@@ -216,3 +216,55 @@ const q = users.select((u) => ({
   name_len: charLength(u.name),
 }));
 ```
+
+### UNION / UNION ALL
+
+```ts
+import { table, t } from "./src/edsl";
+
+const activeUsers = table("users", {
+  id: t.number(),
+  name: t.string(),
+  active: t.boolean(),
+}).filter((u) => u.active.eq(true))
+  .select((u) => ({ id: u.id, name: u.name }));
+
+const inactiveUsers = table("users", {
+  id: t.number(),
+  name: t.string(),
+  active: t.boolean(),
+}).filter((u) => u.active.eq(false))
+  .select((u) => ({ id: u.id, name: u.name }));
+
+const allUsers = activeUsers.unionAll(inactiveUsers);
+```
+
+### Recursive loop (WITH RECURSIVE)
+
+```ts
+import { loop, table, t } from "./src/edsl";
+
+const employees = table("employees", {
+  id: t.number(),
+  name: t.string(),
+  manager_id: t.number(),
+});
+
+const orgTree = loop(
+  {
+    id: t.number(),
+    name: t.string(),
+    manager_id: t.number(),
+  },
+  (self) => ({
+    base: employees
+      .filter((e) => e.manager_id.isNull())
+      .select((e) => ({ id: e.id, name: e.name, manager_id: e.manager_id })),
+    step: employees
+      .join(self, (e, s) => e.manager_id.eq(s.id))
+      .select((e) => ({ id: e.id, name: e.name, manager_id: e.manager_id })),
+  })
+);
+
+const q = orgTree.select((o) => ({ id: o.id, name: o.name }));
+```

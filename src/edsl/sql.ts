@@ -5,39 +5,217 @@ import type {
   OrderItem,
   Source,
   SourceRef,
+  SelectItem,
   SqlOptions,
   SqlFormat,
   Stage,
   Value,
 } from "./types";
 import type { ColumnRefs } from "./expr";
-import { selectAllItems } from "./expr";
+import { createColumnRefs, selectAllItems } from "./expr";
 
 export function compilePipeline(
   source: Source,
   stages: Stage[],
   columns: ColumnRefs<Record<string, any>>,
-  columnNames: readonly string[] | null
+  columnNames: readonly string[] | null,
+  options?: { ctePrefix?: string; baseWiths?: With[] }
 ): AST {
+  const { ast, ctes } = buildPipelineAst(
+    source,
+    stages,
+    columns,
+    columnNames,
+    options
+  );
+  const baseWiths = options?.baseWiths ?? [];
+  const merged = baseWiths.length ? [...baseWiths, ...ctes] : ctes;
+  ast.with = merged.length ? merged : null;
+  return ast;
+}
+
+export function buildRecursiveCte(
+  name: string,
+  base: {
+    source: Source;
+    stages: Stage[];
+    columns: ColumnRefs<Record<string, any>>;
+    columnNames: readonly string[] | null;
+  },
+  step: {
+    source: Source;
+    stages: Stage[];
+    columns: ColumnRefs<Record<string, any>>;
+    columnNames: readonly string[] | null;
+  }
+): With {
+  const baseAst = compileLoopPart(base, "base");
+  const stepAst = compileLoopPart(step, "step");
+  const unionAst = attachUnion(baseAst, stepAst, "union all");
+  return {
+    name: { type: "default", value: name },
+    stmt: {
+      ast: unionAst as any,
+      tableList: [],
+      columnList: [],
+    },
+    columns: null,
+    recursive: true,
+  } as With;
+}
+
+function compileLoopPart(
+  input: {
+    source: Source;
+    stages: Stage[];
+    columns: ColumnRefs<Record<string, any>>;
+    columnNames: readonly string[] | null;
+  },
+  label: "base" | "step"
+): AST {
+  const { source, stages, columns, columnNames } = input;
+  const baseFrom = sourceToFrom({
+    kind: "table",
+    name: source.table,
+    schema: source.schema,
+    as: source.as,
+  });
+  const from: any[] = [baseFrom];
+  let whereExpr: ExprNode<any> | null = null;
+  let selectItems: SelectItem[] | null = null;
+  let groupBy: ExprNode<any>[] | null = null;
+  let phase: "join" | "filter" | "select" = "join";
+  const keepTables = new Set<string>();
+
+  for (const stage of stages) {
+    switch (stage.kind) {
+      case "join": {
+        if (phase !== "join") {
+          throw new Error(
+            `loop ${label} must place joins before filters or selects`
+          );
+        }
+        if (stage.source.kind === "subquery") {
+          const withs = (stage.source.ast as any).with;
+          if (withs && withs.length) {
+            throw new Error(`loop ${label} does not allow nested CTEs in joins`);
+          }
+        }
+        if (stage.as) keepTables.add(stage.as);
+        const join = `${stage.joinType} JOIN`;
+        from.push(
+          stage.source.kind === "table"
+            ? {
+                db: null,
+                schema: stage.source.schema,
+                table: stage.source.table,
+                as: stage.as,
+                join,
+                on: exprToAst(stripTableRefs(stage.on, keepTables)),
+              }
+            : {
+                expr: {
+                  ast: stage.source.ast,
+                  tableList: [],
+                  columnList: [],
+                  parentheses: true,
+                },
+                as: stage.as,
+                join,
+                on: exprToAst(stripTableRefs(stage.on, keepTables)),
+              }
+        );
+        break;
+      }
+      case "filter": {
+        if (phase === "select") {
+          throw new Error(`loop ${label} must not filter after select`);
+        }
+        phase = "filter";
+        if (whereExpr) {
+          whereExpr = {
+            kind: "binary",
+            op: "AND",
+            left: whereExpr,
+            right: stage.predicate,
+          };
+        } else {
+          whereExpr = stage.predicate;
+        }
+        break;
+      }
+      case "select": {
+        if (phase === "select") {
+          throw new Error(`loop ${label} only allows one select stage`);
+        }
+        phase = "select";
+        selectItems = stage.items;
+        groupBy = stage.groupBy;
+        break;
+      }
+      case "orderBy":
+      case "limit":
+      case "union":
+        throw new Error(`loop ${label} does not allow ${stage.kind} stages`);
+      default:
+        assertNever(stage);
+    }
+  }
+
+  if (!selectItems) {
+    selectItems = selectAllItems(columns, columnNames);
+  }
+
+  return buildSelectAst({
+    from,
+    columns: selectItems.map((item) => ({
+      expr: exprToAst(stripTableRefs(item.expr, keepTables)),
+      as: item.as,
+    })),
+    where: whereExpr ? exprToAst(stripTableRefs(whereExpr, keepTables)) : null,
+    groupby: groupBy
+      ? {
+          columns: groupBy.map((expr) =>
+            exprToAst(stripTableRefs(expr, keepTables))
+          ),
+          modifiers: [],
+        }
+      : null,
+    orderby: null,
+    limit: null,
+  });
+}
+
+function buildPipelineAst(
+  source: Source,
+  stages: Stage[],
+  columns: ColumnRefs<Record<string, any>>,
+  columnNames: readonly string[] | null,
+  options?: { ctePrefix?: string }
+): { ast: AST; ctes: With[] } {
+  const ctePrefix = options?.ctePrefix ?? "";
   if (stages.length === 0) {
-    return buildSelectAst({
-      from: [
-        sourceToFrom({
-          kind: "table",
-          name: source.table,
-          schema: source.schema,
-          as: source.as,
-        }),
-      ],
-      columns: selectAllItems(columns, columnNames).map((item) => ({
-        expr: exprToAst(item.expr),
-        as: item.as,
-      })),
-      where: null,
-      groupby: null,
-      orderby: null,
-      limit: null,
-    });
+    return {
+      ast: buildSelectAst({
+        from: [
+          sourceToFrom({
+            kind: "table",
+            name: source.table,
+            schema: source.schema,
+            as: source.as,
+          }),
+        ],
+        columns: selectAllItems(columns, columnNames).map((item) => ({
+          expr: exprToAst(item.expr),
+          as: item.as,
+        })),
+        where: null,
+        groupby: null,
+        orderby: null,
+        limit: null,
+      }),
+      ctes: [],
+    };
   }
 
   const ctes: With[] = [];
@@ -47,11 +225,16 @@ export function compilePipeline(
     schema: source.schema,
     as: source.as,
   };
+  let unionCount = 0;
 
   for (let i = 0; i < stages.length - 1; i += 1) {
-    const stage = hoistJoinSubquery(stages[i], ctes);
-    const stageAst = stageToSelect(stage, current);
-    const name = `cte_${i}`;
+    const stage = hoistJoinSubquery(stages[i], ctes, ctePrefix);
+    const stageAst =
+      stage.kind === "union"
+        ? compileUnionStage(stage, current, ctes, `${ctePrefix}u${unionCount}_`)
+        : stageToSelect(stage, current);
+    if (stage.kind === "union") unionCount += 1;
+    const name = `${ctePrefix}cte_${i}`;
     ctes.push({
       name: { value: name },
       stmt: {
@@ -63,10 +246,12 @@ export function compilePipeline(
     current = { kind: "cte", name };
   }
 
-  const finalStage = hoistJoinSubquery(stages[stages.length - 1], ctes);
-  const finalAst = stageToSelect(finalStage, current);
-  finalAst.with = ctes.length ? ctes : null;
-  return finalAst as AST;
+  const finalStage = hoistJoinSubquery(stages[stages.length - 1], ctes, ctePrefix);
+  const finalAst =
+    finalStage.kind === "union"
+      ? compileUnionStage(finalStage, current, ctes, `${ctePrefix}u${unionCount}_`)
+      : stageToSelect(finalStage, current);
+  return { ast: finalAst as AST, ctes };
 }
 
 function stageToSelect(stage: Stage, source: SourceRef): AST {
@@ -170,6 +355,8 @@ function stageToSelect(stage: Stage, source: SourceRef): AST {
         limit: null,
       });
     }
+    case "union":
+      throw new Error("union stages must be compiled by buildPipelineAst");
     default:
       return assertNever(stage);
   }
@@ -214,9 +401,14 @@ function buildSelectAst(params: {
   } as AST;
 }
 
-function hoistJoinSubquery(stage: Stage, ctes: With[]): Stage {
+function hoistJoinSubquery(
+  stage: Stage,
+  ctes: With[],
+  ctePrefix: string
+): Stage {
   if (stage.kind !== "join" || stage.source.kind !== "subquery") return stage;
-  const cteName = stage.as ?? `join_${ctes.length}`;
+  const baseName = stage.as ? `${ctePrefix}${stage.as}` : `${ctePrefix}join_${ctes.length}`;
+  const cteName = baseName;
   ctes.push({
     name: { value: cteName },
     stmt: {
@@ -230,6 +422,52 @@ function hoistJoinSubquery(stage: Stage, ctes: With[]): Stage {
     source: { kind: "table", table: cteName, schema: null },
     as: stage.as === cteName ? null : stage.as,
   };
+}
+
+function compileUnionStage(
+  stage: Extract<Stage, { kind: "union" }>,
+  source: SourceRef,
+  ctes: With[],
+  rightPrefix: string
+): AST {
+  const baseFrom = sourceToFrom(source);
+  const leftAst = buildSelectAst({
+    from: [baseFrom],
+    columns: stage.selectAll.map((item) => ({
+      expr: exprToAst(stripTableRefs(item.expr)),
+      as: item.as,
+    })),
+    where: null,
+    groupby: null,
+    orderby: null,
+    limit: null,
+  });
+
+  const rightColumns = createColumnRefs<Record<string, any>>(
+    null,
+    stage.right.columnNames
+  );
+  const rightCompiled = buildPipelineAst(
+    stage.right.source,
+    stage.right.stages,
+    rightColumns,
+    stage.right.columnNames,
+    { ctePrefix: rightPrefix }
+  );
+  if (rightCompiled.ctes.length) {
+    ctes.push(...rightCompiled.ctes);
+  }
+  rightCompiled.ast.with = null;
+
+  return attachUnion(leftAst, rightCompiled.ast, stage.op);
+}
+
+function attachUnion(left: AST, right: AST, op: "union" | "union all"): AST {
+  const root = left as any;
+  const tail = right as any;
+  root.set_op = op;
+  root._next = tail;
+  return root as AST;
 }
 
 function stripTableRefs(

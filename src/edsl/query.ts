@@ -1,4 +1,4 @@
-import { Parser, type AST, type Option } from "node-sql-parser";
+import { Parser, type AST, type Option, type With } from "node-sql-parser";
 import type {
   ColumnType,
   Dialect,
@@ -8,6 +8,7 @@ import type {
   JoinTypeInput,
   OrderItem,
   QueryIR,
+  QuerySpec,
   SqlFormat,
   SqlOptions,
   Stage,
@@ -30,6 +31,7 @@ import {
 } from "./expr";
 import {
   buildSqlOptions,
+  buildRecursiveCte,
   compilePipeline,
   formatSqlPretty,
   stripRedundantQuotes,
@@ -41,7 +43,8 @@ export class Query<TColumns extends Record<string, any>> {
     readonly source: Source,
     readonly stages: Stage[],
     readonly columns: ColumnRefs<TColumns>,
-    readonly columnNames: readonly string[] | null
+    readonly columnNames: readonly string[] | null,
+    readonly withs: With[] = []
   ) {}
 
   select<Sel extends SelectShape>(
@@ -65,7 +68,13 @@ export class Query<TColumns extends Record<string, any>> {
       groupBy: null,
     };
     const nextColumns = createColumnRefs<SelectResult<Sel>>(null, keys);
-    return new Query(this.source, [...this.stages, stage], nextColumns, keys);
+    return new Query(
+      this.source,
+      [...this.stages, stage],
+      nextColumns,
+      keys,
+      this.withs
+    );
   }
 
   aggregate<Sel extends SelectShape>(
@@ -90,7 +99,13 @@ export class Query<TColumns extends Record<string, any>> {
       groupBy: finalGroupBy.length ? finalGroupBy : null,
     };
     const nextColumns = createColumnRefs<SelectResult<Sel>>(null, keys);
-    return new Query(this.source, [...this.stages, stage], nextColumns, keys);
+    return new Query(
+      this.source,
+      [...this.stages, stage],
+      nextColumns,
+      keys,
+      this.withs
+    );
   }
 
   filter(
@@ -102,7 +117,13 @@ export class Query<TColumns extends Record<string, any>> {
       predicate: next,
       selectAll: selectAllItems(this.columns, this.columnNames),
     };
-    return new Query(this.source, [...this.stages, stage], this.columns, this.columnNames);
+    return new Query(
+      this.source,
+      [...this.stages, stage],
+      this.columns,
+      this.columnNames,
+      this.withs
+    );
   }
 
   orderBy(
@@ -115,7 +136,13 @@ export class Query<TColumns extends Record<string, any>> {
       items,
       selectAll: selectAllItems(this.columns, this.columnNames),
     };
-    return new Query(this.source, [...this.stages, stage], this.columns, this.columnNames);
+    return new Query(
+      this.source,
+      [...this.stages, stage],
+      this.columns,
+      this.columnNames,
+      this.withs
+    );
   }
 
   limit(count: number): Query<TColumns> {
@@ -124,7 +151,21 @@ export class Query<TColumns extends Record<string, any>> {
       count,
       selectAll: selectAllItems(this.columns, this.columnNames),
     };
-    return new Query(this.source, [...this.stages, stage], this.columns, this.columnNames);
+    return new Query(
+      this.source,
+      [...this.stages, stage],
+      this.columns,
+      this.columnNames,
+      this.withs
+    );
+  }
+
+  unionAll(right: Query<TColumns>): Query<TColumns> {
+    return this.unionInternal(right, "union all");
+  }
+
+  union(right: Query<TColumns>): Query<TColumns> {
+    return this.unionInternal(right, "union");
   }
 
   join<TRight extends Record<string, any>>(
@@ -163,7 +204,13 @@ export class Query<TColumns extends Record<string, any>> {
       on: predicate,
       selectAll: selectAllItems(nextColumns, nextNames),
     };
-    return new Query(this.source, [...this.stages, stage], nextColumns, nextNames);
+    return new Query(
+      this.source,
+      [...this.stages, stage],
+      nextColumns,
+      nextNames,
+      mergeWiths(this.withs, right.withs)
+    );
   }
 
   innerJoin<TRight extends Record<string, any>>(
@@ -199,7 +246,13 @@ export class Query<TColumns extends Record<string, any>> {
   }
 
   toAst(): AST {
-    return compilePipeline(this.source, this.stages, this.columns, this.columnNames);
+    return compilePipeline(
+      this.source,
+      this.stages,
+      this.columns,
+      this.columnNames,
+      { baseWiths: this.withs }
+    );
   }
 
   toSql(dialect?: Dialect, format?: SqlFormat): string;
@@ -214,6 +267,33 @@ export class Query<TColumns extends Record<string, any>> {
     const sql = parser.sqlify(this.toAst(), options);
     const cleaned = stripRedundantQuotes(sql);
     return sqlFormat === "pretty" ? formatSqlPretty(cleaned) : cleaned;
+  }
+
+  private unionInternal(right: Query<TColumns>, op: "union" | "union all"): Query<TColumns> {
+    const leftNames = this.columnNames;
+    const rightNames = right.columnNames;
+    if (!leftNames || !rightNames) {
+      throw new Error("union requires both queries to have explicit column lists");
+    }
+    assertUnionCompatible(leftNames, rightNames);
+    const rightSpec: QuerySpec = {
+      source: right.source,
+      stages: right.stages,
+      columnNames: right.columnNames,
+    };
+    const stage: Stage = {
+      kind: "union",
+      op,
+      right: rightSpec,
+      selectAll: selectAllItems(this.columns, this.columnNames),
+    };
+    return new Query(
+      this.source,
+      [...this.stages, stage],
+      this.columns,
+      this.columnNames,
+      mergeWiths(this.withs, right.withs)
+    );
   }
 }
 
@@ -268,7 +348,58 @@ export function table(
   const columnNames = schema ? Object.keys(schema) : null;
   const { table, schema: schemaName } = parseTableName(name, resolvedOptions);
   const columns = createColumnRefs(null, columnNames);
-  return new Query({ table, schema: schemaName, as: null }, [], columns, columnNames);
+  return new Query(
+    { table, schema: schemaName, as: null },
+    [],
+    columns,
+    columnNames,
+    []
+  );
+}
+
+let loopCounter = 0;
+
+export function loop<S extends Record<string, ColumnType<any>>>(
+  schema: S,
+  builder: (self: Query<InferSchema<S>>) => {
+    base: Query<InferSchema<S>>;
+    step: Query<InferSchema<S>>;
+  }
+): Query<InferSchema<S>> {
+  const name = `loop_${loopCounter++}`;
+  const self = table(name, schema);
+  const { base, step } = builder(self);
+  const schemaKeys = Object.keys(schema);
+  assertLoopSchema(schemaKeys, base.columnNames, "base");
+  assertLoopSchema(schemaKeys, step.columnNames, "step");
+  assertLoopColumns(base.columnNames, step.columnNames);
+  if (base.withs.length || step.withs.length) {
+    throw new Error("loop does not allow nested CTEs in base or step queries");
+  }
+  const recursiveCte = buildRecursiveCte(
+    name,
+    {
+      source: base.source,
+      stages: base.stages,
+      columns: base.columns as ColumnRefs<Record<string, any>>,
+      columnNames: base.columnNames,
+    },
+    {
+      source: step.source,
+      stages: step.stages,
+      columns: step.columns as ColumnRefs<Record<string, any>>,
+      columnNames: step.columnNames,
+    }
+  );
+  const columnNames = Object.keys(schema);
+  const columns = createColumnRefs<InferSchema<S>>(null, columnNames);
+  return new Query(
+    { table: name, schema: null, as: null },
+    [],
+    columns,
+    columnNames,
+    [recursiveCte]
+  );
 }
 
 function autoAlias(table: string, stages: Stage[]): string {
@@ -292,4 +423,69 @@ function normalizeJoinType(type: JoinTypeInput): JoinType {
     default:
       throw new Error(`Unsupported join type: ${type}`);
   }
+}
+
+function assertUnionCompatible(
+  left: readonly string[],
+  right: readonly string[]
+): void {
+  if (left.length !== right.length) {
+    throw new Error("union requires both queries to have the same columns");
+  }
+  for (let i = 0; i < left.length; i += 1) {
+    if (left[i] !== right[i]) {
+      throw new Error("union requires both queries to have matching column names");
+    }
+  }
+}
+
+function assertLoopColumns(
+  base: readonly string[] | null,
+  step: readonly string[] | null
+): void {
+  if (!base || !step) {
+    throw new Error("loop requires explicit column lists for base and step");
+  }
+  assertUnionCompatible(base, step);
+}
+
+function assertLoopSchema(
+  schemaKeys: readonly string[],
+  names: readonly string[] | null,
+  label: "base" | "step"
+): void {
+  if (!names) {
+    throw new Error(`loop ${label} must return explicit columns`);
+  }
+  assertUnionCompatible(schemaKeys, names);
+}
+
+function mergeWiths(left: With[], right: With[]): With[] {
+  if (left.length === 0) return right.length ? [...right] : [];
+  if (right.length === 0) return [...left];
+  const seen = new Set<string>();
+  const merged: With[] = [];
+  for (const item of left) {
+    const name = withName(item);
+    if (name) seen.add(name);
+    merged.push(item);
+  }
+  for (const item of right) {
+    const name = withName(item);
+    if (name && seen.has(name)) {
+      throw new Error(`CTE name conflict: ${name}`);
+    }
+    if (name) seen.add(name);
+    merged.push(item);
+  }
+  return merged;
+}
+
+function withName(item: With): string | null {
+  const raw = (item as any).name;
+  if (!raw) return null;
+  if (typeof raw === "string") return raw;
+  if (typeof raw.value === "string") return raw.value;
+  if (Array.isArray(raw) && typeof raw[0]?.value === "string") return raw[0].value;
+  return null;
 }

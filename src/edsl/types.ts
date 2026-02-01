@@ -141,6 +141,12 @@ export type Stage =
       as: string | null;
       on: ExprNode<boolean>;
       selectAll: SelectItem[];
+    }
+  | {
+      kind: "union";
+      op: "union" | "union all";
+      right: QuerySpec;
+      selectAll: SelectItem[];
     };
 
 export type JoinSource =
@@ -150,6 +156,12 @@ export type JoinSource =
 export type QueryIR = {
   source: Source;
   stages: Stage[];
+};
+
+export type QuerySpec = {
+  source: Source;
+  stages: Stage[];
+  columnNames: readonly string[] | null;
 };
 
 export type ColumnType<T> = { kind: "column_type"; _type?: T };
