@@ -1,0 +1,218 @@
+# teta
+
+To install dependencies:
+
+```bash
+bun install
+```
+
+To run:
+
+```bash
+bun run index.ts
+```
+
+This project was created using `bun init` in bun v1.3.6. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.
+
+## EDSL example
+
+Note: to avoid `SELECT *`, provide a schema when calling `table(...)`. Without a schema, any step that needs implicit “select all” will throw because column names are unknown.
+
+```ts
+import { table, t } from "./src/edsl";
+
+const users = table("users", {
+  id: t.number(),
+  name: t.string(),
+  age: t.number(),
+  active: t.boolean(),
+});
+
+const q = users
+  .filter((u) => u.active.eq(true).and(u.age.gte(18)))
+  .select((u) => ({
+    id: u.id,
+    name: u.name.replace(" ", "_").coalesce("unknown"),
+    age: u.age,
+  }))
+  .orderBy((u) => [u.name.asc(), u.id.desc()])
+  .limit(20);
+
+console.log(q.toSql("Postgresql", "pretty"));
+```
+
+### Schema-qualified tables
+
+```ts
+import { table, t } from "./src/edsl";
+
+const users = table("analytics.users", {
+  id: t.number(),
+  name: t.string(),
+});
+
+const orders = table(
+  "orders",
+  {
+    order_id: t.number(),
+    user_id: t.number(),
+  },
+  { schema: "sales" }
+);
+```
+
+## More examples
+
+Each chained step is compiled into a CTE, so changing the order of operations is safe and predictable.
+
+### Pipeline steps (CTE per stage)
+
+```ts
+import { table, t } from "./src/edsl";
+
+const users = table("users", {
+  id: t.number(),
+  name: t.string(),
+  age: t.number(),
+  active: t.boolean(),
+});
+
+const q = users
+  .select((u) => ({ ...u, age_plus_one: u.age.add(1) }))
+  .filter((u) => u.age_plus_one.gt(30))
+  .select((u) => ({ id: u.id, name: u.name, age_plus_one: u.age_plus_one }));
+
+console.log(q.toSql());
+```
+
+### Join (auto alias)
+
+```ts
+import { table, t } from "./src/edsl";
+
+const users = table("users", {
+  id: t.number(),
+  name: t.string(),
+});
+
+const orders = table("orders", {
+  order_id: t.number(),
+  user_id: t.number(),
+  total: t.number(),
+});
+
+const q = users
+  .leftJoin(orders, (u, o) => u.id.eq(o.user_id))
+  .select((u) => ({
+    user_id: u.id,
+    user_name: u.name,
+    order_id: u.order_id,
+    total: u.total,
+  }));
+
+console.log(q.toSql());
+```
+
+You can pass a join type as the third argument to `join`, for example `"left"` or `"right"`.
+Shortcuts are available: `innerJoin`, `leftJoin`, `rightJoin`, `fullJoin`.
+
+### Aggregate with group()
+
+Grouping is expressed by wrapping the grouping key in `group(...)` inside `aggregate(...)`.
+There is no separate `groupBy` step.
+
+```ts
+import { table, t, count, group, sum } from "./src/edsl";
+
+const orders = table("orders", {
+  id: t.number(),
+  user_id: t.number(),
+  total: t.number(),
+});
+
+const q = orders
+  .filter((o) => o.total.gt(0))
+  .aggregate((o) => ({
+    user_id: group(o.user_id),
+    order_count: count(),
+    total_spend: sum(o.total),
+  }));
+
+console.log(q.toSql());
+```
+
+### Window function
+
+```ts
+import { table, t, rank } from "./src/edsl";
+
+const users = table("users", {
+  id: t.number(),
+  name: t.string(),
+  age: t.number(),
+});
+
+const q = users.select((u) => ({
+  id: u.id,
+  name: u.name,
+  age_rank: rank().over({ orderBy: u.age.desc() }),
+}));
+
+console.log(q.toSql("Postgresql", "pretty"));
+```
+
+### String concat
+
+```ts
+import { table, t, concat, f } from "./src/edsl";
+
+const users = table("users", {
+  id: t.number(),
+  first_name: t.string(),
+  last_name: t.string(),
+});
+
+const q = users.select((u) => ({
+  id: u.id,
+  full_name: concat(u.first_name, " ", u.last_name),
+  label: f`user:${u.id}-${u.first_name}`,
+}));
+```
+
+### Custom SQL functions (UDF)
+
+```ts
+import { table, t, fn, windowFn } from "./src/edsl";
+
+const users = table("users", {
+  id: t.number(),
+  name: t.string(),
+});
+
+const q = users.select((u) => ({
+  id: u.id,
+  name_hash: fn<string>("my_hash_udf", u.name),
+  score_rank: windowFn<number>("percent_rank").over({ orderBy: u.id.desc() }),
+}));
+```
+
+### SQL92 string helpers
+
+```ts
+import { table, t, lower, upper, trim, substring, position, charLength } from "./src/edsl";
+
+const users = table("users", {
+  id: t.number(),
+  name: t.string(),
+});
+
+const q = users.select((u) => ({
+  id: u.id,
+  name_lower: lower(u.name),
+  name_upper: upper(u.name),
+  name_trim: trim(u.name),
+  name_prefix: substring(u.name, 1, 3),
+  name_pos: position("a", u.name),
+  name_len: charLength(u.name),
+}));
+```
