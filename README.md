@@ -61,6 +61,115 @@ const orders = table(
 );
 ```
 
+## Tutorial
+
+This section shows EDSL snippets and the SQL they generate.
+
+### 1) Filter + select + order + limit
+
+```ts
+import { table, t } from "./src/edsl";
+
+const users = table("users", {
+  id: t.number(),
+  name: t.string(),
+  age: t.number(),
+  active: t.boolean(),
+});
+
+const q = users
+  .filter((u) => u.active.eq(true).and(u.age.gte(18)))
+  .select((u) => ({ id: u.id, name: u.name, age: u.age }))
+  .orderBy((u) => [u.age.desc(), u.id.asc()])
+  .limit(5);
+
+console.log(q.toSql("postgresql", "pretty"));
+```
+
+Generated SQL:
+
+```sql
+WITH cte_0 AS (
+SELECT id, name, age, active
+FROM users
+WHERE active = TRUE AND age >= 18), cte_1 AS (
+SELECT id, name, age
+FROM cte_0), cte_2 AS (
+SELECT id, name, age
+FROM cte_1
+ORDER BY age DESC, id ASC)
+SELECT id, name, age
+FROM cte_2
+LIMIT 5
+```
+
+### 2) Join + aggregate with group()
+
+```ts
+import { table, t, count, group, sum } from "./src/edsl";
+
+const users = table("users", {
+  id: t.number(),
+  name: t.string(),
+});
+
+const orders = table("orders", {
+  order_id: t.number(),
+  user_id: t.number(),
+  total: t.number(),
+});
+
+const q = users
+  .leftJoin(orders, (u, o) => u.id.eq(o.user_id))
+  .aggregate((u) => ({
+    user_id: group(u.id),
+    order_count: count(),
+    total_spend: sum(u.total),
+  }));
+
+console.log(q.toSql("postgresql", "pretty"));
+```
+
+Generated SQL:
+
+```sql
+WITH cte_0 AS (
+SELECT id, name, orders_j1.order_id AS order_id, orders_j1.user_id AS user_id, orders_j1.total AS total
+FROM users
+LEFT JOIN orders AS orders_j1
+ON id = orders_j1.user_id)
+SELECT id AS user_id, COUNT(1) AS order_count, SUM(total) AS total_spend
+FROM cte_0
+GROUP BY id
+```
+
+### 3) String concat with template helper
+
+```ts
+import { table, t, f } from "./src/edsl";
+
+const names = table("names", {
+  id: t.number(),
+  prefix: t.string(),
+  first: t.string(),
+  last: t.string(),
+  suffix: t.string(),
+});
+
+const q = names.select((t) => ({
+  title: f`${t.prefix} ${t.first} ${t.last} ${t.suffix}`,
+}));
+
+console.log(q.toSql("postgresql", "pretty"));
+```
+
+Generated SQL:
+
+```sql
+SELECT concat(prefix, ' ', first, ' ', last, ' ', suffix) AS title
+FROM names
+```
+
 ## More examples
 
 Each chained step is compiled into a CTE, so changing the order of operations is safe and predictable.
