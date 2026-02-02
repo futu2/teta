@@ -1,6 +1,7 @@
 import type {
   AggFunc,
   BinaryOp,
+  CaseWhenNode,
   ExprNode,
   OrderItem,
   SelectItem,
@@ -9,6 +10,11 @@ import type {
 } from "./types";
 
 export type ExprInput<T> = ExprRef<T> | T;
+export type CaseBuilder<T> = {
+  when: (condition: ExprInput<boolean>, value: ExprInput<T>) => CaseBuilder<T>;
+  else: (value: ExprInput<T>) => ExprRef<T>;
+  end: () => ExprRef<T | null>;
+};
 
 export type WindowSpecInput = {
   partitionBy?: ExprRef<any> | ExprRef<any>[];
@@ -240,6 +246,15 @@ export function bitLength(value: ExprInput<string>): ExprRef<number> {
   return funcExpr("BIT_LENGTH", [toExprNode(value)]);
 }
 
+export function when<T>(
+  condition: ExprInput<boolean>,
+  value: ExprInput<T>
+): CaseBuilder<T> {
+  return new CaseBuilderImpl<T>([
+    { when: toExprNode(condition), then: toExprNode(value) },
+  ]);
+}
+
 export function concat(...parts: ExprInput<any>[]): ExprRef<string> {
   if (parts.length === 0) {
     throw new Error("concat requires at least one value");
@@ -428,6 +443,13 @@ export function containsGroup(expr: ExprNode<any>, inAgg = false): boolean {
           ? expr.orderBy.some((item) => containsGroup(item.expr, inAgg))
           : false)
       );
+    case "case":
+      return (
+        expr.whens.some(
+          (item) =>
+            containsGroup(item.when, inAgg) || containsGroup(item.then, inAgg)
+        ) || (expr.elseExpr ? containsGroup(expr.elseExpr, inAgg) : false)
+      );
     default:
       return false;
   }
@@ -480,6 +502,17 @@ export function unwrapGroupExpr(
             }))
           : null,
       };
+    case "case":
+      return {
+        ...expr,
+        whens: expr.whens.map((item) => ({
+          when: unwrapGroupExpr(item.when, groupBy, inAgg),
+          then: unwrapGroupExpr(item.then, groupBy, inAgg),
+        })),
+        elseExpr: expr.elseExpr
+          ? unwrapGroupExpr(expr.elseExpr, groupBy, inAgg)
+          : null,
+      };
     default:
       return expr;
   }
@@ -514,6 +547,36 @@ export function toExprNodeList(
 export function toOrderItems(input?: OrderItem | OrderItem[]): OrderItem[] | null {
   if (!input) return null;
   return Array.isArray(input) ? input : [input];
+}
+
+function buildCaseExpr<T>(
+  whens: CaseWhenNode[],
+  elseExpr: ExprNode<any> | null
+): ExprRef<T | null> {
+  return new ExprRef<T | null>({
+    kind: "case",
+    whens,
+    elseExpr,
+  });
+}
+
+class CaseBuilderImpl<T> implements CaseBuilder<T> {
+  constructor(private readonly whens: CaseWhenNode[]) {}
+
+  when(condition: ExprInput<boolean>, value: ExprInput<T>): CaseBuilder<T> {
+    return new CaseBuilderImpl<T>([
+      ...this.whens,
+      { when: toExprNode(condition), then: toExprNode(value) },
+    ]);
+  }
+
+  else(value: ExprInput<T>): ExprRef<T> {
+    return buildCaseExpr<T>(this.whens, toExprNode(value)) as ExprRef<T>;
+  }
+
+  end(): ExprRef<T | null> {
+    return buildCaseExpr<T>(this.whens, null);
+  }
 }
 
 class WindowBuilder<T> {

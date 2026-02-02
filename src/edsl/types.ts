@@ -62,7 +62,8 @@ export type ExprNode<T> =
   | AggNode
   | GroupNode
   | FuncNode
-  | WindowNode;
+  | WindowNode
+  | CaseNode;
 
 export type ColumnNode = {
   kind: "column";
@@ -112,6 +113,17 @@ export type WindowNode = {
   args: ExprNode<any>[];
   partitionBy: OrderExpr[] | null;
   orderBy: OrderItem[] | null;
+};
+
+export type CaseWhenNode = {
+  when: ExprNode<boolean>;
+  then: ExprNode<any>;
+};
+
+export type CaseNode = {
+  kind: "case";
+  whens: CaseWhenNode[];
+  elseExpr: ExprNode<any> | null;
 };
 
 export type OrderExpr = ExprNode<any>;

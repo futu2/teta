@@ -326,6 +326,24 @@ const q = users.select((u) => ({
 }));
 ```
 
+### CASE WHEN
+
+```ts
+import { table, t, when } from "./src/edsl";
+
+const users = table("users", {
+  id: t.number(),
+  age: t.number(),
+});
+
+const q = users.select((u) => ({
+  id: u.id,
+  age_group: when(u.age.lt(18), "minor")
+    .when(u.age.lt(65), "adult")
+    .else("senior"),
+}));
+```
+
 ### UNION / UNION ALL
 
 ```ts

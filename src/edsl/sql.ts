@@ -510,6 +510,17 @@ function stripTableRefs(
             }))
           : null,
       };
+    case "case":
+      return {
+        ...expr,
+        whens: expr.whens.map((item) => ({
+          when: stripTableRefs(item.when, keepTables),
+          then: stripTableRefs(item.then, keepTables),
+        })),
+        elseExpr: expr.elseExpr
+          ? stripTableRefs(expr.elseExpr, keepTables)
+          : null,
+      };
     default:
       return expr;
   }
@@ -577,6 +588,26 @@ function exprToAst(expr: ExprNode<any>): any {
         },
         over: buildWindowOver(expr.partitionBy, expr.orderBy),
       };
+    case "case": {
+      const whens = expr.whens.map((item) => {
+        const cond = exprToAst(item.when);
+        const result = exprToAst(item.then);
+        return {
+          cond,
+          result,
+          when: cond,
+          then: result,
+        };
+      });
+      const elseExpr = expr.elseExpr ? exprToAst(expr.elseExpr) : null;
+      return {
+        type: "case",
+        expr: null,
+        args: whens,
+        default: elseExpr,
+        else: elseExpr,
+      };
+    }
     default:
       return assertNever(expr);
   }
