@@ -1,5 +1,4 @@
 import type {
-  AggFunc,
   BinaryOp,
   CaseWhenNode,
   ExprNode,
@@ -80,6 +79,75 @@ export class ExprRef<T> {
     return binaryExpr("/", this.node, toExprNode(value));
   }
 
+  group(this: ExprRef<T>): ExprRef<T> {
+    return new ExprRef<T>({ kind: "group", expr: this.node });
+  }
+
+  count(this: ExprRef<any>): ExprRef<number> {
+    return new ExprRef<number>({
+      kind: "agg",
+      name: "COUNT",
+      arg: this.node,
+      distinct: false,
+    });
+  }
+
+  sum(this: ExprRef<number>): ExprRef<number> {
+    return new ExprRef<number>({
+      kind: "agg",
+      name: "SUM",
+      arg: this.node,
+      distinct: false,
+    });
+  }
+
+  avg(this: ExprRef<number>): ExprRef<number> {
+    return new ExprRef<number>({
+      kind: "agg",
+      name: "AVG",
+      arg: this.node,
+      distinct: false,
+    });
+  }
+
+  min(this: ExprRef<T>): ExprRef<T> {
+    return new ExprRef<T>({
+      kind: "agg",
+      name: "MIN",
+      arg: this.node,
+      distinct: false,
+    });
+  }
+
+  max(this: ExprRef<T>): ExprRef<T> {
+    return new ExprRef<T>({
+      kind: "agg",
+      name: "MAX",
+      arg: this.node,
+      distinct: false,
+    });
+  }
+
+  rank(this: ExprRef<any>): WindowBuilder<number> {
+    return new WindowBuilder<number>("RANK", []);
+  }
+
+  denseRank(this: ExprRef<any>): WindowBuilder<number> {
+    return new WindowBuilder<number>("DENSE_RANK", []);
+  }
+
+  rowNumber(this: ExprRef<any>): WindowBuilder<number> {
+    return new WindowBuilder<number>("ROW_NUMBER", []);
+  }
+
+  ceil(this: ExprRef<number>): ExprRef<number> {
+    return funcExpr("CEIL", [this.node]);
+  }
+
+  sqrt(this: ExprRef<number>): ExprRef<number> {
+    return funcExpr("SQRT", [this.node]);
+  }
+
   replace(
     this: ExprRef<string>,
     search: ExprInput<string>,
@@ -90,6 +158,64 @@ export class ExprRef<T> {
       toExprNode(search),
       toExprNode(replacement),
     ]);
+  }
+
+  upper(this: ExprRef<string>): ExprRef<string> {
+    return funcExpr("UPPER", [this.node]);
+  }
+
+  lower(this: ExprRef<string>): ExprRef<string> {
+    return funcExpr("LOWER", [this.node]);
+  }
+
+  trim(this: ExprRef<string>): ExprRef<string> {
+    return funcExpr("TRIM", [this.node]);
+  }
+
+  substring(
+    this: ExprRef<string>,
+    start: ExprInput<number>,
+    length?: ExprInput<number>
+  ): ExprRef<string> {
+    const args = [this.node, toExprNode(start)];
+    if (length !== undefined) args.push(toExprNode(length));
+    return funcExpr("SUBSTRING", args);
+  }
+
+  position(this: ExprRef<string>, needle: ExprInput<string>): ExprRef<number> {
+    return funcExpr("POSITION", [toExprNode(needle), this.node]);
+  }
+
+  overlay(
+    this: ExprRef<string>,
+    placing: ExprInput<string>,
+    start: ExprInput<number>,
+    length?: ExprInput<number>
+  ): ExprRef<string> {
+    const args = [this.node, toExprNode(placing), toExprNode(start)];
+    if (length !== undefined) args.push(toExprNode(length));
+    return funcExpr("OVERLAY", args);
+  }
+
+  charLength(this: ExprRef<string>): ExprRef<number> {
+    return funcExpr("CHAR_LENGTH", [this.node]);
+  }
+
+  characterLength(this: ExprRef<string>): ExprRef<number> {
+    return funcExpr("CHARACTER_LENGTH", [this.node]);
+  }
+
+  octetLength(this: ExprRef<string>): ExprRef<number> {
+    return funcExpr("OCTET_LENGTH", [this.node]);
+  }
+
+  bitLength(this: ExprRef<string>): ExprRef<number> {
+    return funcExpr("BIT_LENGTH", [this.node]);
+  }
+
+  concat(this: ExprRef<string>, ...parts: ExprInput<any>[]): ExprRef<string> {
+    if (parts.length === 0) return this;
+    return funcExpr("CONCAT", [this.node, ...parts.map((part) => toExprNode(part))]);
   }
 
   coalesce(this: ExprRef<T>, ...values: ExprInput<T>[]): ExprRef<T> {
@@ -144,32 +270,6 @@ export function lit<T extends Value>(value: T): ExprRef<T> {
   return new ExprRef<T>({ kind: "literal", value });
 }
 
-export function group<T>(value: ExprInput<T>): ExprRef<T> {
-  return new ExprRef<T>({ kind: "group", expr: toExprNode(value) });
-}
-
-export function rank(): WindowBuilder<number> {
-  return new WindowBuilder<number>("RANK", []);
-}
-
-export function denseRank(): WindowBuilder<number> {
-  return new WindowBuilder<number>("DENSE_RANK", []);
-}
-
-export function rowNumber(): WindowBuilder<number> {
-  return new WindowBuilder<number>("ROW_NUMBER", []);
-}
-
-export function count(value?: ExprInput<any>): ExprRef<number> {
-  const arg = value === undefined ? toExprNode(1) : toExprNode(value);
-  return new ExprRef<number>({
-    kind: "agg",
-    name: "COUNT",
-    arg,
-    distinct: false,
-  });
-}
-
 export function fn<T = any>(
   name: string,
   ...args: ExprInput<any>[]
@@ -190,62 +290,6 @@ export function windowFn<T = any>(
   return new WindowBuilder<T>(name, args.map((arg) => toExprNode(arg)));
 }
 
-export function upper(value: ExprInput<string>): ExprRef<string> {
-  return funcExpr("UPPER", [toExprNode(value)]);
-}
-
-export function lower(value: ExprInput<string>): ExprRef<string> {
-  return funcExpr("LOWER", [toExprNode(value)]);
-}
-
-export function trim(value: ExprInput<string>): ExprRef<string> {
-  return funcExpr("TRIM", [toExprNode(value)]);
-}
-
-export function substring(
-  value: ExprInput<string>,
-  start: ExprInput<number>,
-  length?: ExprInput<number>
-): ExprRef<string> {
-  const args = [toExprNode(value), toExprNode(start)];
-  if (length !== undefined) args.push(toExprNode(length));
-  return funcExpr("SUBSTRING", args);
-}
-
-export function position(
-  needle: ExprInput<string>,
-  haystack: ExprInput<string>
-): ExprRef<number> {
-  return funcExpr("POSITION", [toExprNode(needle), toExprNode(haystack)]);
-}
-
-export function overlay(
-  value: ExprInput<string>,
-  placing: ExprInput<string>,
-  start: ExprInput<number>,
-  length?: ExprInput<number>
-): ExprRef<string> {
-  const args = [toExprNode(value), toExprNode(placing), toExprNode(start)];
-  if (length !== undefined) args.push(toExprNode(length));
-  return funcExpr("OVERLAY", args);
-}
-
-export function charLength(value: ExprInput<string>): ExprRef<number> {
-  return funcExpr("CHAR_LENGTH", [toExprNode(value)]);
-}
-
-export function characterLength(value: ExprInput<string>): ExprRef<number> {
-  return funcExpr("CHARACTER_LENGTH", [toExprNode(value)]);
-}
-
-export function octetLength(value: ExprInput<string>): ExprRef<number> {
-  return funcExpr("OCTET_LENGTH", [toExprNode(value)]);
-}
-
-export function bitLength(value: ExprInput<string>): ExprRef<number> {
-  return funcExpr("BIT_LENGTH", [toExprNode(value)]);
-}
-
 export function when<T>(
   condition: ExprInput<boolean>,
   value: ExprInput<T>
@@ -253,13 +297,6 @@ export function when<T>(
   return new CaseBuilderImpl<T>([
     { when: toExprNode(condition), then: toExprNode(value) },
   ]);
-}
-
-export function concat(...parts: ExprInput<any>[]): ExprRef<string> {
-  if (parts.length === 0) {
-    throw new Error("concat requires at least one value");
-  }
-  return funcExpr("CONCAT", parts.map((part) => toExprNode(part)));
 }
 
 export function f(
@@ -273,23 +310,7 @@ export function f(
     if (i < exprs.length) parts.push(exprs[i]);
   }
   if (parts.length === 0) return lit("");
-  return concat(...parts);
-}
-
-export function sum(value: ExprInput<number>): ExprRef<number> {
-  return aggExpr<number>("SUM", value);
-}
-
-export function avg(value: ExprInput<number>): ExprRef<number> {
-  return aggExpr<number>("AVG", value);
-}
-
-export function min<T>(value: ExprInput<T>): ExprRef<T> {
-  return aggExpr<T>("MIN", value);
-}
-
-export function max<T>(value: ExprInput<T>): ExprRef<T> {
-  return aggExpr<T>("MAX", value);
+  return funcExpr("CONCAT", parts.map((part) => toExprNode(part)));
 }
 
 export function createColumnRefs<TColumns extends Record<string, any>>(
@@ -601,15 +622,6 @@ function binaryExpr(
   right: ExprNode<any>
 ): ExprRef<any> {
   return new ExprRef({ kind: "binary", op, left, right });
-}
-
-function aggExpr<T>(name: AggFunc, value: ExprInput<T>): ExprRef<T> {
-  return new ExprRef<T>({
-    kind: "agg",
-    name,
-    arg: toExprNode(value),
-    distinct: false,
-  });
 }
 
 function funcExpr<T>(name: string, args: ExprNode<any>[]): ExprRef<T> {

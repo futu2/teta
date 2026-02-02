@@ -106,7 +106,7 @@ LIMIT 5
 ### 2) Join + aggregate with group()
 
 ```ts
-import { table, t, count, group, sum } from "./src/edsl";
+import { table, t } from "./src/edsl";
 
 const users = table("users", {
   id: t.number(),
@@ -122,9 +122,9 @@ const orders = table("orders", {
 const q = users
   .leftJoin(orders, (u, o) => u.id.eq(o.user_id))
   .aggregate((u) => ({
-    user_id: group(u.id),
-    order_count: count(),
-    total_spend: sum(u.total),
+    user_id: u.id.group(),
+    order_count: u.order_id.count(),
+    total_spend: u.total.sum(),
   }));
 
 console.log(q.toSql("postgresql", "pretty"));
@@ -138,7 +138,7 @@ SELECT id, name, orders_j1.order_id AS order_id, orders_j1.user_id AS user_id, o
 FROM users
 LEFT JOIN orders AS orders_j1
 ON id = orders_j1.user_id)
-SELECT id AS user_id, COUNT(1) AS order_count, SUM(total) AS total_spend
+SELECT id AS user_id, COUNT(order_id) AS order_count, SUM(total) AS total_spend
 FROM cte_0
 GROUP BY id
 ```
@@ -227,11 +227,11 @@ Shortcuts are available: `innerJoin`, `leftJoin`, `rightJoin`, `fullJoin`.
 
 ### Aggregate with group()
 
-Grouping is expressed by wrapping the grouping key in `group(...)` inside `aggregate(...)`.
+Grouping is expressed by calling `.group()` on the grouping key inside `aggregate(...)`.
 There is no separate `groupBy` step.
 
 ```ts
-import { table, t, count, group, sum } from "./src/edsl";
+import { table, t } from "./src/edsl";
 
 const orders = table("orders", {
   id: t.number(),
@@ -242,9 +242,9 @@ const orders = table("orders", {
 const q = orders
   .filter((o) => o.total.gt(0))
   .aggregate((o) => ({
-    user_id: group(o.user_id),
-    order_count: count(),
-    total_spend: sum(o.total),
+    user_id: o.user_id.group(),
+    order_count: o.id.count(),
+    total_spend: o.total.sum(),
   }));
 
 console.log(q.toSql());
@@ -253,7 +253,7 @@ console.log(q.toSql());
 ### Window function
 
 ```ts
-import { table, t, rank } from "./src/edsl";
+import { table, t } from "./src/edsl";
 
 const users = table("users", {
   id: t.number(),
@@ -264,7 +264,7 @@ const users = table("users", {
 const q = users.select((u) => ({
   id: u.id,
   name: u.name,
-  age_rank: rank().over({ orderBy: u.age.desc() }),
+  age_rank: u.age.rank().over({ orderBy: u.age.desc() }),
 }));
 
 console.log(q.toSql("Postgresql", "pretty"));
@@ -273,7 +273,7 @@ console.log(q.toSql("Postgresql", "pretty"));
 ### String concat
 
 ```ts
-import { table, t, concat, f } from "./src/edsl";
+import { table, t, f } from "./src/edsl";
 
 const users = table("users", {
   id: t.number(),
@@ -283,7 +283,7 @@ const users = table("users", {
 
 const q = users.select((u) => ({
   id: u.id,
-  full_name: concat(u.first_name, " ", u.last_name),
+  full_name: u.first_name.concat(" ", u.last_name),
   label: f`user:${u.id}-${u.first_name}`,
 }));
 ```
@@ -308,7 +308,7 @@ const q = users.select((u) => ({
 ### SQL92 string helpers
 
 ```ts
-import { table, t, lower, upper, trim, substring, position, charLength } from "./src/edsl";
+import { table, t } from "./src/edsl";
 
 const users = table("users", {
   id: t.number(),
@@ -317,12 +317,12 @@ const users = table("users", {
 
 const q = users.select((u) => ({
   id: u.id,
-  name_lower: lower(u.name),
-  name_upper: upper(u.name),
-  name_trim: trim(u.name),
-  name_prefix: substring(u.name, 1, 3),
-  name_pos: position("a", u.name),
-  name_len: charLength(u.name),
+  name_lower: u.name.lower(),
+  name_upper: u.name.upper(),
+  name_trim: u.name.trim(),
+  name_prefix: u.name.substring(1, 3),
+  name_pos: u.name.position("a"),
+  name_len: u.name.charLength(),
 }));
 ```
 

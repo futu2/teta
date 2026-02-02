@@ -1,4 +1,4 @@
-import { table, t, count, group, sum, rank } from "./src/edsl";
+import { table, t } from "./src/edsl";
 
 const users = table(
   "users",
@@ -29,13 +29,13 @@ const joined = users
 const aggregated = joined
   .filter((u) => u.total.gt(0))
   .aggregate((u) => ({
-    user_id: group(u.user_id),
-    order_count: count(),
-    total_spend: sum(u.total),
+    user_id: u.user_id.group(),
+    order_count: u.order_id.count(),
+    total_spend: u.total.sum(),
   }))
   .select((u) => ({
     ...u,
-    spend_rank: rank().over({ orderBy: u.total_spend.desc() }),
+    spend_rank: u.total_spend.rank().over({ orderBy: u.total_spend.desc() }),
   }))
   .orderBy((u) => u.total_spend.desc())
   .limit(10);
