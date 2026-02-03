@@ -5,14 +5,18 @@ import type {
   ExprNode,
   OrderItem,
   SqlDate,
+  SqlFloat,
   SqlTimestamp,
+  SqlInt,
+  SqlNumber,
   SelectItem,
   TimestampLiteral,
   UnaryOp,
   Value,
 } from "./types";
 
-export type ExprInput<T> = ExprRef<T> | T;
+type NumericInput<T> = T extends SqlNumber ? T | number : T;
+export type ExprInput<T> = ExprRef<T> | NumericInput<T>;
 export type CaseBuilder<T> = {
   when: (condition: ExprInput<boolean>, value: ExprInput<T>) => CaseBuilder<T>;
   else: (value: ExprInput<T>) => ExprRef<T>;
@@ -35,19 +39,25 @@ export class ExprRef<T> {
     return binaryExpr("!=", this.node, toExprNode(value));
   }
 
-  gt(this: ExprRef<number>, value: ExprInput<number>): ExprRef<boolean> {
+  gt<T extends SqlNumber>(this: ExprRef<T>, value: ExprInput<T>): ExprRef<boolean> {
     return binaryExpr(">", this.node, toExprNode(value));
   }
 
-  gte(this: ExprRef<number>, value: ExprInput<number>): ExprRef<boolean> {
+  gte<T extends SqlNumber>(
+    this: ExprRef<T>,
+    value: ExprInput<T>
+  ): ExprRef<boolean> {
     return binaryExpr(">=", this.node, toExprNode(value));
   }
 
-  lt(this: ExprRef<number>, value: ExprInput<number>): ExprRef<boolean> {
+  lt<T extends SqlNumber>(this: ExprRef<T>, value: ExprInput<T>): ExprRef<boolean> {
     return binaryExpr("<", this.node, toExprNode(value));
   }
 
-  lte(this: ExprRef<number>, value: ExprInput<number>): ExprRef<boolean> {
+  lte<T extends SqlNumber>(
+    this: ExprRef<T>,
+    value: ExprInput<T>
+  ): ExprRef<boolean> {
     return binaryExpr("<=", this.node, toExprNode(value));
   }
 
@@ -67,27 +77,31 @@ export class ExprRef<T> {
     return new ExprRef<boolean>({ kind: "unary", op: "NOT", expr: this.node });
   }
 
-  add(this: ExprRef<number>, value: ExprInput<number>): ExprRef<number> {
+  add<T extends SqlNumber>(this: ExprRef<T>, value: ExprInput<T>): ExprRef<T> {
     return binaryExpr("+", this.node, toExprNode(value));
   }
 
-  sub(this: ExprRef<number>, value: ExprInput<number>): ExprRef<number> {
+  sub<T extends SqlNumber>(this: ExprRef<T>, value: ExprInput<T>): ExprRef<T> {
     return binaryExpr("-", this.node, toExprNode(value));
   }
 
-  mul(this: ExprRef<number>, value: ExprInput<number>): ExprRef<number> {
+  mul<T extends SqlNumber>(this: ExprRef<T>, value: ExprInput<T>): ExprRef<T> {
     return binaryExpr("*", this.node, toExprNode(value));
   }
 
-  div(this: ExprRef<number>, value: ExprInput<number>): ExprRef<number> {
+  div<T extends SqlNumber>(this: ExprRef<T>, value: ExprInput<T>): ExprRef<T> {
     return binaryExpr("/", this.node, toExprNode(value));
   }
 
-  extract(this: ExprRef<any>, field: string): ExprRef<number> {
+  mod<T extends SqlNumber>(this: ExprRef<T>, value: ExprInput<T>): ExprRef<T> {
+    return funcExpr("MOD", [this.node, toExprNode(value)]);
+  }
+
+  extract(this: ExprRef<any>, field: string): ExprRef<SqlFloat> {
     if (!field.trim()) {
       throw new Error("extract requires a field");
     }
-    return new ExprRef<number>({
+    return new ExprRef<SqlFloat>({
       kind: "extract",
       field,
       source: this.node,
@@ -98,8 +112,8 @@ export class ExprRef<T> {
     return new ExprRef<T>({ kind: "group", expr: this.node });
   }
 
-  count(this: ExprRef<any>): ExprRef<number> {
-    return new ExprRef<number>({
+  count(this: ExprRef<any>): ExprRef<SqlInt> {
+    return new ExprRef<SqlInt>({
       kind: "agg",
       name: "COUNT",
       arg: this.node,
@@ -107,8 +121,8 @@ export class ExprRef<T> {
     });
   }
 
-  sum(this: ExprRef<number>): ExprRef<number> {
-    return new ExprRef<number>({
+  sum<T extends SqlNumber>(this: ExprRef<T>): ExprRef<T> {
+    return new ExprRef<T>({
       kind: "agg",
       name: "SUM",
       arg: this.node,
@@ -116,8 +130,8 @@ export class ExprRef<T> {
     });
   }
 
-  avg(this: ExprRef<number>): ExprRef<number> {
-    return new ExprRef<number>({
+  avg(this: ExprRef<SqlNumber>): ExprRef<SqlFloat> {
+    return new ExprRef<SqlFloat>({
       kind: "agg",
       name: "AVG",
       arg: this.node,
@@ -143,23 +157,31 @@ export class ExprRef<T> {
     });
   }
 
-  rank(this: ExprRef<any>): WindowBuilder<number> {
-    return new WindowBuilder<number>("RANK", []);
+  rank(this: ExprRef<any>): WindowBuilder<SqlInt> {
+    return new WindowBuilder<SqlInt>("RANK", []);
   }
 
-  denseRank(this: ExprRef<any>): WindowBuilder<number> {
-    return new WindowBuilder<number>("DENSE_RANK", []);
+  denseRank(this: ExprRef<any>): WindowBuilder<SqlInt> {
+    return new WindowBuilder<SqlInt>("DENSE_RANK", []);
   }
 
-  rowNumber(this: ExprRef<any>): WindowBuilder<number> {
-    return new WindowBuilder<number>("ROW_NUMBER", []);
+  rowNumber(this: ExprRef<any>): WindowBuilder<SqlInt> {
+    return new WindowBuilder<SqlInt>("ROW_NUMBER", []);
   }
 
-  ceil(this: ExprRef<number>): ExprRef<number> {
+  ceil(this: ExprRef<SqlNumber>): ExprRef<SqlInt> {
     return funcExpr("CEIL", [this.node]);
   }
 
-  sqrt(this: ExprRef<number>): ExprRef<number> {
+  floor(this: ExprRef<SqlNumber>): ExprRef<SqlInt> {
+    return funcExpr("FLOOR", [this.node]);
+  }
+
+  abs<T extends SqlNumber>(this: ExprRef<T>): ExprRef<T> {
+    return funcExpr("ABS", [this.node]);
+  }
+
+  sqrt(this: ExprRef<SqlNumber>): ExprRef<SqlFloat> {
     return funcExpr("SQRT", [this.node]);
   }
 
@@ -189,42 +211,42 @@ export class ExprRef<T> {
 
   substring(
     this: ExprRef<string>,
-    start: ExprInput<number>,
-    length?: ExprInput<number>
+    start: ExprInput<SqlInt>,
+    length?: ExprInput<SqlInt>
   ): ExprRef<string> {
     const args = [this.node, toExprNode(start)];
     if (length !== undefined) args.push(toExprNode(length));
     return funcExpr("SUBSTRING", args);
   }
 
-  position(this: ExprRef<string>, needle: ExprInput<string>): ExprRef<number> {
+  position(this: ExprRef<string>, needle: ExprInput<string>): ExprRef<SqlInt> {
     return funcExpr("POSITION", [toExprNode(needle), this.node]);
   }
 
   overlay(
     this: ExprRef<string>,
     placing: ExprInput<string>,
-    start: ExprInput<number>,
-    length?: ExprInput<number>
+    start: ExprInput<SqlInt>,
+    length?: ExprInput<SqlInt>
   ): ExprRef<string> {
     const args = [this.node, toExprNode(placing), toExprNode(start)];
     if (length !== undefined) args.push(toExprNode(length));
     return funcExpr("OVERLAY", args);
   }
 
-  charLength(this: ExprRef<string>): ExprRef<number> {
+  charLength(this: ExprRef<string>): ExprRef<SqlInt> {
     return funcExpr("CHAR_LENGTH", [this.node]);
   }
 
-  characterLength(this: ExprRef<string>): ExprRef<number> {
+  characterLength(this: ExprRef<string>): ExprRef<SqlInt> {
     return funcExpr("CHARACTER_LENGTH", [this.node]);
   }
 
-  octetLength(this: ExprRef<string>): ExprRef<number> {
+  octetLength(this: ExprRef<string>): ExprRef<SqlInt> {
     return funcExpr("OCTET_LENGTH", [this.node]);
   }
 
-  bitLength(this: ExprRef<string>): ExprRef<number> {
+  bitLength(this: ExprRef<string>): ExprRef<SqlInt> {
     return funcExpr("BIT_LENGTH", [this.node]);
   }
 
@@ -259,11 +281,11 @@ export class ExprRef<T> {
     return { expr: this.node, direction: "DESC" };
   }
 
-  sumOver(
-    this: ExprRef<number>,
+  sumOver<T extends SqlNumber>(
+    this: ExprRef<T>,
     spec: WindowSpecInput = {}
-  ): ExprRef<number> {
-    return new WindowBuilder<number>("SUM", [this.node]).over(spec);
+  ): ExprRef<T> {
+    return new WindowBuilder<T>("SUM", [this.node]).over(spec);
   }
 
   cast<TTarget = any>(target: string): ExprRef<TTarget> {
@@ -275,6 +297,14 @@ export class ExprRef<T> {
       expr: this.node,
       target,
     });
+  }
+
+  toInt(this: ExprRef<SqlNumber>): ExprRef<SqlInt> {
+    return this.cast<SqlInt>("INTEGER");
+  }
+
+  toFloat(this: ExprRef<SqlNumber>): ExprRef<SqlFloat> {
+    return this.cast<SqlFloat>("FLOAT");
   }
 
   toDate(this: ExprRef<SqlTimestamp>): ExprRef<SqlDate> {
@@ -363,8 +393,8 @@ export function trim(value: ExprInput<string>): ExprRef<string> {
 
 export function substring(
   value: ExprInput<string>,
-  start: ExprInput<number>,
-  length?: ExprInput<number>
+  start: ExprInput<SqlInt>,
+  length?: ExprInput<SqlInt>
 ): ExprRef<string> {
   const args = [toExprNode(value), toExprNode(start)];
   if (length !== undefined) args.push(toExprNode(length));
@@ -374,34 +404,34 @@ export function substring(
 export function position(
   needle: ExprInput<string>,
   haystack: ExprInput<string>
-): ExprRef<number> {
+): ExprRef<SqlInt> {
   return funcExpr("POSITION", [toExprNode(needle), toExprNode(haystack)]);
 }
 
 export function overlay(
   value: ExprInput<string>,
   placing: ExprInput<string>,
-  start: ExprInput<number>,
-  length?: ExprInput<number>
+  start: ExprInput<SqlInt>,
+  length?: ExprInput<SqlInt>
 ): ExprRef<string> {
   const args = [toExprNode(value), toExprNode(placing), toExprNode(start)];
   if (length !== undefined) args.push(toExprNode(length));
   return funcExpr("OVERLAY", args);
 }
 
-export function charLength(value: ExprInput<string>): ExprRef<number> {
+export function charLength(value: ExprInput<string>): ExprRef<SqlInt> {
   return funcExpr("CHAR_LENGTH", [toExprNode(value)]);
 }
 
-export function characterLength(value: ExprInput<string>): ExprRef<number> {
+export function characterLength(value: ExprInput<string>): ExprRef<SqlInt> {
   return funcExpr("CHARACTER_LENGTH", [toExprNode(value)]);
 }
 
-export function octetLength(value: ExprInput<string>): ExprRef<number> {
+export function octetLength(value: ExprInput<string>): ExprRef<SqlInt> {
   return funcExpr("OCTET_LENGTH", [toExprNode(value)]);
 }
 
-export function bitLength(value: ExprInput<string>): ExprRef<number> {
+export function bitLength(value: ExprInput<string>): ExprRef<SqlInt> {
   return funcExpr("BIT_LENGTH", [toExprNode(value)]);
 }
 export function when<T>(

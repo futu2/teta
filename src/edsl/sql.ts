@@ -723,23 +723,24 @@ function exprToAst(expr: ExprNode<any>): any {
         over: buildWindowOver(expr.partitionBy, expr.orderBy),
       };
     case "case": {
-      const whens = expr.whens.map((item) => {
-        const cond = exprToAst(item.when);
-        const result = exprToAst(item.then);
-        return {
-          cond,
-          result,
-          when: cond,
-          then: result,
-        };
-      });
-      const elseExpr = expr.elseExpr ? exprToAst(expr.elseExpr) : null;
+      const whens = expr.whens.map((item) => ({
+        type: "when",
+        cond: exprToAst(item.when),
+        result: exprToAst(item.then),
+      }));
+      const args = expr.elseExpr
+        ? [
+            ...whens,
+            {
+              type: "else",
+              result: exprToAst(expr.elseExpr),
+            },
+          ]
+        : whens;
       return {
         type: "case",
         expr: null,
-        args: whens,
-        default: elseExpr,
-        else: elseExpr,
+        args,
       };
     }
     default:

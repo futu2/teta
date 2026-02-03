@@ -3,8 +3,12 @@ import type { AST, Option } from "node-sql-parser";
 export type DateLiteral = { kind: "date_literal"; value: string };
 export type TimestampLiteral = { kind: "timestamp_literal"; value: string };
 export type Value = string | number | boolean | null | DateLiteral | TimestampLiteral;
-export type SqlInt = number;
-export type SqlFloat = number;
+declare const __sqlInt: unique symbol;
+declare const __sqlFloat: unique symbol;
+
+export type SqlInt = number & { readonly [__sqlInt]: true };
+export type SqlFloat = number & { readonly [__sqlFloat]: true };
+export type SqlNumber = SqlInt | SqlFloat;
 export type SqlDate = string;
 export type SqlTimestamp = string;
 
