@@ -1,20 +1,16 @@
 import { table, t } from "./src/edsl";
 
-const users = table(
-  "users",
-  {
-    id: t.number(),
-    name: t.string(),
-    age: t.number(),
-    active: t.boolean(),
-  },
-  { schema: "analytics" }
-);
+const users = table("analytics.users", {
+  id: t.int(),
+  name: t.string(),
+  age: t.int(),
+  active: t.boolean(),
+});
 
 const orders = table("sales.orders", {
-  order_id: t.number(),
-  user_id: t.number(),
-  total: t.number(),
+  order_id: t.int(),
+  user_id: t.int(),
+  total: t.float(),
 });
 
 const joined = users

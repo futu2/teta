@@ -9,10 +9,13 @@ import type {
   OrderItem,
   QueryIR,
   QuerySpec,
+  SqlFloat,
+  SqlInt,
+  SqlDate,
   SqlFormat,
   SqlOptions,
+  SqlTimestamp,
   Stage,
-  TableOptions,
 } from "./types";
 import {
   ColumnRefs,
@@ -299,29 +302,14 @@ export class Query<TColumns extends Record<string, any>> {
 
 export const t = {
   string: () => ({ kind: "column_type" } as ColumnType<string>),
-  number: () => ({ kind: "column_type" } as ColumnType<number>),
+  int: () => ({ kind: "column_type" } as ColumnType<SqlInt>),
+  float: () => ({ kind: "column_type" } as ColumnType<SqlFloat>),
   boolean: () => ({ kind: "column_type" } as ColumnType<boolean>),
+  date: () => ({ kind: "column_type" } as ColumnType<SqlDate>),
+  timestamp: () => ({ kind: "column_type" } as ColumnType<SqlTimestamp>),
 };
 
-function isColumnSchema(
-  value: Record<string, ColumnType<any>> | TableOptions | undefined
-): value is Record<string, ColumnType<any>> {
-  if (!value || typeof value !== "object") return false;
-  const entries = Object.values(value);
-  if (entries.length === 0) return false;
-  return entries.every(
-    (entry) =>
-      typeof entry === "object" &&
-      entry !== null &&
-      (entry as ColumnType<any>).kind === "column_type"
-  );
-}
-
-function parseTableName(
-  name: string,
-  options?: TableOptions
-): { table: string; schema: string | null } {
-  if (options?.schema) return { table: name, schema: options.schema };
+function parseTableName(name: string): { table: string; schema: string | null } {
   const parts = name.split(".");
   if (parts.length === 2) {
     return { schema: parts[0], table: parts[1] };
@@ -329,24 +317,12 @@ function parseTableName(
   return { schema: null, table: name };
 }
 
-export function table<TColumns extends Record<string, any>>(
-  name: string,
-  options?: TableOptions
-): Query<TColumns>;
 export function table<S extends Record<string, ColumnType<any>>>(
   name: string,
-  schema: S,
-  options?: TableOptions
-): Query<InferSchema<S>>;
-export function table(
-  name: string,
-  schemaOrOptions?: Record<string, ColumnType<any>> | TableOptions,
-  options?: TableOptions
-): Query<Record<string, any>> {
-  const schema = isColumnSchema(schemaOrOptions) ? schemaOrOptions : undefined;
-  const resolvedOptions = schema ? options : (schemaOrOptions as TableOptions | undefined);
-  const columnNames = schema ? Object.keys(schema) : null;
-  const { table, schema: schemaName } = parseTableName(name, resolvedOptions);
+  schema: S
+): Query<InferSchema<S>> {
+  const columnNames = Object.keys(schema);
+  const { table, schema: schemaName } = parseTableName(name);
   const columns = createColumnRefs(null, columnNames);
   return new Query(
     { table, schema: schemaName, as: null },

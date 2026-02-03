@@ -1,9 +1,13 @@
 import type {
   BinaryOp,
   CaseWhenNode,
+  DateLiteral,
   ExprNode,
   OrderItem,
+  SqlDate,
+  SqlTimestamp,
   SelectItem,
+  TimestampLiteral,
   UnaryOp,
   Value,
 } from "./types";
@@ -243,6 +247,21 @@ export class ExprRef<T> {
   desc(): OrderItem {
     return { expr: this.node, direction: "DESC" };
   }
+
+  cast<TTarget = any>(target: string): ExprRef<TTarget> {
+    if (!target.trim()) {
+      throw new Error("cast requires a target type");
+    }
+    return new ExprRef<TTarget>({
+      kind: "cast",
+      expr: this.node,
+      target,
+    });
+  }
+
+  toDate(this: ExprRef<SqlTimestamp>): ExprRef<SqlDate> {
+    return this.cast<SqlDate>("DATE");
+  }
 }
 
 export class ColumnRef<T, Name extends string> extends ExprRef<T> {
@@ -290,6 +309,83 @@ export function windowFn<T = any>(
   return new WindowBuilder<T>(name, args.map((arg) => toExprNode(arg)));
 }
 
+export function currentDate(): ExprRef<SqlDate> {
+  return funcExpr("CURRENT_DATE", []);
+}
+
+export function currentTimestamp(): ExprRef<SqlTimestamp> {
+  return funcExpr("CURRENT_TIMESTAMP", []);
+}
+
+export function dateLiteral(value: string): ExprRef<SqlDate> {
+  return new ExprRef<SqlDate>({
+    kind: "literal",
+    value: { kind: "date_literal", value } as DateLiteral,
+  });
+}
+
+export function timestampLiteral(value: string): ExprRef<SqlTimestamp> {
+  return new ExprRef<SqlTimestamp>({
+    kind: "literal",
+    value: { kind: "timestamp_literal", value } as TimestampLiteral,
+  });
+}
+
+export function upper(value: ExprInput<string>): ExprRef<string> {
+  return funcExpr("UPPER", [toExprNode(value)]);
+}
+
+export function lower(value: ExprInput<string>): ExprRef<string> {
+  return funcExpr("LOWER", [toExprNode(value)]);
+}
+
+export function trim(value: ExprInput<string>): ExprRef<string> {
+  return funcExpr("TRIM", [toExprNode(value)]);
+}
+
+export function substring(
+  value: ExprInput<string>,
+  start: ExprInput<number>,
+  length?: ExprInput<number>
+): ExprRef<string> {
+  const args = [toExprNode(value), toExprNode(start)];
+  if (length !== undefined) args.push(toExprNode(length));
+  return funcExpr("SUBSTRING", args);
+}
+
+export function position(
+  needle: ExprInput<string>,
+  haystack: ExprInput<string>
+): ExprRef<number> {
+  return funcExpr("POSITION", [toExprNode(needle), toExprNode(haystack)]);
+}
+
+export function overlay(
+  value: ExprInput<string>,
+  placing: ExprInput<string>,
+  start: ExprInput<number>,
+  length?: ExprInput<number>
+): ExprRef<string> {
+  const args = [toExprNode(value), toExprNode(placing), toExprNode(start)];
+  if (length !== undefined) args.push(toExprNode(length));
+  return funcExpr("OVERLAY", args);
+}
+
+export function charLength(value: ExprInput<string>): ExprRef<number> {
+  return funcExpr("CHAR_LENGTH", [toExprNode(value)]);
+}
+
+export function characterLength(value: ExprInput<string>): ExprRef<number> {
+  return funcExpr("CHARACTER_LENGTH", [toExprNode(value)]);
+}
+
+export function octetLength(value: ExprInput<string>): ExprRef<number> {
+  return funcExpr("OCTET_LENGTH", [toExprNode(value)]);
+}
+
+export function bitLength(value: ExprInput<string>): ExprRef<number> {
+  return funcExpr("BIT_LENGTH", [toExprNode(value)]);
+}
 export function when<T>(
   condition: ExprInput<boolean>,
   value: ExprInput<T>
@@ -437,6 +533,12 @@ export function toExprNode<T>(value: ExprInput<T>): ExprNode<any> {
   if (type === "string" || type === "number" || type === "boolean") {
     return { kind: "literal", value };
   }
+  if (type === "object") {
+    const literal = value as DateLiteral | TimestampLiteral;
+    if (literal.kind === "date_literal" || literal.kind === "timestamp_literal") {
+      return { kind: "literal", value: literal };
+    }
+  }
   throw new Error(`Unsupported literal value: ${String(value)}`);
 }
 
@@ -454,6 +556,8 @@ export function containsGroup(expr: ExprNode<any>, inAgg = false): boolean {
       return containsGroup(expr.arg, true);
     case "func":
       return expr.args.some((arg) => containsGroup(arg, inAgg));
+    case "cast":
+      return containsGroup(expr.expr, inAgg);
     case "window":
       return (
         expr.args.some((arg) => containsGroup(arg, inAgg)) ||
@@ -508,6 +612,11 @@ export function unwrapGroupExpr(
       return {
         ...expr,
         args: expr.args.map((arg) => unwrapGroupExpr(arg, groupBy, inAgg)),
+      };
+    case "cast":
+      return {
+        ...expr,
+        expr: unwrapGroupExpr(expr.expr, groupBy, inAgg),
       };
     case "window":
       return {

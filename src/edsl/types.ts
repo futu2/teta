@@ -1,6 +1,12 @@
 import type { AST, Option } from "node-sql-parser";
 
-export type Value = string | number | boolean | null;
+export type DateLiteral = { kind: "date_literal"; value: string };
+export type TimestampLiteral = { kind: "timestamp_literal"; value: string };
+export type Value = string | number | boolean | null | DateLiteral | TimestampLiteral;
+export type SqlInt = number;
+export type SqlFloat = number;
+export type SqlDate = string;
+export type SqlTimestamp = string;
 
 export type BinaryOp =
   | "="
@@ -62,6 +68,7 @@ export type ExprNode<T> =
   | AggNode
   | GroupNode
   | FuncNode
+  | CastNode
   | WindowNode
   | CaseNode;
 
@@ -105,6 +112,12 @@ export type FuncNode = {
   kind: "func";
   name: string;
   args: ExprNode<any>[];
+};
+
+export type CastNode = {
+  kind: "cast";
+  expr: ExprNode<any>;
+  target: string;
 };
 
 export type WindowNode = {
@@ -177,7 +190,6 @@ export type QuerySpec = {
 };
 
 export type ColumnType<T> = { kind: "column_type"; _type?: T };
-export type TableOptions = { schema?: string };
 
 export type InferSchema<S extends Record<string, ColumnType<any>>> = {
   [K in keyof S]: S[K] extends ColumnType<infer T> ? T : never;

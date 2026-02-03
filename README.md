@@ -16,15 +16,15 @@ This project was created using `bun init` in bun v1.3.6. [Bun](https://bun.com) 
 
 ## EDSL example
 
-Note: to avoid `SELECT *`, provide a schema when calling `table(...)`. Without a schema, any step that needs implicit “select all” will throw because column names are unknown.
+Note: `table(...)` requires a schema to avoid `SELECT *` and keep column names explicit.
 
 ```ts
 import { table, t } from "./src/edsl";
 
 const users = table("users", {
-  id: t.number(),
+  id: t.int(),
   name: t.string(),
-  age: t.number(),
+  age: t.int(),
   active: t.boolean(),
 });
 
@@ -47,18 +47,14 @@ console.log(q.toSql("Postgresql", "pretty"));
 import { table, t } from "./src/edsl";
 
 const users = table("analytics.users", {
-  id: t.number(),
+  id: t.int(),
   name: t.string(),
 });
 
-const orders = table(
-  "orders",
-  {
-    order_id: t.number(),
-    user_id: t.number(),
-  },
-  { schema: "sales" }
-);
+const orders = table("sales.orders", {
+  order_id: t.int(),
+  user_id: t.int(),
+});
 ```
 
 ## Tutorial
@@ -71,9 +67,9 @@ This section shows EDSL snippets and the SQL they generate.
 import { table, t } from "./src/edsl";
 
 const users = table("users", {
-  id: t.number(),
+  id: t.int(),
   name: t.string(),
-  age: t.number(),
+  age: t.int(),
   active: t.boolean(),
 });
 
@@ -109,14 +105,14 @@ LIMIT 5
 import { table, t } from "./src/edsl";
 
 const users = table("users", {
-  id: t.number(),
+  id: t.int(),
   name: t.string(),
 });
 
 const orders = table("orders", {
-  order_id: t.number(),
-  user_id: t.number(),
-  total: t.number(),
+  order_id: t.int(),
+  user_id: t.int(),
+  total: t.float(),
 });
 
 const q = users
@@ -149,7 +145,7 @@ GROUP BY id
 import { table, t, f } from "./src/edsl";
 
 const names = table("names", {
-  id: t.number(),
+  id: t.int(),
   prefix: t.string(),
   first: t.string(),
   last: t.string(),
@@ -180,9 +176,9 @@ Each chained step is compiled into a CTE, so changing the order of operations is
 import { table, t } from "./src/edsl";
 
 const users = table("users", {
-  id: t.number(),
+  id: t.int(),
   name: t.string(),
-  age: t.number(),
+  age: t.int(),
   active: t.boolean(),
 });
 
@@ -200,14 +196,14 @@ console.log(q.toSql());
 import { table, t } from "./src/edsl";
 
 const users = table("users", {
-  id: t.number(),
+  id: t.int(),
   name: t.string(),
 });
 
 const orders = table("orders", {
-  order_id: t.number(),
-  user_id: t.number(),
-  total: t.number(),
+  order_id: t.int(),
+  user_id: t.int(),
+  total: t.float(),
 });
 
 const q = users
@@ -234,9 +230,9 @@ There is no separate `groupBy` step.
 import { table, t } from "./src/edsl";
 
 const orders = table("orders", {
-  id: t.number(),
-  user_id: t.number(),
-  total: t.number(),
+  id: t.int(),
+  user_id: t.int(),
+  total: t.float(),
 });
 
 const q = orders
@@ -256,9 +252,9 @@ console.log(q.toSql());
 import { table, t } from "./src/edsl";
 
 const users = table("users", {
-  id: t.number(),
+  id: t.int(),
   name: t.string(),
-  age: t.number(),
+  age: t.int(),
 });
 
 const q = users.select((u) => ({
@@ -276,7 +272,7 @@ console.log(q.toSql("Postgresql", "pretty"));
 import { table, t, f } from "./src/edsl";
 
 const users = table("users", {
-  id: t.number(),
+  id: t.int(),
   first_name: t.string(),
   last_name: t.string(),
 });
@@ -294,7 +290,7 @@ const q = users.select((u) => ({
 import { table, t, fn, windowFn } from "./src/edsl";
 
 const users = table("users", {
-  id: t.number(),
+  id: t.int(),
   name: t.string(),
 });
 
@@ -311,7 +307,7 @@ const q = users.select((u) => ({
 import { table, t } from "./src/edsl";
 
 const users = table("users", {
-  id: t.number(),
+  id: t.int(),
   name: t.string(),
 });
 
@@ -326,14 +322,51 @@ const q = users.select((u) => ({
 }));
 ```
 
+### SQL standard date/time helpers
+
+```ts
+import { table, t, currentDate, currentTimestamp, dateLiteral, timestampLiteral } from "./src/edsl";
+
+const posts = table("posts", {
+  id: t.int(),
+  published_on: t.date(),
+  created_at: t.timestamp(),
+});
+
+const q = posts.select((p) => ({
+  today: currentDate(),
+  now: currentTimestamp(),
+  go_live: dateLiteral("2024-02-03"),
+  created_at: timestampLiteral("2024-02-03 12:34:56"),
+  created_on: p.created_at.toDate(),
+}));
+```
+
+### CAST helpers
+
+```ts
+import { table, t } from "./src/edsl";
+
+const orders = table("orders", {
+  id: t.int(),
+  total: t.float(),
+  created_at: t.timestamp(),
+});
+
+const q = orders.select((o) => ({
+  total_text: o.total.cast<string>("TEXT"),
+  created_date: o.created_at.toDate(),
+}));
+```
+
 ### CASE WHEN
 
 ```ts
 import { table, t, when } from "./src/edsl";
 
 const users = table("users", {
-  id: t.number(),
-  age: t.number(),
+  id: t.int(),
+  age: t.int(),
 });
 
 const q = users.select((u) => ({
@@ -350,14 +383,14 @@ const q = users.select((u) => ({
 import { table, t } from "./src/edsl";
 
 const activeUsers = table("users", {
-  id: t.number(),
+  id: t.int(),
   name: t.string(),
   active: t.boolean(),
 }).filter((u) => u.active.eq(true))
   .select((u) => ({ id: u.id, name: u.name }));
 
 const inactiveUsers = table("users", {
-  id: t.number(),
+  id: t.int(),
   name: t.string(),
   active: t.boolean(),
 }).filter((u) => u.active.eq(false))
@@ -372,16 +405,16 @@ const allUsers = activeUsers.unionAll(inactiveUsers);
 import { loop, table, t } from "./src/edsl";
 
 const employees = table("employees", {
-  id: t.number(),
+  id: t.int(),
   name: t.string(),
-  manager_id: t.number(),
+  manager_id: t.int(),
 });
 
 const orgTree = loop(
   {
-    id: t.number(),
+    id: t.int(),
     name: t.string(),
-    manager_id: t.number(),
+    manager_id: t.int(),
   },
   (self) => ({
     base: employees

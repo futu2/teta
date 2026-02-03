@@ -496,6 +496,11 @@ function stripTableRefs(
         ...expr,
         args: expr.args.map((arg) => stripTableRefs(arg, keepTables)),
       };
+    case "cast":
+      return {
+        ...expr,
+        expr: stripTableRefs(expr.expr, keepTables),
+      };
     case "window":
       return {
         ...expr,
@@ -525,6 +530,8 @@ function stripTableRefs(
       return expr;
   }
 }
+
+const keywordFunctions = new Set(["CURRENT_DATE", "CURRENT_TIMESTAMP"]);
 
 function exprToAst(expr: ExprNode<any>): any {
   switch (expr.kind) {
@@ -564,11 +571,30 @@ function exprToAst(expr: ExprNode<any>): any {
       };
     case "group":
       return exprToAst(expr.expr);
-    case "func":
+    case "cast":
+      return {
+        type: "cast",
+        keyword: "cast",
+        expr: exprToAst(expr.expr),
+        symbol: "as",
+        target: [{ dataType: expr.target.toUpperCase() }],
+      };
+    case "func": {
+      const normalized = expr.name.trim();
+      const upperName = normalized.toUpperCase();
+      if (expr.args.length === 0 && keywordFunctions.has(upperName)) {
+        return {
+          type: "function",
+          name: {
+            name: [{ type: "origin", value: upperName }],
+          },
+          over: null,
+        };
+      }
       return {
         type: "function",
         name: {
-          name: [{ type: "default", value: expr.name.toLowerCase() }],
+          name: [{ type: "default", value: normalized.toLowerCase() }],
         },
         args: {
           type: "expr_list",
@@ -576,6 +602,7 @@ function exprToAst(expr: ExprNode<any>): any {
         },
         over: null,
       };
+    }
     case "window":
       return {
         type: "function",
@@ -615,6 +642,16 @@ function exprToAst(expr: ExprNode<any>): any {
 
 function literalToAst(value: Value): any {
   if (value === null) return { type: "null", value: null };
+  if (typeof value === "object") {
+    switch (value.kind) {
+      case "date_literal":
+        return { type: "date", value: value.value };
+      case "timestamp_literal":
+        return { type: "timestamp", value: value.value };
+      default:
+        return assertNever(value);
+    }
+  }
   switch (typeof value) {
     case "string":
       return { type: "string", value };
