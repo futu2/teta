@@ -80,6 +80,7 @@ function compileLoopPart(
     schema: source.schema,
     as: source.as,
   });
+  const baseAlias = ensureAlias(baseFrom);
   const from: any[] = [baseFrom];
   let whereExpr: ExprNode<any> | null = null;
   let selectItems: SelectItem[] | null = null;
@@ -102,6 +103,7 @@ function compileLoopPart(
           }
         }
         if (stage.as) keepTables.add(stage.as);
+        keepTables.add(baseAlias);
         const join = `${stage.joinType} JOIN`;
         from.push(
           stage.source.kind === "table"
@@ -111,7 +113,7 @@ function compileLoopPart(
                 table: stage.source.table,
                 as: stage.as,
                 join,
-                on: exprToAst(stripTableRefs(stage.on, keepTables)),
+                on: exprToAst(qualifyForBase(stage.on, baseAlias, keepTables)),
               }
             : {
                 expr: {
@@ -122,7 +124,7 @@ function compileLoopPart(
                 },
                 as: stage.as,
                 join,
-                on: exprToAst(stripTableRefs(stage.on, keepTables)),
+                on: exprToAst(qualifyForBase(stage.on, baseAlias, keepTables)),
               }
         );
         break;
@@ -169,14 +171,14 @@ function compileLoopPart(
   return buildSelectAst({
     from,
     columns: selectItems.map((item) => ({
-      expr: exprToAst(stripTableRefs(item.expr, keepTables)),
+      expr: exprToAst(qualifyForBase(item.expr, baseAlias, keepTables)),
       as: item.as,
     })),
-    where: whereExpr ? exprToAst(stripTableRefs(whereExpr, keepTables)) : null,
+    where: whereExpr ? exprToAst(qualifyForBase(whereExpr, baseAlias, keepTables)) : null,
     groupby: groupBy
       ? {
           columns: groupBy.map((expr) =>
-            exprToAst(stripTableRefs(expr, keepTables))
+            exprToAst(qualifyForBase(expr, baseAlias, keepTables))
           ),
           modifiers: [],
         }
@@ -195,18 +197,18 @@ function buildPipelineAst(
 ): { ast: AST; ctes: With[] } {
   const ctePrefix = options?.ctePrefix ?? "";
   if (stages.length === 0) {
+    const baseFrom = sourceToFrom({
+      kind: "table",
+      name: source.table,
+      schema: source.schema,
+      as: source.as,
+    });
+    const baseAlias = ensureAlias(baseFrom);
     return {
       ast: buildSelectAst({
-        from: [
-          sourceToFrom({
-            kind: "table",
-            name: source.table,
-            schema: source.schema,
-            as: source.as,
-          }),
-        ],
+        from: [baseFrom],
         columns: selectAllItems(columns, columnNames).map((item) => ({
-          expr: exprToAst(item.expr),
+          expr: exprToAst(qualifyForBase(item.expr, baseAlias)),
           as: item.as,
         })),
         where: null,
@@ -256,22 +258,23 @@ function buildPipelineAst(
 
 function stageToSelect(stage: Stage, source: SourceRef): AST {
   const baseFrom = sourceToFrom(source);
+  const baseAlias = ensureAlias(baseFrom);
   switch (stage.kind) {
     case "select":
       return buildSelectAst({
         from: [baseFrom],
         columns: stage.items.map((item) => ({
-          expr: exprToAst(stripTableRefs(item.expr)),
+          expr: exprToAst(qualifyForBase(item.expr, baseAlias)),
           as: item.as,
         })),
         where: null,
         groupby: stage.groupBy
           ? {
-              columns: stage.groupBy.map((expr) =>
-                exprToAst(stripTableRefs(expr))
-              ),
-              modifiers: [],
-            }
+            columns: stage.groupBy.map((expr) =>
+              exprToAst(qualifyForBase(expr, baseAlias))
+            ),
+            modifiers: [],
+          }
           : null,
         orderby: null,
         limit: null,
@@ -280,10 +283,10 @@ function stageToSelect(stage: Stage, source: SourceRef): AST {
       return buildSelectAst({
         from: [baseFrom],
         columns: stage.selectAll.map((item) => ({
-          expr: exprToAst(stripTableRefs(item.expr)),
+          expr: exprToAst(qualifyForBase(item.expr, baseAlias)),
           as: item.as,
         })),
-        where: exprToAst(stripTableRefs(stage.predicate)),
+        where: exprToAst(qualifyForBase(stage.predicate, baseAlias)),
         groupby: null,
         orderby: null,
         limit: null,
@@ -292,13 +295,13 @@ function stageToSelect(stage: Stage, source: SourceRef): AST {
       return buildSelectAst({
         from: [baseFrom],
         columns: stage.selectAll.map((item) => ({
-          expr: exprToAst(stripTableRefs(item.expr)),
+          expr: exprToAst(qualifyForBase(item.expr, baseAlias)),
           as: item.as,
         })),
         where: null,
         groupby: null,
         orderby: stage.items.map((item) => ({
-          expr: exprToAst(stripTableRefs(item.expr)),
+          expr: exprToAst(qualifyForBase(item.expr, baseAlias)),
           type: item.direction,
         })),
         limit: null,
@@ -307,7 +310,7 @@ function stageToSelect(stage: Stage, source: SourceRef): AST {
       return buildSelectAst({
         from: [baseFrom],
         columns: stage.selectAll.map((item) => ({
-          expr: exprToAst(stripTableRefs(item.expr)),
+          expr: exprToAst(qualifyForBase(item.expr, baseAlias)),
           as: item.as,
         })),
         where: null,
@@ -331,7 +334,7 @@ function stageToSelect(stage: Stage, source: SourceRef): AST {
                 table: stage.source.table,
                 as: stage.as,
                 join,
-                on: exprToAst(stripTableRefs(stage.on, keepTables)),
+                on: exprToAst(qualifyForBase(stage.on, baseAlias, keepTables)),
               }
             : {
                 expr: {
@@ -342,11 +345,11 @@ function stageToSelect(stage: Stage, source: SourceRef): AST {
                 },
                 as: stage.as,
                 join,
-                on: exprToAst(stripTableRefs(stage.on, keepTables)),
+                on: exprToAst(qualifyForBase(stage.on, baseAlias, keepTables)),
               },
         ],
         columns: stage.selectAll.map((item) => ({
-          expr: exprToAst(stripTableRefs(item.expr, keepTables)),
+          expr: exprToAst(qualifyForBase(item.expr, baseAlias, keepTables)),
           as: item.as,
         })),
         where: null,
@@ -407,8 +410,7 @@ function hoistJoinSubquery(
   ctePrefix: string
 ): Stage {
   if (stage.kind !== "join" || stage.source.kind !== "subquery") return stage;
-  const baseName = stage.as ? `${ctePrefix}${stage.as}` : `${ctePrefix}join_${ctes.length}`;
-  const cteName = baseName;
+  const cteName = `${ctePrefix}join_${ctes.length}`;
   ctes.push({
     name: { value: cteName },
     stmt: {
@@ -420,7 +422,7 @@ function hoistJoinSubquery(
   return {
     ...stage,
     source: { kind: "table", table: cteName, schema: null },
-    as: stage.as === cteName ? null : stage.as,
+    as: stage.as,
   };
 }
 
@@ -431,10 +433,11 @@ function compileUnionStage(
   rightPrefix: string
 ): AST {
   const baseFrom = sourceToFrom(source);
+  const baseAlias = ensureAlias(baseFrom);
   const leftAst = buildSelectAst({
     from: [baseFrom],
     columns: stage.selectAll.map((item) => ({
-      expr: exprToAst(stripTableRefs(item.expr)),
+      expr: exprToAst(qualifyForBase(item.expr, baseAlias)),
       as: item.as,
     })),
     where: null,
@@ -496,6 +499,11 @@ function stripTableRefs(
         ...expr,
         args: expr.args.map((arg) => stripTableRefs(arg, keepTables)),
       };
+    case "extract":
+      return {
+        ...expr,
+        source: stripTableRefs(expr.source, keepTables),
+      };
     case "cast":
       return {
         ...expr,
@@ -529,6 +537,96 @@ function stripTableRefs(
     default:
       return expr;
   }
+}
+
+function ensureAlias(from: { as?: string | null; table?: string | null }): string {
+  if (from.as) return from.as;
+  const base = from.table ?? "t";
+  const alias = `${base}_0`;
+  from.as = alias;
+  return alias;
+}
+
+function qualifyMissingTables(
+  expr: ExprNode<any>,
+  table: string
+): ExprNode<any> {
+  switch (expr.kind) {
+    case "column":
+      if (expr.table) return expr;
+      return { ...expr, table };
+    case "binary":
+      return {
+        ...expr,
+        left: qualifyMissingTables(expr.left, table),
+        right: qualifyMissingTables(expr.right, table),
+      };
+    case "unary":
+      return {
+        ...expr,
+        expr: qualifyMissingTables(expr.expr, table),
+      };
+    case "agg":
+      return {
+        ...expr,
+        arg: qualifyMissingTables(expr.arg, table),
+      };
+    case "group":
+      return {
+        ...expr,
+        expr: qualifyMissingTables(expr.expr, table),
+      };
+    case "func":
+      return {
+        ...expr,
+        args: expr.args.map((arg) => qualifyMissingTables(arg, table)),
+      };
+    case "extract":
+      return {
+        ...expr,
+        source: qualifyMissingTables(expr.source, table),
+      };
+    case "cast":
+      return {
+        ...expr,
+        expr: qualifyMissingTables(expr.expr, table),
+      };
+    case "window":
+      return {
+        ...expr,
+        args: expr.args.map((arg) => qualifyMissingTables(arg, table)),
+        partitionBy: expr.partitionBy
+          ? expr.partitionBy.map((arg) => qualifyMissingTables(arg, table))
+          : null,
+        orderBy: expr.orderBy
+          ? expr.orderBy.map((item) => ({
+              ...item,
+              expr: qualifyMissingTables(item.expr, table),
+            }))
+          : null,
+      };
+    case "case":
+      return {
+        ...expr,
+        whens: expr.whens.map((item) => ({
+          when: qualifyMissingTables(item.when, table),
+          then: qualifyMissingTables(item.then, table),
+        })),
+        elseExpr: expr.elseExpr
+          ? qualifyMissingTables(expr.elseExpr, table)
+          : null,
+      };
+    default:
+      return expr;
+  }
+}
+
+function qualifyForBase(
+  expr: ExprNode<any>,
+  baseAlias: string,
+  keepTables?: Set<string>
+): ExprNode<any> {
+  return qualifyMissingTables(stripTableRefs(expr, keepTables), baseAlias);
 }
 
 const keywordFunctions = new Set(["CURRENT_DATE", "CURRENT_TIMESTAMP"]);
@@ -571,6 +669,15 @@ function exprToAst(expr: ExprNode<any>): any {
       };
     case "group":
       return exprToAst(expr.expr);
+    case "extract":
+      return {
+        type: "extract",
+        args: {
+          field: expr.field.toLowerCase(),
+          cast_type: null,
+          source: exprToAst(expr.source),
+        },
+      };
     case "cast":
       return {
         type: "cast",

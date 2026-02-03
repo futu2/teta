@@ -266,6 +266,21 @@ const q = users.select((u) => ({
 console.log(q.toSql("Postgresql", "pretty"));
 ```
 
+```ts
+import { table, t } from "./src/edsl";
+
+const orders = table("orders", {
+  id: t.int(),
+  total: t.float(),
+  created_at: t.timestamp(),
+});
+
+const q = orders.select((o) => ({
+  id: o.id,
+  running_total: o.total.sumOver({ orderBy: o.created_at.asc() }),
+}));
+```
+
 ### String concat
 
 ```ts
@@ -344,6 +359,10 @@ const q = posts.select((p) => ({
 
 ### CAST helpers
 
+Use `cast<T>(type)` on any expression to emit `CAST(expr AS type)`.
+If you already know the type you want, add a generic to keep the result typed.
+For timestamps, `toDate()` is a convenience for `CAST(ts AS DATE)`.
+
 ```ts
 import { table, t } from "./src/edsl";
 
@@ -357,6 +376,24 @@ const q = orders.select((o) => ({
   total_text: o.total.cast<string>("TEXT"),
   created_date: o.created_at.toDate(),
 }));
+```
+
+```ts
+import { table, t } from "./src/edsl";
+
+const users = table("users", {
+  id: t.int(),
+  age_text: t.string(),
+  created_at: t.timestamp(),
+});
+
+const q = users
+  .filter((u) => u.age_text.cast<number>("INTEGER").gt(18))
+  .select((u) => ({
+    id: u.id,
+    age_int: u.age_text.cast<number>("INTEGER"),
+    created_day: u.created_at.cast<string>("DATE"),
+  }));
 ```
 
 ### CASE WHEN

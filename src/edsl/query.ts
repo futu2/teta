@@ -385,7 +385,7 @@ function autoAlias(table: string, stages: Stage[]): string {
   }, 0);
   const base = table.replace(/[^A-Za-z0-9_]+/g, "_").replace(/^_+|_+$/g, "");
   const name = base.length ? base : "t";
-  return `${name}_j${joinCount + 1}`;
+  return `${name}_${joinCount + 1}`;
 }
 
 function normalizeJoinType(type: JoinTypeInput): JoinType {

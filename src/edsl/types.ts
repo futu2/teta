@@ -68,6 +68,7 @@ export type ExprNode<T> =
   | AggNode
   | GroupNode
   | FuncNode
+  | ExtractNode
   | CastNode
   | WindowNode
   | CaseNode;
@@ -112,6 +113,12 @@ export type FuncNode = {
   kind: "func";
   name: string;
   args: ExprNode<any>[];
+};
+
+export type ExtractNode = {
+  kind: "extract";
+  field: string;
+  source: ExprNode<any>;
 };
 
 export type CastNode = {

@@ -83,6 +83,17 @@ export class ExprRef<T> {
     return binaryExpr("/", this.node, toExprNode(value));
   }
 
+  extract(this: ExprRef<any>, field: string): ExprRef<number> {
+    if (!field.trim()) {
+      throw new Error("extract requires a field");
+    }
+    return new ExprRef<number>({
+      kind: "extract",
+      field,
+      source: this.node,
+    });
+  }
+
   group(this: ExprRef<T>): ExprRef<T> {
     return new ExprRef<T>({ kind: "group", expr: this.node });
   }
@@ -246,6 +257,13 @@ export class ExprRef<T> {
 
   desc(): OrderItem {
     return { expr: this.node, direction: "DESC" };
+  }
+
+  sumOver(
+    this: ExprRef<number>,
+    spec: WindowSpecInput = {}
+  ): ExprRef<number> {
+    return new WindowBuilder<number>("SUM", [this.node]).over(spec);
   }
 
   cast<TTarget = any>(target: string): ExprRef<TTarget> {
@@ -556,6 +574,8 @@ export function containsGroup(expr: ExprNode<any>, inAgg = false): boolean {
       return containsGroup(expr.arg, true);
     case "func":
       return expr.args.some((arg) => containsGroup(arg, inAgg));
+    case "extract":
+      return containsGroup(expr.source, inAgg);
     case "cast":
       return containsGroup(expr.expr, inAgg);
     case "window":
@@ -612,6 +632,11 @@ export function unwrapGroupExpr(
       return {
         ...expr,
         args: expr.args.map((arg) => unwrapGroupExpr(arg, groupBy, inAgg)),
+      };
+    case "extract":
+      return {
+        ...expr,
+        source: unwrapGroupExpr(expr.source, groupBy, inAgg),
       };
     case "cast":
       return {
