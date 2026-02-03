@@ -18,6 +18,9 @@ This project was created using `bun init` in bun v1.3.6. [Bun](https://bun.com) 
 
 Note: `table(...)` requires a schema to avoid `SELECT *` and keep column names explicit.
 
+Generated SQL always uses auto-generated aliases (e.g., `users_0`, `orders_1`) and fully
+qualified column references.
+
 ```ts
 import { table, t } from "./src/edsl";
 
@@ -86,16 +89,16 @@ Generated SQL:
 
 ```sql
 WITH cte_0 AS (
-SELECT id, name, age, active
-FROM users
-WHERE active = TRUE AND age >= 18), cte_1 AS (
-SELECT id, name, age
-FROM cte_0), cte_2 AS (
-SELECT id, name, age
-FROM cte_1
-ORDER BY age DESC, id ASC)
-SELECT id, name, age
-FROM cte_2
+SELECT users_0.id, users_0.name, users_0.age, users_0.active
+FROM users AS users_0
+WHERE users_0.active = TRUE AND users_0.age >= 18), cte_1 AS (
+SELECT cte_0_0.id, cte_0_0.name, cte_0_0.age
+FROM cte_0 AS cte_0_0), cte_2 AS (
+SELECT cte_1_0.id, cte_1_0.name, cte_1_0.age
+FROM cte_1 AS cte_1_0
+ORDER BY cte_1_0.age DESC, cte_1_0.id ASC)
+SELECT cte_2_0.id, cte_2_0.name, cte_2_0.age
+FROM cte_2 AS cte_2_0
 LIMIT 5
 ```
 
@@ -130,13 +133,13 @@ Generated SQL:
 
 ```sql
 WITH cte_0 AS (
-SELECT id, name, orders_j1.order_id AS order_id, orders_j1.user_id AS user_id, orders_j1.total AS total
-FROM users
-LEFT JOIN orders AS orders_j1
-ON id = orders_j1.user_id)
-SELECT id AS user_id, COUNT(order_id) AS order_count, SUM(total) AS total_spend
-FROM cte_0
-GROUP BY id
+SELECT users_0.id, users_0.name, orders_1.order_id AS order_id, orders_1.user_id AS user_id, orders_1.total AS total
+FROM users AS users_0
+LEFT JOIN orders AS orders_1
+ON users_0.id = orders_1.user_id)
+SELECT cte_0_0.id AS user_id, COUNT(cte_0_0.order_id) AS order_count, SUM(cte_0_0.total) AS total_spend
+FROM cte_0 AS cte_0_0
+GROUP BY cte_0_0.id
 ```
 
 ### 3) String concat with template helper
@@ -162,8 +165,8 @@ console.log(q.toSql("postgresql", "pretty"));
 Generated SQL:
 
 ```sql
-SELECT concat(prefix, ' ', first, ' ', last, ' ', suffix) AS title
-FROM names
+SELECT concat(names_0.prefix, ' ', names_0.first, ' ', names_0.last, ' ', names_0.suffix) AS title
+FROM names AS names_0
 ```
 
 ## More examples
