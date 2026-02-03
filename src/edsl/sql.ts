@@ -860,6 +860,7 @@ function normalizeDialect(dialect: Dialect): string {
 
 export function formatSqlPretty(sql: string): string {
   const keywords = [
+    "WITH RECURSIVE",
     "WITH",
     "SELECT",
     "FROM",
@@ -882,6 +883,35 @@ export function formatSqlPretty(sql: string): string {
   let inDouble = false;
   let inBacktick = false;
   let inBracket = false;
+  let parenDepth = 0;
+  let inWith = false;
+  const mainQueryKeywords = new Set(["SELECT", "INSERT", "UPDATE", "DELETE"]);
+  const withKeywords = new Set(["WITH", "WITH RECURSIVE"]);
+  const cteIndent = "  ";
+  const cteBodyIndent = "  ";
+
+  const isLineStart = (text: string) => {
+    const idx = text.lastIndexOf("\n");
+    const tail = idx === -1 ? text : text.slice(idx + 1);
+    return /^[ \t]*$/.test(tail);
+  };
+
+  const trimTrailingSpacesIfContent = () => {
+    const idx = out.lastIndexOf("\n");
+    const tail = idx === -1 ? out : out.slice(idx + 1);
+    if (/[^ \t]/.test(tail)) out = out.replace(/[ \t]+$/g, "");
+  };
+
+  const getIndent = (lineInWith: boolean) => {
+    if (!lineInWith) return "";
+    return parenDepth > 0 ? cteIndent + cteBodyIndent : cteIndent;
+  };
+
+  const appendNewline = (indent: string) => {
+    trimTrailingSpacesIfContent();
+    if (out.length > 0 && !isLineStart(out)) out += "\n";
+    if (indent) out += indent;
+  };
 
   while (i < sql.length) {
     const ch = sql[i];
@@ -917,21 +947,45 @@ export function formatSqlPretty(sql: string): string {
     }
 
     if (!inSingle && !inDouble && !inBacktick && !inBracket) {
+      if (inWith && parenDepth === 0 && ch === ",") {
+        trimTrailingSpacesIfContent();
+        out += ",";
+        i += 1;
+        while (i < sql.length && (sql[i] === " " || sql[i] === "\t")) i += 1;
+        appendNewline(getIndent(true));
+        continue;
+      }
       const match = matchKeyword(sql, i, ordered);
       if (match) {
-        out = out.replace(/[ \t]+$/g, "");
-        if (out.length > 0 && !out.endsWith("\n")) out += "\n";
+        const upper = match.text.toUpperCase();
+        const isWithKeyword = withKeywords.has(upper);
+        let nextInWith = inWith;
+        if (parenDepth === 0) {
+          if (isWithKeyword) nextInWith = true;
+          else if (inWith && mainQueryKeywords.has(upper)) nextInWith = false;
+        }
+        const lineInWith = isWithKeyword ? false : nextInWith;
+        appendNewline(getIndent(lineInWith));
         out += match.text;
         i += match.length;
+        inWith = nextInWith;
+        if (isWithKeyword && parenDepth === 0) {
+          appendNewline(getIndent(true));
+          while (i < sql.length && (sql[i] === " " || sql[i] === "\t")) i += 1;
+        }
         continue;
       }
     }
 
     out += ch;
     i += 1;
+    if (!inSingle && !inDouble && !inBacktick && !inBracket) {
+      if (ch === "(") parenDepth += 1;
+      else if (ch === ")" && parenDepth > 0) parenDepth -= 1;
+    }
   }
 
-  return out.replace(/[ \t]+\n/g, "\n").replace(/\n[ \t]+/g, "\n").trim();
+  return out.replace(/[ \t]+\n/g, "\n").trim();
 }
 
 export function stripRedundantQuotes(sql: string): string {
