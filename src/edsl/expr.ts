@@ -185,6 +185,19 @@ export class ExprRef<T> {
     return funcExpr("SQRT", [this.node]);
   }
 
+  greatest<T extends SqlNumber>(
+    this: ExprRef<T>,
+    ...values: ExprInput<T>[]
+  ): ExprRef<T> {
+    if (values.length === 0) {
+      throw new Error("greatest requires at least one value");
+    }
+    return funcExpr("GREATEST", [
+      this.node,
+      ...values.map((value) => toExprNode(value)),
+    ]);
+  }
+
   replace(
     this: ExprRef<string>,
     search: ExprInput<string>,
@@ -203,6 +216,10 @@ export class ExprRef<T> {
 
   lower(this: ExprRef<string>): ExprRef<string> {
     return funcExpr("LOWER", [this.node]);
+  }
+
+  reverse(this: ExprRef<string>): ExprRef<string> {
+    return funcExpr("REVERSE", [this.node]);
   }
 
   trim(this: ExprRef<string>): ExprRef<string> {

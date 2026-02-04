@@ -689,6 +689,24 @@ function exprToAst(expr: ExprNode<any>): any {
     case "func": {
       const normalized = expr.name.trim();
       const upperName = normalized.toUpperCase();
+      if (upperName === "POSITION" && expr.args.length === 2) {
+        return {
+          type: "function",
+          name: {
+            name: [{ type: "origin", value: "position" }],
+          },
+          separator: " ",
+          args: {
+            type: "expr_list",
+            value: [
+              exprToAst(expr.args[0]),
+              { type: "origin", value: "in" },
+              exprToAst(expr.args[1]),
+            ],
+          },
+          over: null,
+        };
+      }
       if (expr.args.length === 0 && keywordFunctions.has(upperName)) {
         return {
           type: "function",
