@@ -196,7 +196,8 @@ export class Query<TColumns extends Record<string, any>> {
               right.source,
               right.stages,
               right.columns as ColumnRefs<Record<string, any>>,
-              right.columnNames
+              right.columnNames,
+              { ctePrefix: `${alias}_` }
             ),
           };
     const stage: Stage = {

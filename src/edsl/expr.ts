@@ -198,6 +198,19 @@ export class ExprRef<T> {
     ]);
   }
 
+  least<T extends SqlNumber>(
+    this: ExprRef<T>,
+    ...values: ExprInput<T>[]
+  ): ExprRef<T> {
+    if (values.length === 0) {
+      throw new Error("least requires at least one value");
+    }
+    return funcExpr("LEAST", [
+      this.node,
+      ...values.map((value) => toExprNode(value)),
+    ]);
+  }
+
   replace(
     this: ExprRef<string>,
     search: ExprInput<string>,

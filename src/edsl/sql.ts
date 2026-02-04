@@ -410,11 +410,16 @@ function hoistJoinSubquery(
   ctePrefix: string
 ): Stage {
   if (stage.kind !== "join" || stage.source.kind !== "subquery") return stage;
+  const subqueryAst = stage.source.ast as any;
+  if (subqueryAst.with && subqueryAst.with.length) {
+    ctes.push(...subqueryAst.with);
+    subqueryAst.with = null;
+  }
   const cteName = `${ctePrefix}join_${ctes.length}`;
   ctes.push({
     name: { value: cteName },
     stmt: {
-      ast: stage.source.ast as any,
+      ast: subqueryAst,
       tableList: [],
       columnList: [],
     },
