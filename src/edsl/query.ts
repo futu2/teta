@@ -41,6 +41,7 @@ import {
 } from "./sql";
 import type { Source, JoinSource } from "./types";
 
+/** Composable query builder with typed columns and SQL rendering. */
 export class Query<TColumns extends Record<string, any>> {
   constructor(
     readonly source: Source,
@@ -301,6 +302,7 @@ export class Query<TColumns extends Record<string, any>> {
   }
 }
 
+/** Column type helpers for table schemas. */
 export const t = {
   string: () => ({ kind: "column_type" } as ColumnType<string>),
   int: () => ({ kind: "column_type" } as ColumnType<SqlInt>),
@@ -318,6 +320,7 @@ function parseTableName(name: string): { table: string; schema: string | null } 
   return { schema: null, table: name };
 }
 
+/** Define a table with a schema and return a typed query builder. */
 export function table<S extends Record<string, ColumnType<any>>>(
   name: string,
   schema: S
@@ -336,6 +339,7 @@ export function table<S extends Record<string, ColumnType<any>>>(
 
 let loopCounter = 0;
 
+/** Build a recursive CTE query with a base and step query. */
 export function loop<S extends Record<string, ColumnType<any>>>(
   schema: S,
   builder: (self: Query<InferSchema<S>>) => {

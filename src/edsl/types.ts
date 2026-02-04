@@ -6,10 +6,15 @@ export type Value = string | number | boolean | null | DateLiteral | TimestampLi
 declare const __sqlInt: unique symbol;
 declare const __sqlFloat: unique symbol;
 
+/** SQL integer numeric type. */
 export type SqlInt = number & { readonly [__sqlInt]: true };
+/** SQL floating-point numeric type. */
 export type SqlFloat = number & { readonly [__sqlFloat]: true };
+/** SQL numeric type (int or float). */
 export type SqlNumber = SqlInt | SqlFloat;
+/** SQL DATE value string. */
 export type SqlDate = string;
+/** SQL TIMESTAMP value string. */
 export type SqlTimestamp = string;
 
 export type BinaryOp =
@@ -32,6 +37,7 @@ export type UnaryOp = "NOT";
 export type AggFunc = "COUNT" | "SUM" | "AVG" | "MIN" | "MAX";
 export type JoinType = "INNER" | "LEFT" | "RIGHT" | "FULL";
 export type JoinTypeInput = "inner" | "left" | "right" | "full" | JoinType;
+/** Database dialect identifier for SQL rendering. */
 export type Dialect =
   | "MySQL"
   | "MariaDB"
@@ -61,7 +67,9 @@ export type Dialect =
   | "hive"
   | "flinksql"
   | "noql";
+/** SQL output formatting style. */
 export type SqlFormat = "compact" | "pretty";
+/** SQL parser options with optional formatting. */
 export type SqlOptions = Option & { format?: SqlFormat };
 
 export type ExprNode<T> =

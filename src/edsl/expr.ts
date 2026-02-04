@@ -28,6 +28,7 @@ export type WindowSpecInput = {
   orderBy?: OrderItem | OrderItem[];
 };
 
+/** Typed SQL expression reference with fluent helpers. */
 export class ExprRef<T> {
   constructor(readonly node: ExprNode<T>) {}
 
@@ -363,10 +364,12 @@ export type SelectResult<S extends SelectShape> = {
   [K in keyof S]: S[K] extends ExprRef<infer T> ? T : S[K];
 };
 
+/** Create a typed SQL literal expression. */
 export function lit<T extends Value>(value: T): ExprRef<T> {
   return new ExprRef<T>({ kind: "literal", value });
 }
 
+/** Call a SQL function with arbitrary arguments. */
 export function fn<T = any>(
   name: string,
   ...args: ExprInput<any>[]
@@ -377,6 +380,7 @@ export function fn<T = any>(
   return funcExpr(name, args.map((arg) => toExprNode(arg)));
 }
 
+/** Call a SQL window function (use `.over(...)` on the result). */
 export function windowFn<T = any>(
   name: string,
   ...args: ExprInput<any>[]
@@ -387,14 +391,17 @@ export function windowFn<T = any>(
   return new WindowBuilder<T>(name, args.map((arg) => toExprNode(arg)));
 }
 
+/** SQL standard CURRENT_DATE expression. */
 export function currentDate(): ExprRef<SqlDate> {
   return funcExpr("CURRENT_DATE", []);
 }
 
+/** SQL standard CURRENT_TIMESTAMP expression. */
 export function currentTimestamp(): ExprRef<SqlTimestamp> {
   return funcExpr("CURRENT_TIMESTAMP", []);
 }
 
+/** SQL DATE literal expression. */
 export function dateLiteral(value: string): ExprRef<SqlDate> {
   return new ExprRef<SqlDate>({
     kind: "literal",
@@ -402,6 +409,7 @@ export function dateLiteral(value: string): ExprRef<SqlDate> {
   });
 }
 
+/** SQL TIMESTAMP literal expression. */
 export function timestampLiteral(value: string): ExprRef<SqlTimestamp> {
   return new ExprRef<SqlTimestamp>({
     kind: "literal",
@@ -464,6 +472,7 @@ export function octetLength(value: ExprInput<string>): ExprRef<SqlInt> {
 export function bitLength(value: ExprInput<string>): ExprRef<SqlInt> {
   return funcExpr("BIT_LENGTH", [toExprNode(value)]);
 }
+/** Start a CASE expression builder. */
 export function when<T>(
   condition: ExprInput<boolean>,
   value: ExprInput<T>
@@ -473,6 +482,7 @@ export function when<T>(
   ]);
 }
 
+/** Template string helper that concatenates parts with SQL CONCAT. */
 export function f(
   strings: TemplateStringsArray,
   ...exprs: ExprInput<any>[]
