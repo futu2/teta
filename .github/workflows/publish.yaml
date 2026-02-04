@@ -4,17 +4,16 @@ on:
     branches:
       - master
 
-  jobs:
-    publish:
-      runs-on: ubuntu-latest
-      permissions:
-        contents: read
-        id-token: write
-      steps:
-        - uses: actions/checkout@v6
-        - uses: oven-sh/setup-bun@v1
-          with:
-            bun-version: latest
-        - name: Publish package
-          run: bunx jsr publish
-
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+      - name: Publish package
+        run: bunx jsr publish
