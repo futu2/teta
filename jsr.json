@@ -1,5 +1,11 @@
 {
   "name": "@teta/teta",
-  "version": "0.1.0",
-  "exports": "./mod.ts"
+  "version": "0.1.1",
+  "description": "Type-safe SQL EDSL for building composable queries.",
+  "exports": "./mod.ts",
+  "compatibility": {
+    "deno": true,
+    "node": true,
+    "bun": true
+  }
 }
