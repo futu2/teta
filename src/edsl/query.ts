@@ -1,23 +1,25 @@
 import { Parser, type AST, type Option, type With } from "node-sql-parser";
-import type {
-  ColumnType,
-  Dialect,
-  ExprNode,
-  InferSchema,
-  JoinType,
-  JoinTypeInput,
-  OrderItem,
-  QueryIR,
-  QuerySpec,
-  SqlFloat,
-  SqlInt,
-  SqlDate,
-  SqlFormat,
-  SqlOptions,
-  SqlTimestamp,
-  Stage,
+import {
+  OUTER_TABLE_ALIAS,
+  type ColumnType,
+  type Dialect,
+  type ExprNode,
+  type InferSchema,
+  type JoinType,
+  type JoinTypeInput,
+  type OrderItem,
+  type QueryIR,
+  type QuerySpec,
+  type SqlFloat,
+  type SqlInt,
+  type SqlDate,
+  type SqlFormat,
+  type SqlOptions,
+  type SqlTimestamp,
+  type Stage,
 } from "./types";
 import {
+  ColumnRef,
   ColumnRefs,
   ExprRef,
   SelectResult,
@@ -33,6 +35,7 @@ import {
   unwrapGroupExpr,
 } from "./expr";
 import {
+  applyDialectFixes,
   buildSqlOptions,
   buildRecursiveCte,
   compilePipeline,
@@ -204,6 +207,7 @@ export class Query<TColumns extends Record<string, any>> {
     const stage: Stage = {
       kind: "join",
       joinType: normalizeJoinType(joinType),
+      lateral: false,
       source: joinSource,
       as: alias,
       on: predicate,
@@ -246,6 +250,54 @@ export class Query<TColumns extends Record<string, any>> {
     return this.join(right, on, "full");
   }
 
+  lateralJoin<TRight extends Record<string, any>>(
+    right:
+      | Query<TRight>
+      | ((outer: ColumnRefs<TColumns>) => Query<TRight>),
+    on: (left: ColumnRefs<TColumns>, right: ColumnRefs<TRight>) => ExprRef<boolean>,
+    joinType: JoinTypeInput = "inner"
+  ): Query<TColumns & TRight> {
+    const outerColumns = qualifyOuterColumns(this.columns);
+    const rightQuery = typeof right === "function" ? right(outerColumns) : right;
+    const alias = autoAlias(rightQuery.source.table, this.stages);
+    const rightKeys = rightQuery.columnNames ? [...rightQuery.columnNames] : null;
+    const rightColumns = createColumnRefs<TRight>(alias, rightKeys);
+    const predicate = on(this.columns, rightColumns).node;
+    const nextColumns = mergeColumnRefs(
+      this.columns,
+      rightColumns,
+      this.columnNames,
+      rightKeys
+    );
+    const nextNames = mergeColumnNames(this.columnNames, rightKeys);
+    const joinSource: JoinSource = {
+      kind: "subquery",
+      ast: compilePipeline(
+        rightQuery.source,
+        rightQuery.stages,
+        rightQuery.columns as ColumnRefs<Record<string, any>>,
+        rightQuery.columnNames,
+        { ctePrefix: `${alias}_`, keepTables: new Set([OUTER_TABLE_ALIAS]) }
+      ),
+    };
+    const stage: Stage = {
+      kind: "join",
+      joinType: normalizeJoinType(joinType),
+      lateral: true,
+      source: joinSource,
+      as: alias,
+      on: predicate,
+      selectAll: selectAllItems(nextColumns, nextNames),
+    };
+    return new Query(
+      this.source,
+      [...this.stages, stage],
+      nextColumns,
+      nextNames,
+      mergeWiths(this.withs, rightQuery.withs)
+    );
+  }
+
   toIR(): QueryIR {
     return { source: this.source, stages: this.stages };
   }
@@ -269,7 +321,8 @@ export class Query<TColumns extends Record<string, any>> {
   ): string {
     const parser = new Parser();
     const { options, sqlFormat } = buildSqlOptions(dialectOrOpt, optOrFormat, format);
-    const sql = parser.sqlify(this.toAst(), options);
+    const ast = applyDialectFixes(this.toAst(), options?.database);
+    const sql = parser.sqlify(ast, options);
     const cleaned = stripRedundantQuotes(sql);
     return sqlFormat === "pretty" ? formatSqlPretty(cleaned) : cleaned;
   }
@@ -338,6 +391,16 @@ export function table<S extends Record<string, ColumnType<any>>>(
 }
 
 let loopCounter = 0;
+
+function qualifyOuterColumns<TColumns extends Record<string, any>>(
+  columns: ColumnRefs<TColumns>
+): ColumnRefs<TColumns> {
+  const result: Record<string, ColumnRef<any, string>> = {};
+  for (const key of Object.keys(columns)) {
+    result[key] = new ColumnRef<any, string>(OUTER_TABLE_ALIAS, key);
+  }
+  return result as ColumnRefs<TColumns>;
+}
 
 /** Build a recursive CTE query with a base and step query. */
 export function loop<S extends Record<string, ColumnType<any>>>(

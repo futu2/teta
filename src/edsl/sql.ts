@@ -11,6 +11,7 @@ import type {
   Stage,
   Value,
 } from "./types";
+import { OUTER_TABLE_ALIAS } from "./types";
 import type { ColumnRefs } from "./expr";
 import { createColumnRefs, selectAllItems } from "./expr";
 
@@ -19,7 +20,7 @@ export function compilePipeline(
   stages: Stage[],
   columns: ColumnRefs<Record<string, any>>,
   columnNames: readonly string[] | null,
-  options?: { ctePrefix?: string; baseWiths?: With[] }
+  options?: { ctePrefix?: string; baseWiths?: With[]; keepTables?: Set<string> }
 ): AST {
   const { ast, ctes } = buildPipelineAst(
     source,
@@ -105,6 +106,12 @@ function compileLoopPart(
         if (stage.as) keepTables.add(stage.as);
         keepTables.add(baseAlias);
         const join = `${stage.joinType} JOIN`;
+        const subqueryAst =
+          stage.source.kind === "subquery" && stage.lateral
+            ? replaceOuterAlias(stage.source.ast, baseAlias)
+            : stage.source.kind === "subquery"
+              ? stage.source.ast
+              : null;
         from.push(
           stage.source.kind === "table"
             ? {
@@ -113,17 +120,19 @@ function compileLoopPart(
                 table: stage.source.table,
                 as: stage.as,
                 join,
+                prefix: stage.lateral ? "lateral" : undefined,
                 on: exprToAst(qualifyForBase(stage.on, baseAlias, keepTables)),
               }
             : {
                 expr: {
-                  ast: stage.source.ast,
+                  ast: subqueryAst,
                   tableList: [],
                   columnList: [],
                   parentheses: true,
                 },
                 as: stage.as,
                 join,
+                prefix: stage.lateral ? "lateral" : undefined,
                 on: exprToAst(qualifyForBase(stage.on, baseAlias, keepTables)),
               }
         );
@@ -193,9 +202,10 @@ function buildPipelineAst(
   stages: Stage[],
   columns: ColumnRefs<Record<string, any>>,
   columnNames: readonly string[] | null,
-  options?: { ctePrefix?: string }
+  options?: { ctePrefix?: string; keepTables?: Set<string> }
 ): { ast: AST; ctes: With[] } {
   const ctePrefix = options?.ctePrefix ?? "";
+  const keepTables = options?.keepTables;
   if (stages.length === 0) {
     const baseFrom = sourceToFrom({
       kind: "table",
@@ -208,7 +218,7 @@ function buildPipelineAst(
       ast: buildSelectAst({
         from: [baseFrom],
         columns: selectAllItems(columns, columnNames).map((item) => ({
-          expr: exprToAst(qualifyForBase(item.expr, baseAlias)),
+          expr: exprToAst(qualifyForBase(item.expr, baseAlias, keepTables)),
           as: item.as,
         })),
         where: null,
@@ -233,8 +243,14 @@ function buildPipelineAst(
     const stage = hoistJoinSubquery(stages[i], ctes, ctePrefix);
     const stageAst =
       stage.kind === "union"
-        ? compileUnionStage(stage, current, ctes, `${ctePrefix}u${unionCount}_`)
-        : stageToSelect(stage, current);
+        ? compileUnionStage(
+            stage,
+            current,
+            ctes,
+            `${ctePrefix}u${unionCount}_`,
+            keepTables
+          )
+        : stageToSelect(stage, current, keepTables);
     if (stage.kind === "union") unionCount += 1;
     const name = `${ctePrefix}cte_${i}`;
     ctes.push({
@@ -251,12 +267,22 @@ function buildPipelineAst(
   const finalStage = hoistJoinSubquery(stages[stages.length - 1], ctes, ctePrefix);
   const finalAst =
     finalStage.kind === "union"
-      ? compileUnionStage(finalStage, current, ctes, `${ctePrefix}u${unionCount}_`)
-      : stageToSelect(finalStage, current);
+      ? compileUnionStage(
+          finalStage,
+          current,
+          ctes,
+          `${ctePrefix}u${unionCount}_`,
+          keepTables
+        )
+      : stageToSelect(finalStage, current, keepTables);
   return { ast: finalAst as AST, ctes };
 }
 
-function stageToSelect(stage: Stage, source: SourceRef): AST {
+function stageToSelect(
+  stage: Stage,
+  source: SourceRef,
+  keepTables?: Set<string>
+): AST {
   const baseFrom = sourceToFrom(source);
   const baseAlias = ensureAlias(baseFrom);
   switch (stage.kind) {
@@ -264,14 +290,14 @@ function stageToSelect(stage: Stage, source: SourceRef): AST {
       return buildSelectAst({
         from: [baseFrom],
         columns: stage.items.map((item) => ({
-          expr: exprToAst(qualifyForBase(item.expr, baseAlias)),
+          expr: exprToAst(qualifyForBase(item.expr, baseAlias, keepTables)),
           as: item.as,
         })),
         where: null,
         groupby: stage.groupBy
           ? {
             columns: stage.groupBy.map((expr) =>
-              exprToAst(qualifyForBase(expr, baseAlias))
+              exprToAst(qualifyForBase(expr, baseAlias, keepTables))
             ),
             modifiers: [],
           }
@@ -283,10 +309,10 @@ function stageToSelect(stage: Stage, source: SourceRef): AST {
       return buildSelectAst({
         from: [baseFrom],
         columns: stage.selectAll.map((item) => ({
-          expr: exprToAst(qualifyForBase(item.expr, baseAlias)),
+          expr: exprToAst(qualifyForBase(item.expr, baseAlias, keepTables)),
           as: item.as,
         })),
-        where: exprToAst(qualifyForBase(stage.predicate, baseAlias)),
+        where: exprToAst(qualifyForBase(stage.predicate, baseAlias, keepTables)),
         groupby: null,
         orderby: null,
         limit: null,
@@ -295,13 +321,13 @@ function stageToSelect(stage: Stage, source: SourceRef): AST {
       return buildSelectAst({
         from: [baseFrom],
         columns: stage.selectAll.map((item) => ({
-          expr: exprToAst(qualifyForBase(item.expr, baseAlias)),
+          expr: exprToAst(qualifyForBase(item.expr, baseAlias, keepTables)),
           as: item.as,
         })),
         where: null,
         groupby: null,
         orderby: stage.items.map((item) => ({
-          expr: exprToAst(qualifyForBase(item.expr, baseAlias)),
+          expr: exprToAst(qualifyForBase(item.expr, baseAlias, keepTables)),
           type: item.direction,
         })),
         limit: null,
@@ -310,7 +336,7 @@ function stageToSelect(stage: Stage, source: SourceRef): AST {
       return buildSelectAst({
         from: [baseFrom],
         columns: stage.selectAll.map((item) => ({
-          expr: exprToAst(qualifyForBase(item.expr, baseAlias)),
+          expr: exprToAst(qualifyForBase(item.expr, baseAlias, keepTables)),
           as: item.as,
         })),
         where: null,
@@ -323,7 +349,15 @@ function stageToSelect(stage: Stage, source: SourceRef): AST {
       });
     case "join": {
       const join = `${stage.joinType} JOIN`;
-      const keepTables = stage.as ? new Set([stage.as]) : undefined;
+      const nextKeep = new Set<string>(keepTables ?? []);
+      if (stage.as) nextKeep.add(stage.as);
+      nextKeep.add(baseAlias);
+      const subqueryAst =
+        stage.source.kind === "subquery" && stage.lateral
+          ? replaceOuterAlias(stage.source.ast, baseAlias)
+          : stage.source.kind === "subquery"
+            ? stage.source.ast
+            : null;
       return buildSelectAst({
         from: [
           baseFrom,
@@ -334,22 +368,24 @@ function stageToSelect(stage: Stage, source: SourceRef): AST {
                 table: stage.source.table,
                 as: stage.as,
                 join,
-                on: exprToAst(qualifyForBase(stage.on, baseAlias, keepTables)),
+                prefix: stage.lateral ? "lateral" : undefined,
+                on: exprToAst(qualifyForBase(stage.on, baseAlias, nextKeep)),
               }
             : {
                 expr: {
-                  ast: stage.source.ast,
+                  ast: subqueryAst,
                   tableList: [],
                   columnList: [],
                   parentheses: true,
                 },
                 as: stage.as,
                 join,
-                on: exprToAst(qualifyForBase(stage.on, baseAlias, keepTables)),
+                prefix: stage.lateral ? "lateral" : undefined,
+                on: exprToAst(qualifyForBase(stage.on, baseAlias, nextKeep)),
               },
         ],
         columns: stage.selectAll.map((item) => ({
-          expr: exprToAst(qualifyForBase(item.expr, baseAlias, keepTables)),
+          expr: exprToAst(qualifyForBase(item.expr, baseAlias, nextKeep)),
           as: item.as,
         })),
         where: null,
@@ -410,6 +446,7 @@ function hoistJoinSubquery(
   ctePrefix: string
 ): Stage {
   if (stage.kind !== "join" || stage.source.kind !== "subquery") return stage;
+  if (stage.lateral && containsOuterAlias(stage.source.ast)) return stage;
   const subqueryAst = stage.source.ast as any;
   if (subqueryAst.with && subqueryAst.with.length) {
     ctes.push(...subqueryAst.with);
@@ -435,14 +472,15 @@ function compileUnionStage(
   stage: Extract<Stage, { kind: "union" }>,
   source: SourceRef,
   ctes: With[],
-  rightPrefix: string
+  rightPrefix: string,
+  keepTables?: Set<string>
 ): AST {
   const baseFrom = sourceToFrom(source);
   const baseAlias = ensureAlias(baseFrom);
   const leftAst = buildSelectAst({
     from: [baseFrom],
     columns: stage.selectAll.map((item) => ({
-      expr: exprToAst(qualifyForBase(item.expr, baseAlias)),
+      expr: exprToAst(qualifyForBase(item.expr, baseAlias, keepTables)),
       as: item.as,
     })),
     where: null,
@@ -460,7 +498,7 @@ function compileUnionStage(
     stage.right.stages,
     rightColumns,
     stage.right.columnNames,
-    { ctePrefix: rightPrefix }
+    { ctePrefix: rightPrefix, keepTables }
   );
   if (rightCompiled.ctes.length) {
     ctes.push(...rightCompiled.ctes);
@@ -542,6 +580,39 @@ function stripTableRefs(
     default:
       return expr;
   }
+}
+
+function cloneAst<T>(ast: T): T {
+  return JSON.parse(JSON.stringify(ast)) as T;
+}
+
+function applyOuterAlias(node: any, baseAlias: string): void {
+  if (!node) return;
+  if (Array.isArray(node)) {
+    node.forEach((item) => applyOuterAlias(item, baseAlias));
+    return;
+  }
+  if (typeof node !== "object") return;
+  if (node.type === "column_ref" && node.table === OUTER_TABLE_ALIAS) {
+    node.table = baseAlias;
+  }
+  for (const value of Object.values(node)) {
+    applyOuterAlias(value, baseAlias);
+  }
+}
+
+function replaceOuterAlias(ast: AST, baseAlias: string): AST {
+  const copy = cloneAst(ast);
+  applyOuterAlias(copy, baseAlias);
+  return copy;
+}
+
+function containsOuterAlias(node: any): boolean {
+  if (!node) return false;
+  if (Array.isArray(node)) return node.some((item) => containsOuterAlias(item));
+  if (typeof node !== "object") return false;
+  if (node.type === "column_ref" && node.table === OUTER_TABLE_ALIAS) return true;
+  return Object.values(node).some((value) => containsOuterAlias(value));
 }
 
 function ensureAlias(from: { as?: string | null; table?: string | null }): string {
@@ -844,6 +915,30 @@ export function buildSqlOptions(
   if (format) sqlFormat = format;
 
   return { options, sqlFormat };
+}
+
+export function applyDialectFixes(ast: AST, database?: string): AST {
+  if (!database) return ast;
+  const normalized = database.toString().trim().toLowerCase();
+  if (normalized !== "sqlite") return ast;
+  const copy = cloneAst(ast);
+  stripLateralPrefix(copy);
+  return copy;
+}
+
+function stripLateralPrefix(node: any): void {
+  if (!node) return;
+  if (Array.isArray(node)) {
+    node.forEach((item) => stripLateralPrefix(item));
+    return;
+  }
+  if (typeof node !== "object") return;
+  if (node.prefix === "lateral") {
+    delete node.prefix;
+  }
+  for (const value of Object.values(node)) {
+    stripLateralPrefix(value);
+  }
 }
 
 function normalizeDialect(dialect: Dialect): string {

@@ -1,5 +1,7 @@
 import type { AST, Option } from "node-sql-parser";
 
+export const OUTER_TABLE_ALIAS = "__teta_outer__";
+
 export type DateLiteral = { kind: "date_literal"; value: string };
 export type TimestampLiteral = { kind: "timestamp_literal"; value: string };
 export type Value = string | number | boolean | null | DateLiteral | TimestampLiteral;
@@ -181,6 +183,7 @@ export type Stage =
   | {
       kind: "join";
       joinType: JoinType;
+      lateral?: boolean;
       source: JoinSource;
       as: string | null;
       on: ExprNode<boolean>;
