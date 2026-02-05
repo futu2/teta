@@ -12,6 +12,7 @@ export {
   fn,
   windowFn,
   when,
+  shape,
   f,
   lit,
   currentDate,

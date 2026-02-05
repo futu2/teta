@@ -482,6 +482,33 @@ export function when<T>(
   ]);
 }
 
+export type ExprShape<T extends Record<string, ExprRef<any>>> = {
+  map: (mapper: (value: T[keyof T]) => ExprRef<any>) => {
+    [K in keyof T]: ExprRef<any>;
+  };
+  group: () => { [K in keyof T]: ExprRef<any> };
+};
+
+/** Wrap a shape to apply methods to each expression value. */
+export function shape<T extends Record<string, ExprRef<any>>>(value: T): ExprShape<T> {
+  return {
+    map(mapper) {
+      const result: Record<string, ExprRef<any>> = {};
+      for (const key of Object.keys(value)) {
+        result[key] = mapper(value[key]);
+      }
+      return result as { [K in keyof T]: ExprRef<any> };
+    },
+    group() {
+      const result: Record<string, ExprRef<any>> = {};
+      for (const key of Object.keys(value)) {
+        result[key] = value[key].group();
+      }
+      return result as { [K in keyof T]: ExprRef<any> };
+    },
+  };
+}
+
 /** Template string helper that concatenates parts with SQL CONCAT. */
 export function f(
   strings: TemplateStringsArray,
