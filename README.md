@@ -224,6 +224,41 @@ console.log(q.toSql());
 You can pass a join type as the third argument to `join`, for example `"left"` or `"right"`.
 Shortcuts are available: `innerJoin`, `leftJoin`, `rightJoin`, `fullJoin`.
 
+### Lateral join
+
+Use `lateralJoin` when the right-hand query needs to reference columns from the left side.
+
+```ts
+import { table, t, lit } from "./src/edsl";
+
+const users = table("users", {
+  id: t.int(),
+  name: t.string(),
+});
+
+const orders = table("orders", {
+  id: t.int(),
+  user_id: t.int(),
+  total: t.float(),
+});
+
+const q = users.lateralJoin(
+  (u) =>
+    orders
+      .filter((o) => o.user_id.eq(u.id))
+      .select((o) => ({
+        order_id: o.id,
+        total: o.total,
+      })),
+  () => lit(true)
+);
+
+console.log(q.toSql());
+```
+
+Note: `JOIN LATERAL` is emitted for most dialects. For `sqlite`, the `LATERAL` keyword is removed
+because correlated subqueries are already allowed.
+
 ### Aggregate with group()
 
 Grouping is expressed by calling `.group()` on the grouping key inside `aggregate(...)`.

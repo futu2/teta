@@ -341,6 +341,15 @@ export class ExprRef<T> {
   toDate(this: ExprRef<SqlTimestamp>): ExprRef<SqlDate> {
     return this.cast<SqlDate>("DATE");
   }
+
+  round(this: ExprRef<SqlNumber>, scale?: ExprInput<SqlInt>): ExprRef<SqlNumber> {
+    const args = scale === undefined ? [this.node] : [this.node, toExprNode(scale)];
+    return funcExpr("ROUND", args);
+  }
+
+  concat(...values: ExprInput<any>[]): ExprRef<string> {
+    return funcExpr("CONCAT", [this.node, ...values.map((value) => toExprNode(value))]);
+  }
 }
 
 export class ColumnRef<T, Name extends string> extends ExprRef<T> {
