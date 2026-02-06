@@ -34,7 +34,8 @@ export type BinaryOp =
   | "/"
   | "LIKE"
   | "IS"
-  | "IS NOT";
+  | "IS NOT"
+  | "IN";
 export type UnaryOp = "NOT";
 export type AggFunc = "COUNT" | "SUM" | "AVG" | "MIN" | "MAX";
 export type JoinType = "INNER" | "LEFT" | "RIGHT" | "FULL";
@@ -82,6 +83,7 @@ export type ExprNode<T> =
   | AggNode
   | GroupNode
   | FuncNode
+  | ListNode
   | ExtractNode
   | CastNode
   | WindowNode
@@ -127,6 +129,11 @@ export type FuncNode = {
   kind: "func";
   name: string;
   args: ExprNode<any>[];
+};
+
+export type ListNode = {
+  kind: "list";
+  items: ExprNode<any>[];
 };
 
 export type ExtractNode = {

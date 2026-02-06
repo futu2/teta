@@ -1,5 +1,16 @@
 # teta
 
+## features
+
+typescript lsp with auto completion of fields
+
+typesafe
+
+## playground
+
+[sql zoo replica playground](https://futu2.github.io/teta-tutorial/)
+
+
 To install dependencies:
 
 ```bash
@@ -373,6 +384,21 @@ const q = users.select((u) => ({
   name_pos: u.name.position("a"),
   name_len: u.name.charLength(),
 }));
+```
+
+### IN operator
+
+```ts
+import { table, t } from "./src/edsl";
+
+const users = table("users", {
+  id: t.int(),
+  status: t.string(),
+});
+
+const q = users
+  .filter((u) => u.status.in(["active", "trial", "paused"]))
+  .select((u) => ({ id: u.id, status: u.status }));
 ```
 
 ### SQL standard date/time helpers

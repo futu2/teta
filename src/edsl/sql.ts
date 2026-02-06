@@ -542,6 +542,11 @@ function stripTableRefs(
         ...expr,
         args: expr.args.map((arg) => stripTableRefs(arg, keepTables)),
       };
+    case "list":
+      return {
+        ...expr,
+        items: expr.items.map((item) => stripTableRefs(item, keepTables)),
+      };
     case "extract":
       return {
         ...expr,
@@ -656,6 +661,11 @@ function qualifyMissingTables(
       return {
         ...expr,
         args: expr.args.map((arg) => qualifyMissingTables(arg, table)),
+      };
+    case "list":
+      return {
+        ...expr,
+        items: expr.items.map((item) => qualifyMissingTables(item, table)),
       };
     case "extract":
       return {
@@ -804,6 +814,11 @@ function exprToAst(expr: ExprNode<any>): any {
         over: null,
       };
     }
+    case "list":
+      return {
+        type: "expr_list",
+        value: expr.items.map(exprToAst),
+      };
     case "window":
       return {
         type: "function",

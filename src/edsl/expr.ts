@@ -66,6 +66,16 @@ export class ExprRef<T> {
     return binaryExpr("LIKE", this.node, toExprNode(value));
   }
 
+  ["in"](values: readonly ExprInput<T>[]): ExprRef<boolean> {
+    if (values.length === 0) {
+      throw new Error("in requires at least one value");
+    }
+    return binaryExpr("IN", this.node, {
+      kind: "list",
+      items: values.map((value) => toExprNode(value)),
+    });
+  }
+
   and(this: ExprRef<boolean>, value: ExprInput<boolean>): ExprRef<boolean> {
     return binaryExpr("AND", this.node, toExprNode(value));
   }
@@ -680,6 +690,8 @@ export function containsGroup(expr: ExprNode<any>, inAgg = false): boolean {
       return containsGroup(expr.arg, true);
     case "func":
       return expr.args.some((arg) => containsGroup(arg, inAgg));
+    case "list":
+      return expr.items.some((item) => containsGroup(item, inAgg));
     case "extract":
       return containsGroup(expr.source, inAgg);
     case "cast":
@@ -738,6 +750,11 @@ export function unwrapGroupExpr(
       return {
         ...expr,
         args: expr.args.map((arg) => unwrapGroupExpr(arg, groupBy, inAgg)),
+      };
+    case "list":
+      return {
+        ...expr,
+        items: expr.items.map((item) => unwrapGroupExpr(item, groupBy, inAgg)),
       };
     case "extract":
       return {
