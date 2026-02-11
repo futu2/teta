@@ -6,6 +6,8 @@ Note: `table(...)` requires a schema to avoid `SELECT *` and keep column names e
 Generated SQL always uses auto-generated aliases (e.g., `users_0`, `orders_1`) and fully
 qualified column references.
 
+Keep EDSL queries dialect-neutral. Choose dialect when rendering with `toSql(...)`.
+
 ## Basics
 
 ### 1) Filter + select + order + limit
@@ -216,8 +218,122 @@ const q = users.lateralJoin(
 console.log(q.toSql());
 ```
 
-Note: `JOIN LATERAL` is emitted for most dialects. For `sqlite`, the `LATERAL` keyword is removed
-because correlated subqueries are already allowed.
+Note: `JOIN LATERAL` is emitted for dialects with `lateralJoinKeyword=true`.
+For `sqlite`, the keyword is omitted during SQL rendering because correlated subqueries are allowed.
+
+### Dialect configuration and parser fallback
+
+Use a custom dialect config when runtime dialect and parser dialect differ:
+
+```ts
+import { table, t } from "./src/edsl";
+
+const users = table("users", {
+  id: t.int(),
+  name: t.string(),
+});
+
+console.log(users.select((u) => ({ id: u.id })).toSql({
+  dialect: {
+    name: "presto",
+    parserDialect: "Trino",
+    features: { lateralJoinKeyword: true },
+  },
+  format: "pretty",
+}));
+
+console.log(users.toSql("sqlite"));
+console.log(users.toSql("hetuengine dql"));
+```
+
+### Built-in HetuEngine DQL dialect
+
+Teta includes a built-in HetuEngine DQL profile. You can render with any of these aliases:
+
+- `"hetuengine dql"`
+- `"hetuenginedql"`
+- `"hetuengine"`
+
+This profile uses `Trino` as parser fallback for SQL stringification and applies Hetu-oriented function naming (for example array cardinality/slice mappings).
+
+### Language specification
+
+Teta keeps expressions dialect-neutral in EDSL, then applies dialect behavior at `toSql(...)` via `dialect.language`.
+
+Teta language spec categories:
+
+- math (basic arithmetic)
+- string manipulation (including regex)
+- logical operators
+- date and time functions
+- type conversion + null handling
+- array manipulation
+- window/aggregation functions
+- lateral join
+- recursive CTE
+
+Method-centric EDSL is preferred when possible. Date/time and array operations are exposed as instance methods:
+
+```ts
+import { table, t } from "./src/edsl";
+
+const sessions = table("sessions", {
+  id: t.int(),
+  started_at: t.timestamp(),
+  ended_at: t.timestamp(),
+  tags: t.string(),
+});
+
+const q = sessions.select((s) => ({
+  id: s.id,
+  started_day: s.started_at.dateTrunc("day"),
+  started_fmt: s.started_at.dateFormat("%Y-%m-%d"),
+  duration_sec: s.started_at.dateDiff("second", s.ended_at),
+  started_epoch: s.started_at.toUnixTime(),
+  parsed_start: s.started_at.cast<string>("TEXT").dateParse("%Y-%m-%d %H:%M:%S"),
+  has_prod: s.tags.arrayContains("prod"),
+  tag_count: s.tags.arrayLength(),
+  tag_label: s.tags.arrayJoin("|"),
+  normalized_tag: s.tags.regexReplace("[^a-zA-Z0-9_]+", "_"),
+  has_uuid: s.tags.regexLike("^[0-9a-fA-F-]{36}$"),
+}));
+```
+
+You can customize a dialect so unsupported direct functions map to equivalents/fallbacks:
+
+```ts
+import { table, t } from "./src/edsl";
+
+const users = table("users", {
+  id: t.int(),
+  name: t.string(),
+  created_at: t.timestamp(),
+});
+
+const q = users.select((u) => ({
+  id: u.id,
+  created_fmt: u.created_at.dateFormat("%Y-%m-%d"),
+  bits: u.name.bitLength(),
+}));
+
+console.log(q.toSql({
+  dialect: {
+    name: "sqlite_custom",
+    parserDialect: "SQLite",
+    language: {
+      functions: { CHARACTER_LENGTH: "LENGTH" },
+      fallbacks: {
+        BIT_LENGTH: "bit_length_via_length_x8",
+        DATE_FORMAT: "date_format_via_strftime",
+        DATE_DIFF: "date_diff_via_julianday",
+        ARRAY_LENGTH: "array_length_via_json_array_length",
+        REGEXP_LIKE: "regex_like_via_regexp_function",
+      },
+      unsupported: ["OVERLAY"],
+    },
+  },
+}));
+```
 
 ### Aggregate with group()
 
@@ -249,34 +365,30 @@ console.log(q.toSql());
 ```ts
 import { table, t } from "./src/edsl";
 
-const users = table("users", {
-  id: t.int(),
-  name: t.string(),
-  age: t.int(),
-});
-
-const q = users.select((u) => ({
-  id: u.id,
-  name: u.name,
-  age_rank: u.age.rank().over({ orderBy: u.age.desc() }),
-}));
-
-console.log(q.toSql("Postgresql", "pretty"));
-```
-
-```ts
-import { table, t } from "./src/edsl";
-
 const orders = table("orders", {
   id: t.int(),
+  user_id: t.int(),
   total: t.float(),
   created_at: t.timestamp(),
 });
 
 const q = orders.select((o) => ({
   id: o.id,
+  user_id: o.user_id,
   running_total: o.total.sumOver({ orderBy: o.created_at.asc() }),
+  rank_in_time: o.total.rank().over({ orderBy: o.created_at.desc() }),
+  prev_total: o.total.lag(1, 0).over({
+    partitionBy: o.user_id,
+    orderBy: o.created_at.asc(),
+  }),
+  next_total: o.total.lead(1, 0).over({
+    partitionBy: o.user_id,
+    orderBy: o.created_at.asc(),
+  }),
+  bucket: o.total.ntile(4).over({ orderBy: o.total.desc() }),
 }));
+
+console.log(q.toSql("Postgresql", "pretty"));
 ```
 
 ### Custom SQL functions (UDF)
@@ -314,6 +426,30 @@ const q = users.select((u) => ({
   name_prefix: u.name.substring(1, 3),
   name_pos: u.name.position("a"),
   name_len: u.name.charLength(),
+  name_clean: u.name.regexReplace("\\s+", "_"),
+  has_digits: u.name.regexLike(".*\\d+.*"),
+  first_digits: u.name.regexExtract("(\\d+)", 1),
+}));
+```
+
+### Array helpers
+
+```ts
+import { table, t } from "./src/edsl";
+
+const sessions = table("sessions", {
+  id: t.int(),
+  tags: t.string(),
+});
+
+const q = sessions.select((s) => ({
+  id: s.id,
+  tag_count: s.tags.arrayLength(),
+  has_prod: s.tags.arrayContains("prod"),
+  prod_pos: s.tags.arrayPosition("prod"),
+  first_two: s.tags.arraySlice(1, 2),
+  tag_csv: s.tags.arrayJoin(","),
+  with_debug: s.tags.arrayAppend("debug"),
 }));
 ```
 
@@ -341,14 +477,22 @@ const posts = table("posts", {
   id: t.int(),
   published_on: t.date(),
   created_at: t.timestamp(),
+  event_text: t.string(),
 });
 
 const q = posts.select((p) => ({
   today: currentDate(),
   now: currentTimestamp(),
   go_live: dateLiteral("2024-02-03"),
-  created_at: timestampLiteral("2024-02-03 12:34:56"),
-  created_on: p.created_at.toDate(),
+  pinned_at: timestampLiteral("2024-02-03 12:34:56"),
+  created_day: p.created_at.dateTrunc("day"),
+  created_fmt: p.created_at.dateFormat("%Y-%m-%d"),
+  next_week: p.created_at.dateAdd("day", 7),
+  age_days: p.published_on.dateDiff("day", currentDate()),
+  created_epoch: p.created_at.toUnixTime(),
+  parsed_event_ts: p.event_text.dateParse("%Y-%m-%d %H:%M:%S"),
+  created_year: p.created_at.year(),
+  created_month: p.created_at.month(),
 }));
 ```
 

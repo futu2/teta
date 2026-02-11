@@ -1,8 +1,12 @@
 import type { AST, Option, With } from "node-sql-parser";
 import type {
+  BuiltinDialect,
+  DialectFeatures,
+  DialectSpec,
   Dialect,
   ExprNode,
   OrderItem,
+  QueryDialect,
   Source,
   SourceRef,
   SelectItem,
@@ -14,24 +18,187 @@ import type {
 import { OUTER_TABLE_ALIAS } from "./types";
 import type { ColumnRefs } from "./expr";
 import { createColumnRefs, selectAllItems } from "./expr";
+import { applyDialectLanguage, resolveDialectLanguage } from "./language";
+
+const DEFAULT_DIALECT: QueryDialect = {
+  name: "default",
+  parserDialect: null,
+  features: {
+    lateralJoinKeyword: true,
+    recursiveCte: true,
+  },
+  language: {
+    functions: {},
+    fallbacks: {},
+    unsupported: [],
+  },
+};
+
+const BUILTIN_DIALECTS: Record<Lowercase<BuiltinDialect>, {
+  name: string;
+  parserDialect: string;
+  features?: DialectFeatures;
+}> = {
+  mysql: { name: "MySQL", parserDialect: "MySQL" },
+  mariadb: { name: "MariaDB", parserDialect: "MariaDB" },
+  postgresql: { name: "Postgresql", parserDialect: "Postgresql" },
+  sqlite: {
+    name: "SQLite",
+    parserDialect: "SQLite",
+    features: { lateralJoinKeyword: false, recursiveCte: true },
+  },
+  trino: { name: "Trino", parserDialect: "Trino" },
+  transactsql: { name: "TransactSQL", parserDialect: "TransactSQL" },
+  redshift: { name: "Redshift", parserDialect: "Redshift" },
+  snowflake: { name: "Snowflake", parserDialect: "Snowflake" },
+  bigquery: { name: "BigQuery", parserDialect: "BigQuery" },
+  athena: { name: "Athena", parserDialect: "Athena" },
+  db2: { name: "DB2", parserDialect: "DB2" },
+  hive: { name: "Hive", parserDialect: "Hive" },
+  flinksql: { name: "FlinkSQL", parserDialect: "FlinkSQL" },
+  noql: { name: "NoQL", parserDialect: "NoQL" },
+  hetuenginedql: { name: "HetuEngine DQL", parserDialect: "Trino" },
+  "hetuengine dql": { name: "HetuEngine DQL", parserDialect: "Trino" },
+  hetuengine: { name: "HetuEngine DQL", parserDialect: "Trino" },
+};
+
+export function getDefaultDialect(): QueryDialect {
+  return cloneDialect(DEFAULT_DIALECT);
+}
+
+export function resolveDialect(dialect?: Dialect): QueryDialect {
+  if (!dialect) return getDefaultDialect();
+  if (typeof dialect === "object") {
+    if (isDialectSpec(dialect)) return resolveDialectSpec(dialect);
+    return getDefaultDialect();
+  }
+  const raw = dialect.toString().trim();
+  if (!raw) return getDefaultDialect();
+  const builtin = lookupBuiltinDialect(raw);
+  if (!builtin) {
+    return {
+      name: raw,
+      parserDialect: null,
+      features: {
+        lateralJoinKeyword: true,
+        recursiveCte: true,
+      },
+      language: resolveDialectLanguage(raw),
+    };
+  }
+  return {
+    name: builtin.name,
+    parserDialect: builtin.parserDialect,
+    features: {
+      lateralJoinKeyword: builtin.features?.lateralJoinKeyword ?? true,
+      recursiveCte: builtin.features?.recursiveCte ?? true,
+    },
+    language: resolveDialectLanguage(builtin.name),
+  };
+}
+
+export function sameDialect(left: QueryDialect, right: QueryDialect): boolean {
+  return (
+    left.parserDialect === right.parserDialect &&
+    left.features.lateralJoinKeyword === right.features.lateralJoinKeyword &&
+    left.features.recursiveCte === right.features.recursiveCte
+  );
+}
+
+export function cloneDialect(dialect: QueryDialect): QueryDialect {
+  return {
+    name: dialect.name,
+    parserDialect: dialect.parserDialect,
+    features: {
+      lateralJoinKeyword: dialect.features.lateralJoinKeyword,
+      recursiveCte: dialect.features.recursiveCte,
+    },
+    language: {
+      functions: { ...dialect.language.functions },
+      fallbacks: { ...dialect.language.fallbacks },
+      unsupported: [...dialect.language.unsupported],
+    },
+  };
+}
+
+function isDialectSpec(value: unknown): value is DialectSpec {
+  return typeof value === "object" && value !== null && "name" in value;
+}
+
+function resolveDialectSpec(spec: DialectSpec): QueryDialect {
+  const rawName = spec.name.toString().trim();
+  const builtinByName = lookupBuiltinDialect(rawName);
+  const parserSource =
+    spec.parserDialect === undefined
+      ? builtinByName?.parserDialect ?? null
+      : spec.parserDialect;
+  const parserRaw = parserSource === null ? null : parserSource.toString().trim();
+  const builtinByParser = parserRaw ? lookupBuiltinDialect(parserRaw) : null;
+
+  const parserDialect =
+    parserRaw && builtinByParser
+      ? builtinByParser.parserDialect
+      : parserRaw;
+  const lateralJoinKeyword =
+    spec.features?.lateralJoinKeyword ??
+    builtinByName?.features?.lateralJoinKeyword ??
+    builtinByParser?.features?.lateralJoinKeyword ??
+    true;
+  const recursiveCte =
+    spec.features?.recursiveCte ??
+    builtinByName?.features?.recursiveCte ??
+    builtinByParser?.features?.recursiveCte ??
+    true;
+
+  return {
+    name: rawName || builtinByName?.name || "custom",
+    parserDialect,
+    features: {
+      lateralJoinKeyword,
+      recursiveCte,
+    },
+    language: resolveDialectLanguage(rawName, spec.language),
+  };
+}
+
+function lookupBuiltinDialect(input: string):
+  | {
+      name: string;
+      parserDialect: string;
+      features?: DialectFeatures;
+    }
+  | undefined {
+  const key = input.toString().trim().toLowerCase() as Lowercase<BuiltinDialect>;
+  const direct = BUILTIN_DIALECTS[key];
+  if (direct) return direct;
+  const compactKey = key.replace(/[^a-z0-9]+/g, "") as Lowercase<BuiltinDialect>;
+  if (!compactKey || compactKey === key) return undefined;
+  return BUILTIN_DIALECTS[compactKey];
+}
 
 export function compilePipeline(
   source: Source,
   stages: Stage[],
   columns: ColumnRefs<Record<string, any>>,
   columnNames: readonly string[] | null,
-  options?: { ctePrefix?: string; baseWiths?: With[]; keepTables?: Set<string> }
+  options?: {
+    ctePrefix?: string;
+    baseWiths?: With[];
+    keepTables?: Set<string>;
+    dialect?: QueryDialect;
+  }
 ): AST {
+  const dialect = options?.dialect ?? getDefaultDialect();
   const { ast, ctes } = buildPipelineAst(
     source,
     stages,
     columns,
     columnNames,
-    options
+    { ...options, dialect }
   );
   const baseWiths = options?.baseWiths ?? [];
   const merged = baseWiths.length ? [...baseWiths, ...ctes] : ctes;
-  ast.with = merged.length ? merged : null;
+  (ast as any).with = merged.length ? merged : null;
   return ast;
 }
 
@@ -48,10 +215,14 @@ export function buildRecursiveCte(
     stages: Stage[];
     columns: ColumnRefs<Record<string, any>>;
     columnNames: readonly string[] | null;
-  }
+  },
+  dialect: QueryDialect = getDefaultDialect()
 ): With {
-  const baseAst = compileLoopPart(base, "base");
-  const stepAst = compileLoopPart(step, "step");
+  if (!dialect.features.recursiveCte) {
+    throw new Error(`Dialect ${dialect.name} does not support recursive CTE`);
+  }
+  const baseAst = compileLoopPart(base, "base", dialect);
+  const stepAst = compileLoopPart(step, "step", dialect);
   const unionAst = attachUnion(baseAst, stepAst, "union all");
   return {
     name: { type: "default", value: name },
@@ -72,7 +243,8 @@ function compileLoopPart(
     columns: ColumnRefs<Record<string, any>>;
     columnNames: readonly string[] | null;
   },
-  label: "base" | "step"
+  label: "base" | "step",
+  dialect: QueryDialect
 ): AST {
   const { source, stages, columns, columnNames } = input;
   const baseFrom = sourceToFrom({
@@ -120,8 +292,8 @@ function compileLoopPart(
                 table: stage.source.table,
                 as: stage.as,
                 join,
-                prefix: stage.lateral ? "lateral" : undefined,
-                on: exprToAst(qualifyForBase(stage.on, baseAlias, keepTables)),
+                prefix: lateralJoinPrefix(stage.lateral, dialect),
+                on: exprToAst(qualifyForBase(stage.on, baseAlias, keepTables, dialect)),
               }
             : {
                 expr: {
@@ -132,8 +304,8 @@ function compileLoopPart(
                 },
                 as: stage.as,
                 join,
-                prefix: stage.lateral ? "lateral" : undefined,
-                on: exprToAst(qualifyForBase(stage.on, baseAlias, keepTables)),
+                prefix: lateralJoinPrefix(stage.lateral, dialect),
+                on: exprToAst(qualifyForBase(stage.on, baseAlias, keepTables, dialect)),
               }
         );
         break;
@@ -180,14 +352,16 @@ function compileLoopPart(
   return buildSelectAst({
     from,
     columns: selectItems.map((item) => ({
-      expr: exprToAst(qualifyForBase(item.expr, baseAlias, keepTables)),
+      expr: exprToAst(qualifyForBase(item.expr, baseAlias, keepTables, dialect)),
       as: item.as,
     })),
-    where: whereExpr ? exprToAst(qualifyForBase(whereExpr, baseAlias, keepTables)) : null,
+    where: whereExpr
+      ? exprToAst(qualifyForBase(whereExpr, baseAlias, keepTables, dialect))
+      : null,
     groupby: groupBy
       ? {
           columns: groupBy.map((expr) =>
-            exprToAst(qualifyForBase(expr, baseAlias, keepTables))
+            exprToAst(qualifyForBase(expr, baseAlias, keepTables, dialect))
           ),
           modifiers: [],
         }
@@ -202,10 +376,15 @@ function buildPipelineAst(
   stages: Stage[],
   columns: ColumnRefs<Record<string, any>>,
   columnNames: readonly string[] | null,
-  options?: { ctePrefix?: string; keepTables?: Set<string> }
+  options?: {
+    ctePrefix?: string;
+    keepTables?: Set<string>;
+    dialect?: QueryDialect;
+  }
 ): { ast: AST; ctes: With[] } {
   const ctePrefix = options?.ctePrefix ?? "";
   const keepTables = options?.keepTables;
+  const dialect = options?.dialect ?? getDefaultDialect();
   if (stages.length === 0) {
     const baseFrom = sourceToFrom({
       kind: "table",
@@ -218,7 +397,7 @@ function buildPipelineAst(
       ast: buildSelectAst({
         from: [baseFrom],
         columns: selectAllItems(columns, columnNames).map((item) => ({
-          expr: exprToAst(qualifyForBase(item.expr, baseAlias, keepTables)),
+          expr: exprToAst(qualifyForBase(item.expr, baseAlias, keepTables, dialect)),
           as: item.as,
         })),
         where: null,
@@ -248,9 +427,10 @@ function buildPipelineAst(
             current,
             ctes,
             `${ctePrefix}u${unionCount}_`,
-            keepTables
+            keepTables,
+            dialect
           )
-        : stageToSelect(stage, current, keepTables);
+        : stageToSelect(stage, current, keepTables, dialect);
     if (stage.kind === "union") unionCount += 1;
     const name = `${ctePrefix}cte_${i}`;
     ctes.push({
@@ -272,16 +452,18 @@ function buildPipelineAst(
           current,
           ctes,
           `${ctePrefix}u${unionCount}_`,
-          keepTables
+          keepTables,
+          dialect
         )
-      : stageToSelect(finalStage, current, keepTables);
+      : stageToSelect(finalStage, current, keepTables, dialect);
   return { ast: finalAst as AST, ctes };
 }
 
 function stageToSelect(
   stage: Stage,
   source: SourceRef,
-  keepTables?: Set<string>
+  keepTables?: Set<string>,
+  dialect: QueryDialect = getDefaultDialect()
 ): AST {
   const baseFrom = sourceToFrom(source);
   const baseAlias = ensureAlias(baseFrom);
@@ -290,14 +472,14 @@ function stageToSelect(
       return buildSelectAst({
         from: [baseFrom],
         columns: stage.items.map((item) => ({
-          expr: exprToAst(qualifyForBase(item.expr, baseAlias, keepTables)),
+          expr: exprToAst(qualifyForBase(item.expr, baseAlias, keepTables, dialect)),
           as: item.as,
         })),
         where: null,
         groupby: stage.groupBy
           ? {
             columns: stage.groupBy.map((expr) =>
-              exprToAst(qualifyForBase(expr, baseAlias, keepTables))
+              exprToAst(qualifyForBase(expr, baseAlias, keepTables, dialect))
             ),
             modifiers: [],
           }
@@ -309,10 +491,10 @@ function stageToSelect(
       return buildSelectAst({
         from: [baseFrom],
         columns: stage.selectAll.map((item) => ({
-          expr: exprToAst(qualifyForBase(item.expr, baseAlias, keepTables)),
+          expr: exprToAst(qualifyForBase(item.expr, baseAlias, keepTables, dialect)),
           as: item.as,
         })),
-        where: exprToAst(qualifyForBase(stage.predicate, baseAlias, keepTables)),
+        where: exprToAst(qualifyForBase(stage.predicate, baseAlias, keepTables, dialect)),
         groupby: null,
         orderby: null,
         limit: null,
@@ -321,13 +503,13 @@ function stageToSelect(
       return buildSelectAst({
         from: [baseFrom],
         columns: stage.selectAll.map((item) => ({
-          expr: exprToAst(qualifyForBase(item.expr, baseAlias, keepTables)),
+          expr: exprToAst(qualifyForBase(item.expr, baseAlias, keepTables, dialect)),
           as: item.as,
         })),
         where: null,
         groupby: null,
         orderby: stage.items.map((item) => ({
-          expr: exprToAst(qualifyForBase(item.expr, baseAlias, keepTables)),
+          expr: exprToAst(qualifyForBase(item.expr, baseAlias, keepTables, dialect)),
           type: item.direction,
         })),
         limit: null,
@@ -336,7 +518,7 @@ function stageToSelect(
       return buildSelectAst({
         from: [baseFrom],
         columns: stage.selectAll.map((item) => ({
-          expr: exprToAst(qualifyForBase(item.expr, baseAlias, keepTables)),
+          expr: exprToAst(qualifyForBase(item.expr, baseAlias, keepTables, dialect)),
           as: item.as,
         })),
         where: null,
@@ -368,8 +550,8 @@ function stageToSelect(
                 table: stage.source.table,
                 as: stage.as,
                 join,
-                prefix: stage.lateral ? "lateral" : undefined,
-                on: exprToAst(qualifyForBase(stage.on, baseAlias, nextKeep)),
+                prefix: lateralJoinPrefix(stage.lateral, dialect),
+                on: exprToAst(qualifyForBase(stage.on, baseAlias, nextKeep, dialect)),
               }
             : {
                 expr: {
@@ -380,12 +562,12 @@ function stageToSelect(
                 },
                 as: stage.as,
                 join,
-                prefix: stage.lateral ? "lateral" : undefined,
-                on: exprToAst(qualifyForBase(stage.on, baseAlias, nextKeep)),
+                prefix: lateralJoinPrefix(stage.lateral, dialect),
+                on: exprToAst(qualifyForBase(stage.on, baseAlias, nextKeep, dialect)),
               },
         ],
         columns: stage.selectAll.map((item) => ({
-          expr: exprToAst(qualifyForBase(item.expr, baseAlias, nextKeep)),
+          expr: exprToAst(qualifyForBase(item.expr, baseAlias, nextKeep, dialect)),
           as: item.as,
         })),
         where: null,
@@ -473,14 +655,15 @@ function compileUnionStage(
   source: SourceRef,
   ctes: With[],
   rightPrefix: string,
-  keepTables?: Set<string>
+  keepTables?: Set<string>,
+  dialect: QueryDialect = getDefaultDialect()
 ): AST {
   const baseFrom = sourceToFrom(source);
   const baseAlias = ensureAlias(baseFrom);
   const leftAst = buildSelectAst({
     from: [baseFrom],
     columns: stage.selectAll.map((item) => ({
-      expr: exprToAst(qualifyForBase(item.expr, baseAlias, keepTables)),
+      expr: exprToAst(qualifyForBase(item.expr, baseAlias, keepTables, dialect)),
       as: item.as,
     })),
     where: null,
@@ -489,21 +672,18 @@ function compileUnionStage(
     limit: null,
   });
 
-  const rightColumns = createColumnRefs<Record<string, any>>(
-    null,
-    stage.right.columnNames
-  );
+  const rightColumns = createColumnRefs<Record<string, any>>(null, stage.right.columnNames);
   const rightCompiled = buildPipelineAst(
     stage.right.source,
     stage.right.stages,
     rightColumns,
     stage.right.columnNames,
-    { ctePrefix: rightPrefix, keepTables }
+    { ctePrefix: rightPrefix, keepTables, dialect }
   );
   if (rightCompiled.ctes.length) {
     ctes.push(...rightCompiled.ctes);
   }
-  rightCompiled.ast.with = null;
+  (rightCompiled.ast as any).with = null;
 
   return attachUnion(leftAst, rightCompiled.ast, stage.op);
 }
@@ -710,9 +890,13 @@ function qualifyMissingTables(
 function qualifyForBase(
   expr: ExprNode<any>,
   baseAlias: string,
-  keepTables?: Set<string>
+  keepTables?: Set<string>,
+  dialect: QueryDialect = getDefaultDialect()
 ): ExprNode<any> {
-  return qualifyMissingTables(stripTableRefs(expr, keepTables), baseAlias);
+  return applyDialectLanguage(
+    qualifyMissingTables(stripTableRefs(expr, keepTables), baseAlias),
+    dialect
+  );
 }
 
 const keywordFunctions = new Set(["CURRENT_DATE", "CURRENT_TIMESTAMP"]);
@@ -908,37 +1092,93 @@ function buildWindowOver(
 
 export function buildSqlOptions(
   dialectOrOpt?: Dialect | SqlOptions,
-  optOrFormat?: Option | SqlFormat,
+  optOrFormat?: SqlOptions | SqlFormat,
   format?: SqlFormat
-): { options?: Option; sqlFormat: SqlFormat } {
-  let options: Option | undefined;
+): { dialect: QueryDialect; options?: Option; sqlFormat: SqlFormat } {
+  let dialect = getDefaultDialect();
+  let options: Option = {};
   let sqlFormat: SqlFormat = "compact";
 
-  if (dialectOrOpt && typeof dialectOrOpt === "object") {
-    const { format: fmt, ...rest } = dialectOrOpt as SqlOptions;
-    options = { ...rest };
+  if (typeof dialectOrOpt === "string") {
+    dialect = resolveDialect(dialectOrOpt);
+    if (typeof optOrFormat === "object" && optOrFormat) {
+      const {
+        format: fmt,
+        dialect: inlineDialect,
+        database: explicitDatabase,
+        ...rest
+      } = optOrFormat as SqlOptions;
+      options = { ...rest };
+      if (fmt) sqlFormat = fmt;
+      if (inlineDialect !== undefined) dialect = resolveDialect(inlineDialect);
+      if (explicitDatabase !== undefined) {
+        options.database = explicitDatabase;
+      }
+    }
+  } else if (dialectOrOpt && typeof dialectOrOpt === "object") {
+    if (isDialectSpec(dialectOrOpt)) {
+      dialect = resolveDialect(dialectOrOpt);
+    } else {
+      const {
+        format: fmt,
+        dialect: inlineDialect,
+        database: explicitDatabase,
+        ...rest
+      } = dialectOrOpt as SqlOptions;
+      options = { ...rest };
+      if (fmt) sqlFormat = fmt;
+      if (inlineDialect !== undefined) dialect = resolveDialect(inlineDialect);
+      if (explicitDatabase !== undefined) {
+        options.database = explicitDatabase;
+      }
+    }
+  }
+
+  if (typeof optOrFormat === "object" && optOrFormat && typeof dialectOrOpt !== "string") {
+    const {
+      format: fmt,
+      dialect: inlineDialect,
+      database: explicitDatabase,
+      ...rest
+    } = optOrFormat as SqlOptions;
+    options = { ...options, ...rest };
     if (fmt) sqlFormat = fmt;
-  } else if (typeof dialectOrOpt === "string") {
-    const merged: Option = {
-      ...(typeof optOrFormat === "object" && optOrFormat ? optOrFormat : {}),
-    };
-    merged.database = normalizeDialect(dialectOrOpt);
-    options = merged;
+    if (inlineDialect !== undefined) dialect = resolveDialect(inlineDialect);
+    if (explicitDatabase !== undefined) {
+      options.database = explicitDatabase;
+    }
   }
 
   if (typeof optOrFormat === "string") sqlFormat = optOrFormat;
   if (format) sqlFormat = format;
 
-  return { options, sqlFormat };
+  if (options.database === undefined && dialect.parserDialect) {
+    options.database = dialect.parserDialect;
+  }
+
+  const hasOptions = Object.keys(options).length > 0;
+
+  return {
+    dialect,
+    options: hasOptions ? options : undefined,
+    sqlFormat,
+  };
 }
 
-export function applyDialectFixes(ast: AST, database?: string): AST {
-  if (!database) return ast;
-  const normalized = database.toString().trim().toLowerCase();
-  if (normalized !== "sqlite") return ast;
+export function applyDialectFixes(ast: AST, dialect: QueryDialect): AST {
+  if (!dialect.features.recursiveCte && containsRecursiveCte(ast)) {
+    throw new Error(`Dialect ${dialect.name} does not support recursive CTE`);
+  }
+  if (dialect.features.lateralJoinKeyword) return ast;
   const copy = cloneAst(ast);
   stripLateralPrefix(copy);
   return copy;
+}
+
+function containsRecursiveCte(ast: AST): boolean {
+  const withClause = (ast as any).with;
+  if (!Array.isArray(withClause) || withClause.length === 0) return false;
+  return withClause.some((item) => Boolean((item as any)?.recursive));
 }
 
 function stripLateralPrefix(node: any): void {
@@ -956,40 +1196,12 @@ function stripLateralPrefix(node: any): void {
   }
 }
 
-function normalizeDialect(dialect: Dialect): string {
-  const key = dialect.toString().trim().toLowerCase();
-  switch (key) {
-    case "mysql":
-      return "MySQL";
-    case "mariadb":
-      return "MariaDB";
-    case "postgresql":
-      return "Postgresql";
-    case "sqlite":
-      return "SQLite";
-    case "trino":
-      return "Trino";
-    case "transactsql":
-      return "TransactSQL";
-    case "redshift":
-      return "Redshift";
-    case "snowflake":
-      return "Snowflake";
-    case "bigquery":
-      return "BigQuery";
-    case "athena":
-      return "Athena";
-    case "db2":
-      return "DB2";
-    case "hive":
-      return "Hive";
-    case "flinksql":
-      return "FlinkSQL";
-    case "noql":
-      return "NoQL";
-    default:
-      return dialect;
-  }
+function lateralJoinPrefix(
+  lateral: boolean | undefined,
+  dialect: QueryDialect
+): "lateral" | undefined {
+  if (!lateral) return undefined;
+  return dialect.features.lateralJoinKeyword ? "lateral" : undefined;
 }
 
 export function formatSqlPretty(sql: string): string {

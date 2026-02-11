@@ -6,8 +6,9 @@ Type-safe SQL EDSL for TypeScript with composable query pipelines.
 
 - Typed column refs with autocomplete
 - Composable pipeline steps (each step compiles to a CTE)
-- Fluent expression helpers (filters, aggregates, windows, functions)
+- Method-centric expression helpers (math/string/date/array/window)
 - Dialect-aware SQL rendering (pretty or compact)
+- Dialect language mapping + fallback rewrites at `toSql(...)`
 
 ## Playground
 
@@ -48,9 +49,108 @@ const q = users
 console.log(q.toSql("Postgresql", "pretty"));
 ```
 
+## Dialect-neutral EDSL, dialect at render time
+
+Keep EDSL expressions general, then choose SQL dialect only in `toSql(...)`:
+
+```ts
+console.log(q.toSql({
+  dialect: {
+    name: "Presto",
+    parserDialect: "Trino",
+  },
+  format: "pretty",
+}));
+```
+
+Built-in HetuEngine DQL support is available via `toSql("hetuengine dql")` (aliases: `"hetuenginedql"`, `"hetuengine"`).
+Internally, SQL stringification uses the `Trino` parser dialect while preserving Hetu-oriented function mappings.
+
+## Method-centric expression API
+
+When possible, expression entry points are methods on `ExprRef`:
+
+```ts
+const events = table("events", {
+  id: t.int(),
+  created_at: t.timestamp(),
+  tags: t.string(),
+});
+
+const q = events.select((e) => ({
+  id: e.id,
+  created_day: e.created_at.dateTrunc("day").dateFormat("%Y-%m-%d"),
+  event_hour: e.created_at.hour(),
+  tag_count: e.tags.arrayLength(),
+  has_sale_tag: e.tags.arrayContains("sale"),
+  normalized_name: e.tags.regexReplace("[^a-zA-Z0-9_]+", "_"),
+  has_uuid: e.tags.regexLike("^[0-9a-fA-F-]{36}$"),
+}));
+```
+
+Common date/time methods:
+
+- `dateTrunc`, `dateAdd`, `dateDiff`
+- `dateFormat`, `dateParse`
+- `toUnixTime`, `fromUnixTime`
+- `year`, `month`, `day`, `hour`, `minute`, `second`
+
+Common array methods:
+
+- `arrayLength`, `arrayContains`, `arrayPosition`
+- `arraySlice`, `arrayJoin`
+- `arrayAppend`, `arrayPrepend`, `arrayConcat`, `arrayDistinct`
+
+Common regex string methods:
+
+- `regexLike`
+- `regexReplace`
+- `regexExtract`
+
+## SQL language specification
+
+Teta language spec includes:
+
+- math (basic arithmetic)
+- string manipulation
+- logical operators
+- date/time functions
+- type conversion + null handling
+- array manipulation
+- window/aggregation functions
+- lateral join
+- recursive CTE
+
+Each dialect can map missing names or apply fallback rewrites through `dialect.language`.
+
+For full function list + support matrix, see `LANGUAGE_SPEC.md`.
+
+## Custom dialect language mapping
+
+```ts
+console.log(q.toSql({
+  dialect: {
+    name: "sqlite_custom",
+    parserDialect: "SQLite",
+    language: {
+      functions: {
+        CHARACTER_LENGTH: "LENGTH",
+      },
+      fallbacks: {
+        BIT_LENGTH: "bit_length_via_length_x8",
+        DATE_FORMAT: "date_format_via_strftime",
+        ARRAY_LENGTH: "array_length_via_json_array_length",
+        REGEXP_LIKE: "regex_like_via_regexp_function",
+      },
+      unsupported: ["OVERLAY"],
+    },
+  },
+}));
+```
+
 ## Tutorial
 
-See `TUTORIAL.md` for a full walkthrough, generated SQL, and more examples.
+See `TUTORIAL.md` for end-to-end examples.
 
 ## License
 

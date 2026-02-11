@@ -1,4 +1,4 @@
-import { Parser, type AST, type Option, type With } from "node-sql-parser";
+import { Parser, type AST, type With } from "node-sql-parser";
 import {
   OUTER_TABLE_ALIAS,
   type ColumnType,
@@ -20,10 +20,7 @@ import {
 } from "./types";
 import {
   ColumnRef,
-  ColumnRefs,
   ExprRef,
-  SelectResult,
-  SelectShape,
   containsGroup,
   createColumnRefs,
   dedupeExprs,
@@ -34,6 +31,7 @@ import {
   toExprNode,
   unwrapGroupExpr,
 } from "./expr";
+import type { ColumnRefs, SelectResult, SelectShape } from "./expr";
 import {
   applyDialectFixes,
   buildSqlOptions,
@@ -277,7 +275,10 @@ export class Query<TColumns extends Record<string, any>> {
         rightQuery.stages,
         rightQuery.columns as ColumnRefs<Record<string, any>>,
         rightQuery.columnNames,
-        { ctePrefix: `${alias}_`, keepTables: new Set([OUTER_TABLE_ALIAS]) }
+        {
+          ctePrefix: `${alias}_`,
+          keepTables: new Set([OUTER_TABLE_ALIAS]),
+        }
       ),
     };
     const stage: Stage = {
@@ -316,12 +317,25 @@ export class Query<TColumns extends Record<string, any>> {
   toSql(opt?: SqlOptions): string;
   toSql(
     dialectOrOpt?: Dialect | SqlOptions,
-    optOrFormat?: Option | SqlFormat,
+    optOrFormat?: SqlOptions | SqlFormat,
     format?: SqlFormat
   ): string {
     const parser = new Parser();
-    const { options, sqlFormat } = buildSqlOptions(dialectOrOpt, optOrFormat, format);
-    const ast = applyDialectFixes(this.toAst(), options?.database);
+    const { dialect, options, sqlFormat } = buildSqlOptions(
+      dialectOrOpt,
+      optOrFormat,
+      format
+    );
+    const ast = applyDialectFixes(
+      compilePipeline(
+        this.source,
+        this.stages,
+        this.columns,
+        this.columnNames,
+        { baseWiths: this.withs, dialect }
+      ),
+      dialect
+    );
     const sql = parser.sqlify(ast, options);
     const cleaned = stripRedundantQuotes(sql);
     return sqlFormat === "pretty" ? formatSqlPretty(cleaned) : cleaned;
@@ -368,7 +382,11 @@ export const t = {
 function parseTableName(name: string): { table: string; schema: string | null } {
   const parts = name.split(".");
   if (parts.length === 2) {
-    return { schema: parts[0], table: parts[1] };
+    const schema = parts[0];
+    const table = parts[1];
+    if (schema !== undefined && table !== undefined) {
+      return { schema, table };
+    }
   }
   return { schema: null, table: name };
 }
@@ -380,7 +398,7 @@ export function table<S extends Record<string, ColumnType<any>>>(
 ): Query<InferSchema<S>> {
   const columnNames = Object.keys(schema);
   const { table, schema: schemaName } = parseTableName(name);
-  const columns = createColumnRefs(null, columnNames);
+  const columns = createColumnRefs<InferSchema<S>>(null, columnNames);
   return new Query(
     { table, schema: schemaName, as: null },
     [],

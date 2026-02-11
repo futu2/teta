@@ -40,8 +40,8 @@ export type UnaryOp = "NOT";
 export type AggFunc = "COUNT" | "SUM" | "AVG" | "MIN" | "MAX";
 export type JoinType = "INNER" | "LEFT" | "RIGHT" | "FULL";
 export type JoinTypeInput = "inner" | "left" | "right" | "full" | JoinType;
-/** Database dialect identifier for SQL rendering. */
-export type Dialect =
+/** Built-in SQL dialect identifiers supported by Teta. */
+export type BuiltinDialect =
   | "MySQL"
   | "MariaDB"
   | "Postgresql"
@@ -56,6 +56,9 @@ export type Dialect =
   | "Hive"
   | "FlinkSQL"
   | "NoQL"
+  | "HetuEngineDQL"
+  | "HetuEngine DQL"
+  | "HetuEngine"
   | "mysql"
   | "mariadb"
   | "postgresql"
@@ -69,11 +72,74 @@ export type Dialect =
   | "db2"
   | "hive"
   | "flinksql"
-  | "noql";
+  | "noql"
+  | "hetuenginedql"
+  | "hetuengine dql"
+  | "hetuengine";
+
+/** Dialect feature flags used during EDSL -> AST codegen. */
+export type DialectFeatures = {
+  lateralJoinKeyword?: boolean;
+  recursiveCte?: boolean;
+};
+
+export type DialectLanguageFallback =
+  | "bit_length_via_length_x8"
+  | "array_length_via_json_array_length"
+  | "array_length_dim1"
+  | "array_contains_via_array_position"
+  | "array_contains_via_json_instr"
+  | "array_position_via_json_instr"
+  | "array_join_via_json_string"
+  | "array_append_via_json_insert_end"
+  | "date_format_via_strftime"
+  | "date_parse_via_datetime"
+  | "date_trunc_via_strftime"
+  | "date_add_via_datetime"
+  | "date_diff_via_julianday"
+  | "date_diff_via_extract_epoch"
+  | "date_add_via_epoch_timestamp"
+  | "to_unixtime_via_strftime_s"
+  | "to_unixtime_via_extract_epoch"
+  | "from_unixtime_via_datetime"
+  | "regex_like_via_regexp_match"
+  | "regex_like_via_regexp_function";
+
+export type DialectLanguageConfig = {
+  functions?: Record<string, string>;
+  fallbacks?: Record<string, DialectLanguageFallback>;
+  unsupported?: string[];
+};
+
+/** Custom dialect definition with optional parser fallback. */
+export type DialectSpec = {
+  name: string;
+  parserDialect?: string | null;
+  features?: DialectFeatures;
+  language?: DialectLanguageConfig;
+};
+
+/** Database dialect identifier for SQL rendering and AST generation. */
+export type Dialect = BuiltinDialect | DialectSpec | (string & {});
+
+/** Resolved dialect configuration embedded in query IR and AST codegen. */
+export type QueryDialect = {
+  name: string;
+  parserDialect: string | null;
+  features: {
+    lateralJoinKeyword: boolean;
+    recursiveCte: boolean;
+  };
+  language: {
+    functions: Record<string, string>;
+    fallbacks: Record<string, DialectLanguageFallback>;
+    unsupported: string[];
+  };
+};
 /** SQL output formatting style. */
 export type SqlFormat = "compact" | "pretty";
 /** SQL parser options with optional formatting. */
-export type SqlOptions = Option & { format?: SqlFormat };
+export type SqlOptions = Option & { format?: SqlFormat; dialect?: Dialect };
 
 export type ExprNode<T> =
   | ColumnNode

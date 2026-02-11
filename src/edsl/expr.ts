@@ -119,6 +119,72 @@ export class ExprRef<T> {
     });
   }
 
+  dateTrunc(
+    this: ExprRef<SqlDate | SqlTimestamp | string>,
+    unit: ExprInput<string>
+  ): ExprRef<SqlTimestamp> {
+    return funcExpr("DATE_TRUNC", [toExprNode(unit), this.node]);
+  }
+
+  dateAdd(
+    this: ExprRef<SqlDate | SqlTimestamp | string>,
+    unit: ExprInput<string>,
+    amount: ExprInput<SqlInt>
+  ): ExprRef<SqlTimestamp> {
+    return funcExpr("DATE_ADD", [toExprNode(unit), toExprNode(amount), this.node]);
+  }
+
+  dateDiff(
+    this: ExprRef<SqlDate | SqlTimestamp | string>,
+    unit: ExprInput<string>,
+    other: ExprInput<SqlDate | SqlTimestamp | string>
+  ): ExprRef<SqlInt> {
+    return funcExpr("DATE_DIFF", [toExprNode(unit), this.node, toExprNode(other)]);
+  }
+
+  dateFormat(
+    this: ExprRef<SqlDate | SqlTimestamp | string>,
+    format: ExprInput<string>
+  ): ExprRef<string> {
+    return funcExpr("DATE_FORMAT", [this.node, toExprNode(format)]);
+  }
+
+  dateParse(this: ExprRef<string>, format: ExprInput<string>): ExprRef<SqlTimestamp> {
+    return funcExpr("DATE_PARSE", [this.node, toExprNode(format)]);
+  }
+
+  toUnixTime(this: ExprRef<SqlDate | SqlTimestamp | string>): ExprRef<SqlFloat> {
+    return funcExpr("TO_UNIXTIME", [this.node]);
+  }
+
+  fromUnixTime(this: ExprRef<SqlNumber>): ExprRef<SqlTimestamp> {
+    return funcExpr("FROM_UNIXTIME", [this.node]);
+  }
+
+  year(this: ExprRef<any>): ExprRef<SqlInt> {
+    return this.extract("year").cast<SqlInt>("INTEGER");
+  }
+
+  month(this: ExprRef<any>): ExprRef<SqlInt> {
+    return this.extract("month").cast<SqlInt>("INTEGER");
+  }
+
+  day(this: ExprRef<any>): ExprRef<SqlInt> {
+    return this.extract("day").cast<SqlInt>("INTEGER");
+  }
+
+  hour(this: ExprRef<any>): ExprRef<SqlInt> {
+    return this.extract("hour").cast<SqlInt>("INTEGER");
+  }
+
+  minute(this: ExprRef<any>): ExprRef<SqlInt> {
+    return this.extract("minute").cast<SqlInt>("INTEGER");
+  }
+
+  second(this: ExprRef<any>): ExprRef<SqlInt> {
+    return this.extract("second").cast<SqlInt>("INTEGER");
+  }
+
   group(this: ExprRef<T>): ExprRef<T> {
     return new ExprRef<T>({ kind: "group", expr: this.node });
   }
@@ -180,6 +246,28 @@ export class ExprRef<T> {
     return new WindowBuilder<SqlInt>("ROW_NUMBER", []);
   }
 
+  lag(this: ExprRef<T>, offset?: ExprInput<SqlInt>, fallback?: ExprInput<T>): WindowBuilder<T> {
+    const args: ExprNode<any>[] = [this.node];
+    if (offset !== undefined) args.push(toExprNode(offset));
+    if (fallback !== undefined) args.push(toExprNode(fallback));
+    return new WindowBuilder<T>("LAG", args);
+  }
+
+  lead(this: ExprRef<T>, offset?: ExprInput<SqlInt>, fallback?: ExprInput<T>): WindowBuilder<T> {
+    const args: ExprNode<any>[] = [this.node];
+    if (offset !== undefined) args.push(toExprNode(offset));
+    if (fallback !== undefined) args.push(toExprNode(fallback));
+    return new WindowBuilder<T>("LEAD", args);
+  }
+
+  percentRank(this: ExprRef<any>): WindowBuilder<SqlFloat> {
+    return new WindowBuilder<SqlFloat>("PERCENT_RANK", []);
+  }
+
+  ntile(this: ExprRef<any>, buckets: ExprInput<SqlInt>): WindowBuilder<SqlInt> {
+    return new WindowBuilder<SqlInt>("NTILE", [toExprNode(buckets)]);
+  }
+
   ceil(this: ExprRef<SqlNumber>): ExprRef<SqlInt> {
     return funcExpr("CEIL", [this.node]);
   }
@@ -194,6 +282,10 @@ export class ExprRef<T> {
 
   sqrt(this: ExprRef<SqlNumber>): ExprRef<SqlFloat> {
     return funcExpr("SQRT", [this.node]);
+  }
+
+  pow(this: ExprRef<SqlNumber>, exponent: ExprInput<SqlNumber>): ExprRef<SqlFloat> {
+    return funcExpr("POWER", [this.node, toExprNode(exponent)]);
   }
 
   greatest<T extends SqlNumber>(
@@ -250,6 +342,31 @@ export class ExprRef<T> {
     return funcExpr("TRIM", [this.node]);
   }
 
+  regexLike(this: ExprRef<string>, pattern: ExprInput<string>): ExprRef<boolean> {
+    return funcExpr("REGEXP_LIKE", [this.node, toExprNode(pattern)]);
+  }
+
+  regexReplace(
+    this: ExprRef<string>,
+    pattern: ExprInput<string>,
+    replacement: ExprInput<string>,
+    flags?: ExprInput<string>
+  ): ExprRef<string> {
+    const args = [this.node, toExprNode(pattern), toExprNode(replacement)];
+    if (flags !== undefined) args.push(toExprNode(flags));
+    return funcExpr("REGEXP_REPLACE", args);
+  }
+
+  regexExtract(
+    this: ExprRef<string>,
+    pattern: ExprInput<string>,
+    groupIndex?: ExprInput<SqlInt>
+  ): ExprRef<string> {
+    const args = [this.node, toExprNode(pattern)];
+    if (groupIndex !== undefined) args.push(toExprNode(groupIndex));
+    return funcExpr("REGEXP_EXTRACT", args);
+  }
+
   substring(
     this: ExprRef<string>,
     start: ExprInput<SqlInt>,
@@ -291,9 +408,79 @@ export class ExprRef<T> {
     return funcExpr("BIT_LENGTH", [this.node]);
   }
 
+  left(this: ExprRef<string>, length: ExprInput<SqlInt>): ExprRef<string> {
+    return funcExpr("LEFT", [this.node, toExprNode(length)]);
+  }
+
+  right(this: ExprRef<string>, length: ExprInput<SqlInt>): ExprRef<string> {
+    return funcExpr("RIGHT", [this.node, toExprNode(length)]);
+  }
+
+  lpad(
+    this: ExprRef<string>,
+    length: ExprInput<SqlInt>,
+    padding: ExprInput<string> = " "
+  ): ExprRef<string> {
+    return funcExpr("LPAD", [this.node, toExprNode(length), toExprNode(padding)]);
+  }
+
+  rpad(
+    this: ExprRef<string>,
+    length: ExprInput<SqlInt>,
+    padding: ExprInput<string> = " "
+  ): ExprRef<string> {
+    return funcExpr("RPAD", [this.node, toExprNode(length), toExprNode(padding)]);
+  }
+
   concat(this: ExprRef<string>, ...parts: ExprInput<any>[]): ExprRef<string> {
     if (parts.length === 0) return this;
     return funcExpr("CONCAT", [this.node, ...parts.map((part) => toExprNode(part))]);
+  }
+
+  arrayLength(this: ExprRef<any>): ExprRef<SqlInt> {
+    return funcExpr("ARRAY_LENGTH", [this.node]);
+  }
+
+  arrayContains(this: ExprRef<any>, value: ExprInput<any>): ExprRef<boolean> {
+    return funcExpr("ARRAY_CONTAINS", [this.node, toExprNode(value)]);
+  }
+
+  arrayPosition(this: ExprRef<any>, value: ExprInput<any>): ExprRef<SqlInt> {
+    return funcExpr("ARRAY_POSITION", [this.node, toExprNode(value)]);
+  }
+
+  arraySlice(
+    this: ExprRef<any>,
+    start: ExprInput<SqlInt>,
+    length?: ExprInput<SqlInt>
+  ): ExprRef<any> {
+    const args = [this.node, toExprNode(start)];
+    if (length !== undefined) args.push(toExprNode(length));
+    return funcExpr("ARRAY_SLICE", args);
+  }
+
+  arrayJoin(this: ExprRef<any>, separator: ExprInput<string>): ExprRef<string> {
+    return funcExpr("ARRAY_JOIN", [this.node, toExprNode(separator)]);
+  }
+
+  arrayAppend(this: ExprRef<any>, value: ExprInput<any>): ExprRef<any> {
+    return funcExpr("ARRAY_APPEND", [this.node, toExprNode(value)]);
+  }
+
+  arrayPrepend(this: ExprRef<any>, value: ExprInput<any>): ExprRef<any> {
+    return funcExpr("ARRAY_PREPEND", [this.node, toExprNode(value)]);
+  }
+
+  arrayConcat(this: ExprRef<any>, ...values: ExprInput<any>[]): ExprRef<any> {
+    if (values.length === 0) return this;
+    return funcExpr("ARRAY_CONCAT", [
+      this.node,
+      ...values.map((value) => toExprNode(value)),
+    ]);
+  }
+
+  arrayDistinct(this: ExprRef<any>): ExprRef<any> {
+    return funcExpr("ARRAY_DISTINCT", [this.node]);
   }
 
   coalesce(this: ExprRef<T>, ...values: ExprInput<T>[]): ExprRef<T> {
@@ -304,6 +491,10 @@ export class ExprRef<T> {
       this.node,
       ...values.map((value) => toExprNode(value)),
     ]);
+  }
+
+  nullIf(this: ExprRef<T>, value: ExprInput<T>): ExprRef<T | null> {
+    return funcExpr("NULLIF", [this.node, toExprNode(value)]);
   }
 
   isNull(): ExprRef<boolean> {
@@ -355,10 +546,6 @@ export class ExprRef<T> {
   round(this: ExprRef<SqlNumber>, scale?: ExprInput<SqlInt>): ExprRef<SqlNumber> {
     const args = scale === undefined ? [this.node] : [this.node, toExprNode(scale)];
     return funcExpr("ROUND", args);
-  }
-
-  concat(...values: ExprInput<any>[]): ExprRef<string> {
-    return funcExpr("CONCAT", [this.node, ...values.map((value) => toExprNode(value))]);
   }
 }
 

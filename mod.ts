@@ -21,8 +21,18 @@ export {
   timestampLiteral,
 } from "./src/edsl/expr";
 
+/** Language specification and dialect mapping helpers. */
+export { LANGUAGE_SPEC, getLanguageSpec } from "./src/edsl/language";
+export type { LanguageCategory } from "./src/edsl/language";
+
 /** Common SQL type aliases and SQL rendering options. */
 export type {
+  BuiltinDialect,
+  DialectLanguageConfig,
+  DialectLanguageFallback,
+  DialectFeatures,
+  DialectSpec,
+  QueryDialect,
   SqlInt,
   SqlFloat,
   SqlNumber,
