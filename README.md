@@ -107,6 +107,30 @@ Common regex string methods:
 - `regexReplace`
 - `regexExtract`
 
+
+## Watch SQL + clipboard utility
+
+You can watch a source module, regenerate SQL on changes, and copy it to clipboard (`xclip`/`xsel`/`wl-copy`/`pbcopy`/`clip`) using:
+
+```ts
+import { watchQuerySourceToClipboard } from "./src/edsl";
+
+await watchQuerySourceToClipboard({
+  source: "./dev/query-source.ts",
+  exportName: "query",
+  toSqlArgs: ["hetuengine dql", "pretty"],
+  outputFile: "./result.sql",
+  clipboard: "auto",
+});
+```
+
+Expected export in `./dev/query-source.ts` can be either:
+
+- a `Query` object export, e.g. `export const query = users.select(...)`
+- a function returning `Query` or SQL string, e.g. `export async function query() { ... }`
+
+Tip: On Linux install one of `wl-copy`, `xclip`, or `xsel`.
+
 ## SQL language specification
 
 Teta language spec includes:

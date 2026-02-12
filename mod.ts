@@ -25,6 +25,19 @@ export {
 export { LANGUAGE_SPEC, getLanguageSpec } from "./src/edsl/language";
 export type { LanguageCategory } from "./src/edsl/language";
 
+/** Dev utilities for source-watch SQL generation and clipboard copy. */
+export {
+  copyTextToClipboard,
+  renderSqlFromSource,
+  watchQuerySourceToClipboard,
+} from "./src/edsl/dev";
+export type {
+  ClipboardTool,
+  QueryLike,
+  WatchQueryController,
+  WatchQuerySourceOptions,
+} from "./src/edsl/dev";
+
 /** Common SQL type aliases and SQL rendering options. */
 export type {
   BuiltinDialect,
