@@ -21,6 +21,7 @@ export type WatchQuerySourceOptions = {
   watchPaths?: string | string[];
   exportName?: string;
   toSqlArgs?: unknown[];
+  isolateModules?: boolean;
   outputFile?: string;
   copyToClipboard?: boolean;
   clipboard?: ClipboardTool;
@@ -41,6 +42,10 @@ type ClipboardCommand = {
   args: string[];
 };
 
+type IsolatedRenderResult =
+  | { ok: true; sql: string }
+  | { ok: false; error: string };
+
 const CLIPBOARD_COMMANDS: Record<Exclude<ClipboardTool, "auto">, ClipboardCommand> = {
   "wl-copy": { command: "wl-copy", args: [] },
   xclip: { command: "xclip", args: ["-selection", "clipboard"] },
@@ -48,6 +53,49 @@ const CLIPBOARD_COMMANDS: Record<Exclude<ClipboardTool, "auto">, ClipboardComman
   pbcopy: { command: "pbcopy", args: [] },
   clip: { command: "clip", args: [] },
 };
+
+const RENDER_RESULT_PREFIX = "__teta_render_sql__";
+const RENDER_SQL_EVAL_SCRIPT = String.raw`(async () => {
+  const PREFIX = "__teta_render_sql__";
+  const respond = (payload) => process.stdout.write(PREFIX + JSON.stringify(payload) + "\n");
+  try {
+    const { resolve } = await import("node:path");
+    const { pathToFileURL } = await import("node:url");
+    const source = (process.env.TETA_SOURCE ?? "").trim();
+    if (!source) {
+      throw new Error("renderSqlFromSource requires a source path");
+    }
+
+    const exportName = (process.env.TETA_EXPORT_NAME ?? "query").trim() || "query";
+    const toSqlArgs = JSON.parse(process.env.TETA_TO_SQL_ARGS ?? "[]");
+    const importedModule = await import(pathToFileURL(resolve(source)).href);
+
+    if (!(exportName in importedModule)) {
+      throw new Error("Export '" + exportName + "' not found in " + source);
+    }
+
+    let target = importedModule[exportName];
+    if (typeof target === "function") {
+      target = await target();
+    }
+
+    if (typeof target === "string") {
+      respond({ ok: true, sql: target });
+      return;
+    }
+    if (!target || typeof target !== "object" || typeof target.toSql !== "function") {
+      throw new Error(
+        "Export '" + exportName + "' must be a SQL string, Query-like object, or a function returning one"
+      );
+    }
+
+    respond({ ok: true, sql: target.toSql(...toSqlArgs) });
+  } catch (error) {
+    const message = error instanceof Error ? (error.stack ?? error.message) : String(error);
+    respond({ ok: false, error: message });
+    process.exitCode = 1;
+  }
+})();`;
 
 export function copyTextToClipboard(
   text: string,
@@ -101,6 +149,72 @@ export async function renderSqlFromSource(
   return target.toSql(...toSqlArgs);
 }
 
+function renderSqlFromSourceIsolated(
+  source: string,
+  exportName = "query",
+  toSqlArgs: readonly unknown[] = []
+): string {
+  const sourcePath = source.toString().trim();
+  if (!sourcePath) {
+    throw new Error("renderSqlFromSource requires a source path");
+  }
+
+  let serializedArgs = "[]";
+  try {
+    serializedArgs = JSON.stringify(toSqlArgs);
+  } catch {
+    throw new Error(
+      "watchQuerySourceToClipboard isolateModules mode requires JSON-serializable toSqlArgs"
+    );
+  }
+
+  const runtimeArgs = "bun" in process.versions
+    ? ["--eval", RENDER_SQL_EVAL_SCRIPT]
+    : ["--input-type=module", "--eval", RENDER_SQL_EVAL_SCRIPT];
+  const result = spawnSync(process.execPath, runtimeArgs, {
+    env: {
+      ...process.env,
+      TETA_SOURCE: sourcePath,
+      TETA_EXPORT_NAME: exportName,
+      TETA_TO_SQL_ARGS: serializedArgs,
+    },
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+
+  if (result.error) {
+    throw result.error;
+  }
+
+  const stdout = result.stdout ?? "";
+  const markerIndex = stdout.lastIndexOf(RENDER_RESULT_PREFIX);
+  let payload: IsolatedRenderResult | null = null;
+
+  if (markerIndex >= 0) {
+    const [payloadLineRaw = ""] = stdout
+      .slice(markerIndex + RENDER_RESULT_PREFIX.length)
+      .split(/\r?\n/, 1);
+    const payloadLine = payloadLineRaw.trim();
+    if (payloadLine) {
+      try {
+        payload = JSON.parse(payloadLine) as IsolatedRenderResult;
+      } catch {
+        payload = null;
+      }
+    }
+  }
+
+  if (result.status === 0 && payload?.ok) {
+    return payload.sql;
+  }
+
+  const workerError = payload && !payload.ok ? payload.error : "";
+  const stderr = result.stderr?.trim() ?? "";
+  const details = workerError || stderr
+    || `Failed to render SQL in isolated process (exit ${result.status ?? "unknown"})`;
+  throw new Error(details);
+}
+
 export async function watchQuerySourceToClipboard(
   options: WatchQuerySourceOptions
 ): Promise<WatchQueryController> {
@@ -112,6 +226,7 @@ export async function watchQuerySourceToClipboard(
   const exportName = options.exportName?.trim() || "query";
   const watchPaths = normalizeWatchPaths(source, options.watchPaths);
   const debounceMs = options.debounceMs ?? 120;
+  const isolateModules = options.isolateModules ?? true;
   const clipboard = options.clipboard ?? "auto";
   const shouldCopy = options.copyToClipboard ?? true;
   const log = options.log ?? ((message: string) => console.log(message));
@@ -127,7 +242,9 @@ export async function watchQuerySourceToClipboard(
   let queue: Promise<void> = Promise.resolve();
 
   const runOnce = async (): Promise<string> => {
-    const sql = await renderSqlFromSource(source, exportName, options.toSqlArgs ?? []);
+    const sql = isolateModules
+      ? renderSqlFromSourceIsolated(source, exportName, options.toSqlArgs ?? [])
+      : await renderSqlFromSource(source, exportName, options.toSqlArgs ?? []);
 
     if (options.outputFile) {
       await writeFile(options.outputFile, sql, "utf8");

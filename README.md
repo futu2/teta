@@ -119,6 +119,7 @@ await watchQuerySourceToClipboard({
   source: "./dev/query-source.ts",
   exportName: "query",
   toSqlArgs: ["hetuengine dql", "pretty"],
+  isolateModules: true,
   outputFile: "./result.sql",
   clipboard: "auto",
 });
@@ -130,6 +131,20 @@ Expected export in `./dev/query-source.ts` can be either:
 - a function returning `Query` or SQL string, e.g. `export async function query() { ... }`
 
 Tip: On Linux install one of `wl-copy`, `xclip`, or `xsel`.
+`isolateModules` defaults to `true` to avoid stale transitive import caches while watching.
+
+Simple local example (already included in this repo as `exampel1.ts`):
+
+```bash
+bun run exampel1.ts
+```
+
+`exampel1.ts` watches `./test4.ts`, writes SQL to `./test4.sql`, and copies SQL to clipboard.
+Ensure `test4.ts` exports `query`, for example:
+
+```ts
+export const query = q2;
+```
 
 ## SQL language specification
 
