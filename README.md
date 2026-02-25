@@ -110,41 +110,75 @@ Common regex string methods:
 
 ## Watch SQL + clipboard utility
 
-You can watch a source module, regenerate SQL on changes, and copy it to clipboard (`xclip`/`xsel`/`wl-copy`/`pbcopy`/`clip`) using:
+You can watch a source module, regenerate SQL on changes, and copy it to clipboard (`xclip`/`xsel`/`wl-copy`/`pbcopy`/`clip`) using `watchQuerySourceToClipboard`.
+
+1. Create a source module that exports `query`:
 
 ```ts
+// dev/query-source.ts
+import { table, t } from "../src/edsl";
+
+const users = table("users", {
+  id: t.int(),
+  name: t.string(),
+  active: t.boolean(),
+});
+
+export const query = users
+  .filter((u) => u.active.eq(true))
+  .select((u) => ({
+    id: u.id,
+    name: u.name,
+  }));
+```
+
+2. Create a watcher script:
+
+```ts
+// watch-sql.ts
 import { watchQuerySourceToClipboard } from "./src/edsl";
 
-await watchQuerySourceToClipboard({
+const controller = await watchQuerySourceToClipboard({
   source: "./dev/query-source.ts",
   exportName: "query",
-  toSqlArgs: ["hetuengine dql", "pretty"],
+  toSqlArgs: ["Postgresql", "pretty"],
   isolateModules: true,
   outputFile: "./result.sql",
   clipboard: "auto",
+  copyToClipboard: true,
+  debounceMs: 120,
+  runImmediately: true,
 });
+
+console.log("Watching ./dev/query-source.ts");
+console.log("Updates: ./result.sql + clipboard");
+console.log("Press Ctrl+C to stop.");
+
+const stop = () => {
+  controller.stop();
+  process.exit(0);
+};
+
+process.once("SIGINT", stop);
+process.once("SIGTERM", stop);
 ```
 
-Expected export in `./dev/query-source.ts` can be either:
+3. Run the watcher:
 
-- a `Query` object export, e.g. `export const query = users.select(...)`
+```bash
+bun run watch-sql.ts
+```
+
+4. Edit `./dev/query-source.ts`. On each change, SQL is re-rendered, written to `./result.sql`, and copied to your clipboard.
+
+`source` must export `query` as one of:
+
+- a `Query` object, e.g. `export const query = users.select(...)`
 - a function returning `Query` or SQL string, e.g. `export async function query() { ... }`
+- a SQL string export, e.g. `export const query = "select 1"`
 
 Tip: On Linux install one of `wl-copy`, `xclip`, or `xsel`.
 `isolateModules` defaults to `true` to avoid stale transitive import caches while watching.
-
-Simple local example (already included in this repo as `exampel1.ts`):
-
-```bash
-bun run exampel1.ts
-```
-
-`exampel1.ts` watches `./test4.ts`, writes SQL to `./test4.sql`, and copies SQL to clipboard.
-Ensure `test4.ts` exports `query`, for example:
-
-```ts
-export const query = q2;
-```
 
 ## SQL language specification
 
