@@ -700,15 +700,17 @@ export function shape<T extends Record<string, ExprRef<any>>>(value: T): ExprSha
   return {
     map(mapper) {
       const result: Record<string, ExprRef<any>> = {};
-      for (const key of Object.keys(value)) {
-        result[key] = mapper(value[key]);
+      for (const key of Object.keys(value) as Array<keyof T>) {
+        result[key as string] = mapper(value[key]);
       }
       return result as { [K in keyof T]: ExprRef<any> };
     },
     group() {
       const result: Record<string, ExprRef<any>> = {};
-      for (const key of Object.keys(value)) {
-        result[key] = value[key].group();
+      for (const key of Object.keys(value) as Array<keyof T>) {
+        const item = value[key];
+        if (!item) continue;
+        result[key as string] = item.group();
       }
       return result as { [K in keyof T]: ExprRef<any> };
     },
@@ -722,9 +724,10 @@ export function f(
 ): ExprRef<string> {
   const parts: ExprInput<any>[] = [];
   for (let i = 0; i < strings.length; i += 1) {
-    const literal = strings[i];
+    const literal = strings[i] ?? "";
     if (literal.length > 0) parts.push(literal);
-    if (i < exprs.length) parts.push(exprs[i]);
+    const expr = exprs[i];
+    if (expr !== undefined) parts.push(expr);
   }
   if (parts.length === 0) return lit("");
   return funcExpr("CONCAT", parts.map((part) => toExprNode(part)));
@@ -849,18 +852,25 @@ export function selectAllItems<TColumns extends Record<string, any>>(
 
 export function toExprNode<T>(value: ExprInput<T>): ExprNode<any> {
   if (value instanceof ExprRef) return value.node;
+  if (value === undefined) {
+    throw new Error("Unsupported literal value: undefined");
+  }
   if (value === null) return { kind: "literal", value: null };
   const type = typeof value;
   if (type === "string" || type === "number" || type === "boolean") {
+    return { kind: "literal", value: value as Value };
+  }
+  if (isTemporalLiteral(value)) {
     return { kind: "literal", value };
   }
-  if (type === "object") {
-    const literal = value as DateLiteral | TimestampLiteral;
-    if (literal.kind === "date_literal" || literal.kind === "timestamp_literal") {
-      return { kind: "literal", value: literal };
-    }
-  }
   throw new Error(`Unsupported literal value: ${String(value)}`);
+}
+
+function isTemporalLiteral(value: unknown): value is DateLiteral | TimestampLiteral {
+  if (typeof value !== "object" || value === null) return false;
+  const candidate = value as { kind?: unknown; value?: unknown };
+  if (candidate.value !== undefined && typeof candidate.value !== "string") return false;
+  return candidate.kind === "date_literal" || candidate.kind === "timestamp_literal";
 }
 
 export function containsGroup(expr: ExprNode<any>, inAgg = false): boolean {

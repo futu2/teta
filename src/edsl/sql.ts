@@ -1,4 +1,4 @@
-import type { AST, Option, With } from "node-sql-parser";
+import type { AST, Option, Select, With } from "node-sql-parser";
 import type {
   BuiltinDialect,
   DialectFeatures,
@@ -60,6 +60,24 @@ const BUILTIN_DIALECTS: Record<Lowercase<BuiltinDialect>, {
   hetuenginedql: { name: "HetuEngine DQL", parserDialect: "Trino" },
   "hetuengine dql": { name: "HetuEngine DQL", parserDialect: "Trino" },
   hetuengine: { name: "HetuEngine DQL", parserDialect: "Trino" },
+};
+
+type SelectAst = Omit<
+  Select,
+  "columns" | "from" | "where" | "groupby" | "having" | "orderby" | "limit" | "options" | "window"
+> & {
+  columns: any;
+  from: any[] | any | null;
+  where: any | null;
+  groupby: any | null;
+  having: any[] | null;
+  orderby: any | null;
+  limit: any | null;
+  options: any[] | null;
+  window?: any;
+  into: { position: null };
+  locking_read: null;
+  collate: null;
 };
 
 export function getDefaultDialect(): QueryDialect {
@@ -198,7 +216,7 @@ export function compilePipeline(
   );
   const baseWiths = options?.baseWiths ?? [];
   const merged = baseWiths.length ? [...baseWiths, ...ctes] : ctes;
-  (ast as any).with = merged.length ? merged : null;
+  ast.with = merged.length ? merged : null;
   return ast;
 }
 
@@ -224,16 +242,16 @@ export function buildRecursiveCte(
   const baseAst = compileLoopPart(base, "base", dialect);
   const stepAst = compileLoopPart(step, "step", dialect);
   const unionAst = attachUnion(baseAst, stepAst, "union all");
-  return {
-    name: { type: "default", value: name },
+  const recursiveWith: With & { recursive: boolean } = {
+    name: { value: name },
     stmt: {
-      ast: unionAst as any,
+      ast: unionAst,
       tableList: [],
       columnList: [],
     },
-    columns: null,
     recursive: true,
-  } as With;
+  };
+  return recursiveWith;
 }
 
 function compileLoopPart(
@@ -245,7 +263,7 @@ function compileLoopPart(
   },
   label: "base" | "step",
   dialect: QueryDialect
-): AST {
+): SelectAst {
   const { source, stages, columns, columnNames } = input;
   const baseFrom = sourceToFrom({
     kind: "table",
@@ -280,9 +298,12 @@ function compileLoopPart(
         const join = `${stage.joinType} JOIN`;
         const subqueryAst =
           stage.source.kind === "subquery" && stage.lateral
-            ? replaceOuterAlias(stage.source.ast, baseAlias)
+            ? ensureSelectAst(
+                replaceOuterAlias(stage.source.ast, baseAlias),
+                `loop ${label} lateral join`
+              )
             : stage.source.kind === "subquery"
-              ? stage.source.ast
+              ? ensureSelectAst(stage.source.ast, `loop ${label} join`)
               : null;
         from.push(
           stage.source.kind === "table"
@@ -381,7 +402,7 @@ function buildPipelineAst(
     keepTables?: Set<string>;
     dialect?: QueryDialect;
   }
-): { ast: AST; ctes: With[] } {
+): { ast: SelectAst; ctes: With[] } {
   const ctePrefix = options?.ctePrefix ?? "";
   const keepTables = options?.keepTables;
   const dialect = options?.dialect ?? getDefaultDialect();
@@ -419,7 +440,7 @@ function buildPipelineAst(
   let unionCount = 0;
 
   for (let i = 0; i < stages.length - 1; i += 1) {
-    const stage = hoistJoinSubquery(stages[i], ctes, ctePrefix);
+    const stage = hoistJoinSubquery(stages[i]!, ctes, ctePrefix);
     const stageAst =
       stage.kind === "union"
         ? compileUnionStage(
@@ -436,7 +457,7 @@ function buildPipelineAst(
     ctes.push({
       name: { value: name },
       stmt: {
-        ast: stageAst as any,
+        ast: stageAst,
         tableList: [],
         columnList: [],
       },
@@ -444,7 +465,7 @@ function buildPipelineAst(
     current = { kind: "cte", name };
   }
 
-  const finalStage = hoistJoinSubquery(stages[stages.length - 1], ctes, ctePrefix);
+  const finalStage = hoistJoinSubquery(stages[stages.length - 1]!, ctes, ctePrefix);
   const finalAst =
     finalStage.kind === "union"
       ? compileUnionStage(
@@ -456,7 +477,7 @@ function buildPipelineAst(
           dialect
         )
       : stageToSelect(finalStage, current, keepTables, dialect);
-  return { ast: finalAst as AST, ctes };
+  return { ast: finalAst, ctes };
 }
 
 function stageToSelect(
@@ -464,7 +485,7 @@ function stageToSelect(
   source: SourceRef,
   keepTables?: Set<string>,
   dialect: QueryDialect = getDefaultDialect()
-): AST {
+): SelectAst {
   const baseFrom = sourceToFrom(source);
   const baseAlias = ensureAlias(baseFrom);
   switch (stage.kind) {
@@ -536,9 +557,12 @@ function stageToSelect(
       nextKeep.add(baseAlias);
       const subqueryAst =
         stage.source.kind === "subquery" && stage.lateral
-          ? replaceOuterAlias(stage.source.ast, baseAlias)
+          ? ensureSelectAst(
+              replaceOuterAlias(stage.source.ast, baseAlias),
+              "lateral join"
+            )
           : stage.source.kind === "subquery"
-            ? stage.source.ast
+            ? ensureSelectAst(stage.source.ast, "join")
             : null;
       return buildSelectAst({
         from: [
@@ -602,7 +626,7 @@ function buildSelectAst(params: {
   groupby: any | null;
   orderby: any | null;
   limit: any | null;
-}): AST {
+}): SelectAst {
   return {
     with: null,
     type: "select",
@@ -617,9 +641,9 @@ function buildSelectAst(params: {
     orderby: params.orderby,
     limit: params.limit,
     locking_read: null,
-    window: null,
+    window: undefined,
     collate: null,
-  } as AST;
+  };
 }
 
 function hoistJoinSubquery(
@@ -629,7 +653,7 @@ function hoistJoinSubquery(
 ): Stage {
   if (stage.kind !== "join" || stage.source.kind !== "subquery") return stage;
   if (stage.lateral && containsOuterAlias(stage.source.ast)) return stage;
-  const subqueryAst = stage.source.ast as any;
+  const subqueryAst = ensureSelectAst(stage.source.ast, "join subquery");
   if (subqueryAst.with && subqueryAst.with.length) {
     ctes.push(...subqueryAst.with);
     subqueryAst.with = null;
@@ -657,7 +681,7 @@ function compileUnionStage(
   rightPrefix: string,
   keepTables?: Set<string>,
   dialect: QueryDialect = getDefaultDialect()
-): AST {
+): SelectAst {
   const baseFrom = sourceToFrom(source);
   const baseAlias = ensureAlias(baseFrom);
   const leftAst = buildSelectAst({
@@ -683,17 +707,31 @@ function compileUnionStage(
   if (rightCompiled.ctes.length) {
     ctes.push(...rightCompiled.ctes);
   }
-  (rightCompiled.ast as any).with = null;
+  const rightAst = rightCompiled.ast;
+  rightAst.with = null;
 
-  return attachUnion(leftAst, rightCompiled.ast, stage.op);
+  return attachUnion(leftAst, rightAst, stage.op);
 }
 
-function attachUnion(left: AST, right: AST, op: "union" | "union all"): AST {
-  const root = left as any;
-  const tail = right as any;
-  root.set_op = op;
-  root._next = tail;
-  return root as AST;
+function attachUnion(
+  left: SelectAst,
+  right: SelectAst,
+  op: "union" | "union all"
+): SelectAst {
+  left.set_op = op;
+  left._next = right;
+  return left;
+}
+
+function isSelectAst(ast: AST): ast is SelectAst {
+  return ast.type === "select";
+}
+
+function ensureSelectAst(ast: AST, context: string): SelectAst {
+  if (!isSelectAst(ast)) {
+    throw new Error(`${context} expected a select AST but got ${ast.type}`);
+  }
+  return ast;
 }
 
 function stripTableRefs(
@@ -969,9 +1007,9 @@ function exprToAst(expr: ExprNode<any>): any {
           args: {
             type: "expr_list",
             value: [
-              exprToAst(expr.args[0]),
+              exprToAst(expr.args[0]!),
               { type: "origin", value: "in" },
-              exprToAst(expr.args[1]),
+              exprToAst(expr.args[1]!),
             ],
           },
           over: null,
@@ -1305,7 +1343,7 @@ export function formatSqlPretty(sql: string): string {
       if (match) {
         const upper = match.text.toUpperCase();
         const isWithKeyword = withKeywords.has(upper);
-        let nextInWith = inWith;
+        let nextInWith: boolean = inWith;
         if (parenDepth === 0) {
           if (isWithKeyword) nextInWith = true;
           else if (inWith && mainQueryKeywords.has(upper)) nextInWith = false;
@@ -1398,8 +1436,8 @@ function matchKeyword(
     if (index + len > sql.length) continue;
     const slice = sql.slice(index, index + len);
     if (slice.toLowerCase() !== keyword.toLowerCase()) continue;
-    const prev = index === 0 ? "" : sql[index - 1];
-    const next = index + len >= sql.length ? "" : sql[index + len];
+    const prev = index === 0 ? "" : (sql[index - 1] ?? "");
+    const next = index + len >= sql.length ? "" : (sql[index + len] ?? "");
     if (isWordChar(prev) || isWordChar(next)) continue;
     return { text: slice, length: len };
   }
