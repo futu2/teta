@@ -117,6 +117,26 @@ export class Query<TColumns extends Record<string, any>> {
     predicate: (cols: ColumnRefs<TColumns>) => ExprRef<boolean>
   ): Query<TColumns> {
     const next = predicate(this.columns).node;
+    const lastStage = this.stages[this.stages.length - 1];
+    if (lastStage?.kind === "filter") {
+      const merged: Stage = {
+        kind: "filter",
+        predicate: {
+          kind: "binary",
+          op: "AND",
+          left: lastStage.predicate,
+          right: next,
+        },
+        selectAll: lastStage.selectAll,
+      };
+      return new Query(
+        this.source,
+        [...this.stages.slice(0, -1), merged],
+        this.columns,
+        this.columnNames,
+        this.withs
+      );
+    }
     const stage: Stage = {
       kind: "filter",
       predicate: next,
