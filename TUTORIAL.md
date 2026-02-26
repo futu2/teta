@@ -243,16 +243,14 @@ console.log(users.select((u) => ({ id: u.id })).toSql({
 }));
 
 console.log(users.toSql("sqlite"));
-console.log(users.toSql("hetuengine dql"));
+console.log(users.toSql("hetu"));
 ```
 
 ### Built-in HetuEngine DQL dialect
 
-Teta includes a built-in HetuEngine DQL profile. You can render with any of these aliases:
+Teta includes a built-in HetuEngine DQL profile. Use the canonical backend name:
 
-- `"hetuengine dql"`
-- `"hetuenginedql"`
-- `"hetuengine"`
+- `"hetu"`
 
 This profile uses `Trino` as parser fallback for SQL stringification and applies Hetu-oriented function naming (for example array cardinality/slice mappings).
 
@@ -388,7 +386,7 @@ const q = orders.select((o) => ({
   bucket: o.total.ntile(4).over({ orderBy: o.total.desc() }),
 }));
 
-console.log(q.toSql("Postgresql", "pretty"));
+console.log(q.toSql("postgresql", "pretty"));
 ```
 
 ### Custom SQL functions (UDF)

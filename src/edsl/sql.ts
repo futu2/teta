@@ -34,32 +34,31 @@ const DEFAULT_DIALECT: QueryDialect = {
   },
 };
 
-const BUILTIN_DIALECTS: Record<Lowercase<BuiltinDialect>, {
-  name: string;
+const BUILTIN_DIALECTS: Record<BuiltinDialect, {
+  name: BuiltinDialect;
   parserDialect: string;
   features?: DialectFeatures;
 }> = {
-  mysql: { name: "MySQL", parserDialect: "MySQL" },
-  mariadb: { name: "MariaDB", parserDialect: "MariaDB" },
-  postgresql: { name: "Postgresql", parserDialect: "Postgresql" },
+  mysql: { name: "mysql", parserDialect: "MySQL" },
+  mariadb: { name: "mariadb", parserDialect: "MariaDB" },
+  postgresql: { name: "postgresql", parserDialect: "Postgresql" },
   sqlite: {
-    name: "SQLite",
+    name: "sqlite",
     parserDialect: "SQLite",
     features: { lateralJoinKeyword: false, recursiveCte: true },
   },
-  trino: { name: "Trino", parserDialect: "Trino" },
-  transactsql: { name: "TransactSQL", parserDialect: "TransactSQL" },
-  redshift: { name: "Redshift", parserDialect: "Redshift" },
-  snowflake: { name: "Snowflake", parserDialect: "Snowflake" },
-  bigquery: { name: "BigQuery", parserDialect: "BigQuery" },
-  athena: { name: "Athena", parserDialect: "Athena" },
-  db2: { name: "DB2", parserDialect: "DB2" },
-  hive: { name: "Hive", parserDialect: "Hive" },
-  flinksql: { name: "FlinkSQL", parserDialect: "FlinkSQL" },
-  noql: { name: "NoQL", parserDialect: "NoQL" },
-  hetuenginedql: { name: "HetuEngine DQL", parserDialect: "Trino" },
-  "hetuengine dql": { name: "HetuEngine DQL", parserDialect: "Trino" },
-  hetuengine: { name: "HetuEngine DQL", parserDialect: "Trino" },
+  trino: { name: "trino", parserDialect: "Trino" },
+  transactsql: { name: "transactsql", parserDialect: "TransactSQL" },
+  redshift: { name: "redshift", parserDialect: "Redshift" },
+  snowflake: { name: "snowflake", parserDialect: "Snowflake" },
+  bigquery: { name: "bigquery", parserDialect: "BigQuery" },
+  athena: { name: "athena", parserDialect: "Athena" },
+  db2: { name: "db2", parserDialect: "DB2" },
+  hive: { name: "hive", parserDialect: "Hive" },
+  flinksql: { name: "flinksql", parserDialect: "FlinkSQL" },
+  noql: { name: "noql", parserDialect: "NoQL" },
+  duckdb: { name: "duckdb", parserDialect: "Postgresql" },
+  hetu: { name: "hetu", parserDialect: "Trino" },
 };
 
 type SelectAst = Omit<
@@ -119,6 +118,12 @@ export function resolveDialect(dialect?: Dialect): QueryDialect {
   if (!raw) return getDefaultDialect();
   const builtin = lookupBuiltinDialect(raw);
   if (!builtin) {
+    const canonicalBuiltin = suggestCanonicalBuiltin(raw);
+    if (canonicalBuiltin) {
+      throw new Error(
+        `Invalid built-in dialect '${raw}'. Use canonical lowercase '${canonicalBuiltin}'.`
+      );
+    }
     return {
       name: raw,
       parserDialect: null,
@@ -170,6 +175,12 @@ function isDialectSpec(value: unknown): value is DialectSpec {
 
 function resolveDialectSpec(spec: DialectSpec): QueryDialect {
   const rawName = spec.name.toString().trim();
+  const canonicalBuiltin = suggestCanonicalBuiltin(rawName);
+  if (canonicalBuiltin && rawName !== canonicalBuiltin) {
+    throw new Error(
+      `Invalid built-in dialect '${rawName}'. Use canonical lowercase '${canonicalBuiltin}'.`
+    );
+  }
   const builtinByName = lookupBuiltinDialect(rawName);
   const parserSource =
     spec.parserDialect === undefined
@@ -193,30 +204,52 @@ function resolveDialectSpec(spec: DialectSpec): QueryDialect {
     builtinByParser?.features?.recursiveCte ??
     true;
 
+  const resolvedName = rawName || builtinByName?.name || "custom";
+
   return {
-    name: rawName || builtinByName?.name || "custom",
+    name: resolvedName,
     parserDialect,
     features: {
       lateralJoinKeyword,
       recursiveCte,
     },
-    language: resolveDialectLanguage(rawName, spec.language),
+    language: resolveDialectLanguage(resolvedName, spec.language),
   };
 }
 
 function lookupBuiltinDialect(input: string):
   | {
-      name: string;
+      name: BuiltinDialect;
       parserDialect: string;
       features?: DialectFeatures;
     }
   | undefined {
-  const key = input.toString().trim().toLowerCase() as Lowercase<BuiltinDialect>;
+  const key = input.toString().trim() as BuiltinDialect;
   const direct = BUILTIN_DIALECTS[key];
-  if (direct) return direct;
-  const compactKey = key.replace(/[^a-z0-9]+/g, "") as Lowercase<BuiltinDialect>;
-  if (!compactKey || compactKey === key) return undefined;
-  return BUILTIN_DIALECTS[compactKey];
+  return direct;
+}
+
+function suggestCanonicalBuiltin(input: string): BuiltinDialect | null {
+  const raw = input.toString().trim();
+  if (!raw) return null;
+  const lower = raw.toLowerCase();
+  if (lower in BUILTIN_DIALECTS) {
+    return lower as BuiltinDialect;
+  }
+  const compact = lower.replace(/[^a-z0-9]+/g, "");
+  if (!compact) return null;
+  if (
+    compact === "hetu" ||
+    compact === "hetudql" ||
+    compact === "hetuengine" ||
+    compact === "hetuenginedql"
+  ) {
+    return "hetu";
+  }
+  if (compact in BUILTIN_DIALECTS) {
+    return compact as BuiltinDialect;
+  }
+  return null;
 }
 
 export function compilePipeline(

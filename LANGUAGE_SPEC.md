@@ -155,11 +155,9 @@ If `dialect.features.recursiveCte = false`, SQL rendering throws an explicit err
 
 ## Built-in HetuEngine DQL profile
 
-`HetuEngine DQL` is available as a built-in dialect alias:
+`HetuEngine DQL` is available as a built-in canonical backend:
 
-- `"hetuengine dql"`
-- `"hetuenginedql"`
-- `"hetuengine"`
+- `"hetu"`
 
 Current defaults:
 

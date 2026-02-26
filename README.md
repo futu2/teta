@@ -46,7 +46,7 @@ const q = users
   .orderBy((u) => [u.name.asc(), u.id.desc()])
   .limit(20);
 
-console.log(q.toSql("Postgresql", "pretty"));
+console.log(q.toSql("postgresql", "pretty"));
 ```
 
 ## Dialect-neutral EDSL, dialect at render time
@@ -56,15 +56,20 @@ Keep EDSL expressions general, then choose SQL dialect only in `toSql(...)`:
 ```ts
 console.log(q.toSql({
   dialect: {
-    name: "Presto",
+    name: "presto",
     parserDialect: "Trino",
   },
   format: "pretty",
 }));
 ```
 
-Built-in HetuEngine DQL support is available via `toSql("hetuengine dql")` (aliases: `"hetuenginedql"`, `"hetuengine"`).
+Built-in HetuEngine DQL support is available via `toSql("hetu")`.
 Internally, SQL stringification uses the `Trino` parser dialect while preserving Hetu-oriented function mappings.
+
+Built-in backend names are unique canonical lowercase identifiers:
+`mysql`, `mariadb`, `postgresql`, `sqlite`, `trino`, `transactsql`, `redshift`,
+`snowflake`, `bigquery`, `athena`, `db2`, `hive`, `flinksql`, `noql`,
+`duckdb`, `hetu`.
 
 ## Method-centric expression API
 
@@ -141,7 +146,7 @@ import { watchQuerySourceToClipboard } from "./src/edsl";
 const controller = await watchQuerySourceToClipboard({
   source: "./dev/query-source.ts",
   exportName: "query",
-  toSqlArgs: ["Postgresql", "pretty"],
+  toSqlArgs: ["postgresql", "pretty"],
   isolateModules: true,
   outputFile: "./result.sql",
   clipboard: "auto",

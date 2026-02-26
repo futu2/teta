@@ -159,27 +159,8 @@ const DIALECT_LANGUAGE: Record<string, DialectLanguageConfig> = {
       REGEXP_LIKE: "regex_like_via_regexp_match",
     },
   },
-  "hetuengine dql": {
-    functions: {
-      CHARACTER_LENGTH: "LENGTH",
-      CHAR_LENGTH: "LENGTH",
-      ARRAY_LENGTH: "CARDINALITY",
-      ARRAY_SLICE: "SLICE",
-      ARRAY_CONCAT: "CONCAT",
-      REGEXP_EXTRACT: "REGEXP_EXTRACT",
-    },
-  },
-  hetuenginedql: {
-    functions: {
-      CHARACTER_LENGTH: "LENGTH",
-      CHAR_LENGTH: "LENGTH",
-      ARRAY_LENGTH: "CARDINALITY",
-      ARRAY_SLICE: "SLICE",
-      ARRAY_CONCAT: "CONCAT",
-      REGEXP_EXTRACT: "REGEXP_EXTRACT",
-    },
-  },
-  hetuengine: {
+  duckdb: {},
+  hetu: {
     functions: {
       CHARACTER_LENGTH: "LENGTH",
       CHAR_LENGTH: "LENGTH",
@@ -202,11 +183,7 @@ export function resolveDialectLanguage(
   override?: DialectLanguageConfig
 ): Required<DialectLanguageConfig> {
   const normalizedName = dialectName.toLowerCase();
-  const compactName = normalizedName.replace(/[^a-z0-9]+/g, "");
-  const base =
-    DIALECT_LANGUAGE[normalizedName] ??
-    DIALECT_LANGUAGE[compactName] ??
-    IDENTITY_LANGUAGE;
+  const base = DIALECT_LANGUAGE[normalizedName] ?? IDENTITY_LANGUAGE;
   const merged: Required<DialectLanguageConfig> = {
     functions: { ...base.functions, ...(override?.functions ?? {}) },
     fallbacks: { ...base.fallbacks, ...(override?.fallbacks ?? {}) },

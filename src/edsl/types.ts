@@ -42,23 +42,6 @@ export type JoinType = "INNER" | "LEFT" | "RIGHT" | "FULL";
 export type JoinTypeInput = "inner" | "left" | "right" | "full" | JoinType;
 /** Built-in SQL dialect identifiers supported by Teta. */
 export type BuiltinDialect =
-  | "MySQL"
-  | "MariaDB"
-  | "Postgresql"
-  | "SQLite"
-  | "Trino"
-  | "TransactSQL"
-  | "Redshift"
-  | "Snowflake"
-  | "BigQuery"
-  | "Athena"
-  | "DB2"
-  | "Hive"
-  | "FlinkSQL"
-  | "NoQL"
-  | "HetuEngineDQL"
-  | "HetuEngine DQL"
-  | "HetuEngine"
   | "mysql"
   | "mariadb"
   | "postgresql"
@@ -73,9 +56,8 @@ export type BuiltinDialect =
   | "hive"
   | "flinksql"
   | "noql"
-  | "hetuenginedql"
-  | "hetuengine dql"
-  | "hetuengine";
+  | "duckdb"
+  | "hetu";
 
 /** Dialect feature flags used during EDSL -> AST codegen. */
 export type DialectFeatures = {
