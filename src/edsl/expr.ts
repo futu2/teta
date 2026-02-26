@@ -14,6 +14,12 @@ import type {
   UnaryOp,
   Value,
 } from "./types";
+import {
+  containsGroup,
+  dedupeExprs,
+  shouldAlias,
+  unwrapGroupExpr,
+} from "./expr_node_ops";
 
 type NumericInput<T> = T extends SqlNumber ? T | number : T;
 export type ExprInput<T> = ExprRef<T> | NumericInput<T>;
@@ -880,144 +886,7 @@ function isTemporalLiteral(value: unknown): value is DateLiteral | TimestampLite
   if (candidate.value !== undefined && typeof candidate.value !== "string") return false;
   return candidate.kind === "date_literal" || candidate.kind === "timestamp_literal";
 }
-
-export function containsGroup(expr: ExprNode<unknown>, inAgg = false): boolean {
-  switch (expr.kind) {
-    case "group":
-      return !inAgg;
-    case "binary":
-      return (
-        containsGroup(expr.left, inAgg) || containsGroup(expr.right, inAgg)
-      );
-    case "unary":
-      return containsGroup(expr.expr, inAgg);
-    case "agg":
-      return containsGroup(expr.arg, true);
-    case "func":
-      return expr.args.some((arg) => containsGroup(arg, inAgg));
-    case "list":
-      return expr.items.some((item) => containsGroup(item, inAgg));
-    case "extract":
-      return containsGroup(expr.source, inAgg);
-    case "cast":
-      return containsGroup(expr.expr, inAgg);
-    case "window":
-      return (
-        expr.args.some((arg) => containsGroup(arg, inAgg)) ||
-        (expr.partitionBy
-          ? expr.partitionBy.some((arg) => containsGroup(arg, inAgg))
-          : false) ||
-        (expr.orderBy
-          ? expr.orderBy.some((item) => containsGroup(item.expr, inAgg))
-          : false)
-      );
-    case "case":
-      return (
-        expr.whens.some(
-          (item) =>
-            containsGroup(item.when, inAgg) || containsGroup(item.then, inAgg)
-        ) || (expr.elseExpr ? containsGroup(expr.elseExpr, inAgg) : false)
-      );
-    default:
-      return false;
-  }
-}
-
-export function unwrapGroupExpr(
-  expr: ExprNode<unknown>,
-  groupBy: ExprNode<unknown>[],
-  inAgg: boolean
-): ExprNode<unknown> {
-  switch (expr.kind) {
-    case "group":
-      if (inAgg) {
-        throw new Error("group() cannot be used inside aggregate functions");
-      }
-      groupBy.push(expr.expr);
-      return unwrapGroupExpr(expr.expr, groupBy, false);
-    case "binary":
-      return {
-        ...expr,
-        left: unwrapGroupExpr(expr.left, groupBy, inAgg),
-        right: unwrapGroupExpr(expr.right, groupBy, inAgg),
-      };
-    case "unary":
-      return {
-        ...expr,
-        expr: unwrapGroupExpr(expr.expr, groupBy, inAgg),
-      };
-    case "agg":
-      return {
-        ...expr,
-        arg: unwrapGroupExpr(expr.arg, groupBy, true),
-      };
-    case "func":
-      return {
-        ...expr,
-        args: expr.args.map((arg) => unwrapGroupExpr(arg, groupBy, inAgg)),
-      };
-    case "list":
-      return {
-        ...expr,
-        items: expr.items.map((item) => unwrapGroupExpr(item, groupBy, inAgg)),
-      };
-    case "extract":
-      return {
-        ...expr,
-        source: unwrapGroupExpr(expr.source, groupBy, inAgg),
-      };
-    case "cast":
-      return {
-        ...expr,
-        expr: unwrapGroupExpr(expr.expr, groupBy, inAgg),
-      };
-    case "window":
-      return {
-        ...expr,
-        args: expr.args.map((arg) => unwrapGroupExpr(arg, groupBy, inAgg)),
-        partitionBy: expr.partitionBy
-          ? expr.partitionBy.map((arg) => unwrapGroupExpr(arg, groupBy, inAgg))
-          : null,
-        orderBy: expr.orderBy
-          ? expr.orderBy.map((item) => ({
-              ...item,
-              expr: unwrapGroupExpr(item.expr, groupBy, inAgg),
-            }))
-          : null,
-      };
-    case "case":
-      return {
-        ...expr,
-        whens: expr.whens.map((item) => ({
-          when: unwrapGroupExpr(item.when, groupBy, inAgg),
-          then: unwrapGroupExpr(item.then, groupBy, inAgg),
-        })),
-        elseExpr: expr.elseExpr
-          ? unwrapGroupExpr(expr.elseExpr, groupBy, inAgg)
-          : null,
-      };
-    default:
-      return expr;
-  }
-}
-
-export function dedupeExprs(exprs: ExprNode<unknown>[]): ExprNode<unknown>[] {
-  if (exprs.length <= 1) return exprs;
-  const seen = new Set<string>();
-  const result: ExprNode<unknown>[] = [];
-  for (const expr of exprs) {
-    const key = JSON.stringify(expr);
-    if (seen.has(key)) continue;
-    seen.add(key);
-    result.push(expr);
-  }
-  return result;
-}
-
-export function shouldAlias(expr: ExprNode<unknown>, key: string): boolean {
-  if (expr.kind !== "column") return true;
-  return expr.name !== key || expr.table !== null;
-}
+export { containsGroup, unwrapGroupExpr, dedupeExprs, shouldAlias };
 
 export function toExprNodeList(
   input?: ExprRef<unknown> | ExprRef<unknown>[]

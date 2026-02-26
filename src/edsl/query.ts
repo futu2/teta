@@ -5,7 +5,6 @@ import {
   type Dialect,
   type ExprNode,
   type InferSchema,
-  type JoinType,
   type JoinTypeInput,
   type OrderItem,
   type QueryIR,
@@ -19,7 +18,6 @@ import {
   type Stage,
 } from "./types";
 import {
-  ColumnRef,
   ExprRef,
   containsGroup,
   createColumnRefs,
@@ -41,6 +39,16 @@ import {
   stripRedundantQuotes,
 } from "./sql";
 import type { Source, JoinSource } from "./types";
+import {
+  assertLoopColumns,
+  assertLoopSchema,
+  assertUnionCompatible,
+  autoAlias,
+  mergeWiths,
+  normalizeJoinType,
+  parseTableName,
+  qualifyOuterColumns,
+} from "./query_utils";
 
 /** Composable query builder with typed columns and SQL rendering. */
 export class Query<TColumns extends Record<string, any>> {
@@ -399,18 +407,6 @@ export const t = {
   timestamp: () => ({ kind: "column_type" } as ColumnType<SqlTimestamp>),
 };
 
-function parseTableName(name: string): { table: string; schema: string | null } {
-  const parts = name.split(".");
-  if (parts.length === 2) {
-    const schema = parts[0];
-    const table = parts[1];
-    if (schema !== undefined && table !== undefined) {
-      return { schema, table };
-    }
-  }
-  return { schema: null, table: name };
-}
-
 /** Define a table with a schema and return a typed query builder. */
 export function table<S extends Record<string, ColumnType<any>>>(
   name: string,
@@ -429,16 +425,6 @@ export function table<S extends Record<string, ColumnType<any>>>(
 }
 
 let loopCounter = 0;
-
-function qualifyOuterColumns<TColumns extends Record<string, any>>(
-  columns: ColumnRefs<TColumns>
-): ColumnRefs<TColumns> {
-  const result: Record<string, ColumnRef<any, string>> = {};
-  for (const key of Object.keys(columns)) {
-    result[key] = new ColumnRef<any, string>(OUTER_TABLE_ALIAS, key);
-  }
-  return result as ColumnRefs<TColumns>;
-}
 
 /** Build a recursive CTE query with a base and step query. */
 export function loop<S extends Record<string, ColumnType<any>>>(
@@ -482,92 +468,4 @@ export function loop<S extends Record<string, ColumnType<any>>>(
     columnNames,
     [recursiveCte]
   );
-}
-
-function autoAlias(table: string, stages: Stage[]): string {
-  const joinCount = stages.reduce((count, stage) => {
-    if (stage.kind === "join") return count + 1;
-    return count;
-  }, 0);
-  const base = table.replace(/[^A-Za-z0-9_]+/g, "_").replace(/^_+|_+$/g, "");
-  const name = base.length ? base : "t";
-  return `${name}_${joinCount + 1}`;
-}
-
-function normalizeJoinType(type: JoinTypeInput): JoinType {
-  const normalized = type.toString().trim().toUpperCase();
-  switch (normalized) {
-    case "INNER":
-    case "LEFT":
-    case "RIGHT":
-    case "FULL":
-      return normalized;
-    default:
-      throw new Error(`Unsupported join type: ${type}`);
-  }
-}
-
-function assertUnionCompatible(
-  left: readonly string[],
-  right: readonly string[]
-): void {
-  if (left.length !== right.length) {
-    throw new Error("union requires both queries to have the same columns");
-  }
-  for (let i = 0; i < left.length; i += 1) {
-    if (left[i] !== right[i]) {
-      throw new Error("union requires both queries to have matching column names");
-    }
-  }
-}
-
-function assertLoopColumns(
-  base: readonly string[] | null,
-  step: readonly string[] | null
-): void {
-  if (!base || !step) {
-    throw new Error("loop requires explicit column lists for base and step");
-  }
-  assertUnionCompatible(base, step);
-}
-
-function assertLoopSchema(
-  schemaKeys: readonly string[],
-  names: readonly string[] | null,
-  label: "base" | "step"
-): void {
-  if (!names) {
-    throw new Error(`loop ${label} must return explicit columns`);
-  }
-  assertUnionCompatible(schemaKeys, names);
-}
-
-function mergeWiths(left: With[], right: With[]): With[] {
-  if (left.length === 0) return right.length ? [...right] : [];
-  if (right.length === 0) return [...left];
-  const seen = new Set<string>();
-  const merged: With[] = [];
-  for (const item of left) {
-    const name = withName(item);
-    if (name) seen.add(name);
-    merged.push(item);
-  }
-  for (const item of right) {
-    const name = withName(item);
-    if (name && seen.has(name)) {
-      throw new Error(`CTE name conflict: ${name}`);
-    }
-    if (name) seen.add(name);
-    merged.push(item);
-  }
-  return merged;
-}
-
-function withName(item: With): string | null {
-  const raw = (item as any).name;
-  if (!raw) return null;
-  if (typeof raw === "string") return raw;
-  if (typeof raw.value === "string") return raw.value;
-  if (Array.isArray(raw) && typeof raw[0]?.value === "string") return raw[0].value;
-  return null;
 }
