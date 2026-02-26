@@ -24,7 +24,7 @@ export type CaseBuilder<T> = {
 };
 
 export type WindowSpecInput = {
-  partitionBy?: ExprRef<any> | ExprRef<any>[];
+  partitionBy?: ExprRef<unknown> | ExprRef<unknown>[];
   orderBy?: OrderItem | OrderItem[];
 };
 
@@ -108,7 +108,7 @@ export class ExprRef<T> {
     return funcExpr("MOD", [this.node, toExprNode(value)]);
   }
 
-  extract(this: ExprRef<any>, field: string): ExprRef<SqlFloat> {
+  extract(this: ExprRef<unknown>, field: string): ExprRef<SqlFloat> {
     if (!field.trim()) {
       throw new Error("extract requires a field");
     }
@@ -161,27 +161,27 @@ export class ExprRef<T> {
     return funcExpr("FROM_UNIXTIME", [this.node]);
   }
 
-  year(this: ExprRef<any>): ExprRef<SqlInt> {
+  year(this: ExprRef<unknown>): ExprRef<SqlInt> {
     return this.extract("year").cast<SqlInt>("INTEGER");
   }
 
-  month(this: ExprRef<any>): ExprRef<SqlInt> {
+  month(this: ExprRef<unknown>): ExprRef<SqlInt> {
     return this.extract("month").cast<SqlInt>("INTEGER");
   }
 
-  day(this: ExprRef<any>): ExprRef<SqlInt> {
+  day(this: ExprRef<unknown>): ExprRef<SqlInt> {
     return this.extract("day").cast<SqlInt>("INTEGER");
   }
 
-  hour(this: ExprRef<any>): ExprRef<SqlInt> {
+  hour(this: ExprRef<unknown>): ExprRef<SqlInt> {
     return this.extract("hour").cast<SqlInt>("INTEGER");
   }
 
-  minute(this: ExprRef<any>): ExprRef<SqlInt> {
+  minute(this: ExprRef<unknown>): ExprRef<SqlInt> {
     return this.extract("minute").cast<SqlInt>("INTEGER");
   }
 
-  second(this: ExprRef<any>): ExprRef<SqlInt> {
+  second(this: ExprRef<unknown>): ExprRef<SqlInt> {
     return this.extract("second").cast<SqlInt>("INTEGER");
   }
 
@@ -189,7 +189,7 @@ export class ExprRef<T> {
     return new ExprRef<T>({ kind: "group", expr: this.node });
   }
 
-  count(this: ExprRef<any>): ExprRef<SqlInt> {
+  count(this: ExprRef<unknown>): ExprRef<SqlInt> {
     return new ExprRef<SqlInt>({
       kind: "agg",
       name: "COUNT",
@@ -234,37 +234,37 @@ export class ExprRef<T> {
     });
   }
 
-  rank(this: ExprRef<any>): WindowBuilder<SqlInt> {
+  rank(this: ExprRef<unknown>): WindowBuilder<SqlInt> {
     return new WindowBuilder<SqlInt>("RANK", []);
   }
 
-  denseRank(this: ExprRef<any>): WindowBuilder<SqlInt> {
+  denseRank(this: ExprRef<unknown>): WindowBuilder<SqlInt> {
     return new WindowBuilder<SqlInt>("DENSE_RANK", []);
   }
 
-  rowNumber(this: ExprRef<any>): WindowBuilder<SqlInt> {
+  rowNumber(this: ExprRef<unknown>): WindowBuilder<SqlInt> {
     return new WindowBuilder<SqlInt>("ROW_NUMBER", []);
   }
 
   lag(this: ExprRef<T>, offset?: ExprInput<SqlInt>, fallback?: ExprInput<T>): WindowBuilder<T> {
-    const args: ExprNode<any>[] = [this.node];
+    const args: ExprNode<unknown>[] = [this.node];
     if (offset !== undefined) args.push(toExprNode(offset));
     if (fallback !== undefined) args.push(toExprNode(fallback));
     return new WindowBuilder<T>("LAG", args);
   }
 
   lead(this: ExprRef<T>, offset?: ExprInput<SqlInt>, fallback?: ExprInput<T>): WindowBuilder<T> {
-    const args: ExprNode<any>[] = [this.node];
+    const args: ExprNode<unknown>[] = [this.node];
     if (offset !== undefined) args.push(toExprNode(offset));
     if (fallback !== undefined) args.push(toExprNode(fallback));
     return new WindowBuilder<T>("LEAD", args);
   }
 
-  percentRank(this: ExprRef<any>): WindowBuilder<SqlFloat> {
+  percentRank(this: ExprRef<unknown>): WindowBuilder<SqlFloat> {
     return new WindowBuilder<SqlFloat>("PERCENT_RANK", []);
   }
 
-  ntile(this: ExprRef<any>, buckets: ExprInput<SqlInt>): WindowBuilder<SqlInt> {
+  ntile(this: ExprRef<unknown>, buckets: ExprInput<SqlInt>): WindowBuilder<SqlInt> {
     return new WindowBuilder<SqlInt>("NTILE", [toExprNode(buckets)]);
   }
 
@@ -432,46 +432,46 @@ export class ExprRef<T> {
     return funcExpr("RPAD", [this.node, toExprNode(length), toExprNode(padding)]);
   }
 
-  concat(this: ExprRef<string>, ...parts: ExprInput<any>[]): ExprRef<string> {
+  concat(this: ExprRef<string>, ...parts: ExprInput<unknown>[]): ExprRef<string> {
     if (parts.length === 0) return this;
     return funcExpr("CONCAT", [this.node, ...parts.map((part) => toExprNode(part))]);
   }
 
-  arrayLength(this: ExprRef<any>): ExprRef<SqlInt> {
+  arrayLength(this: ExprRef<unknown>): ExprRef<SqlInt> {
     return funcExpr("ARRAY_LENGTH", [this.node]);
   }
 
-  arrayContains(this: ExprRef<any>, value: ExprInput<any>): ExprRef<boolean> {
+  arrayContains(this: ExprRef<unknown>, value: ExprInput<unknown>): ExprRef<boolean> {
     return funcExpr("ARRAY_CONTAINS", [this.node, toExprNode(value)]);
   }
 
-  arrayPosition(this: ExprRef<any>, value: ExprInput<any>): ExprRef<SqlInt> {
+  arrayPosition(this: ExprRef<unknown>, value: ExprInput<unknown>): ExprRef<SqlInt> {
     return funcExpr("ARRAY_POSITION", [this.node, toExprNode(value)]);
   }
 
   arraySlice(
-    this: ExprRef<any>,
+    this: ExprRef<unknown>,
     start: ExprInput<SqlInt>,
     length?: ExprInput<SqlInt>
-  ): ExprRef<any> {
+  ): ExprRef<unknown> {
     const args = [this.node, toExprNode(start)];
     if (length !== undefined) args.push(toExprNode(length));
     return funcExpr("ARRAY_SLICE", args);
   }
 
-  arrayJoin(this: ExprRef<any>, separator: ExprInput<string>): ExprRef<string> {
+  arrayJoin(this: ExprRef<unknown>, separator: ExprInput<string>): ExprRef<string> {
     return funcExpr("ARRAY_JOIN", [this.node, toExprNode(separator)]);
   }
 
-  arrayAppend(this: ExprRef<any>, value: ExprInput<any>): ExprRef<any> {
+  arrayAppend(this: ExprRef<unknown>, value: ExprInput<unknown>): ExprRef<unknown> {
     return funcExpr("ARRAY_APPEND", [this.node, toExprNode(value)]);
   }
 
-  arrayPrepend(this: ExprRef<any>, value: ExprInput<any>): ExprRef<any> {
+  arrayPrepend(this: ExprRef<unknown>, value: ExprInput<unknown>): ExprRef<unknown> {
     return funcExpr("ARRAY_PREPEND", [this.node, toExprNode(value)]);
   }
 
-  arrayConcat(this: ExprRef<any>, ...values: ExprInput<any>[]): ExprRef<any> {
+  arrayConcat(this: ExprRef<unknown>, ...values: ExprInput<unknown>[]): ExprRef<unknown> {
     if (values.length === 0) return this;
     return funcExpr("ARRAY_CONCAT", [
       this.node,
@@ -479,7 +479,7 @@ export class ExprRef<T> {
     ]);
   }
 
-  arrayDistinct(this: ExprRef<any>): ExprRef<any> {
+  arrayDistinct(this: ExprRef<unknown>): ExprRef<unknown> {
     return funcExpr("ARRAY_DISTINCT", [this.node]);
   }
 
@@ -520,7 +520,7 @@ export class ExprRef<T> {
     return new WindowBuilder<T>("SUM", [this.node]).over(spec);
   }
 
-  cast<TTarget = any>(target: string): ExprRef<TTarget> {
+  cast<TTarget = unknown>(target: string): ExprRef<TTarget> {
     if (!target.trim()) {
       throw new Error("cast requires a target type");
     }
@@ -560,11 +560,11 @@ export class ColumnRef<T, Name extends string> extends ExprRef<T> {
   }
 }
 
-export type ColumnRefs<T extends Record<string, any>> = {
+export type ColumnRefs<T extends Record<string, unknown>> = {
   [K in keyof T & string]: ColumnRef<T[K], K>;
 };
 
-export type SelectValue = ExprRef<any> | Value;
+export type SelectValue = ExprRef<unknown> | Value;
 export type SelectShape = Record<string, SelectValue>;
 export type SelectResult<S extends SelectShape> = {
   [K in keyof S]: S[K] extends ExprRef<infer T> ? T : S[K];
@@ -576,9 +576,9 @@ export function lit<T extends Value>(value: T): ExprRef<T> {
 }
 
 /** Call a SQL function with arbitrary arguments. */
-export function fn<T = any>(
+export function fn<T = unknown>(
   name: string,
-  ...args: ExprInput<any>[]
+  ...args: ExprInput<unknown>[]
 ): ExprRef<T> {
   if (!name.trim()) {
     throw new Error("fn requires a function name");
@@ -587,9 +587,9 @@ export function fn<T = any>(
 }
 
 /** Call a SQL window function (use `.over(...)` on the result). */
-export function windowFn<T = any>(
+export function windowFn<T = unknown>(
   name: string,
-  ...args: ExprInput<any>[]
+  ...args: ExprInput<unknown>[]
 ): WindowBuilder<T> {
   if (!name.trim()) {
     throw new Error("windowFn requires a function name");
@@ -688,31 +688,31 @@ export function when<T>(
   ]);
 }
 
-export type ExprShape<T extends Record<string, ExprRef<any>>> = {
-  map: (mapper: (value: T[keyof T]) => ExprRef<any>) => {
-    [K in keyof T]: ExprRef<any>;
+export type ExprShape<T extends Record<string, ExprRef<unknown>>> = {
+  map: (mapper: (value: T[keyof T]) => ExprRef<unknown>) => {
+    [K in keyof T]: ExprRef<unknown>;
   };
-  group: () => { [K in keyof T]: ExprRef<any> };
+  group: () => { [K in keyof T]: ExprRef<unknown> };
 };
 
 /** Wrap a shape to apply methods to each expression value. */
-export function shape<T extends Record<string, ExprRef<any>>>(value: T): ExprShape<T> {
+export function shape<T extends Record<string, ExprRef<unknown>>>(value: T): ExprShape<T> {
   return {
     map(mapper) {
-      const result: Record<string, ExprRef<any>> = {};
+      const result: Record<string, ExprRef<unknown>> = {};
       for (const key of Object.keys(value) as Array<keyof T>) {
         result[key as string] = mapper(value[key]);
       }
-      return result as { [K in keyof T]: ExprRef<any> };
+      return result as { [K in keyof T]: ExprRef<unknown> };
     },
     group() {
-      const result: Record<string, ExprRef<any>> = {};
+      const result: Record<string, ExprRef<unknown>> = {};
       for (const key of Object.keys(value) as Array<keyof T>) {
         const item = value[key];
         if (!item) continue;
         result[key as string] = item.group();
       }
-      return result as { [K in keyof T]: ExprRef<any> };
+      return result as { [K in keyof T]: ExprRef<unknown> };
     },
   };
 }
@@ -720,9 +720,9 @@ export function shape<T extends Record<string, ExprRef<any>>>(value: T): ExprSha
 /** Template string helper that concatenates parts with SQL CONCAT. */
 export function f(
   strings: TemplateStringsArray,
-  ...exprs: ExprInput<any>[]
+  ...exprs: ExprInput<unknown>[]
 ): ExprRef<string> {
-  const parts: ExprInput<any>[] = [];
+  const parts: ExprInput<unknown>[] = [];
   for (let i = 0; i < strings.length; i += 1) {
     const literal = strings[i] ?? "";
     if (literal.length > 0) parts.push(literal);
@@ -733,16 +733,16 @@ export function f(
   return funcExpr("CONCAT", parts.map((part) => toExprNode(part)));
 }
 
-export function createColumnRefs<TColumns extends Record<string, any>>(
+export function createColumnRefs<TColumns extends Record<string, unknown>>(
   tableName: string | null,
   columnNames?: readonly string[] | null
 ): ColumnRefs<TColumns> {
-  const cache = new Map<string, ColumnRef<any, string>>();
+  const cache = new Map<string, ColumnRef<unknown, string>>();
   const columns = columnNames ? [...columnNames] : [];
   const getColumn = (name: string) => {
     const existing = cache.get(name);
     if (existing) return existing;
-    const next = new ColumnRef<any, string>(tableName, name);
+    const next = new ColumnRef<unknown, string>(tableName, name);
     cache.set(name, next);
     return next;
   };
@@ -772,8 +772,8 @@ export function createColumnRefs<TColumns extends Record<string, any>>(
 }
 
 export function mergeColumnRefs<
-  TLeft extends Record<string, any>,
-  TRight extends Record<string, any>
+  TLeft extends Record<string, unknown>,
+  TRight extends Record<string, unknown>
 >(
   left: ColumnRefs<TLeft>,
   right: ColumnRefs<TRight>,
@@ -784,8 +784,12 @@ export function mergeColumnRefs<
   const getColumn = (prop: string) => {
     const leftHas = leftKeys ? leftKeys.includes(prop) : false;
     const rightHas = rightKeys ? rightKeys.includes(prop) : false;
-    if (rightHas && !leftHas) return (right as any)[prop];
-    return (left as any)[prop] ?? (right as any)[prop];
+    const leftValue = Reflect.get(left, prop);
+    const rightValue = Reflect.get(right, prop);
+    const leftRef = leftValue instanceof ExprRef ? leftValue : undefined;
+    const rightRef = rightValue instanceof ExprRef ? rightValue : undefined;
+    if (rightHas && !leftHas) return rightRef;
+    return leftRef ?? rightRef;
   };
 
   return new Proxy(
@@ -836,7 +840,7 @@ export function mergeColumnNames(
   return merged;
 }
 
-export function selectAllItems<TColumns extends Record<string, any>>(
+export function selectAllItems<TColumns extends Record<string, unknown>>(
   columns: ColumnRefs<TColumns>,
   columnNames: readonly string[] | null
 ): SelectItem[] {
@@ -844,13 +848,17 @@ export function selectAllItems<TColumns extends Record<string, any>>(
     throw new Error("Cannot expand select-all without a schema");
   }
   return columnNames.map((name) => {
-    const ref = (columns as any)[name] as ExprRef<any>;
+    const value = Reflect.get(columns, name);
+    if (!(value instanceof ExprRef)) {
+      throw new Error(`Unknown column ref: ${name}`);
+    }
+    const ref = value;
     const expr = toExprNode(ref);
     return { expr, as: shouldAlias(expr, name) ? name : null };
   });
 }
 
-export function toExprNode<T>(value: ExprInput<T>): ExprNode<any> {
+export function toExprNode<T>(value: ExprInput<T>): ExprNode<unknown> {
   if (value instanceof ExprRef) return value.node;
   if (value === undefined) {
     throw new Error("Unsupported literal value: undefined");
@@ -873,7 +881,7 @@ function isTemporalLiteral(value: unknown): value is DateLiteral | TimestampLite
   return candidate.kind === "date_literal" || candidate.kind === "timestamp_literal";
 }
 
-export function containsGroup(expr: ExprNode<any>, inAgg = false): boolean {
+export function containsGroup(expr: ExprNode<unknown>, inAgg = false): boolean {
   switch (expr.kind) {
     case "group":
       return !inAgg;
@@ -916,10 +924,10 @@ export function containsGroup(expr: ExprNode<any>, inAgg = false): boolean {
 }
 
 export function unwrapGroupExpr(
-  expr: ExprNode<any>,
-  groupBy: ExprNode<any>[],
+  expr: ExprNode<unknown>,
+  groupBy: ExprNode<unknown>[],
   inAgg: boolean
-): ExprNode<any> {
+): ExprNode<unknown> {
   switch (expr.kind) {
     case "group":
       if (inAgg) {
@@ -993,10 +1001,10 @@ export function unwrapGroupExpr(
   }
 }
 
-export function dedupeExprs(exprs: ExprNode<any>[]): ExprNode<any>[] {
+export function dedupeExprs(exprs: ExprNode<unknown>[]): ExprNode<unknown>[] {
   if (exprs.length <= 1) return exprs;
   const seen = new Set<string>();
-  const result: ExprNode<any>[] = [];
+  const result: ExprNode<unknown>[] = [];
   for (const expr of exprs) {
     const key = JSON.stringify(expr);
     if (seen.has(key)) continue;
@@ -1006,14 +1014,14 @@ export function dedupeExprs(exprs: ExprNode<any>[]): ExprNode<any>[] {
   return result;
 }
 
-export function shouldAlias(expr: ExprNode<any>, key: string): boolean {
+export function shouldAlias(expr: ExprNode<unknown>, key: string): boolean {
   if (expr.kind !== "column") return true;
   return expr.name !== key || expr.table !== null;
 }
 
 export function toExprNodeList(
-  input?: ExprRef<any> | ExprRef<any>[]
-): ExprNode<any>[] | null {
+  input?: ExprRef<unknown> | ExprRef<unknown>[]
+): ExprNode<unknown>[] | null {
   if (!input) return null;
   const items = Array.isArray(input) ? input : [input];
   return items.map((item) => toExprNode(item));
@@ -1026,7 +1034,7 @@ export function toOrderItems(input?: OrderItem | OrderItem[]): OrderItem[] | nul
 
 function buildCaseExpr<T>(
   whens: CaseWhenNode[],
-  elseExpr: ExprNode<any> | null
+  elseExpr: ExprNode<unknown> | null
 ): ExprRef<T | null> {
   return new ExprRef<T | null>({
     kind: "case",
@@ -1055,7 +1063,7 @@ class CaseBuilderImpl<T> implements CaseBuilder<T> {
 }
 
 class WindowBuilder<T> {
-  constructor(private readonly name: string, private readonly args: ExprNode<any>[]) {}
+  constructor(private readonly name: string, private readonly args: ExprNode<unknown>[]) {}
 
   over(spec: WindowSpecInput = {}): ExprRef<T> {
     const partitionBy = toExprNodeList(spec.partitionBy);
@@ -1072,12 +1080,12 @@ class WindowBuilder<T> {
 
 function binaryExpr(
   op: BinaryOp,
-  left: ExprNode<any>,
-  right: ExprNode<any>
-): ExprRef<any> {
+  left: ExprNode<unknown>,
+  right: ExprNode<unknown>
+): ExprRef<unknown> {
   return new ExprRef({ kind: "binary", op, left, right });
 }
 
-function funcExpr<T>(name: string, args: ExprNode<any>[]): ExprRef<T> {
+function funcExpr<T>(name: string, args: ExprNode<unknown>[]): ExprRef<T> {
   return new ExprRef<T>({ kind: "func", name, args });
 }

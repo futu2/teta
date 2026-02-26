@@ -66,19 +66,44 @@ type SelectAst = Omit<
   Select,
   "columns" | "from" | "where" | "groupby" | "having" | "orderby" | "limit" | "options" | "window"
 > & {
-  columns: any;
-  from: any[] | any | null;
-  where: any | null;
-  groupby: any | null;
-  having: any[] | null;
-  orderby: any | null;
-  limit: any | null;
-  options: any[] | null;
-  window?: any;
-  into: { position: null };
-  locking_read: null;
-  collate: null;
+  columns: unknown;
+  from: unknown[] | unknown | null;
+  where: unknown | null;
+  groupby: unknown | null;
+  having: unknown[] | null;
+  orderby: unknown | null;
+  limit: unknown | null;
+  options: unknown[] | null;
+  window?: unknown;
+  into?: { position: null };
+  locking_read?: null;
+  collate?: null;
 };
+
+type BaseFromRef = {
+  db: null;
+  schema?: string | null;
+  table: string;
+  as: string | null;
+};
+
+function toParserSelect(ast: SelectAst): Select {
+  if (!isParserSelect(ast)) {
+    throw new Error("Internal error: generated AST is not a parser-compatible SELECT");
+  }
+  return ast;
+}
+
+function toParserAst(ast: SelectAst): AST {
+  return toParserSelect(ast);
+}
+
+function fromParserSelect(ast: Select): SelectAst {
+  return {
+    ...ast,
+    groupby: ast.groupby ?? null,
+  };
+}
 
 export function getDefaultDialect(): QueryDialect {
   return cloneDialect(DEFAULT_DIALECT);
@@ -197,7 +222,7 @@ function lookupBuiltinDialect(input: string):
 export function compilePipeline(
   source: Source,
   stages: Stage[],
-  columns: ColumnRefs<Record<string, any>>,
+  columns: ColumnRefs<Record<string, unknown>>,
   columnNames: readonly string[] | null,
   options?: {
     ctePrefix?: string;
@@ -217,7 +242,7 @@ export function compilePipeline(
   const baseWiths = options?.baseWiths ?? [];
   const merged = baseWiths.length ? [...baseWiths, ...ctes] : ctes;
   ast.with = merged.length ? merged : null;
-  return ast;
+  return toParserAst(ast);
 }
 
 export function buildRecursiveCte(
@@ -225,13 +250,13 @@ export function buildRecursiveCte(
   base: {
     source: Source;
     stages: Stage[];
-    columns: ColumnRefs<Record<string, any>>;
+    columns: ColumnRefs<Record<string, unknown>>;
     columnNames: readonly string[] | null;
   },
   step: {
     source: Source;
     stages: Stage[];
-    columns: ColumnRefs<Record<string, any>>;
+    columns: ColumnRefs<Record<string, unknown>>;
     columnNames: readonly string[] | null;
   },
   dialect: QueryDialect = getDefaultDialect()
@@ -245,7 +270,7 @@ export function buildRecursiveCte(
   const recursiveWith: With & { recursive: boolean } = {
     name: { value: name },
     stmt: {
-      ast: unionAst,
+      ast: toParserSelect(unionAst),
       tableList: [],
       columnList: [],
     },
@@ -258,7 +283,7 @@ function compileLoopPart(
   input: {
     source: Source;
     stages: Stage[];
-    columns: ColumnRefs<Record<string, any>>;
+    columns: ColumnRefs<Record<string, unknown>>;
     columnNames: readonly string[] | null;
   },
   label: "base" | "step",
@@ -272,10 +297,10 @@ function compileLoopPart(
     as: source.as,
   });
   const baseAlias = ensureAlias(baseFrom);
-  const from: any[] = [baseFrom];
-  let whereExpr: ExprNode<any> | null = null;
+  const from: unknown[] = [baseFrom];
+  let whereExpr: ExprNode<unknown> | null = null;
   let selectItems: SelectItem[] | null = null;
-  let groupBy: ExprNode<any>[] | null = null;
+  let groupBy: ExprNode<unknown>[] | null = null;
   let phase: "join" | "filter" | "select" = "join";
   const keepTables = new Set<string>();
 
@@ -288,7 +313,8 @@ function compileLoopPart(
           );
         }
         if (stage.source.kind === "subquery") {
-          const withs = (stage.source.ast as any).with;
+          const subquery = ensureSelectAst(stage.source.ast, `loop ${label} join`);
+          const withs = subquery.with;
           if (withs && withs.length) {
             throw new Error(`loop ${label} does not allow nested CTEs in joins`);
           }
@@ -395,7 +421,7 @@ function compileLoopPart(
 function buildPipelineAst(
   source: Source,
   stages: Stage[],
-  columns: ColumnRefs<Record<string, any>>,
+  columns: ColumnRefs<Record<string, unknown>>,
   columnNames: readonly string[] | null,
   options?: {
     ctePrefix?: string;
@@ -457,7 +483,7 @@ function buildPipelineAst(
     ctes.push({
       name: { value: name },
       stmt: {
-        ast: stageAst,
+        ast: toParserSelect(stageAst),
         tableList: [],
         columnList: [],
       },
@@ -607,7 +633,7 @@ function stageToSelect(
   }
 }
 
-function sourceToFrom(source: SourceRef): any {
+function sourceToFrom(source: SourceRef): BaseFromRef {
   if (source.kind === "cte") {
     return { db: null, table: source.name, as: null };
   }
@@ -620,12 +646,12 @@ function sourceToFrom(source: SourceRef): any {
 }
 
 function buildSelectAst(params: {
-  from: any[];
-  columns: any;
-  where: any | null;
-  groupby: any | null;
-  orderby: any | null;
-  limit: any | null;
+  from: unknown[];
+  columns: unknown;
+  where: unknown | null;
+  groupby: unknown | null;
+  orderby: unknown | null;
+  limit: unknown | null;
 }): SelectAst {
   return {
     with: null,
@@ -662,7 +688,7 @@ function hoistJoinSubquery(
   ctes.push({
     name: { value: cteName },
     stmt: {
-      ast: subqueryAst,
+      ast: toParserSelect(subqueryAst),
       tableList: [],
       columnList: [],
     },
@@ -696,7 +722,7 @@ function compileUnionStage(
     limit: null,
   });
 
-  const rightColumns = createColumnRefs<Record<string, any>>(null, stage.right.columnNames);
+  const rightColumns = createColumnRefs<Record<string, unknown>>(null, stage.right.columnNames);
   const rightCompiled = buildPipelineAst(
     stage.right.source,
     stage.right.stages,
@@ -719,25 +745,29 @@ function attachUnion(
   op: "union" | "union all"
 ): SelectAst {
   left.set_op = op;
-  left._next = right;
+  left._next = toParserSelect(right);
   return left;
 }
 
-function isSelectAst(ast: AST): ast is SelectAst {
+function isSelectAst(ast: AST): ast is Select {
   return ast.type === "select";
+}
+
+function isParserSelect(value: unknown): value is Select {
+  return isObjectRecord(value) && value.type === "select";
 }
 
 function ensureSelectAst(ast: AST, context: string): SelectAst {
   if (!isSelectAst(ast)) {
     throw new Error(`${context} expected a select AST but got ${ast.type}`);
   }
-  return ast;
+  return fromParserSelect(ast);
 }
 
 function stripTableRefs(
-  expr: ExprNode<any>,
+  expr: ExprNode<unknown>,
   keepTables?: Set<string>
-): ExprNode<any> {
+): ExprNode<unknown> {
   switch (expr.kind) {
     case "column":
       if (!expr.table) return expr;
@@ -809,13 +839,13 @@ function cloneAst<T>(ast: T): T {
   return JSON.parse(JSON.stringify(ast)) as T;
 }
 
-function applyOuterAlias(node: any, baseAlias: string): void {
+function applyOuterAlias(node: unknown, baseAlias: string): void {
   if (!node) return;
   if (Array.isArray(node)) {
     node.forEach((item) => applyOuterAlias(item, baseAlias));
     return;
   }
-  if (typeof node !== "object") return;
+  if (!isObjectRecord(node)) return;
   if (node.type === "column_ref" && node.table === OUTER_TABLE_ALIAS) {
     node.table = baseAlias;
   }
@@ -830,10 +860,10 @@ function replaceOuterAlias(ast: AST, baseAlias: string): AST {
   return copy;
 }
 
-function containsOuterAlias(node: any): boolean {
+function containsOuterAlias(node: unknown): boolean {
   if (!node) return false;
   if (Array.isArray(node)) return node.some((item) => containsOuterAlias(item));
-  if (typeof node !== "object") return false;
+  if (!isObjectRecord(node)) return false;
   if (node.type === "column_ref" && node.table === OUTER_TABLE_ALIAS) return true;
   return Object.values(node).some((value) => containsOuterAlias(value));
 }
@@ -847,9 +877,9 @@ function ensureAlias(from: { as?: string | null; table?: string | null }): strin
 }
 
 function qualifyMissingTables(
-  expr: ExprNode<any>,
+  expr: ExprNode<unknown>,
   table: string
-): ExprNode<any> {
+): ExprNode<unknown> {
   switch (expr.kind) {
     case "column":
       if (expr.table) return expr;
@@ -926,11 +956,11 @@ function qualifyMissingTables(
 }
 
 function qualifyForBase(
-  expr: ExprNode<any>,
+  expr: ExprNode<unknown>,
   baseAlias: string,
   keepTables?: Set<string>,
   dialect: QueryDialect = getDefaultDialect()
-): ExprNode<any> {
+): ExprNode<unknown> {
   return applyDialectLanguage(
     qualifyMissingTables(stripTableRefs(expr, keepTables), baseAlias),
     dialect
@@ -939,7 +969,7 @@ function qualifyForBase(
 
 const keywordFunctions = new Set(["CURRENT_DATE", "CURRENT_TIMESTAMP"]);
 
-function exprToAst(expr: ExprNode<any>): any {
+function exprToAst(expr: ExprNode<unknown>): unknown {
   switch (expr.kind) {
     case "column":
       return {
@@ -1079,7 +1109,7 @@ function exprToAst(expr: ExprNode<any>): any {
   }
 }
 
-function literalToAst(value: Value): any {
+function literalToAst(value: Value): unknown {
   if (value === null) return { type: "null", value: null };
   if (typeof value === "object") {
     switch (value.kind) {
@@ -1104,9 +1134,9 @@ function literalToAst(value: Value): any {
 }
 
 function buildWindowOver(
-  partitionBy: ExprNode<any>[] | null,
+  partitionBy: ExprNode<unknown>[] | null,
   orderBy: OrderItem[] | null
-): any {
+): unknown {
   return {
     type: "window",
     as_window_specification: {
@@ -1214,24 +1244,29 @@ export function applyDialectFixes(ast: AST, dialect: QueryDialect): AST {
 }
 
 function containsRecursiveCte(ast: AST): boolean {
-  const withClause = (ast as any).with;
+  if (!isSelectAst(ast)) return false;
+  const withClause = ast.with;
   if (!Array.isArray(withClause) || withClause.length === 0) return false;
-  return withClause.some((item) => Boolean((item as any)?.recursive));
+  return withClause.some((item) => Reflect.get(item, "recursive") === true);
 }
 
-function stripLateralPrefix(node: any): void {
+function stripLateralPrefix(node: unknown): void {
   if (!node) return;
   if (Array.isArray(node)) {
     node.forEach((item) => stripLateralPrefix(item));
     return;
   }
-  if (typeof node !== "object") return;
+  if (!isObjectRecord(node)) return;
   if (node.prefix === "lateral") {
     delete node.prefix;
   }
   for (const value of Object.values(node)) {
     stripLateralPrefix(value);
   }
+}
+
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }
 
 function lateralJoinPrefix(
