@@ -1,8 +1,3 @@
-/**
- * Type-safe SQL EDSL with composable query pipelines.
- * @module
- */
-
 /** Main query builder type returned by `table(...)`. */
 export { Query, table, loop, t } from "./src/edsl/query";
 
