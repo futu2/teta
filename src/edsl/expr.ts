@@ -22,6 +22,7 @@ import {
 } from "./expr_node_ops";
 
 type NumericInput<T> = T extends SqlNumber ? T | number : T;
+type ComparableInput = SqlNumber | SqlDate | SqlTimestamp;
 export type ExprInput<T> = ExprRef<T> | NumericInput<T>;
 export type CaseBuilder<T> = {
   when: (condition: ExprInput<boolean>, value: ExprInput<T>) => CaseBuilder<T>;
@@ -46,22 +47,22 @@ export class ExprRef<T> {
     return binaryExpr("!=", this.node, toExprNode(value));
   }
 
-  gt<T extends SqlNumber>(this: ExprRef<T>, value: ExprInput<T>): ExprRef<boolean> {
+  gt<T extends ComparableInput>(this: ExprRef<T>, value: ExprInput<T>): ExprRef<boolean> {
     return binaryExpr(">", this.node, toExprNode(value));
   }
 
-  gte<T extends SqlNumber>(
+  gte<T extends ComparableInput>(
     this: ExprRef<T>,
     value: ExprInput<T>
   ): ExprRef<boolean> {
     return binaryExpr(">=", this.node, toExprNode(value));
   }
 
-  lt<T extends SqlNumber>(this: ExprRef<T>, value: ExprInput<T>): ExprRef<boolean> {
+  lt<T extends ComparableInput>(this: ExprRef<T>, value: ExprInput<T>): ExprRef<boolean> {
     return binaryExpr("<", this.node, toExprNode(value));
   }
 
-  lte<T extends SqlNumber>(
+  lte<T extends ComparableInput>(
     this: ExprRef<T>,
     value: ExprInput<T>
   ): ExprRef<boolean> {
