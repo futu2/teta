@@ -55,6 +55,7 @@ export function compilePipeline(
 
 export function buildRecursiveCte(
   name: string,
+  columnNames: readonly string[],
   base: {
     source: Source;
     stages: Stage[];
@@ -82,9 +83,24 @@ export function buildRecursiveCte(
       tableList: [],
       columnList: [],
     },
+    columns: columnNames.map(toCteColumnRef),
     recursive: true,
   };
   return recursiveWith;
+}
+
+function toCteColumnRef(name: string): unknown {
+  return {
+    type: "column_ref",
+    table: null,
+    column: {
+      expr: {
+        type: "default",
+        value: name,
+      },
+    },
+    collate: null,
+  };
 }
 
 function compileLoopPart(
@@ -98,97 +114,144 @@ function compileLoopPart(
   dialect: QueryDialect
 ): SelectAst {
   const { source, stages, columns, columnNames } = input;
-  const baseFrom = sourceToFrom({
+  if (stages.length === 0) {
+    const baseFrom = sourceToFrom({
+      kind: "table",
+      name: source.table,
+      schema: source.schema,
+      as: source.as,
+    });
+    const baseAlias = ensureAlias(baseFrom);
+    return buildSelectAst({
+      from: [baseFrom],
+      columns: selectAllItems(columns, columnNames).map((item) => ({
+        expr: exprToAst(qualifyForBase(item.expr, baseAlias, undefined, dialect)),
+        as: item.as,
+      })),
+      where: null,
+      groupby: null,
+      orderby: null,
+      limit: null,
+    });
+  }
+
+  const optimizedStages = optimizeLoopStages(stages, columnNames, label);
+  if (optimizedStages.length === 0) {
+    const baseFrom = sourceToFrom({
+      kind: "table",
+      name: source.table,
+      schema: source.schema,
+      as: source.as,
+    });
+    const baseAlias = ensureAlias(baseFrom);
+    return buildSelectAst({
+      from: [baseFrom],
+      columns: selectAllItems(columns, columnNames).map((item) => ({
+        expr: exprToAst(qualifyForBase(item.expr, baseAlias, undefined, dialect)),
+        as: item.as,
+      })),
+      where: null,
+      groupby: null,
+      orderby: null,
+      limit: null,
+    });
+  }
+
+  let current: CompileSourceRef = {
     kind: "table",
     name: source.table,
     schema: source.schema,
     as: source.as,
-  });
-  const baseAlias = ensureAlias(baseFrom);
-  const from: unknown[] = [baseFrom];
-  let whereExpr: ExprNode<unknown> | null = null;
-  let selectItems: SelectItem[] | null = null;
-  let groupBy: ExprNode<unknown>[] | null = null;
-  let phase: "join" | "filter" | "select" = "join";
-  const keepTables = new Set<string>();
+  };
+  let compiled: SelectAst | null = null;
 
-  for (const stage of stages) {
+  for (let i = 0; i < optimizedStages.length; i += 1) {
+    const stage = optimizedStages[i]!;
+    compiled = stageToSelect(stage, current, undefined, dialect);
+    if (i < optimizedStages.length - 1) {
+      current = {
+        kind: "subquery",
+        ast: compiled,
+        as: `loop_${label}_${i}`,
+      };
+    }
+  }
+
+  if (!compiled) {
+    throw new Error(`Internal error: loop ${label} did not compile`);
+  }
+  return compiled;
+}
+
+function optimizeLoopStages(
+  stages: Stage[],
+  columnNames: readonly string[] | null,
+  label: "base" | "step"
+): Stage[] {
+  if (stages.length === 0) return [];
+  const planned: Stage[] = new Array(stages.length);
+  const initialNeeded = columnNames
+    ? new Set<string>(columnNames)
+    : stageOutputNames(stages[stages.length - 1]!)
+      ? new Set<string>(stageOutputNames(stages[stages.length - 1]!)!)
+      : new Set<string>();
+  let needed = initialNeeded;
+
+  for (let i = stages.length - 1; i >= 0; i -= 1) {
+    const stage = stages[i]!;
+    validateLoopStage(stage, label);
     switch (stage.kind) {
-      case "join": {
-        if (phase !== "join") {
-          throw new Error(
-            `loop ${label} must place joins before filters or selects`
-          );
-        }
-        if (stage.source.kind === "subquery") {
-          const subquery = ensureSelectAst(stage.source.ast, `loop ${label} join`);
-          const withs = subquery.with;
-          if (withs && withs.length) {
-            throw new Error(`loop ${label} does not allow nested CTEs in joins`);
-          }
-        }
-        if (stage.as) keepTables.add(stage.as);
-        keepTables.add(baseAlias);
-        const join = `${stage.joinType} JOIN`;
-        const subqueryAst =
-          stage.source.kind === "subquery" && stage.lateral
-            ? ensureSelectAst(
-                replaceOuterAlias(stage.source.ast, baseAlias),
-                `loop ${label} lateral join`
-              )
-            : stage.source.kind === "subquery"
-              ? ensureSelectAst(stage.source.ast, `loop ${label} join`)
-              : null;
-        from.push(
-          stage.source.kind === "table"
-            ? {
-                db: null,
-                schema: stage.source.schema,
-                table: stage.source.table,
-                as: stage.as,
-                join,
-                prefix: lateralJoinPrefix(stage.lateral, dialect),
-                on: exprToAst(qualifyForBase(stage.on, baseAlias, keepTables, dialect)),
-              }
+      case "select": {
+        const keptIndexes = stage.keys
+          .map((key, idx) => ({ key, idx }))
+          .filter(({ key }) => needed.has(key))
+          .map(({ idx }) => idx);
+        const useAll = keptIndexes.length === 0;
+        const items = useAll ? stage.items : keptIndexes.map((idx) => stage.items[idx]!);
+        const keys = useAll ? stage.keys : keptIndexes.map((idx) => stage.keys[idx]!);
+        const before = new Set<string>();
+        items.forEach((item) => collectExprColumns(item.expr, before));
+        stage.groupBy?.forEach((expr) => collectExprColumns(expr, before));
+        needed = before;
+        planned[i] =
+          items.length === stage.items.length
+            ? stage
             : {
-                expr: {
-                  ast: subqueryAst,
-                  tableList: [],
-                  columnList: [],
-                  parentheses: true,
-                },
-                as: stage.as,
-                join,
-                prefix: lateralJoinPrefix(stage.lateral, dialect),
-                on: exprToAst(qualifyForBase(stage.on, baseAlias, keepTables, dialect)),
-              }
-        );
+                ...stage,
+                items,
+                keys,
+              };
         break;
       }
       case "filter": {
-        if (phase === "select") {
-          throw new Error(`loop ${label} must not filter after select`);
-        }
-        phase = "filter";
-        if (whereExpr) {
-          whereExpr = {
-            kind: "binary",
-            op: "AND",
-            left: whereExpr,
-            right: stage.predicate,
-          };
-        } else {
-          whereExpr = stage.predicate;
-        }
+        const selectAll = pruneSelectItems(stage.selectAll, needed);
+        const before = new Set<string>(needed);
+        collectExprColumns(stage.predicate, before);
+        needed = before;
+        planned[i] =
+          selectAll === stage.selectAll
+            ? stage
+            : {
+                ...stage,
+                selectAll,
+              };
         break;
       }
-      case "select": {
-        if (phase === "select") {
-          throw new Error(`loop ${label} only allows one select stage`);
-        }
-        phase = "select";
-        selectItems = stage.items;
-        groupBy = stage.groupBy;
+      case "join": {
+        const selectAll = pruneSelectItems(stage.selectAll, needed);
+        const before = new Set<string>();
+        selectAll.forEach((item) =>
+          collectExprColumns(item.expr, before, { excludeTable: stage.as })
+        );
+        collectExprColumns(stage.on, before, { excludeTable: stage.as });
+        needed = before.size ? before : new Set<string>(needed);
+        planned[i] =
+          selectAll === stage.selectAll
+            ? stage
+            : {
+                ...stage,
+                selectAll,
+              };
         break;
       }
       case "orderBy":
@@ -200,30 +263,181 @@ function compileLoopPart(
     }
   }
 
-  if (!selectItems) {
-    selectItems = selectAllItems(columns, columnNames);
-  }
+  return mergeAdjacentLoopFilters(removeNoOpLoopSelects(planned));
+}
 
-  return buildSelectAst({
-    from,
-    columns: selectItems.map((item) => ({
-      expr: exprToAst(qualifyForBase(item.expr, baseAlias, keepTables, dialect)),
-      as: item.as,
-    })),
-    where: whereExpr
-      ? exprToAst(qualifyForBase(whereExpr, baseAlias, keepTables, dialect))
-      : null,
-    groupby: groupBy
-      ? {
-          columns: groupBy.map((expr) =>
-            exprToAst(qualifyForBase(expr, baseAlias, keepTables, dialect))
-          ),
-          modifiers: [],
+function validateLoopStage(stage: Stage, label: "base" | "step"): void {
+  switch (stage.kind) {
+    case "orderBy":
+    case "limit":
+    case "union":
+      throw new Error(`loop ${label} does not allow ${stage.kind} stages`);
+    case "join":
+      if (stage.source.kind === "subquery") {
+        const subquery = ensureSelectAst(stage.source.ast, `loop ${label} join`);
+        const withs = subquery.with;
+        if (withs && withs.length) {
+          throw new Error(`loop ${label} does not allow nested CTEs in joins`);
         }
-      : null,
-    orderby: null,
-    limit: null,
+      }
+      break;
+    default:
+      break;
+  }
+}
+
+function mergeAdjacentLoopFilters(stages: Stage[]): Stage[] {
+  if (stages.length < 2) return stages;
+  const merged: Stage[] = [];
+  for (const stage of stages) {
+    const prev = merged[merged.length - 1];
+    if (stage.kind === "filter" && prev?.kind === "filter") {
+      merged[merged.length - 1] = {
+        kind: "filter",
+        predicate: {
+          kind: "binary",
+          op: "AND",
+          left: prev.predicate,
+          right: stage.predicate,
+        },
+        selectAll: stage.selectAll,
+      };
+      continue;
+    }
+    merged.push(stage);
+  }
+  return merged;
+}
+
+function removeNoOpLoopSelects(stages: Stage[]): Stage[] {
+  const compact: Stage[] = [];
+  let inputNames: readonly string[] | null = null;
+  for (const stage of stages) {
+    if (stage.kind === "select" && isNoOpLoopSelect(stage, inputNames)) {
+      continue;
+    }
+    compact.push(stage);
+    inputNames = stageOutputNames(stage);
+  }
+  return compact;
+}
+
+function isNoOpLoopSelect(
+  stage: Extract<Stage, { kind: "select" }>,
+  inputNames: readonly string[] | null
+): boolean {
+  if (!inputNames) return false;
+  if (stage.groupBy && stage.groupBy.length > 0) return false;
+  if (inputNames.length !== stage.keys.length) return false;
+  for (let i = 0; i < stage.keys.length; i += 1) {
+    const key = stage.keys[i]!;
+    const input = inputNames[i]!;
+    const item = stage.items[i];
+    if (!item) return false;
+    if (key !== input) return false;
+    if (item.as && item.as !== key) return false;
+    if (item.expr.kind !== "column") return false;
+    if (item.expr.name !== key) return false;
+  }
+  return true;
+}
+
+function stageOutputNames(stage: Stage): readonly string[] | null {
+  switch (stage.kind) {
+    case "select":
+      return stage.keys;
+    case "filter":
+    case "join":
+    case "orderBy":
+    case "limit":
+      return selectItemNames(stage.selectAll);
+    case "union":
+      return null;
+    default:
+      return assertNever(stage);
+  }
+}
+
+function selectItemNames(items: SelectItem[]): string[] | null {
+  const names: string[] = [];
+  for (const item of items) {
+    const name = selectItemName(item);
+    if (!name) return null;
+    names.push(name);
+  }
+  return names;
+}
+
+function pruneSelectItems(items: SelectItem[], needed: ReadonlySet<string>): SelectItem[] {
+  const pruned = items.filter((item) => {
+    const name = selectItemName(item);
+    if (!name) return true;
+    return needed.has(name);
   });
+  if (pruned.length === 0 || pruned.length === items.length) return items;
+  return pruned;
+}
+
+function selectItemName(item: SelectItem): string | null {
+  if (item.as) return item.as;
+  if (item.expr.kind === "column") return item.expr.name;
+  return null;
+}
+
+function collectExprColumns(
+  expr: ExprNode<unknown>,
+  out: Set<string>,
+  options?: { excludeTable?: string | null }
+): void {
+  switch (expr.kind) {
+    case "column":
+      if (options?.excludeTable !== undefined && expr.table === options.excludeTable) {
+        return;
+      }
+      out.add(expr.name);
+      return;
+    case "binary":
+      collectExprColumns(expr.left, out, options);
+      collectExprColumns(expr.right, out, options);
+      return;
+    case "unary":
+      collectExprColumns(expr.expr, out, options);
+      return;
+    case "agg":
+      collectExprColumns(expr.arg, out, options);
+      return;
+    case "group":
+      collectExprColumns(expr.expr, out, options);
+      return;
+    case "func":
+      expr.args.forEach((arg) => collectExprColumns(arg, out, options));
+      return;
+    case "list":
+      expr.items.forEach((arg) => collectExprColumns(arg, out, options));
+      return;
+    case "extract":
+      collectExprColumns(expr.source, out, options);
+      return;
+    case "cast":
+      collectExprColumns(expr.expr, out, options);
+      return;
+    case "window":
+      expr.args.forEach((arg) => collectExprColumns(arg, out, options));
+      expr.partitionBy?.forEach((arg) => collectExprColumns(arg, out, options));
+      expr.orderBy?.forEach((item) => collectExprColumns(item.expr, out, options));
+      return;
+    case "case":
+      expr.whens.forEach((item) => {
+        collectExprColumns(item.when, out, options);
+        collectExprColumns(item.then, out, options);
+      });
+      if (expr.elseExpr) collectExprColumns(expr.elseExpr, out, options);
+      return;
+    case "literal":
+      return;
+    default:
+      assertNever(expr);
+  }
 }
 
 function buildPipelineAst(
@@ -314,9 +528,17 @@ function buildPipelineAst(
   return { ast: finalAst, ctes };
 }
 
+type CompileSourceRef =
+  | SourceRef
+  | {
+      kind: "subquery";
+      ast: SelectAst;
+      as: string | null;
+    };
+
 function stageToSelect(
   stage: Stage,
-  source: SourceRef,
+  source: CompileSourceRef,
   keepTables?: Set<string>,
   dialect: QueryDialect = getDefaultDialect()
 ): SelectAst {
@@ -441,7 +663,30 @@ function stageToSelect(
   }
 }
 
-function sourceToFrom(source: SourceRef): BaseFromRef {
+function sourceToFrom(
+  source: CompileSourceRef
+):
+  | BaseFromRef
+  | {
+      expr: {
+        ast: SelectAst;
+        tableList: [];
+        columnList: [];
+        parentheses: true;
+      };
+      as: string | null;
+    } {
+  if (source.kind === "subquery") {
+    return {
+      expr: {
+        ast: source.ast,
+        tableList: [],
+        columnList: [],
+        parentheses: true,
+      },
+      as: source.as,
+    };
+  }
   if (source.kind === "cte") {
     return { db: null, table: source.name, as: null };
   }

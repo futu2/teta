@@ -12,6 +12,8 @@ export function formatSqlPretty(sql: string): string {
     "WHERE",
     "GROUP BY",
     "HAVING",
+    "UNION ALL",
+    "UNION",
     "ORDER BY",
     "LIMIT",
     "ON",

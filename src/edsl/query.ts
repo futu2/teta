@@ -446,6 +446,7 @@ export function loop<S extends Record<string, ColumnType<any>>>(
   }
   const recursiveCte = buildRecursiveCte(
     name,
+    schemaKeys,
     {
       source: base.source,
       stages: base.stages,
