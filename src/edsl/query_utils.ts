@@ -61,17 +61,6 @@ export function assertLoopColumns(
   assertUnionCompatible(base, step);
 }
 
-export function assertLoopSchema(
-  schemaKeys: readonly string[],
-  names: readonly string[] | null,
-  label: "base" | "step"
-): void {
-  if (!names) {
-    throw new Error(`loop ${label} must return explicit columns`);
-  }
-  assertUnionCompatible(schemaKeys, names);
-}
-
 export function qualifyOuterColumns<TColumns extends Record<string, any>>(
   columns: ColumnRefs<TColumns>
 ): ColumnRefs<TColumns> {

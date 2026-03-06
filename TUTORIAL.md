@@ -585,19 +585,13 @@ const employees = table("employees", {
 });
 
 const orgTree = loop(
-  {
-    id: t.int(),
-    name: t.string(),
-    manager_id: t.int(),
-  },
-  (self) => ({
-    base: employees
-      .filter((e) => e.manager_id.isNull())
-      .select((e) => ({ id: e.id, name: e.name, manager_id: e.manager_id })),
-    step: employees
+  employees
+    .filter((e) => e.manager_id.isNull())
+    .select((e) => ({ id: e.id, name: e.name, manager_id: e.manager_id })),
+  (self) =>
+    employees
       .join(self, (e, s) => e.manager_id.eq(s.id))
-      .select((e) => ({ id: e.id, name: e.name, manager_id: e.manager_id })),
-  })
+      .select((e) => ({ id: e.id, name: e.name, manager_id: e.manager_id }))
 );
 
 const q = orgTree.select((o) => ({ id: o.id, name: o.name }));

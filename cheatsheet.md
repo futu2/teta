@@ -40,16 +40,13 @@ const users = table("users", {
 });
 ```
 
-### `loop(schema, builder)`
+### `loop(base, step)`
 Create a recursive CTE query (base + step).
 
 ```ts
 const q = loop(
-  { n: t.int() },
-  (self) => ({
-    base: table("seed", { n: t.int() }).select((s) => ({ n: s.n })),
-    step: self.select((s) => ({ n: s.n.add(1) })),
-  })
+  table("seed", { n: t.int() }).select((s) => ({ n: s.n })),
+  (self) => self.select((s) => ({ n: s.n.add(1) }))
 );
 ```
 
@@ -324,4 +321,3 @@ const q = users
 
 console.log(q.toSql("postgresql", "pretty"));
 ```
-

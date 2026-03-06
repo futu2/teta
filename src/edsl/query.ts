@@ -41,7 +41,6 @@ import {
 import type { Source, JoinSource } from "./types";
 import {
   assertLoopColumns,
-  assertLoopSchema,
   assertUnionCompatible,
   autoAlias,
   mergeWiths,
@@ -426,27 +425,31 @@ export function table<S extends Record<string, ColumnType<any>>>(
 
 let loopCounter = 0;
 
-/** Build a recursive CTE query with a base and step query. */
-export function loop<S extends Record<string, ColumnType<any>>>(
-  schema: S,
-  builder: (self: Query<InferSchema<S>>) => {
-    base: Query<InferSchema<S>>;
-    step: Query<InferSchema<S>>;
+/** Build a recursive CTE query from a base query and recursive step. */
+export function loop<TColumns extends Record<string, any>>(
+  base: Query<TColumns>,
+  step: (self: Query<TColumns>) => Query<TColumns>
+): Query<TColumns> {
+  if (!base.columnNames) {
+    throw new Error("loop base query must have explicit columns");
   }
-): Query<InferSchema<S>> {
   const name = `loop_${loopCounter++}`;
-  const self = table(name, schema);
-  const { base, step } = builder(self);
-  const schemaKeys = Object.keys(schema);
-  assertLoopSchema(schemaKeys, base.columnNames, "base");
-  assertLoopSchema(schemaKeys, step.columnNames, "step");
-  assertLoopColumns(base.columnNames, step.columnNames);
-  if (base.withs.length || step.withs.length) {
+  const selfColumnNames = [...base.columnNames];
+  const self = new Query<TColumns>(
+    { table: name, schema: null, as: null },
+    [],
+    createColumnRefs<TColumns>(null, selfColumnNames),
+    selfColumnNames,
+    []
+  );
+  const stepQuery = step(self);
+  assertLoopColumns(base.columnNames, stepQuery.columnNames);
+  if (base.withs.length || stepQuery.withs.length) {
     throw new Error("loop does not allow nested CTEs in base or step queries");
   }
   const recursiveCte = buildRecursiveCte(
     name,
-    schemaKeys,
+    selfColumnNames,
     {
       source: base.source,
       stages: base.stages,
@@ -454,19 +457,18 @@ export function loop<S extends Record<string, ColumnType<any>>>(
       columnNames: base.columnNames,
     },
     {
-      source: step.source,
-      stages: step.stages,
-      columns: step.columns as ColumnRefs<Record<string, any>>,
-      columnNames: step.columnNames,
+      source: stepQuery.source,
+      stages: stepQuery.stages,
+      columns: stepQuery.columns as ColumnRefs<Record<string, any>>,
+      columnNames: stepQuery.columnNames,
     }
   );
-  const columnNames = Object.keys(schema);
-  const columns = createColumnRefs<InferSchema<S>>(null, columnNames);
+  const columns = createColumnRefs<TColumns>(null, selfColumnNames);
   return new Query(
     { table: name, schema: null, as: null },
     [],
     columns,
-    columnNames,
+    selfColumnNames,
     [recursiveCte]
   );
 }
