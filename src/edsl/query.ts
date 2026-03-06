@@ -28,7 +28,7 @@ import {
   toExprNode,
   unwrapGroupExpr,
 } from "./expr";
-import type { ColumnRefs, SelectResult, SelectShape } from "./expr";
+import type { ColumnRefs, ExprRefs, SelectResult, SelectShape } from "./expr";
 import {
   applyDialectFixes,
   buildSqlOptions,
@@ -50,21 +50,22 @@ import {
 
 type JoinColumnMerger<
   TLeft extends Record<string, any>,
-  TRight extends Record<string, any>
+  TRight extends Record<string, any>,
+  TMerged extends Record<string, any> = TLeft & TRight
 > = (
   left: ColumnRefs<TLeft>,
   right: ColumnRefs<TRight>
-) => ColumnRefs<TLeft & TRight>;
+) => ExprRefs<TMerged>;
 
 function defaultJoinColumnMerger<
   TLeft extends Record<string, any>,
   TRight extends Record<string, any>
->(u: ColumnRefs<TLeft>, o: ColumnRefs<TRight>): ColumnRefs<TLeft & TRight> {
-  return { ...u, ...o } as ColumnRefs<TLeft & TRight>;
+>(u: ColumnRefs<TLeft>, o: ColumnRefs<TRight>): ExprRefs<TLeft & TRight> {
+  return { ...u, ...o } as ExprRefs<TLeft & TRight>;
 }
 
 function resolveMergedColumnNames<TColumns extends Record<string, any>>(
-  columns: ColumnRefs<TColumns>,
+  columns: ExprRefs<TColumns>,
   left: readonly string[] | null,
   right: readonly string[] | null
 ): readonly string[] | null {
@@ -226,30 +227,46 @@ export class Query<TColumns extends Record<string, any>> {
 
   join<TRight extends Record<string, any>>(
     right: Query<TRight>,
-    on: (left: ColumnRefs<TColumns>, right: ColumnRefs<TRight>) => ExprRef<boolean>,
-    mergeColumns: JoinColumnMerger<TColumns, TRight>
+    on: (left: ColumnRefs<TColumns>, right: ColumnRefs<TRight>) => ExprRef<boolean>
   ): Query<TColumns & TRight>;
   join<TRight extends Record<string, any>>(
     right: Query<TRight>,
     on: (left: ColumnRefs<TColumns>, right: ColumnRefs<TRight>) => ExprRef<boolean>,
-    joinType?: JoinTypeInput,
-    mergeColumns?: JoinColumnMerger<TColumns, TRight>
+    joinType: JoinTypeInput
   ): Query<TColumns & TRight>;
-  join<TRight extends Record<string, any>>(
+  join<TRight extends Record<string, any>, TMerged extends Record<string, any>>(
     right: Query<TRight>,
     on: (left: ColumnRefs<TColumns>, right: ColumnRefs<TRight>) => ExprRef<boolean>,
-    joinTypeOrMerge: JoinTypeInput | JoinColumnMerger<TColumns, TRight> = "inner",
-    mergeColumns: JoinColumnMerger<TColumns, TRight> = defaultJoinColumnMerger
-  ): Query<TColumns & TRight> {
+    mergeColumns: JoinColumnMerger<TColumns, TRight, TMerged>
+  ): Query<TMerged>;
+  join<TRight extends Record<string, any>, TMerged extends Record<string, any>>(
+    right: Query<TRight>,
+    on: (left: ColumnRefs<TColumns>, right: ColumnRefs<TRight>) => ExprRef<boolean>,
+    joinType: JoinTypeInput,
+    mergeColumns: JoinColumnMerger<TColumns, TRight, TMerged>
+  ): Query<TMerged>;
+  join<
+    TRight extends Record<string, any>,
+    TMerged extends Record<string, any> = TColumns & TRight
+  >(
+    right: Query<TRight>,
+    on: (left: ColumnRefs<TColumns>, right: ColumnRefs<TRight>) => ExprRef<boolean>,
+    joinTypeOrMerge: JoinTypeInput | JoinColumnMerger<TColumns, TRight, TMerged> = "inner",
+    mergeColumns?: JoinColumnMerger<TColumns, TRight, TMerged>
+  ): Query<TMerged> {
     const joinType = typeof joinTypeOrMerge === "function" ? "inner" : joinTypeOrMerge;
     const mergeResolver =
-      typeof joinTypeOrMerge === "function" ? joinTypeOrMerge : mergeColumns;
+      typeof joinTypeOrMerge === "function"
+        ? joinTypeOrMerge
+        : (mergeColumns ??
+          (defaultJoinColumnMerger as JoinColumnMerger<TColumns, TRight, TMerged>));
     const alias = autoAlias(right.source.table, this.stages);
     const rightKeys = right.columnNames ? [...right.columnNames] : null;
     const rightColumns = createColumnRefs<TRight>(alias, rightKeys);
     const predicate = on(this.columns, rightColumns).node;
-    const nextColumns = mergeResolver(this.columns, rightColumns);
-    const nextNames = resolveMergedColumnNames(nextColumns, this.columnNames, rightKeys);
+    const mergedColumns = mergeResolver(this.columns, rightColumns);
+    const nextNames = resolveMergedColumnNames(mergedColumns, this.columnNames, rightKeys);
+    const nextColumns = createColumnRefs<TMerged>(null, nextNames);
     const joinSource: JoinSource =
       right.stages.length === 0
         ? { kind: "table", table: right.source.table, schema: right.source.schema }
@@ -270,7 +287,7 @@ export class Query<TColumns extends Record<string, any>> {
       source: joinSource,
       as: alias,
       on: predicate,
-      selectAll: selectAllItems(nextColumns, nextNames),
+      selectAll: selectAllItems(mergedColumns, nextNames),
     };
     return new Query(
       this.source,
@@ -345,8 +362,9 @@ export class Query<TColumns extends Record<string, any>> {
     const rightKeys = rightQuery.columnNames ? [...rightQuery.columnNames] : null;
     const rightColumns = createColumnRefs<TRight>(alias, rightKeys);
     const predicate = on(this.columns, rightColumns).node;
-    const nextColumns = mergeResolver(this.columns, rightColumns);
-    const nextNames = resolveMergedColumnNames(nextColumns, this.columnNames, rightKeys);
+    const mergedColumns = mergeResolver(this.columns, rightColumns);
+    const nextNames = resolveMergedColumnNames(mergedColumns, this.columnNames, rightKeys);
+    const nextColumns = createColumnRefs<TColumns & TRight>(null, nextNames);
     const joinSource: JoinSource = {
       kind: "subquery",
       ast: compilePipeline(
@@ -367,7 +385,7 @@ export class Query<TColumns extends Record<string, any>> {
       source: joinSource,
       as: alias,
       on: predicate,
-      selectAll: selectAllItems(nextColumns, nextNames),
+      selectAll: selectAllItems(mergedColumns, nextNames),
     };
     return new Query(
       this.source,

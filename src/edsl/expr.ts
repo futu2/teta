@@ -570,6 +570,9 @@ export class ColumnRef<T, Name extends string> extends ExprRef<T> {
 export type ColumnRefs<T extends Record<string, unknown>> = {
   [K in keyof T & string]: ColumnRef<T[K], K>;
 };
+export type ExprRefs<T extends Record<string, unknown>> = {
+  [K in keyof T & string]: ExprRef<T[K]>;
+};
 
 export type SelectValue = ExprRef<unknown> | Value;
 export type SelectShape = Record<string, SelectValue>;
@@ -856,7 +859,7 @@ export function mergeColumnNames(
 }
 
 export function selectAllItems<TColumns extends Record<string, unknown>>(
-  columns: ColumnRefs<TColumns>,
+  columns: ExprRefs<TColumns>,
   columnNames: readonly string[] | null
 ): SelectItem[] {
   if (!columnNames) {
