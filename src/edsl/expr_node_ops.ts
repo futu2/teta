@@ -16,6 +16,8 @@ export function containsGroup(expr: ExprNode<unknown>, inAgg = false): boolean {
       return expr.args.some((arg) => containsGroup(arg, inAgg));
     case "list":
       return expr.items.some((item) => containsGroup(item, inAgg));
+    case "array":
+      return expr.items.some((item) => containsGroup(item, inAgg));
     case "extract":
       return containsGroup(expr.source, inAgg);
     case "cast":
@@ -76,6 +78,11 @@ export function unwrapGroupExpr(
         args: expr.args.map((arg) => unwrapGroupExpr(arg, groupBy, inAgg)),
       };
     case "list":
+      return {
+        ...expr,
+        items: expr.items.map((item) => unwrapGroupExpr(item, groupBy, inAgg)),
+      };
+    case "array":
       return {
         ...expr,
         items: expr.items.map((item) => unwrapGroupExpr(item, groupBy, inAgg)),

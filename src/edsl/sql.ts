@@ -27,6 +27,22 @@ export { buildSqlOptions, cloneDialect, getDefaultDialect, resolveDialect, sameD
 export { applyDialectFixes } from "./sql_fixes";
 export { formatSqlPretty, stripRedundantQuotes } from "./sql_format";
 
+const DEFERRED_RECURSIVE_CTE_KEY = "__teta_deferred_recursive_cte__";
+
+type RecursivePart = {
+  source: Source;
+  stages: Stage[];
+  columns: ColumnRefs<Record<string, unknown>>;
+  columnNames: readonly string[] | null;
+};
+
+type DeferredRecursiveCte = {
+  name: string;
+  columnNames: readonly string[];
+  base: RecursivePart;
+  step: RecursivePart;
+};
+
 export function compilePipeline(
   source: Source,
   stages: Stage[],
@@ -47,27 +63,37 @@ export function compilePipeline(
     columnNames,
     { ...options, dialect }
   );
-  const baseWiths = options?.baseWiths ?? [];
+  const baseWiths = (options?.baseWiths ?? []).map((item) =>
+    materializeDeferredWith(item, dialect)
+  );
   const merged = baseWiths.length ? [...baseWiths, ...ctes] : ctes;
   ast.with = merged.length ? merged : null;
   return toParserAst(ast);
 }
 
+export function createDeferredRecursiveCte(
+  name: string,
+  columnNames: readonly string[],
+  base: RecursivePart,
+  step: RecursivePart
+): With {
+  const deferred = {
+    name: { value: name },
+    [DEFERRED_RECURSIVE_CTE_KEY]: {
+      name,
+      columnNames: [...columnNames],
+      base,
+      step,
+    } satisfies DeferredRecursiveCte,
+  };
+  return deferred as unknown as With;
+}
+
 export function buildRecursiveCte(
   name: string,
   columnNames: readonly string[],
-  base: {
-    source: Source;
-    stages: Stage[];
-    columns: ColumnRefs<Record<string, unknown>>;
-    columnNames: readonly string[] | null;
-  },
-  step: {
-    source: Source;
-    stages: Stage[];
-    columns: ColumnRefs<Record<string, unknown>>;
-    columnNames: readonly string[] | null;
-  },
+  base: RecursivePart,
+  step: RecursivePart,
   dialect: QueryDialect = getDefaultDialect()
 ): With {
   if (!dialect.features.recursiveCte) {
@@ -87,6 +113,29 @@ export function buildRecursiveCte(
     recursive: true,
   };
   return recursiveWith;
+}
+
+function materializeDeferredWith(withItem: With, dialect: QueryDialect): With {
+  const raw = Reflect.get(withItem, DEFERRED_RECURSIVE_CTE_KEY);
+  if (!isDeferredRecursiveCte(raw)) return withItem;
+  return buildRecursiveCte(
+    raw.name,
+    raw.columnNames,
+    raw.base,
+    raw.step,
+    dialect
+  );
+}
+
+function isDeferredRecursiveCte(value: unknown): value is DeferredRecursiveCte {
+  if (typeof value !== "object" || value === null) return false;
+  const candidate = value as Partial<DeferredRecursiveCte>;
+  return (
+    typeof candidate.name === "string" &&
+    Array.isArray(candidate.columnNames) &&
+    !!candidate.base &&
+    !!candidate.step
+  );
 }
 
 function toCteColumnRef(name: string): unknown {
@@ -413,6 +462,9 @@ function collectExprColumns(
       expr.args.forEach((arg) => collectExprColumns(arg, out, options));
       return;
     case "list":
+      expr.items.forEach((arg) => collectExprColumns(arg, out, options));
+      return;
+    case "array":
       expr.items.forEach((arg) => collectExprColumns(arg, out, options));
       return;
     case "extract":
@@ -833,6 +885,11 @@ function stripTableRefs(
         ...expr,
         items: expr.items.map((item) => stripTableRefs(item, keepTables)),
       };
+    case "array":
+      return {
+        ...expr,
+        items: expr.items.map((item) => stripTableRefs(item, keepTables)),
+      };
     case "extract":
       return {
         ...expr,
@@ -908,6 +965,11 @@ function qualifyMissingTables(
         args: expr.args.map((arg) => qualifyMissingTables(arg, table)),
       };
     case "list":
+      return {
+        ...expr,
+        items: expr.items.map((item) => qualifyMissingTables(item, table)),
+      };
+    case "array":
       return {
         ...expr,
         items: expr.items.map((item) => qualifyMissingTables(item, table)),
@@ -1067,6 +1129,16 @@ function exprToAst(expr: ExprNode<unknown>): unknown {
       return {
         type: "expr_list",
         value: expr.items.map(exprToAst),
+      };
+    case "array":
+      return {
+        type: "array",
+        keyword: "array",
+        expr_list: {
+          type: "expr_list",
+          value: expr.items.map(exprToAst),
+        },
+        brackets: true,
       };
     case "window":
       return {

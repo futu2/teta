@@ -4,6 +4,7 @@ export { Query, table, loop, t } from "./src/edsl/query";
 /** Expression builder and helpers for composing SQL expressions. */
 export {
   ExprRef,
+  array,
   fn,
   windowFn,
   when,

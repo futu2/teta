@@ -582,6 +582,14 @@ export function lit<T extends Value>(value: T): ExprRef<T> {
   return new ExprRef<T>({ kind: "literal", value });
 }
 
+/** Create a SQL array literal expression, rendered as ARRAY[...]. */
+export function array<T = unknown>(...values: ExprInput<T>[]): ExprRef<T[]> {
+  return new ExprRef<T[]>({
+    kind: "array",
+    items: values.map((value) => toExprNode(value)),
+  });
+}
+
 /** Call a SQL function with arbitrary arguments. */
 export function fn<T = unknown>(
   name: string,

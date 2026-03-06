@@ -32,6 +32,7 @@ export type BinaryOp =
   | "-"
   | "*"
   | "/"
+  | "||"
   | "LIKE"
   | "IS"
   | "IS NOT"
@@ -74,6 +75,8 @@ export type DialectLanguageFallback =
   | "array_position_via_json_instr"
   | "array_join_via_json_string"
   | "array_append_via_json_insert_end"
+  | "array_append_via_concat_operator"
+  | "array_prepend_via_concat_operator"
   | "date_format_via_strftime"
   | "date_parse_via_datetime"
   | "date_trunc_via_strftime"
@@ -132,6 +135,7 @@ export type ExprNode<T> =
   | GroupNode
   | FuncNode
   | ListNode
+  | ArrayNode
   | ExtractNode
   | CastNode
   | WindowNode
@@ -181,6 +185,11 @@ export type FuncNode = {
 
 export type ListNode = {
   kind: "list";
+  items: ExprNode<any>[];
+};
+
+export type ArrayNode = {
+  kind: "array";
   items: ExprNode<any>[];
 };
 

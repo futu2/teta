@@ -1,58 +1,17 @@
 import type { Option } from "node-sql-parser";
 import type {
-  BuiltinDialect,
   Dialect,
-  DialectFeatures,
   DialectSpec,
   QueryDialect,
   SqlFormat,
   SqlOptions,
 } from "./types";
-import { resolveDialectLanguage } from "./language";
-
-const DEFAULT_DIALECT: QueryDialect = {
-  name: "default",
-  parserDialect: null,
-  features: {
-    lateralJoinKeyword: true,
-    recursiveCte: true,
-  },
-  language: {
-    functions: {},
-    fallbacks: {},
-    unsupported: [],
-  },
-};
-
-const BUILTIN_DIALECTS: Record<
-  BuiltinDialect,
-  {
-    name: BuiltinDialect;
-    parserDialect: string;
-    features?: DialectFeatures;
-  }
-> = {
-  mysql: { name: "mysql", parserDialect: "MySQL" },
-  mariadb: { name: "mariadb", parserDialect: "MariaDB" },
-  postgresql: { name: "postgresql", parserDialect: "Postgresql" },
-  sqlite: {
-    name: "sqlite",
-    parserDialect: "SQLite",
-    features: { lateralJoinKeyword: false, recursiveCte: true },
-  },
-  trino: { name: "trino", parserDialect: "Trino" },
-  transactsql: { name: "transactsql", parserDialect: "TransactSQL" },
-  redshift: { name: "redshift", parserDialect: "Redshift" },
-  snowflake: { name: "snowflake", parserDialect: "Snowflake" },
-  bigquery: { name: "bigquery", parserDialect: "BigQuery" },
-  athena: { name: "athena", parserDialect: "Athena" },
-  db2: { name: "db2", parserDialect: "DB2" },
-  hive: { name: "hive", parserDialect: "Hive" },
-  flinksql: { name: "flinksql", parserDialect: "FlinkSQL" },
-  noql: { name: "noql", parserDialect: "NoQL" },
-  duckdb: { name: "duckdb", parserDialect: "Postgresql" },
-  hetu: { name: "hetu", parserDialect: "Trino" },
-};
+import {
+  DEFAULT_DIALECT,
+  lookupBuiltinDialect,
+  resolveDialectLanguage,
+  suggestCanonicalBuiltin,
+} from "./dialect";
 
 export function getDefaultDialect(): QueryDialect {
   return cloneDialect(DEFAULT_DIALECT);
@@ -237,41 +196,4 @@ function resolveDialectSpec(spec: DialectSpec): QueryDialect {
     },
     language: resolveDialectLanguage(resolvedName, spec.language),
   };
-}
-
-function lookupBuiltinDialect(
-  input: string
-):
-  | {
-      name: BuiltinDialect;
-      parserDialect: string;
-      features?: DialectFeatures;
-    }
-  | undefined {
-  const key = input.toString().trim() as BuiltinDialect;
-  const direct = BUILTIN_DIALECTS[key];
-  return direct;
-}
-
-function suggestCanonicalBuiltin(input: string): BuiltinDialect | null {
-  const raw = input.toString().trim();
-  if (!raw) return null;
-  const lower = raw.toLowerCase();
-  if (lower in BUILTIN_DIALECTS) {
-    return lower as BuiltinDialect;
-  }
-  const compact = lower.replace(/[^a-z0-9]+/g, "");
-  if (!compact) return null;
-  if (
-    compact === "hetu" ||
-    compact === "hetudql" ||
-    compact === "hetuengine" ||
-    compact === "hetuenginedql"
-  ) {
-    return "hetu";
-  }
-  if (compact in BUILTIN_DIALECTS) {
-    return compact as BuiltinDialect;
-  }
-  return null;
 }

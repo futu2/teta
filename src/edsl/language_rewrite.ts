@@ -28,6 +28,11 @@ export function rewriteDialectExpr(
         ...expr,
         items: expr.items.map((item) => rewriteDialectExpr(item, language)),
       };
+    case "array":
+      return {
+        ...expr,
+        items: expr.items.map((item) => rewriteDialectExpr(item, language)),
+      };
     case "extract":
       return {
         ...expr,
@@ -97,6 +102,9 @@ export function validateDialectExpr(
       validateDialectExpr(expr.expr, language);
       return;
     case "list":
+      expr.items.forEach((item) => validateDialectExpr(item, language));
+      return;
+    case "array":
       expr.items.forEach((item) => validateDialectExpr(item, language));
       return;
     case "window":
@@ -222,6 +230,22 @@ function rewriteFallback(
         return func(functionName, args);
       }
       return func("JSON_INSERT", [arrayExpr, literal("$[#]"), valueExpr]);
+    }
+    case "array_append_via_concat_operator": {
+      const arrayExprValue = args[0];
+      const valueExpr = args[1];
+      if (!arrayExprValue || !valueExpr) {
+        return func(functionName, args);
+      }
+      return binaryExpr("||", arrayExprValue, arrayExpr(valueExpr));
+    }
+    case "array_prepend_via_concat_operator": {
+      const arrayExprValue = args[0];
+      const valueExpr = args[1];
+      if (!arrayExprValue || !valueExpr) {
+        return func(functionName, args);
+      }
+      return binaryExpr("||", arrayExpr(valueExpr), arrayExprValue);
     }
     case "regex_like_via_regexp_match": {
       const valueExpr = args[0];
@@ -473,7 +497,7 @@ function func(name: string, args: ExprNode<any>[]): ExprNode<any> {
 }
 
 function binaryExpr(
-  op: "+" | "-" | "*" | "/" | ">" | "IS NOT",
+  op: "+" | "-" | "*" | "/" | ">" | "IS NOT" | "||",
   left: ExprNode<any>,
   right: ExprNode<any>
 ): ExprNode<any> {
@@ -482,6 +506,13 @@ function binaryExpr(
     op,
     left,
     right,
+  };
+}
+
+function arrayExpr(...items: ExprNode<any>[]): ExprNode<any> {
+  return {
+    kind: "array",
+    items,
   };
 }
 
