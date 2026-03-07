@@ -312,6 +312,7 @@ function isNoOpLoopSelect(
     if (key !== input) return false;
     if (item.as && item.as !== key) return false;
     if (item.expr.kind !== "column") return false;
+    if (item.expr.table !== null) return false;
     if (item.expr.name !== key) return false;
   }
   return true;

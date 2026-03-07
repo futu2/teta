@@ -30,16 +30,30 @@ export function rewriteDialectExpr(
         ...expr,
         items: expr.items.map((item) => rewriteDialectExpr(item, language)),
       };
-    case "extract":
+    case "extract": {
+      const source = rewriteDialectExpr(expr.source, language);
+      const fallback = language.fallbacks.EXTRACT;
+      if (fallback) {
+        return rewriteFallback("EXTRACT", [literal(expr.field), source], fallback);
+      }
       return {
         ...expr,
-        source: rewriteDialectExpr(expr.source, language),
+        source,
       };
-    case "cast":
+    }
+    case "cast": {
+      const rewrittenExpr = rewriteDialectExpr(expr.expr, language);
+      if (expr.target.trim().toUpperCase() === "DATE") {
+        const fallback = language.fallbacks.CAST_DATE;
+        if (fallback) {
+          return rewriteFallback("CAST_DATE", [rewrittenExpr], fallback);
+        }
+      }
       return {
         ...expr,
-        expr: rewriteDialectExpr(expr.expr, language),
+        expr: rewrittenExpr,
       };
+    }
     case "window":
       return {
         ...expr,
@@ -172,6 +186,19 @@ function rewriteFallback(
       }
       return func("ARRAY_LENGTH", [value, literal(1)]);
     }
+    case "array_slice_via_start_length": {
+      const arrayExpr = args[0];
+      const startExpr = args[1];
+      const lengthExpr = args[2];
+      if (!arrayExpr || !startExpr) {
+        return func(functionName, args);
+      }
+      if (!lengthExpr) {
+        return func("ARRAY_SLICE", [arrayExpr, startExpr]);
+      }
+      const endExpr = binaryExpr("+", startExpr, binaryExpr("-", lengthExpr, literal(1)));
+      return func("ARRAY_SLICE", [arrayExpr, startExpr, endExpr]);
+    }
     case "array_contains_via_array_position": {
       const arrayExpr = args[0];
       const valueExpr = args[1];
@@ -244,6 +271,41 @@ function rewriteFallback(
       }
       return binaryExpr("||", arrayExpr(valueExpr), arrayExprValue);
     }
+    case "array_prepend_via_list_concat": {
+      const arrayExprValue = args[0];
+      const valueExpr = args[1];
+      if (!arrayExprValue || !valueExpr) {
+        return func(functionName, args);
+      }
+      return func("LIST_CONCAT", [func("LIST_VALUE", [valueExpr]), arrayExprValue]);
+    }
+    case "position_via_instr": {
+      const needleExpr = args[0];
+      const valueExpr = args[1];
+      if (!needleExpr || !valueExpr) {
+        return func(functionName, args);
+      }
+      return func("INSTR", [valueExpr, needleExpr]);
+    }
+    case "overlay_via_concat_substring": {
+      const valueExpr = args[0];
+      const placingExpr = args[1];
+      const startExpr = args[2];
+      if (!valueExpr || !placingExpr || !startExpr) {
+        return func(functionName, args);
+      }
+      const lengthExpr = args[3] ?? func("CHAR_LENGTH", [placingExpr]);
+      const prefix = func("SUBSTRING", [valueExpr, literal(1), binaryExpr("-", startExpr, literal(1))]);
+      const suffix = func("SUBSTRING", [valueExpr, binaryExpr("+", startExpr, lengthExpr)]);
+      return binaryExpr("||", binaryExpr("||", prefix, placingExpr), suffix);
+    }
+    case "cast_date_via_date_function": {
+      const valueExpr = args[0];
+      if (!valueExpr) {
+        return func(functionName, args);
+      }
+      return func("DATE", [valueExpr]);
+    }
     case "regex_like_via_regexp_match": {
       const valueExpr = args[0];
       const patternExpr = args[1];
@@ -278,6 +340,20 @@ function rewriteFallback(
         return func(functionName, args);
       }
       return func("DATETIME", [valueExpr]);
+    }
+    case "extract_via_strftime": {
+      const fieldExpr = args[0];
+      const valueExpr = args[1];
+      const rawField = fieldExpr ? literalString(fieldExpr) : null;
+      const field = normalizeUnit(rawField) ?? rawField?.trim().toLowerCase() ?? null;
+      if (!field || !valueExpr) {
+        return func(functionName, args);
+      }
+      const format = SQLITE_EXTRACT_FORMATS[field];
+      if (!format) {
+        return func(functionName, args);
+      }
+      return castExpr(func("STRFTIME", [literal(format), valueExpr]), "INTEGER");
     }
     case "date_trunc_via_strftime": {
       const unitExpr = args[0];
@@ -587,6 +663,18 @@ function normalizeUnit(value: string | null): string | null {
       return unit;
   }
 }
+
+const SQLITE_EXTRACT_FORMATS: Record<string, string> = {
+  year: "%Y",
+  quarter: "%m",
+  month: "%m",
+  week: "%W",
+  day: "%d",
+  hour: "%H",
+  minute: "%M",
+  second: "%S",
+  epoch: "%s",
+};
 
 const DATE_TRUNC_FORMATS: Record<string, string> = {
   year: "%Y-01-01 00:00:00",

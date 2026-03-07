@@ -20,6 +20,59 @@ Type-safe SQL EDSL for TypeScript with composable query pipelines.
 bun install
 ```
 
+## Nix dev shell
+
+```bash
+nix develop
+```
+
+The dev shell provides `bun`. On Linux it also exposes the `libstdc++`
+runtime via `LD_LIBRARY_PATH`, which helps native Bun dependencies such as
+DuckDB load correctly.
+
+If the flake is not tracked by Git yet, use a direct path reference instead:
+
+```bash
+nix develop path:$PWD
+```
+
+## Testing
+
+The test suite covers:
+
+- SQL generation for `postgresql`, `mysql`, `duckdb`, and `sqlite`
+- parser smoke tests for generated dialect-specific SQL
+- live `sqlite` execution tests
+- live `duckdb` execution tests when the native binding is available
+
+Run the default suite:
+
+```bash
+bun test
+# or
+bun run test
+```
+
+Run a single file:
+
+```bash
+bun test tests/dialects.test.ts
+```
+
+Run the full suite inside the Nix shell, including DuckDB live tests:
+
+```bash
+nix develop -c bun test
+```
+
+Type-check the project, including the tests:
+
+```bash
+nix develop -c bun x tsc --noEmit
+```
+
+If the flake is not tracked by Git yet, replace `nix develop` with `nix develop path:$PWD`.
+
 ## Quick start
 
 Note: `table(...)` requires a schema to avoid `SELECT *` and keep column names explicit.
