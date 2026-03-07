@@ -1,8 +1,5 @@
-import type {
-  DialectLanguageConfig,
-  DialectLanguageFallback,
-  ExprNode,
-} from "./types";
+import type { ExprNode } from "../../core/types";
+import type { DialectLanguageConfig, DialectLanguageFallback } from "../types";
 
 type ResolvedLanguage = Required<DialectLanguageConfig>;
 

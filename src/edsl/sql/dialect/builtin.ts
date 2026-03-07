@@ -1,4 +1,4 @@
-import type { BuiltinDialect } from "../types";
+import type { BuiltinDialect } from "../../types";
 import { ATHENA_DIALECT } from "./athena";
 import { BIGQUERY_DIALECT } from "./bigquery";
 import { DB2_DIALECT } from "./db2";

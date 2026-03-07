@@ -1,4 +1,4 @@
-import type { QueryDialect } from "../types";
+import type { QueryDialect } from "../../types";
 
 export const DEFAULT_DIALECT: QueryDialect = {
   name: "default",

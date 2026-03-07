@@ -1,22 +1,27 @@
-import { Parser, type AST, type With } from "node-sql-parser";
+import { Parser, type AST } from "node-sql-parser";
 import {
   OUTER_TABLE_ALIAS,
   type ColumnType,
-  type Dialect,
+  type CteSpec,
   type ExprNode,
   type InferSchema,
   type JoinTypeInput,
   type OrderItem,
   type QueryIR,
   type QuerySpec,
-  type SqlFloat,
-  type SqlInt,
-  type SqlDate,
-  type SqlFormat,
-  type SqlOptions,
-  type SqlTimestamp,
   type Stage,
-} from "./types";
+  type Source,
+  type JoinSource,
+} from "./core/types";
+import type {
+  Dialect,
+  SqlFloat,
+  SqlInt,
+  SqlDate,
+  SqlFormat,
+  SqlOptions,
+  SqlTimestamp,
+} from "./sql/types";
 import {
   ExprRef,
   containsGroup,
@@ -37,7 +42,7 @@ import {
   formatSqlPretty,
   stripRedundantQuotes,
 } from "./sql";
-import type { Source, JoinSource } from "./types";
+
 import {
   assertLoopColumns,
   assertUnionCompatible,
@@ -46,7 +51,7 @@ import {
   normalizeJoinType,
   parseTableName,
   qualifyOuterColumns,
-} from "./query_utils";
+} from "./query/utils";
 
 type JoinColumnMerger<
   TLeft extends Record<string, any>,
@@ -81,7 +86,7 @@ export class Query<TColumns extends Record<string, any>> {
     readonly stages: Stage[],
     readonly columns: ColumnRefs<TColumns>,
     readonly columnNames: readonly string[] | null,
-    readonly withs: With[] = []
+    readonly withs: CteSpec[] = []
   ) {}
 
   select<Sel extends SelectShape>(
@@ -272,13 +277,12 @@ export class Query<TColumns extends Record<string, any>> {
         ? { kind: "table", table: right.source.table, schema: right.source.schema }
         : {
             kind: "subquery",
-            ast: compilePipeline(
-              right.source,
-              right.stages,
-              right.columns as ColumnRefs<Record<string, any>>,
-              right.columnNames,
-              { ctePrefix: `${alias}_` }
-            ),
+            query: {
+              source: right.source,
+              stages: right.stages,
+              columnNames: right.columnNames,
+            },
+            keepTables: null,
           };
     const stage: Stage = {
       kind: "join",
@@ -367,16 +371,12 @@ export class Query<TColumns extends Record<string, any>> {
     const nextColumns = createColumnRefs<TColumns & TRight>(null, nextNames);
     const joinSource: JoinSource = {
       kind: "subquery",
-      ast: compilePipeline(
-        rightQuery.source,
-        rightQuery.stages,
-        rightQuery.columns as ColumnRefs<Record<string, any>>,
-        rightQuery.columnNames,
-        {
-          ctePrefix: `${alias}_`,
-          keepTables: new Set([OUTER_TABLE_ALIAS]),
-        }
-      ),
+      query: {
+        source: rightQuery.source,
+        stages: rightQuery.stages,
+        columnNames: rightQuery.columnNames,
+      },
+      keepTables: [OUTER_TABLE_ALIAS],
     };
     const stage: Stage = {
       kind: "join",
@@ -404,9 +404,8 @@ export class Query<TColumns extends Record<string, any>> {
     return compilePipeline(
       this.source,
       this.stages,
-      this.columns,
       this.columnNames,
-      { baseWiths: this.withs }
+      { baseCtes: this.withs }
     );
   }
 
@@ -427,9 +426,8 @@ export class Query<TColumns extends Record<string, any>> {
       compilePipeline(
         this.source,
         this.stages,
-        this.columns,
         this.columnNames,
-        { baseWiths: this.withs, dialect }
+        { baseCtes: this.withs, dialect }
       ),
       dialect
     );
@@ -523,13 +521,11 @@ export function loop<TColumns extends Record<string, any>>(
     {
       source: base.source,
       stages: base.stages,
-      columns: base.columns as ColumnRefs<Record<string, any>>,
       columnNames: base.columnNames,
     },
     {
       source: stepQuery.source,
       stages: stepQuery.stages,
-      columns: stepQuery.columns as ColumnRefs<Record<string, any>>,
       columnNames: stepQuery.columnNames,
     }
   );

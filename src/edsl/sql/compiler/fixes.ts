@@ -1,6 +1,6 @@
 import type { AST } from "node-sql-parser";
-import type { QueryDialect } from "./types";
-import { cloneAst, isSelectAst } from "./sql_ast";
+import type { QueryDialect } from "../types";
+import { cloneAst, isSelectAst } from "./ast";
 
 export function applyDialectFixes(ast: AST, dialect: QueryDialect): AST {
   if (!dialect.features.recursiveCte && containsRecursiveCte(ast)) {

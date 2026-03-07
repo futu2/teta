@@ -1,4 +1,4 @@
-import type { ExprNode } from "./types";
+import type { ExprNode } from "../../types";
 
 export function containsGroup(expr: ExprNode<unknown>, inAgg = false): boolean {
   switch (expr.kind) {

@@ -71,9 +71,27 @@ Built-in backend names are unique canonical lowercase identifiers:
 `snowflake`, `bigquery`, `athena`, `db2`, `hive`, `flinksql`, `noql`,
 `duckdb`, `hetu`.
 
-## Method-centric expression API
+## Function-first expression API with method sugar
 
-When possible, expression entry points are methods on `ExprRef`:
+Expression helpers are defined as normal functions first, and fluent methods on `ExprRef` delegate
+through `.via(...)`. Free functions follow method order, so the receiver expression is the first
+argument.
+
+```ts
+import { lower, replace, table, t, trim } from "./src/edsl";
+
+const users = table("users", {
+  id: t.int(),
+  name: t.string(),
+});
+
+const q = users.select((u) => ({
+  normalized_via_fn: lower(trim(replace(u.name, " ", "_"))),
+  normalized_via_method: u.name.via(replace, " ", "_").via(trim).via(lower),
+}));
+```
+
+The method-centric style still works and remains great for autocomplete:
 
 ```ts
 const events = table("events", {

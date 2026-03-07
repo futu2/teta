@@ -1,13 +1,14 @@
-import type { ExprNode, QueryDialect } from "./types";
-import { rewriteDialectExpr, validateDialectExpr } from "./language_rewrite";
+import type { ExprNode } from "../core/types";
+import type { QueryDialect } from "./types";
+import { rewriteDialectExpr, validateDialectExpr } from "./language/rewrite";
 
 export {
   LANGUAGE_SPEC,
   getLanguageSpec,
   type LanguageCategory,
-} from "./language_spec";
+} from "./language/spec";
 
-export { resolveDialectLanguage } from "./language_config";
+export { resolveDialectLanguage } from "./language/config";
 
 export function applyDialectLanguage(
   expr: ExprNode<any>,

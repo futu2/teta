@@ -1,4 +1,4 @@
-import type { BuiltinDialect } from "../types";
+import type { BuiltinDialect } from "../../types";
 import { BUILTIN_DIALECTS } from "./builtin";
 import type { BuiltinDialectDefinition } from "./types";
 

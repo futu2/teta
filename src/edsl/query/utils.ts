@@ -1,6 +1,6 @@
-import type { With } from "node-sql-parser";
-import { OUTER_TABLE_ALIAS, type JoinType, type JoinTypeInput, type Stage } from "./types";
-import { ColumnRef, type ColumnRefs } from "./expr";
+import type { CteSpec, JoinType, JoinTypeInput, Stage } from "../core/types";
+import { OUTER_TABLE_ALIAS } from "../core/types";
+import { ColumnRef, type ColumnRefs } from "../core/expr";
 
 export function parseTableName(name: string): { table: string; schema: string | null } {
   const parts = name.split(".");
@@ -71,49 +71,21 @@ export function qualifyOuterColumns<TColumns extends Record<string, any>>(
   return result as ColumnRefs<TColumns>;
 }
 
-export function mergeWiths(left: With[], right: With[]): With[] {
+export function mergeWiths(left: CteSpec[], right: CteSpec[]): CteSpec[] {
   if (left.length === 0) return right.length ? [...right] : [];
   if (right.length === 0) return [...left];
   const seen = new Set<string>();
-  const merged: With[] = [];
+  const merged: CteSpec[] = [];
   for (const item of left) {
-    const name = withName(item);
-    if (name) seen.add(name);
+    seen.add(item.name);
     merged.push(item);
   }
   for (const item of right) {
-    const name = withName(item);
-    if (name && seen.has(name)) {
-      throw new Error(`CTE name conflict: ${name}`);
+    if (seen.has(item.name)) {
+      throw new Error(`CTE name conflict: ${item.name}`);
     }
-    if (name) seen.add(name);
+    seen.add(item.name);
     merged.push(item);
   }
   return merged;
-}
-
-function withName(item: With): string | null {
-  const raw = Reflect.get(item, "name");
-  if (!raw) return null;
-  if (typeof raw === "string") return raw;
-  if (
-    typeof raw === "object" &&
-    raw !== null &&
-    "value" in raw &&
-    typeof (raw as { value?: unknown }).value === "string"
-  ) {
-    return (raw as { value: string }).value;
-  }
-  if (Array.isArray(raw)) {
-    const head = raw[0];
-    if (
-      typeof head === "object" &&
-      head !== null &&
-      "value" in head &&
-      typeof (head as { value?: unknown }).value === "string"
-    ) {
-      return (head as { value: string }).value;
-    }
-  }
-  return null;
 }

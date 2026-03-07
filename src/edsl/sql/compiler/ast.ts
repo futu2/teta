@@ -1,6 +1,6 @@
 import type { AST, Select } from "node-sql-parser";
-import { OUTER_TABLE_ALIAS } from "./types";
-import type { SelectAst } from "./sql_types";
+import { OUTER_TABLE_ALIAS } from "../../core/types";
+import type { SelectAst } from "./types";
 
 export function toParserSelect(ast: SelectAst): Select {
   if (!isParserSelect(ast)) {

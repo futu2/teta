@@ -5,13 +5,10 @@ import type {
   QueryDialect,
   SqlFormat,
   SqlOptions,
-} from "./types";
-import {
-  DEFAULT_DIALECT,
-  lookupBuiltinDialect,
-  resolveDialectLanguage,
-  suggestCanonicalBuiltin,
-} from "./dialect";
+} from "../../types";
+import { DEFAULT_DIALECT } from "./default";
+import { resolveDialectLanguage } from "./language";
+import { lookupBuiltinDialect, suggestCanonicalBuiltin } from "./lookup";
 
 export function getDefaultDialect(): QueryDialect {
   return cloneDialect(DEFAULT_DIALECT);

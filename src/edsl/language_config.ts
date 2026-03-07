@@ -1,1 +1,0 @@
-export { resolveDialectLanguage } from "./dialect";
