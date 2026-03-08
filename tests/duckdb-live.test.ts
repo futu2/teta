@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 
+import { duckdbRenderer } from "../mod.ts";
 import { buildLiveDialectQuery } from "./helpers/fixtures.ts";
 
 let DuckDBConnection:
@@ -39,7 +40,7 @@ describe("live duckdb dialect", () => {
       VALUES ('duck', TIMESTAMP '2024-01-02 03:04:05');
     `);
 
-    const sql = buildLiveDialectQuery().toSql("duckdb", "compact");
+    const sql = buildLiveDialectQuery().toSql(duckdbRenderer({ format: "compact" })).sql;
     const rows = await (await connection.run(sql)).getRowObjectsJS();
     const [row] = rows as Array<{
       len: number | bigint;

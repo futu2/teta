@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { table, t } from "../mod.ts";
+import { sqlRenderer, table, t } from "../mod.ts";
 import {
   USER_PIPELINE_POSTGRES_COMPACT,
   USER_PIPELINE_POSTGRES_PRETTY,
@@ -12,17 +12,17 @@ describe("Query.toSql", () => {
   test("renders a compact postgres pipeline", () => {
     const query = buildUserPipelineQuery();
 
-    expect(query.toSql("postgresql", "compact")).toBe(
-      USER_PIPELINE_POSTGRES_COMPACT
-    );
+    expect(
+      query.toSql(sqlRenderer({ dialect: "postgresql", format: "compact" })).sql
+    ).toBe(USER_PIPELINE_POSTGRES_COMPACT);
   });
 
   test("renders a pretty postgres pipeline", () => {
     const query = buildUserPipelineQuery();
 
-    expect(query.toSql("postgresql", "pretty")).toBe(
-      USER_PIPELINE_POSTGRES_PRETTY
-    );
+    expect(
+      query.toSql(sqlRenderer({ dialect: "postgresql", format: "pretty" })).sql
+    ).toBe(USER_PIPELINE_POSTGRES_PRETTY);
   });
 
   test("applies sqlite language rewrites", () => {
@@ -32,8 +32,8 @@ describe("Query.toSql", () => {
       bit_len: user.name.bitLength(),
     }));
 
-    expect(query.toSql("sqlite", "compact")).toBe(
-      USERS_NAME_LENGTH_SQLITE_COMPACT
-    );
+    expect(
+      query.toSql(sqlRenderer({ dialect: "sqlite", format: "compact" })).sql
+    ).toBe(USERS_NAME_LENGTH_SQLITE_COMPACT);
   });
 });

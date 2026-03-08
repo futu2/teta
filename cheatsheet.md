@@ -86,15 +86,15 @@ All `Query` methods are immutable and return a new `Query`.
 ### Output and introspection
 - `toIR()`
 - `toAst()`
-- `toSql(dialect?, format?)`
-- `toSql(options)`
+- `toSql(renderer)`
 
 `toSql` examples:
 
 ```ts
-q.toSql("postgresql");
-q.toSql("postgresql", "pretty");
-q.toSql({ dialect: "duckdb", format: "compact" });
+q.toSql(sqlRenderer({ dialect: "postgresql" })).sql;
+q.toSql(sqlRenderer({ dialect: "postgresql", format: "pretty" })).sql;
+q.toSql(sqlRenderer({ dialect: "duckdb", format: "compact" })).sql;
+q.toSql(duckdbRenderer({ format: "compact" })).sql;
 ```
 
 ## 3) `ExprRef` Methods
@@ -261,9 +261,9 @@ Copy a SQL string to clipboard using one of:
 
 Returns the clipboard tool actually used.
 
-### `renderSqlFromSource(source, exportName = "query", toSqlArgs = [])`
+### `renderSqlFromSource(source, exportName = "query", rendererOptions = {})`
 Load a module and render SQL from:
-- a `Query`-like object (`toSql(...)`)
+- a `Query`-like object (`toSql(renderer)`)
 - a SQL string export
 - a function returning either of the above
 
@@ -319,5 +319,5 @@ const q = users
   .orderBy((u) => [u.created_day.desc(), u.id.asc()])
   .limit(100);
 
-console.log(q.toSql("postgresql", "pretty"));
+console.log(q.toSql(sqlRenderer({ dialect: "postgresql", format: "pretty" })).sql);
 ```

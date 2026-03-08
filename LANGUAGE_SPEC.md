@@ -169,10 +169,10 @@ Current defaults:
 
 ## Dialect customization hooks
 
-You can override any item through `toSql({ dialect: { language: ... } })`:
+You can override any item through `toSql(sqlRenderer({ dialect: { language: ... } }))`:
 
 ```ts
-toSql({
+toSql(sqlRenderer({
   dialect: {
     name: "my_dialect",
     parserDialect: "Trino",
@@ -194,7 +194,7 @@ toSql({
       unsupported: ["OVERLAY"],
     },
   },
-});
+})).sql;
 ```
 
 Available fallback identifiers:

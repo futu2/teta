@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { Database } from "bun:sqlite";
 
+import { sqliteRenderer } from "../mod.ts";
 import { buildLiveDialectQuery } from "./helpers/fixtures.ts";
 
 let database: Database | null = null;
@@ -24,7 +25,7 @@ describe("live sqlite dialect", () => {
       VALUES ('duck', '2024-01-02 03:04:05');
     `);
 
-    const sql = buildLiveDialectQuery().toSql("sqlite", "compact");
+    const sql = buildLiveDialectQuery().toSql(sqliteRenderer({ format: "compact" })).sql;
     const row = database
       .query(sql)
       .get() as

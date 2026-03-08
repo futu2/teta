@@ -6,7 +6,9 @@ Note: `table(...)` requires a schema to avoid `SELECT *` and keep column names e
 Generated SQL always uses auto-generated aliases (e.g., `users_0`, `orders_1`) and fully
 qualified column references.
 
-Keep EDSL queries dialect-neutral. Choose dialect when rendering with `toSql(...)`.
+Keep EDSL queries dialect-neutral. Choose dialect by creating a renderer at render time.
+
+All rendering examples below assume `sqlRenderer` is imported alongside the EDSL helpers.
 
 ## Basics
 
@@ -28,7 +30,7 @@ const q = users
   .orderBy((u) => [u.age.desc(), u.id.asc()])
   .limit(5);
 
-console.log(q.toSql("postgresql", "pretty"));
+console.log(q.toSql(sqlRenderer({ dialect: "postgresql", format: "pretty" })).sql);
 ```
 
 Generated SQL:
@@ -72,7 +74,7 @@ const q = users
     total_spend: u.total.sum(),
   }));
 
-console.log(q.toSql("postgresql", "pretty"));
+console.log(q.toSql(sqlRenderer({ dialect: "postgresql", format: "pretty" })).sql);
 ```
 
 Generated SQL:
@@ -105,7 +107,7 @@ const q = names.select((t) => ({
   title: f`${t.prefix} ${t.first} ${t.last} ${t.suffix}`,
 }));
 
-console.log(q.toSql("postgresql", "pretty"));
+console.log(q.toSql(sqlRenderer({ dialect: "postgresql", format: "pretty" })).sql);
 ```
 
 Generated SQL:
@@ -152,7 +154,7 @@ const q = users
   .filter((u) => u.age_plus_one.gt(30))
   .select((u) => ({ id: u.id, name: u.name, age_plus_one: u.age_plus_one }));
 
-console.log(q.toSql());
+console.log(q.toSql(sqlRenderer()).sql);
 ```
 
 ### Join (auto alias)
@@ -180,7 +182,7 @@ const q = users
     total: u.total,
   }));
 
-console.log(q.toSql());
+console.log(q.toSql(sqlRenderer()).sql);
 ```
 
 You can pass a join type as the third argument to `join`, for example `"left"` or `"right"`.
@@ -215,7 +217,7 @@ const q = users.lateralJoin(
   () => lit(true)
 );
 
-console.log(q.toSql());
+console.log(q.toSql(sqlRenderer()).sql);
 ```
 
 Note: `JOIN LATERAL` is emitted for dialects with `lateralJoinKeyword=true`.
@@ -233,17 +235,17 @@ const users = table("users", {
   name: t.string(),
 });
 
-console.log(users.select((u) => ({ id: u.id })).toSql({
+console.log(users.select((u) => ({ id: u.id })).toSql(sqlRenderer({
   dialect: {
     name: "presto",
     parserDialect: "Trino",
     features: { lateralJoinKeyword: true },
   },
   format: "pretty",
-}));
+})).sql);
 
-console.log(users.toSql("sqlite"));
-console.log(users.toSql("hetu"));
+console.log(users.toSql(sqlRenderer({ dialect: "sqlite" })).sql);
+console.log(users.toSql(sqlRenderer({ dialect: "hetu" })).sql);
 ```
 
 ### Built-in HetuEngine DQL dialect
@@ -256,7 +258,7 @@ This profile uses `Trino` as parser fallback for SQL stringification and applies
 
 ### Language specification
 
-Teta keeps expressions dialect-neutral in EDSL, then applies dialect behavior at `toSql(...)` via `dialect.language`.
+Teta keeps expressions dialect-neutral in EDSL, then applies dialect behavior through the renderer's `dialect.language` config.
 
 Teta language spec categories:
 
@@ -314,7 +316,7 @@ const q = users.select((u) => ({
   bits: u.name.bitLength(),
 }));
 
-console.log(q.toSql({
+console.log(q.toSql(sqlRenderer({
   dialect: {
     name: "sqlite_custom",
     parserDialect: "SQLite",
@@ -330,7 +332,7 @@ console.log(q.toSql({
       unsupported: ["OVERLAY"],
     },
   },
-}));
+})).sql);
 ```
 
 ### Aggregate with group()
@@ -355,7 +357,7 @@ const q = orders
     total_spend: o.total.sum(),
   }));
 
-console.log(q.toSql());
+console.log(q.toSql(sqlRenderer()).sql);
 ```
 
 ### Window function
@@ -386,7 +388,7 @@ const q = orders.select((o) => ({
   bucket: o.total.ntile(4).over({ orderBy: o.total.desc() }),
 }));
 
-console.log(q.toSql("postgresql", "pretty"));
+console.log(q.toSql(sqlRenderer({ dialect: "postgresql", format: "pretty" })).sql);
 ```
 
 ### Custom SQL functions (UDF)

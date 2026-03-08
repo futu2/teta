@@ -80,7 +80,7 @@ Generated SQL always uses auto-generated aliases (e.g., `users_0`, `orders_1`) a
 qualified column references.
 
 ```ts
-import { table, t } from "./src/edsl";
+import { sqlRenderer, table, t } from "./src/edsl";
 
 const users = table("users", {
   id: t.int(),
@@ -99,7 +99,7 @@ const q = users
   .orderBy((u) => [u.name.asc(), u.id.desc()])
   .limit(20);
 
-console.log(q.toSql("postgresql", "pretty"));
+console.log(q.toSql(sqlRenderer({ dialect: "postgresql", format: "pretty" })).sql);
 ```
 
 ## Dialect-neutral EDSL, dialect at render time
@@ -107,16 +107,26 @@ console.log(q.toSql("postgresql", "pretty"));
 Keep EDSL expressions general, then choose SQL dialect only in `toSql(...)`:
 
 ```ts
-console.log(q.toSql({
+console.log(q.toSql(sqlRenderer({
   dialect: {
     name: "presto",
     parserDialect: "Trino",
   },
   format: "pretty",
-}));
+})).sql);
 ```
 
-Built-in HetuEngine DQL support is available via `toSql("hetu")`.
+If you want compilation config to live outside the expression/query definition,
+build a renderer once and reuse it:
+
+```ts
+import { duckdbRenderer } from "./mod.ts";
+
+const renderer = duckdbRenderer({ format: "pretty" });
+const { sql, params } = q.toSql(renderer);
+```
+
+Built-in HetuEngine DQL support is available via `hetuRenderer()`.
 Internally, SQL stringification uses the `Trino` parser dialect while preserving Hetu-oriented function mappings.
 
 Built-in backend names are unique canonical lowercase identifiers:
@@ -217,7 +227,7 @@ import { watchQuerySourceToClipboard } from "./src/edsl";
 const controller = await watchQuerySourceToClipboard({
   source: "./dev/query-source.ts",
   exportName: "query",
-  toSqlArgs: ["postgresql", "pretty"],
+  rendererOptions: { dialect: "postgresql", format: "pretty" },
   isolateModules: true,
   outputFile: "./result.sql",
   clipboard: "auto",
@@ -277,7 +287,7 @@ For full function list + support matrix, see `LANGUAGE_SPEC.md`.
 ## Custom dialect language mapping
 
 ```ts
-console.log(q.toSql({
+console.log(q.toSql(sqlRenderer({
   dialect: {
     name: "sqlite_custom",
     parserDialect: "SQLite",
@@ -294,7 +304,7 @@ console.log(q.toSql({
       unsupported: ["OVERLAY"],
     },
   },
-}));
+})).sql);
 ```
 
 ## Tutorial

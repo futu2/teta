@@ -3,6 +3,7 @@ import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
+import { sqlRenderer, type SqlRenderer, type SqlOptions, type SqlResult } from "./sql";
 
 export type ClipboardTool =
   | "auto"
@@ -13,14 +14,14 @@ export type ClipboardTool =
   | "clip";
 
 export type QueryLike = {
-  toSql: (...args: any[]) => string;
+  toSql: (renderer: SqlRenderer<any, SqlResult>) => SqlResult;
 };
 
 export type WatchQuerySourceOptions = {
   source: string;
   watchPaths?: string | string[];
   exportName?: string;
-  toSqlArgs?: unknown[];
+  rendererOptions?: SqlOptions;
   isolateModules?: boolean;
   outputFile?: string;
   copyToClipboard?: boolean;
@@ -58,6 +59,15 @@ const RENDER_RESULT_PREFIX = "__teta_render_sql__";
 const RENDER_SQL_EVAL_SCRIPT = String.raw`(async () => {
   const PREFIX = "__teta_render_sql__";
   const respond = (payload) => process.stdout.write(PREFIX + JSON.stringify(payload) + "\n");
+  const normalizeSqlOutput = (value) => {
+    if (typeof value === "string") {
+      return value;
+    }
+    if (value && typeof value === "object" && typeof value.sql === "string") {
+      return value.sql;
+    }
+    throw new Error("toSql(...) must return a SQL string or an object with a sql field");
+  };
   try {
     const { resolve } = await import("node:path");
     const { pathToFileURL } = await import("node:url");
@@ -67,7 +77,12 @@ const RENDER_SQL_EVAL_SCRIPT = String.raw`(async () => {
     }
 
     const exportName = (process.env.TETA_EXPORT_NAME ?? "query").trim() || "query";
-    const toSqlArgs = JSON.parse(process.env.TETA_TO_SQL_ARGS ?? "[]");
+    const rendererOptions = JSON.parse(process.env.TETA_RENDERER_OPTIONS ?? "{}");
+    const rendererModuleUrl = (process.env.TETA_SQL_RENDERER_MODULE ?? "").trim();
+    if (!rendererModuleUrl) {
+      throw new Error("renderSqlFromSource requires a renderer module path");
+    }
+    const { sqlRenderer } = await import(rendererModuleUrl);
     const importedModule = await import(pathToFileURL(resolve(source)).href);
 
     if (!(exportName in importedModule)) {
@@ -89,7 +104,7 @@ const RENDER_SQL_EVAL_SCRIPT = String.raw`(async () => {
       );
     }
 
-    respond({ ok: true, sql: target.toSql(...toSqlArgs) });
+    respond({ ok: true, sql: normalizeSqlOutput(target.toSql(sqlRenderer(rendererOptions))) });
   } catch (error) {
     const message = error instanceof Error ? (error.stack ?? error.message) : String(error);
     respond({ ok: false, error: message });
@@ -121,7 +136,7 @@ export function copyTextToClipboard(
 export async function renderSqlFromSource(
   source: string,
   exportName = "query",
-  toSqlArgs: readonly unknown[] = []
+  rendererOptions: SqlOptions = {}
 ): Promise<string> {
   const sourcePath = source.toString().trim();
   if (!sourcePath) {
@@ -146,25 +161,25 @@ export async function renderSqlFromSource(
       `Export '${exportName}' must be a SQL string, Query-like object, or a function returning one`
     );
   }
-  return target.toSql(...toSqlArgs);
+  return normalizeSqlOutput(target.toSql(sqlRenderer(rendererOptions)));
 }
 
 function renderSqlFromSourceIsolated(
   source: string,
   exportName = "query",
-  toSqlArgs: readonly unknown[] = []
+  rendererOptions: SqlOptions = {}
 ): string {
   const sourcePath = source.toString().trim();
   if (!sourcePath) {
     throw new Error("renderSqlFromSource requires a source path");
   }
 
-  let serializedArgs = "[]";
+  let serializedRendererOptions = "{}";
   try {
-    serializedArgs = JSON.stringify(toSqlArgs);
+    serializedRendererOptions = JSON.stringify(rendererOptions);
   } catch {
     throw new Error(
-      "watchQuerySourceToClipboard isolateModules mode requires JSON-serializable toSqlArgs"
+      "watchQuerySourceToClipboard isolateModules mode requires JSON-serializable rendererOptions"
     );
   }
 
@@ -176,7 +191,8 @@ function renderSqlFromSourceIsolated(
       ...process.env,
       TETA_SOURCE: sourcePath,
       TETA_EXPORT_NAME: exportName,
-      TETA_TO_SQL_ARGS: serializedArgs,
+      TETA_RENDERER_OPTIONS: serializedRendererOptions,
+      TETA_SQL_RENDERER_MODULE: new URL("./sql.ts", import.meta.url).href,
     },
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
@@ -243,8 +259,8 @@ export async function watchQuerySourceToClipboard(
 
   const runOnce = async (): Promise<string> => {
     const sql = isolateModules
-      ? renderSqlFromSourceIsolated(source, exportName, options.toSqlArgs ?? [])
-      : await renderSqlFromSource(source, exportName, options.toSqlArgs ?? []);
+      ? renderSqlFromSourceIsolated(source, exportName, options.rendererOptions ?? {})
+      : await renderSqlFromSource(source, exportName, options.rendererOptions ?? {});
 
     if (options.outputFile) {
       await writeFile(options.outputFile, sql, "utf8");
@@ -309,6 +325,15 @@ export async function watchQuerySourceToClipboard(
 function isQueryLike(value: unknown): value is QueryLike {
   return typeof value === "object" && value !== null && "toSql" in value
     && typeof (value as Record<string, unknown>).toSql === "function";
+}
+
+function normalizeSqlOutput(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (typeof value === "object" && value !== null && "sql" in value) {
+    const sql = (value as { sql?: unknown }).sql;
+    if (typeof sql === "string") return sql;
+  }
+  throw new Error("toSql(...) must return a SQL string or an object with a sql field");
 }
 
 function normalizeWatchPaths(source: string, watchPaths?: string | string[]): string[] {

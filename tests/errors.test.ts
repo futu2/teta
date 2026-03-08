@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { loop } from "../mod.ts";
+import { loop, sqlRenderer } from "../mod.ts";
 import {
   GROUP_INSIDE_AGGREGATE_FUNCTION_ERROR,
   GROUP_OUTSIDE_AGGREGATE_ERROR,
@@ -57,7 +57,9 @@ describe("error paths", () => {
     const users = createUsersTable();
 
     expect(() =>
-      users.select((user) => ({ id: user.id })).toSql("PostgreSQL")
+      users
+        .select((user) => ({ id: user.id }))
+        .toSql(sqlRenderer({ dialect: "PostgreSQL" }))
     ).toThrow(NON_CANONICAL_POSTGRES_DIALECT_ERROR);
   });
 });

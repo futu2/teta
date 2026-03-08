@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
+import { sqlRenderer } from "../mod.ts";
 import {
   ORDERS_GROUPED_TOTALS_POSTGRES_COMPACT,
   USERS_ORDERS_LEFT_JOIN_AGG_POSTGRES_COMPACT,
@@ -19,9 +20,9 @@ describe("joins and aggregates", () => {
         total_spend: row.total.sum(),
       }));
 
-    expect(query.toSql("postgresql", "compact")).toBe(
-      USERS_ORDERS_LEFT_JOIN_AGG_POSTGRES_COMPACT
-    );
+    expect(
+      query.toSql(sqlRenderer({ dialect: "postgresql", format: "compact" })).sql
+    ).toBe(USERS_ORDERS_LEFT_JOIN_AGG_POSTGRES_COMPACT);
   });
 
   test("renders grouped aggregates after filtering", () => {
@@ -35,8 +36,8 @@ describe("joins and aggregates", () => {
         total_spend: order.total.sum(),
       }));
 
-    expect(query.toSql("postgresql", "compact")).toBe(
-      ORDERS_GROUPED_TOTALS_POSTGRES_COMPACT
-    );
+    expect(
+      query.toSql(sqlRenderer({ dialect: "postgresql", format: "compact" })).sql
+    ).toBe(ORDERS_GROUPED_TOTALS_POSTGRES_COMPACT);
   });
 });

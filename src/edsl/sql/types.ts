@@ -93,3 +93,18 @@ export type QueryDialect = {
 
 export type SqlFormat = "compact" | "pretty";
 export type SqlOptions = Option & { format?: SqlFormat; dialect?: Dialect };
+
+export type SqlParam = {
+  val: unknown;
+  index: number;
+  name: string | null;
+};
+
+export type SqlResult = {
+  sql: string;
+  params: SqlParam[];
+};
+
+export interface SqlRenderer<TInput = unknown, TResult extends SqlResult = SqlResult> {
+  toSql(input: TInput): TResult;
+}

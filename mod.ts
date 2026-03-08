@@ -111,6 +111,19 @@ export {
 /** Language specification and dialect mapping helpers. */
 export { LANGUAGE_SPEC, getLanguageSpec } from "./src/edsl/sql/language";
 export type { LanguageCategory } from "./src/edsl/sql/language";
+export {
+  duckdbRenderer,
+  hetuRenderer,
+  postgresqlRenderer,
+  sqlRenderer,
+  sqliteRenderer,
+} from "./src/edsl/sql";
+export type {
+  BuiltinSqlRendererOptions,
+  ExprSqlTarget,
+  QuerySqlTarget,
+  SqlCompilable,
+} from "./src/edsl/sql";
 
 /** Dev utilities for source-watch SQL generation and clipboard copy. */
 export {
@@ -139,6 +152,9 @@ export type {
   SqlDate,
   SqlTimestamp,
   Dialect,
+  SqlRenderer,
   SqlFormat,
   SqlOptions,
+  SqlParam,
+  SqlResult,
 } from "./src/edsl/types";

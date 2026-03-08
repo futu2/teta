@@ -8,7 +8,7 @@ import { buildRecursiveCte, createDeferredRecursiveCte, materializeCte } from ".
 
 export { buildRecursiveCte, createDeferredRecursiveCte } from "./recursive";
 
-export function compilePipeline(
+export function renderPipelineAst(
   source: Source,
   stages: Stage[],
   columnNames: readonly string[] | null,

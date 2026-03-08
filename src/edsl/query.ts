@@ -1,4 +1,4 @@
-import { Parser, type AST } from "node-sql-parser";
+import type { AST } from "node-sql-parser";
 import {
   OUTER_TABLE_ALIAS,
   type ColumnType,
@@ -14,12 +14,11 @@ import {
   type JoinSource,
 } from "./core/types";
 import type {
-  Dialect,
+  SqlRenderer,
   SqlFloat,
   SqlInt,
   SqlDate,
-  SqlFormat,
-  SqlOptions,
+  SqlResult,
   SqlTimestamp,
 } from "./sql/types";
 import {
@@ -35,12 +34,8 @@ import {
 } from "./expr";
 import type { ColumnRefs, ExprRefs, SelectResult, SelectShape } from "./expr";
 import {
-  applyDialectFixes,
-  buildSqlOptions,
-  compilePipeline,
+  renderPipelineAst,
   createDeferredRecursiveCte,
-  formatSqlPretty,
-  stripRedundantQuotes,
 } from "./sql";
 
 import {
@@ -401,7 +396,7 @@ export class Query<TColumns extends Record<string, any>> {
   }
 
   toAst(): AST {
-    return compilePipeline(
+    return renderPipelineAst(
       this.source,
       this.stages,
       this.columnNames,
@@ -409,31 +404,8 @@ export class Query<TColumns extends Record<string, any>> {
     );
   }
 
-  toSql(dialect?: Dialect, format?: SqlFormat): string;
-  toSql(opt?: SqlOptions): string;
-  toSql(
-    dialectOrOpt?: Dialect | SqlOptions,
-    optOrFormat?: SqlOptions | SqlFormat,
-    format?: SqlFormat
-  ): string {
-    const parser = new Parser();
-    const { dialect, options, sqlFormat } = buildSqlOptions(
-      dialectOrOpt,
-      optOrFormat,
-      format
-    );
-    const ast = applyDialectFixes(
-      compilePipeline(
-        this.source,
-        this.stages,
-        this.columnNames,
-        { baseCtes: this.withs, dialect }
-      ),
-      dialect
-    );
-    const sql = parser.sqlify(ast, options);
-    const cleaned = stripRedundantQuotes(sql);
-    return sqlFormat === "pretty" ? formatSqlPretty(cleaned) : cleaned;
+  toSql<TReturn extends SqlResult>(renderer: SqlRenderer<any, TReturn>): TReturn {
+    return renderer.toSql(this);
   }
 
   private unionInternal(right: Query<TColumns>, op: "union" | "union all"): Query<TColumns> {

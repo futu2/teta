@@ -1,12 +1,14 @@
 import { describe, expect, test } from "bun:test";
 
+import { sqlRenderer } from "../mod.ts";
 import { buildOrgTreeQuery } from "./helpers/fixtures.ts";
 
 describe("recursive loop queries", () => {
   test("renders a recursive employee tree CTE", () => {
     const sql = buildOrgTreeQuery()
       .select((employee) => ({ id: employee.id, name: employee.name }))
-      .toSql("postgresql", "compact");
+      .toSql(sqlRenderer({ dialect: "postgresql", format: "compact" }))
+      .sql;
 
     const match = sql.match(/^WITH RECURSIVE (loop_\d+)\(id, name, manager_id\) AS \(/);
     expect(match).not.toBeNull();

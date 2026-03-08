@@ -7,6 +7,7 @@ import type {
   TimestampLiteral,
   Value,
 } from "../types";
+import type { SqlRenderer, SqlResult } from "../../sql/types";
 import {
   containsGroup,
   dedupeExprs,
@@ -31,6 +32,10 @@ export interface ExprRef<T> {}
 
 export class ExprRef<T> {
   constructor(readonly node: ExprNode<T>) {}
+
+  toSql<TReturn extends SqlResult>(renderer: SqlRenderer<any, TReturn>): TReturn {
+    return renderer.toSql(this);
+  }
 
   via<A extends unknown[], R>(
     operation: (expr: ExprRef<T>, ...args: A) => R,
