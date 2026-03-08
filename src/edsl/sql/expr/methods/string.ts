@@ -1,4 +1,4 @@
-import { type ExprInput, type ExprRef } from "../../../core/expr";
+import { type ExprInput, type ExprRef, type PropagateNull } from "../../../core/expr";
 import type { SqlInt } from "../../types";
 import {
   bitLength,
@@ -24,28 +24,30 @@ import {
 } from "../ops/string";
 import { defineExprMethods } from "./shared";
 
+type NullableString = string | null;
+
 declare module "../../../core/expr/core" {
   interface ExprRef<T> {
-    replace(this: ExprRef<string>, search: ExprInput<string>, replacement: ExprInput<string>): ExprRef<string>;
-    upper(this: ExprRef<string>): ExprRef<string>;
-    lower(this: ExprRef<string>): ExprRef<string>;
-    reverse(this: ExprRef<string>): ExprRef<string>;
-    trim(this: ExprRef<string>): ExprRef<string>;
-    regexLike(this: ExprRef<string>, pattern: ExprInput<string>): ExprRef<boolean>;
-    regexReplace(this: ExprRef<string>, pattern: ExprInput<string>, replacement: ExprInput<string>, flags?: ExprInput<string>): ExprRef<string>;
-    regexExtract(this: ExprRef<string>, pattern: ExprInput<string>, groupIndex?: ExprInput<SqlInt>): ExprRef<string>;
-    substring(this: ExprRef<string>, start: ExprInput<SqlInt>, length?: ExprInput<SqlInt>): ExprRef<string>;
-    position(this: ExprRef<string>, needle: ExprInput<string>): ExprRef<SqlInt>;
-    overlay(this: ExprRef<string>, placing: ExprInput<string>, start: ExprInput<SqlInt>, length?: ExprInput<SqlInt>): ExprRef<string>;
-    charLength(this: ExprRef<string>): ExprRef<SqlInt>;
-    characterLength(this: ExprRef<string>): ExprRef<SqlInt>;
-    octetLength(this: ExprRef<string>): ExprRef<SqlInt>;
-    bitLength(this: ExprRef<string>): ExprRef<SqlInt>;
-    left(this: ExprRef<string>, length: ExprInput<SqlInt>): ExprRef<string>;
-    right(this: ExprRef<string>, length: ExprInput<SqlInt>): ExprRef<string>;
-    lpad(this: ExprRef<string>, length: ExprInput<SqlInt>, padding?: ExprInput<string>): ExprRef<string>;
-    rpad(this: ExprRef<string>, length: ExprInput<SqlInt>, padding?: ExprInput<string>): ExprRef<string>;
-    concat(this: ExprRef<string>, ...parts: ExprInput<unknown>[]): ExprRef<string>;
+    replace<TValue extends NullableString>(this: ExprRef<TValue>, search: ExprInput<string>, replacement: ExprInput<string>): ExprRef<PropagateNull<TValue, string>>;
+    upper<TValue extends NullableString>(this: ExprRef<TValue>): ExprRef<PropagateNull<TValue, string>>;
+    lower<TValue extends NullableString>(this: ExprRef<TValue>): ExprRef<PropagateNull<TValue, string>>;
+    reverse<TValue extends NullableString>(this: ExprRef<TValue>): ExprRef<PropagateNull<TValue, string>>;
+    trim<TValue extends NullableString>(this: ExprRef<TValue>): ExprRef<PropagateNull<TValue, string>>;
+    regexLike(this: ExprRef<NullableString>, pattern: ExprInput<string>): ExprRef<boolean>;
+    regexReplace<TValue extends NullableString>(this: ExprRef<TValue>, pattern: ExprInput<string>, replacement: ExprInput<string>, flags?: ExprInput<string>): ExprRef<PropagateNull<TValue, string>>;
+    regexExtract<TValue extends NullableString>(this: ExprRef<TValue>, pattern: ExprInput<string>, groupIndex?: ExprInput<SqlInt>): ExprRef<PropagateNull<TValue, string>>;
+    substring<TValue extends NullableString>(this: ExprRef<TValue>, start: ExprInput<SqlInt>, length?: ExprInput<SqlInt>): ExprRef<PropagateNull<TValue, string>>;
+    position<TValue extends NullableString>(this: ExprRef<TValue>, needle: ExprInput<string>): ExprRef<PropagateNull<TValue, SqlInt>>;
+    overlay<TValue extends NullableString>(this: ExprRef<TValue>, placing: ExprInput<string>, start: ExprInput<SqlInt>, length?: ExprInput<SqlInt>): ExprRef<PropagateNull<TValue, string>>;
+    charLength<TValue extends NullableString>(this: ExprRef<TValue>): ExprRef<PropagateNull<TValue, SqlInt>>;
+    characterLength<TValue extends NullableString>(this: ExprRef<TValue>): ExprRef<PropagateNull<TValue, SqlInt>>;
+    octetLength<TValue extends NullableString>(this: ExprRef<TValue>): ExprRef<PropagateNull<TValue, SqlInt>>;
+    bitLength<TValue extends NullableString>(this: ExprRef<TValue>): ExprRef<PropagateNull<TValue, SqlInt>>;
+    left<TValue extends NullableString>(this: ExprRef<TValue>, length: ExprInput<SqlInt>): ExprRef<PropagateNull<TValue, string>>;
+    right<TValue extends NullableString>(this: ExprRef<TValue>, length: ExprInput<SqlInt>): ExprRef<PropagateNull<TValue, string>>;
+    lpad<TValue extends NullableString>(this: ExprRef<TValue>, length: ExprInput<SqlInt>, padding?: ExprInput<string>): ExprRef<PropagateNull<TValue, string>>;
+    rpad<TValue extends NullableString>(this: ExprRef<TValue>, length: ExprInput<SqlInt>, padding?: ExprInput<string>): ExprRef<PropagateNull<TValue, string>>;
+    concat<TValue extends NullableString>(this: ExprRef<TValue>, ...parts: ExprInput<unknown>[]): ExprRef<PropagateNull<TValue, string>>;
   }
 }
 
@@ -71,4 +73,3 @@ defineExprMethods([
   ["rpad", rpad],
   ["concat", concat],
 ]);
-

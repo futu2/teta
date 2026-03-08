@@ -30,6 +30,7 @@ export type BuiltinDialect =
 export type DialectFeatures = {
   lateralJoinKeyword?: boolean;
   recursiveCte?: boolean;
+  qualifyClause?: boolean;
 };
 
 export type DialectLanguageFallback =
@@ -83,6 +84,7 @@ export type QueryDialect = {
   features: {
     lateralJoinKeyword: boolean;
     recursiveCte: boolean;
+    qualifyClause: boolean;
   };
   language: {
     functions: Record<string, string>;
@@ -92,7 +94,15 @@ export type QueryDialect = {
 };
 
 export type SqlFormat = "compact" | "pretty";
-export type SqlOptions = Option & { format?: SqlFormat; dialect?: Dialect };
+export type SqlParameterMode = "inline" | "named";
+export type SqlParameterPrefix = ":" | "$" | "@";
+
+export type SqlOptions = Option & {
+  format?: SqlFormat;
+  dialect?: Dialect;
+  parameterMode?: SqlParameterMode;
+  parameterPrefix?: SqlParameterPrefix;
+};
 
 export type SqlParam = {
   val: unknown;

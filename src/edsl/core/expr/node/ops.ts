@@ -1,4 +1,4 @@
-import type { ExprNode } from "../../types";
+import { OUTER_TABLE_ALIAS, isInternalScopeName, type ExprNode } from "../../types";
 
 export function containsGroup(expr: ExprNode<unknown>, inAgg = false): boolean {
   switch (expr.kind) {
@@ -142,5 +142,5 @@ export function dedupeExprs(exprs: ExprNode<unknown>[]): ExprNode<unknown>[] {
 
 export function shouldAlias(expr: ExprNode<unknown>, key: string): boolean {
   if (expr.kind !== "column") return true;
-  return expr.name !== key || expr.table !== null;
+  return expr.name !== key || (expr.table !== null && !isInternalScopeName(expr.table) && expr.table !== OUTER_TABLE_ALIAS);
 }

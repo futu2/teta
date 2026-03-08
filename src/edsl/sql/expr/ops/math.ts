@@ -1,82 +1,93 @@
 import type { SqlFloat, SqlInt, SqlNumber } from "../../types";
-import { ExprRef, binaryExpr, fn, toExprNode, type ExprInput } from "../core";
+import { ExprRef, fn, toExprNode, type ExprInput, type PropagateNull } from "../core";
 
-export function add<T extends SqlNumber>(
-  left: ExprInput<T>,
-  right: ExprInput<T>
-): ExprRef<T> {
-  return binaryExpr("+", toExprNode(left), toExprNode(right)) as ExprRef<T>;
+type NullableSqlNumber = SqlNumber | null;
+
+export function add<TValue extends NullableSqlNumber>(
+  left: ExprInput<TValue>,
+  right: ExprInput<TValue>
+): ExprRef<TValue> {
+  return binaryExpr("+", toExprNode(left), toExprNode(right)) as ExprRef<TValue>;
 }
 
-export function sub<T extends SqlNumber>(
-  left: ExprInput<T>,
-  right: ExprInput<T>
-): ExprRef<T> {
-  return binaryExpr("-", toExprNode(left), toExprNode(right)) as ExprRef<T>;
+export function sub<TValue extends NullableSqlNumber>(
+  left: ExprInput<TValue>,
+  right: ExprInput<TValue>
+): ExprRef<TValue> {
+  return binaryExpr("-", toExprNode(left), toExprNode(right)) as ExprRef<TValue>;
 }
 
-export function mul<T extends SqlNumber>(
-  left: ExprInput<T>,
-  right: ExprInput<T>
-): ExprRef<T> {
-  return binaryExpr("*", toExprNode(left), toExprNode(right)) as ExprRef<T>;
+export function mul<TValue extends NullableSqlNumber>(
+  left: ExprInput<TValue>,
+  right: ExprInput<TValue>
+): ExprRef<TValue> {
+  return binaryExpr("*", toExprNode(left), toExprNode(right)) as ExprRef<TValue>;
 }
 
-export function div<T extends SqlNumber>(
-  left: ExprInput<T>,
-  right: ExprInput<T>
-): ExprRef<T> {
-  return binaryExpr("/", toExprNode(left), toExprNode(right)) as ExprRef<T>;
+export function div<TValue extends NullableSqlNumber>(
+  left: ExprInput<TValue>,
+  right: ExprInput<TValue>
+): ExprRef<TValue> {
+  return binaryExpr("/", toExprNode(left), toExprNode(right)) as ExprRef<TValue>;
 }
 
-export function mod<T extends SqlNumber>(
-  left: ExprInput<T>,
-  right: ExprInput<T>
-): ExprRef<T> {
-  return fn<T>("MOD", left, right);
+export function mod<TValue extends NullableSqlNumber>(
+  left: ExprInput<TValue>,
+  right: ExprInput<TValue>
+): ExprRef<TValue> {
+  return fn<TValue>("MOD", left, right);
 }
 
-export function ceil(value: ExprInput<SqlNumber>): ExprRef<SqlInt> {
-  return fn<SqlInt>("CEIL", value);
+export function ceil<TValue extends NullableSqlNumber>(
+  value: ExprInput<TValue>
+): ExprRef<PropagateNull<TValue, SqlInt>> {
+  return fn<PropagateNull<TValue, SqlInt>>("CEIL", value);
 }
 
-export function floor(value: ExprInput<SqlNumber>): ExprRef<SqlInt> {
-  return fn<SqlInt>("FLOOR", value);
+export function floor<TValue extends NullableSqlNumber>(
+  value: ExprInput<TValue>
+): ExprRef<PropagateNull<TValue, SqlInt>> {
+  return fn<PropagateNull<TValue, SqlInt>>("FLOOR", value);
 }
 
-export function abs<T extends SqlNumber>(value: ExprInput<T>): ExprRef<T> {
-  return fn<T>("ABS", value);
+export function abs<TValue extends NullableSqlNumber>(value: ExprInput<TValue>): ExprRef<TValue> {
+  return fn<TValue>("ABS", value);
 }
 
-export function sqrt(value: ExprInput<SqlNumber>): ExprRef<SqlFloat> {
-  return fn<SqlFloat>("SQRT", value);
+export function sqrt<TValue extends NullableSqlNumber>(
+  value: ExprInput<TValue>
+): ExprRef<PropagateNull<TValue, SqlFloat>> {
+  return fn<PropagateNull<TValue, SqlFloat>>("SQRT", value);
 }
 
-export function pow(
-  value: ExprInput<SqlNumber>,
-  exponent: ExprInput<SqlNumber>
-): ExprRef<SqlFloat> {
-  return fn<SqlFloat>("POWER", value, exponent);
+export function pow<
+  TValue extends NullableSqlNumber,
+  TExponent extends NullableSqlNumber,
+>(
+  value: ExprInput<TValue>,
+  exponent: ExprInput<TExponent>
+): ExprRef<PropagateNull<TValue | TExponent, SqlFloat>> {
+  return fn<PropagateNull<TValue | TExponent, SqlFloat>>("POWER", value, exponent);
 }
 
-export function greatest<T extends SqlNumber>(
-  value: ExprInput<T>,
-  ...values: ExprInput<T>[]
-): ExprRef<T> {
+export function greatest<TValue extends NullableSqlNumber>(
+  value: ExprInput<TValue>,
+  ...values: ExprInput<TValue>[]
+): ExprRef<TValue> {
   if (values.length === 0) {
     throw new Error("greatest requires at least one value");
   }
-  return fn<T>("GREATEST", value, ...values);
+  return fn<TValue>("GREATEST", value, ...values);
 }
 
-export function least<T extends SqlNumber>(
-  value: ExprInput<T>,
-  ...values: ExprInput<T>[]
-): ExprRef<T> {
+export function least<TValue extends NullableSqlNumber>(
+  value: ExprInput<TValue>,
+  ...values: ExprInput<TValue>[]
+): ExprRef<TValue> {
   if (values.length === 0) {
     throw new Error("least requires at least one value");
   }
-  return fn<T>("LEAST", value, ...values);
+  return fn<TValue>("LEAST", value, ...values);
 }
 
 export function cast<TTarget = unknown>(
@@ -93,20 +104,32 @@ export function cast<TTarget = unknown>(
   });
 }
 
-export function toInt(value: ExprInput<SqlNumber>): ExprRef<SqlInt> {
-  return cast<SqlInt>(value, "INTEGER");
+export function toInt<TValue extends NullableSqlNumber>(
+  value: ExprInput<TValue>
+): ExprRef<PropagateNull<TValue, SqlInt>> {
+  return cast<PropagateNull<TValue, SqlInt>>(value, "INTEGER");
 }
 
-export function toFloat(value: ExprInput<SqlNumber>): ExprRef<SqlFloat> {
-  return cast<SqlFloat>(value, "FLOAT");
+export function toFloat<TValue extends NullableSqlNumber>(
+  value: ExprInput<TValue>
+): ExprRef<PropagateNull<TValue, SqlFloat>> {
+  return cast<PropagateNull<TValue, SqlFloat>>(value, "FLOAT");
 }
 
-export function round(
-  value: ExprInput<SqlNumber>,
+export function round<TValue extends NullableSqlNumber>(
+  value: ExprInput<TValue>,
   scale?: ExprInput<SqlInt>
-): ExprRef<SqlNumber> {
+): ExprRef<TValue> {
   if (scale === undefined) {
-    return fn<SqlNumber>("ROUND", value);
+    return fn<TValue>("ROUND", value);
   }
-  return fn<SqlNumber>("ROUND", value, scale);
+  return fn<TValue>("ROUND", value, scale);
+}
+
+function binaryExpr(
+  op: "+" | "-" | "*" | "/",
+  left: ReturnType<typeof toExprNode>,
+  right: ReturnType<typeof toExprNode>
+): ExprRef<unknown> {
+  return new ExprRef({ kind: "binary", op, left, right });
 }

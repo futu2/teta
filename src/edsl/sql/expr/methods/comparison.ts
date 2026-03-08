@@ -4,7 +4,7 @@ import type { SqlDate, SqlNumber, SqlTimestamp } from "../../types";
 import { and, asc, desc, eq, gt, gte, isIn, isNotNull, isNull, like, lt, lte, ne, not, or } from "../ops/comparison";
 import { defineExprMethods } from "./shared";
 
-type ComparableInput = SqlNumber | SqlDate | SqlTimestamp;
+type ComparableInput = SqlNumber | SqlDate | SqlTimestamp | null;
 
 declare module "../../../core/expr/core" {
   interface ExprRef<T> {
@@ -14,11 +14,11 @@ declare module "../../../core/expr/core" {
     gte<TValue extends ComparableInput>(this: ExprRef<TValue>, value: ExprInput<TValue>): ExprRef<boolean>;
     lt<TValue extends ComparableInput>(this: ExprRef<TValue>, value: ExprInput<TValue>): ExprRef<boolean>;
     lte<TValue extends ComparableInput>(this: ExprRef<TValue>, value: ExprInput<TValue>): ExprRef<boolean>;
-    like(this: ExprRef<string>, value: ExprInput<string>): ExprRef<boolean>;
+    like(this: ExprRef<string | null>, value: ExprInput<string>): ExprRef<boolean>;
     ["in"](values: readonly ExprInput<T>[]): ExprRef<boolean>;
-    and(this: ExprRef<boolean>, value: ExprInput<boolean>): ExprRef<boolean>;
-    or(this: ExprRef<boolean>, value: ExprInput<boolean>): ExprRef<boolean>;
-    not(this: ExprRef<boolean>): ExprRef<boolean>;
+    and(this: ExprRef<boolean | null>, value: ExprInput<boolean | null>): ExprRef<boolean>;
+    or(this: ExprRef<boolean | null>, value: ExprInput<boolean | null>): ExprRef<boolean>;
+    not(this: ExprRef<boolean | null>): ExprRef<boolean>;
     isNull(): ExprRef<boolean>;
     isNotNull(): ExprRef<boolean>;
     asc(): OrderItem;
@@ -43,4 +43,3 @@ defineExprMethods([
   ["asc", asc],
   ["desc", desc],
 ]);
-

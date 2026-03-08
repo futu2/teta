@@ -6,8 +6,12 @@ import type {
   SqlNumber,
   SqlTimestamp,
 } from "../../types";
-import { ExprRef, fn, funcExpr, toExprNode, type ExprInput } from "../core";
+import { ExprRef, fn, funcExpr, toExprNode, type ExprInput, type PropagateNull } from "../core";
 import { cast } from "./math";
+
+type NullableDateLike = SqlDate | SqlTimestamp | string | null;
+type NullableTimestamp = SqlTimestamp | null;
+type NullableSqlNumber = SqlNumber | null;
 
 export function currentDate(): ExprRef<SqlDate> {
   return funcExpr("CURRENT_DATE", []);
@@ -31,88 +35,93 @@ export function timestampLiteral(value: string): ExprRef<SqlTimestamp> {
   });
 }
 
-export function extract(value: ExprInput<unknown>, field: string): ExprRef<SqlFloat> {
+export function extract<TValue>(value: ExprInput<TValue>, field: string): ExprRef<PropagateNull<TValue, SqlFloat>> {
   if (!field.trim()) {
     throw new Error("extract requires a field");
   }
-  return new ExprRef<SqlFloat>({
+  return new ExprRef<PropagateNull<TValue, SqlFloat>>({
     kind: "extract",
     field,
     source: toExprNode(value),
   });
 }
 
-export function dateTrunc(
-  value: ExprInput<SqlDate | SqlTimestamp | string>,
+export function dateTrunc<TValue extends NullableDateLike>(
+  value: ExprInput<TValue>,
   unit: ExprInput<string>
-): ExprRef<SqlTimestamp> {
-  return fn<SqlTimestamp>("DATE_TRUNC", unit, value);
+): ExprRef<PropagateNull<TValue, SqlTimestamp>> {
+  return fn<PropagateNull<TValue, SqlTimestamp>>("DATE_TRUNC", unit, value);
 }
 
-export function dateAdd(
-  value: ExprInput<SqlDate | SqlTimestamp | string>,
+export function dateAdd<TValue extends NullableDateLike>(
+  value: ExprInput<TValue>,
   unit: ExprInput<string>,
   amount: ExprInput<SqlInt>
-): ExprRef<SqlTimestamp> {
-  return fn<SqlTimestamp>("DATE_ADD", unit, amount, value);
+): ExprRef<PropagateNull<TValue, SqlTimestamp>> {
+  return fn<PropagateNull<TValue, SqlTimestamp>>("DATE_ADD", unit, amount, value);
 }
 
-export function dateDiff(
-  value: ExprInput<SqlDate | SqlTimestamp | string>,
+export function dateDiff<
+  TValue extends NullableDateLike,
+  TOther extends NullableDateLike,
+>(
+  value: ExprInput<TValue>,
   unit: ExprInput<string>,
-  other: ExprInput<SqlDate | SqlTimestamp | string>
-): ExprRef<SqlInt> {
-  return fn<SqlInt>("DATE_DIFF", unit, value, other);
+  other: ExprInput<TOther>
+): ExprRef<PropagateNull<TValue | TOther, SqlInt>> {
+  return fn<PropagateNull<TValue | TOther, SqlInt>>("DATE_DIFF", unit, value, other);
 }
 
-export function dateFormat(
-  value: ExprInput<SqlDate | SqlTimestamp | string>,
+export function dateFormat<TValue extends NullableDateLike>(
+  value: ExprInput<TValue>,
   format: ExprInput<string>
-): ExprRef<string> {
-  return fn<string>("DATE_FORMAT", value, format);
+): ExprRef<PropagateNull<TValue, string>> {
+  return fn<PropagateNull<TValue, string>>("DATE_FORMAT", value, format);
 }
 
-export function dateParse(
-  value: ExprInput<string>,
+export function dateParse<TValue extends string | null>(
+  value: ExprInput<TValue>,
   format: ExprInput<string>
-): ExprRef<SqlTimestamp> {
-  return fn<SqlTimestamp>("DATE_PARSE", value, format);
+): ExprRef<PropagateNull<TValue, SqlTimestamp>> {
+  return fn<PropagateNull<TValue, SqlTimestamp>>("DATE_PARSE", value, format);
 }
 
-export function toUnixTime(
-  value: ExprInput<SqlDate | SqlTimestamp | string>
-): ExprRef<SqlFloat> {
-  return fn<SqlFloat>("TO_UNIXTIME", value);
+export function toUnixTime<TValue extends NullableDateLike>(
+  value: ExprInput<TValue>
+): ExprRef<PropagateNull<TValue, SqlFloat>> {
+  return fn<PropagateNull<TValue, SqlFloat>>("TO_UNIXTIME", value);
 }
 
-export function fromUnixTime(value: ExprInput<SqlNumber>): ExprRef<SqlTimestamp> {
-  return fn<SqlTimestamp>("FROM_UNIXTIME", value);
+export function fromUnixTime<TValue extends NullableSqlNumber>(
+  value: ExprInput<TValue>
+): ExprRef<PropagateNull<TValue, SqlTimestamp>> {
+  return fn<PropagateNull<TValue, SqlTimestamp>>("FROM_UNIXTIME", value);
 }
 
-export function year(value: ExprInput<unknown>): ExprRef<SqlInt> {
-  return cast<SqlInt>(extract(value, "year"), "INTEGER");
+export function year<TValue>(value: ExprInput<TValue>): ExprRef<PropagateNull<TValue, SqlInt>> {
+  return cast<PropagateNull<TValue, SqlInt>>(extract(value, "year"), "INTEGER");
 }
 
-export function month(value: ExprInput<unknown>): ExprRef<SqlInt> {
-  return cast<SqlInt>(extract(value, "month"), "INTEGER");
+export function month<TValue>(value: ExprInput<TValue>): ExprRef<PropagateNull<TValue, SqlInt>> {
+  return cast<PropagateNull<TValue, SqlInt>>(extract(value, "month"), "INTEGER");
 }
 
-export function day(value: ExprInput<unknown>): ExprRef<SqlInt> {
-  return cast<SqlInt>(extract(value, "day"), "INTEGER");
+export function day<TValue>(value: ExprInput<TValue>): ExprRef<PropagateNull<TValue, SqlInt>> {
+  return cast<PropagateNull<TValue, SqlInt>>(extract(value, "day"), "INTEGER");
 }
 
-export function hour(value: ExprInput<unknown>): ExprRef<SqlInt> {
-  return cast<SqlInt>(extract(value, "hour"), "INTEGER");
+export function hour<TValue>(value: ExprInput<TValue>): ExprRef<PropagateNull<TValue, SqlInt>> {
+  return cast<PropagateNull<TValue, SqlInt>>(extract(value, "hour"), "INTEGER");
 }
 
-export function minute(value: ExprInput<unknown>): ExprRef<SqlInt> {
-  return cast<SqlInt>(extract(value, "minute"), "INTEGER");
+export function minute<TValue>(value: ExprInput<TValue>): ExprRef<PropagateNull<TValue, SqlInt>> {
+  return cast<PropagateNull<TValue, SqlInt>>(extract(value, "minute"), "INTEGER");
 }
 
-export function second(value: ExprInput<unknown>): ExprRef<SqlInt> {
-  return cast<SqlInt>(extract(value, "second"), "INTEGER");
+export function second<TValue>(value: ExprInput<TValue>): ExprRef<PropagateNull<TValue, SqlInt>> {
+  return cast<PropagateNull<TValue, SqlInt>>(extract(value, "second"), "INTEGER");
 }
 
-export function toDate(value: ExprInput<SqlTimestamp>): ExprRef<SqlDate> {
-  return cast<SqlDate>(value, "DATE");
+export function toDate<TValue extends NullableTimestamp>(value: ExprInput<TValue>): ExprRef<PropagateNull<TValue, SqlDate>> {
+  return cast<PropagateNull<TValue, SqlDate>>(value, "DATE");
 }

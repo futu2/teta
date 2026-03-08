@@ -129,6 +129,11 @@ export function selectAllItems<TColumns extends Record<string, unknown>>(
     }
     const ref = value;
     const expr = toExprNode(ref);
-    return { expr, as: shouldAlias(expr, name) ? name : null };
+    return {
+      expr,
+      as: shouldAlias(expr, name)
+        ? { name, quoted: false }
+        : null,
+    };
   });
 }

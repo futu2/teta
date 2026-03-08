@@ -1,4 +1,9 @@
 export const OUTER_TABLE_ALIAS = "__teta_outer__";
+export const INTERNAL_SCOPE_PREFIX = "__teta_scope_";
+
+export function isInternalScopeName(value: string | null): boolean {
+  return value !== null && value.startsWith(INTERNAL_SCOPE_PREFIX);
+}
 
 export type DateLiteral = { kind: "date_literal"; value: string };
 export type TimestampLiteral = { kind: "timestamp_literal"; value: string };
@@ -127,23 +132,77 @@ export type CaseNode = {
 
 export type OrderExpr = ExprNode<any>;
 
-export type SelectItem = { expr: ExprNode<any>; as: string | null };
+export type SelectItem = { expr: ExprNode<any>; as: SqlIdentifier | null };
 export type OrderItem = { expr: ExprNode<any>; direction: "ASC" | "DESC" };
 
-export type Source = { table: string; schema: string | null; as: string | null };
+export type SqlIdentifier<Name extends string = string> = {
+  name: Name;
+  quoted: boolean;
+};
+
+export type IdentifierInput<Name extends string = string> =
+  | Name
+  | {
+      name: Name;
+      quoted?: boolean;
+    };
+
+export type StructuredTableSource = {
+  db: SqlIdentifier | null;
+  schema: SqlIdentifier | null;
+  table: SqlIdentifier;
+  as: SqlIdentifier | null;
+};
+
+export type TableSourceInput =
+  | string
+  | {
+      table: IdentifierInput;
+      schema?: IdentifierInput | null;
+      db?: IdentifierInput | null;
+      as?: IdentifierInput | null;
+    }
+  | {
+      path:
+        | readonly [IdentifierInput]
+        | readonly [IdentifierInput, IdentifierInput]
+        | readonly [IdentifierInput, IdentifierInput, IdentifierInput];
+      as?: IdentifierInput | null;
+    };
+
+export type Source = StructuredTableSource;
 export type SourceRef =
-  | { kind: "table"; name: string; schema: string | null; as: string | null }
-  | { kind: "cte"; name: string };
+  | {
+      kind: "table";
+      db: SqlIdentifier | null;
+      name: SqlIdentifier;
+      schema: SqlIdentifier | null;
+      as: SqlIdentifier | null;
+      columnIdentifiers?: Readonly<Record<string, SqlIdentifier>> | null;
+    }
+  | { kind: "cte"; name: string; columnIdentifiers?: Readonly<Record<string, SqlIdentifier>> | null; };
 
 export type QuerySpec = {
   source: Source;
   stages: Stage[];
   columnNames: readonly string[] | null;
+  columnIdentifiers: Readonly<Record<string, SqlIdentifier>> | null;
+  scopeId: string;
 };
 
 export type JoinSource =
-  | { kind: "table"; table: string; schema: string | null }
-  | { kind: "subquery"; query: QuerySpec; keepTables: readonly string[] | null };
+  | {
+      kind: "table";
+      db: SqlIdentifier | null;
+      table: SqlIdentifier;
+      schema: SqlIdentifier | null;
+      columnIdentifiers?: Readonly<Record<string, SqlIdentifier>> | null;
+    }
+  | {
+      kind: "subquery";
+      query: QuerySpec;
+      inheritedBindings: Readonly<Record<string, string | null>> | null;
+    };
 
 export type Stage =
   | {
@@ -151,6 +210,7 @@ export type Stage =
       items: SelectItem[];
       keys: string[];
       groupBy: ExprNode<any>[] | null;
+      outputScopeId: string;
     }
   | { kind: "filter"; predicate: ExprNode<boolean>; selectAll: SelectItem[] }
   | { kind: "orderBy"; items: OrderItem[]; selectAll: SelectItem[] }
@@ -163,17 +223,21 @@ export type Stage =
       as: string | null;
       on: ExprNode<boolean>;
       selectAll: SelectItem[];
+      rightScopeId: string;
+      outputScopeId: string;
     }
   | {
       kind: "union";
       op: "union" | "union all";
       right: QuerySpec;
       selectAll: SelectItem[];
+      outputScopeId: string;
     };
 
 export type QueryIR = {
   source: Source;
   stages: Stage[];
+  scopeId: string;
 };
 
 export type CteSpec =

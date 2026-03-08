@@ -5,10 +5,12 @@ import type {
   QueryDialect,
   SqlFormat,
   SqlOptions,
+  SqlParameterMode,
+  SqlParameterPrefix,
 } from "../../types";
 import { DEFAULT_DIALECT } from "./default";
 import { resolveDialectLanguage } from "./language";
-import { lookupBuiltinDialect, suggestCanonicalBuiltin } from "./lookup";
+import { lookupBuiltinDialect, lookupBuiltinDialectByParser, suggestCanonicalBuiltin } from "./lookup";
 
 export function getDefaultDialect(): QueryDialect {
   return cloneDialect(DEFAULT_DIALECT);
@@ -36,6 +38,7 @@ export function resolveDialect(dialect?: Dialect): QueryDialect {
       features: {
         lateralJoinKeyword: true,
         recursiveCte: true,
+        qualifyClause: false,
       },
       language: resolveDialectLanguage(raw),
     };
@@ -46,6 +49,7 @@ export function resolveDialect(dialect?: Dialect): QueryDialect {
     features: {
       lateralJoinKeyword: builtin.features?.lateralJoinKeyword ?? true,
       recursiveCte: builtin.features?.recursiveCte ?? true,
+      qualifyClause: builtin.features?.qualifyClause ?? false,
     },
     language: resolveDialectLanguage(builtin.name),
   };
@@ -55,7 +59,8 @@ export function sameDialect(left: QueryDialect, right: QueryDialect): boolean {
   return (
     left.parserDialect === right.parserDialect &&
     left.features.lateralJoinKeyword === right.features.lateralJoinKeyword &&
-    left.features.recursiveCte === right.features.recursiveCte
+    left.features.recursiveCte === right.features.recursiveCte &&
+    left.features.qualifyClause === right.features.qualifyClause
   );
 }
 
@@ -66,6 +71,7 @@ export function cloneDialect(dialect: QueryDialect): QueryDialect {
     features: {
       lateralJoinKeyword: dialect.features.lateralJoinKeyword,
       recursiveCte: dialect.features.recursiveCte,
+      qualifyClause: dialect.features.qualifyClause,
     },
     language: {
       functions: { ...dialect.language.functions },
@@ -79,10 +85,18 @@ export function buildSqlOptions(
   dialectOrOpt?: Dialect | SqlOptions,
   optOrFormat?: SqlOptions | SqlFormat,
   format?: SqlFormat
-): { dialect: QueryDialect; options?: Option; sqlFormat: SqlFormat } {
+): {
+  dialect: QueryDialect;
+  options?: Option;
+  sqlFormat: SqlFormat;
+  parameterMode: SqlParameterMode;
+  parameterPrefix: SqlParameterPrefix;
+} {
   let dialect = getDefaultDialect();
   let options: Option = {};
   let sqlFormat: SqlFormat = "compact";
+  let parameterMode: SqlParameterMode = "inline";
+  let parameterPrefix: SqlParameterPrefix = ":";
 
   if (typeof dialectOrOpt === "string") {
     dialect = resolveDialect(dialectOrOpt);
@@ -91,6 +105,8 @@ export function buildSqlOptions(
         format: fmt,
         dialect: inlineDialect,
         database: explicitDatabase,
+        parameterMode: inlineParameterMode,
+        parameterPrefix: inlineParameterPrefix,
         ...rest
       } = optOrFormat as SqlOptions;
       options = { ...rest };
@@ -99,6 +115,8 @@ export function buildSqlOptions(
       if (explicitDatabase !== undefined) {
         options.database = explicitDatabase;
       }
+      if (inlineParameterMode) parameterMode = inlineParameterMode;
+      if (inlineParameterPrefix) parameterPrefix = inlineParameterPrefix;
     }
   } else if (dialectOrOpt && typeof dialectOrOpt === "object") {
     if (isDialectSpec(dialectOrOpt)) {
@@ -108,6 +126,8 @@ export function buildSqlOptions(
         format: fmt,
         dialect: inlineDialect,
         database: explicitDatabase,
+        parameterMode: inlineParameterMode,
+        parameterPrefix: inlineParameterPrefix,
         ...rest
       } = dialectOrOpt as SqlOptions;
       options = { ...rest };
@@ -116,6 +136,8 @@ export function buildSqlOptions(
       if (explicitDatabase !== undefined) {
         options.database = explicitDatabase;
       }
+      if (inlineParameterMode) parameterMode = inlineParameterMode;
+      if (inlineParameterPrefix) parameterPrefix = inlineParameterPrefix;
     }
   }
 
@@ -124,6 +146,8 @@ export function buildSqlOptions(
       format: fmt,
       dialect: inlineDialect,
       database: explicitDatabase,
+      parameterMode: inlineParameterMode,
+      parameterPrefix: inlineParameterPrefix,
       ...rest
     } = optOrFormat as SqlOptions;
     options = { ...options, ...rest };
@@ -132,6 +156,8 @@ export function buildSqlOptions(
     if (explicitDatabase !== undefined) {
       options.database = explicitDatabase;
     }
+    if (inlineParameterMode) parameterMode = inlineParameterMode;
+    if (inlineParameterPrefix) parameterPrefix = inlineParameterPrefix;
   }
 
   if (typeof optOrFormat === "string") sqlFormat = optOrFormat;
@@ -147,6 +173,8 @@ export function buildSqlOptions(
     dialect,
     options: hasOptions ? options : undefined,
     sqlFormat,
+    parameterMode,
+    parameterPrefix,
   };
 }
 
@@ -168,7 +196,7 @@ function resolveDialectSpec(spec: DialectSpec): QueryDialect {
       ? builtinByName?.parserDialect ?? null
       : spec.parserDialect;
   const parserRaw = parserSource === null ? null : parserSource.toString().trim();
-  const builtinByParser = parserRaw ? lookupBuiltinDialect(parserRaw) : null;
+  const builtinByParser = parserRaw ? lookupBuiltinDialectByParser(parserRaw) : null;
 
   const parserDialect = parserRaw && builtinByParser ? builtinByParser.parserDialect : parserRaw;
   const lateralJoinKeyword =
@@ -181,6 +209,11 @@ function resolveDialectSpec(spec: DialectSpec): QueryDialect {
     builtinByName?.features?.recursiveCte ??
     builtinByParser?.features?.recursiveCte ??
     true;
+  const qualifyClause =
+    spec.features?.qualifyClause ??
+    builtinByName?.features?.qualifyClause ??
+    builtinByParser?.features?.qualifyClause ??
+    false;
 
   const resolvedName = rawName || builtinByName?.name || "custom";
 
@@ -190,6 +223,7 @@ function resolveDialectSpec(spec: DialectSpec): QueryDialect {
     features: {
       lateralJoinKeyword,
       recursiveCte,
+      qualifyClause,
     },
     language: resolveDialectLanguage(resolvedName, spec.language),
   };

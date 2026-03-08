@@ -15,3 +15,15 @@ export const NON_CANONICAL_POSTGRES_DIALECT_ERROR =
 export function missingQueryExportError(path: string): string {
   return `Export 'query' not found in ${path}`;
 }
+
+export function duplicateProjectionNameError(name: string): string {
+  return `Duplicate projected column name: ${name}`;
+}
+
+export function unknownProjectionKeyError(name: string): string {
+  return `Unknown projection key: ${name}`;
+}
+
+export function unknownProjectionRemapKeyError(name: string): string {
+  return `Unknown projection remap key: ${name}`;
+}

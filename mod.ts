@@ -1,5 +1,5 @@
 /** Main query builder type returned by `table(...)`. */
-export { Query, table, loop, t } from "./src/edsl/query";
+export { Query, table, loop, ident, t } from "./src/edsl/query";
 
 /** Expression builder and helpers for composing SQL expressions. */
 export {
@@ -98,6 +98,18 @@ export {
   array,
   fn,
   windowFn,
+  alias,
+  selectAll,
+  preset,
+  prefix,
+  namespace,
+  remap,
+  pick,
+  omit,
+  project,
+  rename,
+  spread,
+  projects,
   when,
   shape,
   f,
@@ -156,5 +168,9 @@ export type {
   SqlFormat,
   SqlOptions,
   SqlParam,
+  SqlParameterMode,
+  SqlParameterPrefix,
   SqlResult,
+  IdentifierInput,
+  SqlIdentifier,
 } from "./src/edsl/types";

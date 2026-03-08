@@ -3,19 +3,35 @@ import { describe, expect, test } from "bun:test";
 import {
   UNSUPPORTED_CROSS_JOIN_ERROR,
 } from "./helpers/expected-errors.ts";
-import { normalizeJoinType, parseTableName } from "../src/edsl/query/utils.ts";
+import { normalizeJoinType, normalizeTableSource } from "../src/edsl/query/utils.ts";
 import { suggestCanonicalBuiltin } from "../src/edsl/sql/dialect/lookup.ts";
 
 describe("query helpers", () => {
-  test("parses schema-qualified table names", () => {
-    expect(parseTableName("analytics.events")).toEqual({
-      schema: "analytics",
-      table: "events",
-    });
-    expect(parseTableName("events")).toEqual({
+  test("normalizes structured table sources", () => {
+    expect(normalizeTableSource("events")).toEqual({
+      db: null,
       schema: null,
-      table: "events",
+      table: { name: "events", quoted: false },
+      as: null,
     });
+    expect(normalizeTableSource({ table: "events", schema: "analytics" })).toEqual({
+      db: null,
+      schema: { name: "analytics", quoted: false },
+      table: { name: "events", quoted: false },
+      as: null,
+    });
+    expect(normalizeTableSource({ path: ["warehouse", "analytics", "events"] })).toEqual({
+      db: { name: "warehouse", quoted: false },
+      schema: { name: "analytics", quoted: false },
+      table: { name: "events", quoted: false },
+      as: null,
+    });
+  });
+
+  test("rejects empty structured source parts", () => {
+    expect(() => normalizeTableSource({ table: "   " })).toThrow(
+      "table source table must be non-empty"
+    );
   });
 
   test("normalizes supported join types", () => {

@@ -7,17 +7,22 @@ import type {
   SqlRenderer,
   SqlFormat,
   SqlOptions,
+  SqlParameterMode,
+  SqlParameterPrefix,
   SqlResult,
 } from "./types";
 import { applyDialectFixes } from "./render/fixes";
 import { formatSqlPretty, stripRedundantQuotes } from "./render/format";
+import { restoreQuotedIdentifiers } from "./render/identifiers";
 import { renderPipelineAst } from "./render/pipeline";
-import { exprToAst } from "./render/render";
+import { exprToAst, withSqlRenderContext } from "./render/render";
+import type { SqlRenderContext } from "./render/types";
 
 export type QuerySqlTarget = {
   source: Source;
   stages: Stage[];
   columnNames: readonly string[] | null;
+  sourceScopeId: string;
   withs?: CteSpec[];
 };
 
@@ -34,6 +39,8 @@ type RendererState = {
   dialect: QueryDialect;
   options?: Option;
   sqlFormat: SqlFormat;
+  parameterMode: SqlParameterMode;
+  parameterPrefix: SqlParameterPrefix;
 };
 
 export function sqlRenderer(
@@ -45,6 +52,8 @@ export function sqlRenderer(
     dialect: resolved.dialect,
     options: resolved.options,
     sqlFormat: resolved.sqlFormat,
+    parameterMode: resolved.parameterMode,
+    parameterPrefix: resolved.parameterPrefix,
   };
 
   const toSqlResult = (target: SqlCompilable): SqlResult => {
@@ -89,17 +98,20 @@ function renderQueryTarget(
   target: QuerySqlTarget,
   state: RendererState
 ): SqlResult {
-  const ast = applyDialectFixes(
-    renderPipelineAst(target.source, target.stages, target.columnNames, {
-      baseCtes: target.withs ?? [],
-      dialect: state.dialect,
-    }),
-    state.dialect
+  const renderContext = createRenderContext(state);
+  const ast = withSqlRenderContext(renderContext, () =>
+    applyDialectFixes(
+      renderPipelineAst(target.source, target.stages, target.columnNames, target.sourceScopeId, {
+        baseCtes: target.withs ?? [],
+        dialect: state.dialect,
+      }),
+      state.dialect
+    )
   );
 
   return {
-    sql: renderAst(ast, state),
-    params: [],
+    sql: renderAst(ast, state, renderContext),
+    params: renderContext.params,
   };
 }
 
@@ -107,28 +119,50 @@ function renderExprTarget(
   target: ExprSqlTarget,
   state: RendererState
 ): SqlResult {
+  const renderContext = createRenderContext(state);
   const expr = applyDialectLanguage(target.node, state.dialect);
 
   return {
-    sql: renderExprNode(expr, state),
-    params: [],
+    sql: withSqlRenderContext(renderContext, () => renderExprNode(expr, state, renderContext)),
+    params: renderContext.params,
   };
 }
 
-function renderAst(ast: AST, state: RendererState): string {
-  return finalizeSql(state.parser.sqlify(ast, state.options), state.sqlFormat);
+function renderAst(ast: AST, state: RendererState, renderContext: SqlRenderContext): string {
+  return finalizeSql(state.parser.sqlify(ast, state.options), state.sqlFormat, renderContext);
 }
 
-function renderExprNode(expr: ExprNode<unknown>, state: RendererState): string {
+function renderExprNode(
+  expr: ExprNode<unknown>,
+  state: RendererState,
+  renderContext: SqlRenderContext
+): string {
   return finalizeSql(
     state.parser.exprToSQL(exprToAst(expr), state.options),
-    state.sqlFormat
+    state.sqlFormat,
+    renderContext
   );
 }
 
-function finalizeSql(sql: string, sqlFormat: SqlFormat): string {
-  const cleaned = stripRedundantQuotes(sql);
+function finalizeSql(
+  sql: string,
+  sqlFormat: SqlFormat,
+  renderContext: SqlRenderContext
+): string {
+  const cleaned = restoreQuotedIdentifiers(stripRedundantQuotes(sql), renderContext);
   return sqlFormat === "pretty" ? formatSqlPretty(cleaned) : cleaned;
+}
+
+function createRenderContext(state: RendererState): SqlRenderContext {
+  return {
+    mode: "sql",
+    parameterMode: state.parameterMode,
+    parameterPrefix: state.parameterPrefix,
+    params: [],
+    quotedIdentifiers: [],
+    identifierBindings: {},
+    columnIdentifierBindings: {},
+  };
 }
 
 function isExprSqlTarget(value: SqlCompilable): value is ExprSqlTarget {

@@ -1,13 +1,15 @@
 import type { With } from "node-sql-parser";
-import type { CteSpec, ExprNode, QuerySpec, SelectItem, Stage } from "../../core/types";
+import type { CteSpec, ExprNode, QuerySpec, SelectItem, SqlIdentifier, Stage } from "../../core/types";
 import { createColumnRefs, selectAllItems } from "../../core/expr";
+import { selectItemOutputName, selectItemsToIdentifierMap } from "../../query/utils";
 import type { QueryDialect } from "../types";
-import type { SelectAst } from "./types";
+import type { ScopeBindings, SelectAst } from "./types";
 import { ensureAlias, toParserSelect } from "./ast";
 import { buildPipelineAst } from "./build";
 import { getDefaultDialect } from "../dialect";
-import { exprToAst, qualifyForBase } from "./render";
+import { bindExprScopes, exprToAst, getSqlRenderContext } from "./render";
 import { buildSelectAst, sourceToFrom, stageToSelect, type CompileSourceRef } from "./select";
+import { registerColumnIdentifierBindings, renderIdentifier } from "./identifiers";
 import { attachUnion } from "./union";
 
 export type RecursivePart = QuerySpec;
@@ -58,10 +60,16 @@ export function materializeCte(cte: CteSpec, dialect: QueryDialect): With {
     case "recursive":
       return buildRecursiveCte(cte.name, cte.columnNames, cte.base, cte.step, dialect);
     case "query": {
-      const compiled = buildPipelineAst(cte.query.source, cte.query.stages, cte.query.columnNames, {
-        ctePrefix: `${cte.name}_`,
-        dialect,
-      });
+      const compiled = buildPipelineAst(
+        cte.query.source,
+        cte.query.stages,
+        cte.query.columnNames,
+        cte.query.scopeId,
+        {
+          ctePrefix: `${cte.name}_`,
+          dialect,
+        }
+      );
       const ast = compiled.ast;
       ast.with = compiled.ctes.length ? compiled.ctes : null;
       return {
@@ -97,24 +105,30 @@ export function compileLoopPart(
   label: "base" | "step",
   dialect: QueryDialect
 ): SelectAst {
-  const { source, stages, columnNames } = input;
-  const columns = createColumnRefs<Record<string, unknown>>(null, columnNames);
+  const { source, stages, columnNames, columnIdentifiers, scopeId } = input;
+  const columns = createColumnRefs<Record<string, unknown>>(scopeId, columnNames);
   if (stages.length === 0) {
     const baseFrom = sourceToFrom({
       kind: "table",
+      db: source.db,
       name: source.table,
       schema: source.schema,
       as: source.as,
-    });
+      columnIdentifiers,
+    }, dialect);
     const baseAlias = ensureAlias(baseFrom);
+    registerColumnIdentifierBindings(baseAlias, columnIdentifiers, dialect, getSqlRenderContext());
+    const baseBindings: ScopeBindings = { [scopeId]: baseAlias };
     return buildSelectAst({
       from: [baseFrom],
       columns: selectAllItems(columns, columnNames).map((item) => ({
-        expr: exprToAst(qualifyForBase(item.expr, baseAlias, undefined, dialect)),
-        as: item.as,
+        expr: exprToAst(bindExprScopes(item.expr, baseBindings, dialect)),
+        as: renderIdentifier(item.as, dialect, getSqlRenderContext()),
       })),
       where: null,
       groupby: null,
+      having: null,
+      qualify: null,
       orderby: null,
       limit: null,
     });
@@ -124,19 +138,25 @@ export function compileLoopPart(
   if (optimizedStages.length === 0) {
     const baseFrom = sourceToFrom({
       kind: "table",
+      db: source.db,
       name: source.table,
       schema: source.schema,
       as: source.as,
-    });
+      columnIdentifiers,
+    }, dialect);
     const baseAlias = ensureAlias(baseFrom);
+    registerColumnIdentifierBindings(baseAlias, columnIdentifiers, dialect, getSqlRenderContext());
+    const baseBindings: ScopeBindings = { [scopeId]: baseAlias };
     return buildSelectAst({
       from: [baseFrom],
       columns: selectAllItems(columns, columnNames).map((item) => ({
-        expr: exprToAst(qualifyForBase(item.expr, baseAlias, undefined, dialect)),
-        as: item.as,
+        expr: exprToAst(bindExprScopes(item.expr, baseBindings, dialect)),
+        as: renderIdentifier(item.as, dialect, getSqlRenderContext()),
       })),
       where: null,
       groupby: null,
+      having: null,
+      qualify: null,
       orderby: null,
       limit: null,
     });
@@ -144,21 +164,26 @@ export function compileLoopPart(
 
   let current: CompileSourceRef = {
     kind: "table",
+    db: source.db,
     name: source.table,
     schema: source.schema,
     as: source.as,
+    columnIdentifiers,
   };
+  let currentScopeId = scopeId;
   let compiled: SelectAst | null = null;
 
   for (let i = 0; i < optimizedStages.length; i += 1) {
     const stage = optimizedStages[i]!;
-    compiled = stageToSelect(stage, current, undefined, dialect, `loop_${label}_${i}_`);
+    compiled = stageToSelect(stage, current, currentScopeId, undefined, dialect, `loop_${label}_${i}_`);
     if (i < optimizedStages.length - 1) {
       current = {
         kind: "subquery",
         ast: compiled,
         as: `loop_${label}_${i}`,
+        columnIdentifiers: nextLoopColumnIdentifiers(stage, current.columnIdentifiers ?? null),
       };
+      currentScopeId = nextLoopScopeId(stage, currentScopeId);
     }
   }
 
@@ -166,6 +191,41 @@ export function compileLoopPart(
     throw new Error(`Internal error: loop ${label} did not compile`);
   }
   return compiled;
+}
+
+function nextLoopScopeId(stage: Stage, currentScopeId: string): string {
+  switch (stage.kind) {
+    case "select":
+      return stage.outputScopeId;
+    case "join":
+      return stage.outputScopeId;
+    case "filter":
+      return currentScopeId;
+    case "orderBy":
+    case "limit":
+    case "union":
+      throw new Error(`loop scope planning does not allow ${stage.kind} stages`);
+    default:
+      return assertNever(stage);
+  }
+}
+function nextLoopColumnIdentifiers(
+  stage: Stage,
+  currentColumnIdentifiers: Readonly<Record<string, SqlIdentifier>> | null
+): Readonly<Record<string, SqlIdentifier>> | null {
+  switch (stage.kind) {
+    case "select":
+      return selectItemsToIdentifierMap(stage.items) ?? currentColumnIdentifiers;
+    case "filter":
+    case "join":
+      return selectItemsToIdentifierMap(stage.selectAll) ?? currentColumnIdentifiers;
+    case "orderBy":
+    case "limit":
+    case "union":
+      throw new Error(`loop scope planning does not allow ${stage.kind} stages`);
+    default:
+      return assertNever(stage);
+  }
 }
 
 function optimizeLoopStages(
@@ -310,7 +370,7 @@ function isNoOpLoopSelect(
     const item = stage.items[i];
     if (!item) return false;
     if (key !== input) return false;
-    if (item.as && item.as !== key) return false;
+    if (item.as && selectItemOutputName(item) !== key) return false;
     if (item.expr.kind !== "column") return false;
     if (item.expr.table !== null) return false;
     if (item.expr.name !== key) return false;
@@ -355,9 +415,7 @@ function pruneSelectItems(items: SelectItem[], needed: ReadonlySet<string>): Sel
 }
 
 function selectItemName(item: SelectItem): string | null {
-  if (item.as) return item.as;
-  if (item.expr.kind === "column") return item.expr.name;
-  return null;
+  return selectItemOutputName(item);
 }
 
 function collectExprColumns(

@@ -1,43 +1,60 @@
 import type { With } from "node-sql-parser";
-import type { Source, SourceRef, Stage } from "../../core/types";
+import type { Stage } from "../../core/types";
 import type { QueryDialect } from "../types";
-import { createColumnRefs } from "../../core/expr";
-import type { SelectAst } from "./types";
+import type { ScopeBindings, SelectAst } from "./types";
 import { ensureAlias, toParserSelect } from "./ast";
 import { buildPipelineAst } from "./build";
 import { getDefaultDialect } from "../dialect";
-import { exprToAst, qualifyForBase } from "./render";
-import { buildSelectAst, sourceToFrom } from "./select";
+import { bindExprScopes, exprToAst, getSqlRenderContext } from "./render";
+import { registerColumnIdentifierBindings, renderIdentifier } from "./identifiers";
+import { buildSelectAst, sourceToFrom, type CompileSourceRef } from "./select";
 
 export function compileUnionStage(
   stage: Extract<Stage, { kind: "union" }>,
-  source: SourceRef,
+  source: CompileSourceRef,
+  leftScopeId: string,
   ctes: With[],
   rightPrefix: string,
-  keepTables?: Set<string>,
+  inheritedBindings?: ScopeBindings,
   dialect: QueryDialect = getDefaultDialect()
 ): SelectAst {
-  const baseFrom = sourceToFrom(source);
+  const baseFrom = sourceToFrom(source, dialect);
   const baseAlias = ensureAlias(baseFrom);
+  registerColumnIdentifierBindings(
+    baseAlias,
+    source.columnIdentifiers ?? null,
+    dialect,
+    getSqlRenderContext()
+  );
+  const leftBindings: ScopeBindings = {
+    ...(inheritedBindings ?? {}),
+    [leftScopeId]: baseAlias,
+  };
   const leftAst = buildSelectAst({
     from: [baseFrom],
     columns: stage.selectAll.map((item) => ({
-      expr: exprToAst(qualifyForBase(item.expr, baseAlias, keepTables, dialect)),
-      as: item.as,
+      expr: exprToAst(bindExprScopes(item.expr, leftBindings, dialect)),
+      as: renderIdentifier(item.as, dialect, getSqlRenderContext()),
     })),
     where: null,
     groupby: null,
+    having: null,
+    qualify: null,
     orderby: null,
     limit: null,
   });
 
-  const rightColumns = createColumnRefs<Record<string, unknown>>(null, stage.right.columnNames);
-  void rightColumns;
-  const rightCompiled = buildPipelineAst(stage.right.source, stage.right.stages, stage.right.columnNames, {
-    ctePrefix: rightPrefix,
-    keepTables,
-    dialect,
-  });
+  const rightCompiled = buildPipelineAst(
+    stage.right.source,
+    stage.right.stages,
+    stage.right.columnNames,
+    stage.right.scopeId,
+    {
+      ctePrefix: rightPrefix,
+      scopeBindings: inheritedBindings,
+      dialect,
+    }
+  );
   if (rightCompiled.ctes.length) {
     ctes.push(...rightCompiled.ctes);
   }

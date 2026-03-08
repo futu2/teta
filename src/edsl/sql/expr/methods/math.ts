@@ -1,4 +1,4 @@
-import { type ExprInput, type ExprRef } from "../../../core/expr";
+import { type ExprInput, type ExprRef, type PropagateNull } from "../../../core/expr";
 import type { SqlDate, SqlFloat, SqlInt, SqlNumber, SqlTimestamp } from "../../types";
 import {
   abs,
@@ -21,25 +21,27 @@ import {
 import { toDate } from "../ops/date";
 import { defineExprMethods } from "./shared";
 
+type NullableSqlNumber = SqlNumber | null;
+
 declare module "../../../core/expr/core" {
   interface ExprRef<T> {
-    add<TValue extends SqlNumber>(this: ExprRef<TValue>, value: ExprInput<TValue>): ExprRef<TValue>;
-    sub<TValue extends SqlNumber>(this: ExprRef<TValue>, value: ExprInput<TValue>): ExprRef<TValue>;
-    mul<TValue extends SqlNumber>(this: ExprRef<TValue>, value: ExprInput<TValue>): ExprRef<TValue>;
-    div<TValue extends SqlNumber>(this: ExprRef<TValue>, value: ExprInput<TValue>): ExprRef<TValue>;
-    mod<TValue extends SqlNumber>(this: ExprRef<TValue>, value: ExprInput<TValue>): ExprRef<TValue>;
-    ceil(this: ExprRef<SqlNumber>): ExprRef<SqlInt>;
-    floor(this: ExprRef<SqlNumber>): ExprRef<SqlInt>;
-    abs<TValue extends SqlNumber>(this: ExprRef<TValue>): ExprRef<TValue>;
-    sqrt(this: ExprRef<SqlNumber>): ExprRef<SqlFloat>;
-    pow(this: ExprRef<SqlNumber>, exponent: ExprInput<SqlNumber>): ExprRef<SqlFloat>;
-    greatest<TValue extends SqlNumber>(this: ExprRef<TValue>, ...values: ExprInput<TValue>[]): ExprRef<TValue>;
-    least<TValue extends SqlNumber>(this: ExprRef<TValue>, ...values: ExprInput<TValue>[]): ExprRef<TValue>;
+    add<TValue extends NullableSqlNumber>(this: ExprRef<TValue>, value: ExprInput<TValue>): ExprRef<TValue>;
+    sub<TValue extends NullableSqlNumber>(this: ExprRef<TValue>, value: ExprInput<TValue>): ExprRef<TValue>;
+    mul<TValue extends NullableSqlNumber>(this: ExprRef<TValue>, value: ExprInput<TValue>): ExprRef<TValue>;
+    div<TValue extends NullableSqlNumber>(this: ExprRef<TValue>, value: ExprInput<TValue>): ExprRef<TValue>;
+    mod<TValue extends NullableSqlNumber>(this: ExprRef<TValue>, value: ExprInput<TValue>): ExprRef<TValue>;
+    ceil<TValue extends NullableSqlNumber>(this: ExprRef<TValue>): ExprRef<PropagateNull<TValue, SqlInt>>;
+    floor<TValue extends NullableSqlNumber>(this: ExprRef<TValue>): ExprRef<PropagateNull<TValue, SqlInt>>;
+    abs<TValue extends NullableSqlNumber>(this: ExprRef<TValue>): ExprRef<TValue>;
+    sqrt<TValue extends NullableSqlNumber>(this: ExprRef<TValue>): ExprRef<PropagateNull<TValue, SqlFloat>>;
+    pow<TValue extends NullableSqlNumber>(this: ExprRef<TValue>, exponent: ExprInput<TValue>): ExprRef<PropagateNull<TValue, SqlFloat>>;
+    greatest<TValue extends NullableSqlNumber>(this: ExprRef<TValue>, ...values: ExprInput<TValue>[]): ExprRef<TValue>;
+    least<TValue extends NullableSqlNumber>(this: ExprRef<TValue>, ...values: ExprInput<TValue>[]): ExprRef<TValue>;
     cast<TTarget = unknown>(target: string): ExprRef<TTarget>;
-    toInt(this: ExprRef<SqlNumber>): ExprRef<SqlInt>;
-    toFloat(this: ExprRef<SqlNumber>): ExprRef<SqlFloat>;
-    toDate(this: ExprRef<SqlTimestamp>): ExprRef<SqlDate>;
-    round(this: ExprRef<SqlNumber>, scale?: ExprInput<SqlInt>): ExprRef<SqlNumber>;
+    toInt<TValue extends NullableSqlNumber>(this: ExprRef<TValue>): ExprRef<PropagateNull<TValue, SqlInt>>;
+    toFloat<TValue extends NullableSqlNumber>(this: ExprRef<TValue>): ExprRef<PropagateNull<TValue, SqlFloat>>;
+    toDate<TValue extends SqlTimestamp | null>(this: ExprRef<TValue>): ExprRef<PropagateNull<TValue, SqlDate>>;
+    round<TValue extends NullableSqlNumber>(this: ExprRef<TValue>, scale?: ExprInput<SqlInt>): ExprRef<TValue>;
   }
 }
 
@@ -62,4 +64,3 @@ defineExprMethods([
   ["toDate", toDate],
   ["round", round],
 ]);
-

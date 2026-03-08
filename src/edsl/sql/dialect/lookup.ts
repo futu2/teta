@@ -14,6 +14,17 @@ export function lookupBuiltinDialect(input: string): BuiltinDialectDefinition | 
   return BUILTIN_DIALECTS[key];
 }
 
+export function lookupBuiltinDialectByParser(
+  input: string
+): BuiltinDialectDefinition | undefined {
+  const raw = input.toString().trim();
+  if (!raw) return undefined;
+
+  return Object.values(BUILTIN_DIALECTS).find(
+    (dialect) => dialect.parserDialect === raw
+  );
+}
+
 export function suggestCanonicalBuiltin(input: string): BuiltinDialect | null {
   const raw = input.toString().trim();
   if (!raw) return null;

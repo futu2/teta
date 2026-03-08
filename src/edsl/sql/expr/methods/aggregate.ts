@@ -1,4 +1,4 @@
-import { type ExprInput, type ExprRef, type WindowBuilder, type WindowSpecInput } from "../../../core/expr";
+import { type ExprInput, type ExprRef, type PropagateNull, type WindowBuilder, type WindowSpecInput } from "../../../core/expr";
 import type { SqlFloat, SqlInt, SqlNumber } from "../../types";
 import {
   avg,
@@ -18,12 +18,14 @@ import {
 } from "../ops/aggregate";
 import { defineExprMethods } from "./shared";
 
+type NullableSqlNumber = SqlNumber | null;
+
 declare module "../../../core/expr/core" {
   interface ExprRef<T> {
     group(this: ExprRef<T>): ExprRef<T>;
     count(this: ExprRef<unknown>): ExprRef<SqlInt>;
-    sum<TValue extends SqlNumber>(this: ExprRef<TValue>): ExprRef<TValue>;
-    avg(this: ExprRef<SqlNumber>): ExprRef<SqlFloat>;
+    sum<TValue extends NullableSqlNumber>(this: ExprRef<TValue>): ExprRef<TValue>;
+    avg<TValue extends NullableSqlNumber>(this: ExprRef<TValue>): ExprRef<PropagateNull<TValue, SqlFloat>>;
     min(this: ExprRef<T>): ExprRef<T>;
     max(this: ExprRef<T>): ExprRef<T>;
     rank(this: ExprRef<unknown>): WindowBuilder<SqlInt>;
@@ -33,7 +35,7 @@ declare module "../../../core/expr/core" {
     lead(this: ExprRef<T>, offset?: ExprInput<SqlInt>, fallback?: ExprInput<T>): WindowBuilder<T>;
     percentRank(this: ExprRef<unknown>): WindowBuilder<SqlFloat>;
     ntile(this: ExprRef<unknown>, buckets: ExprInput<SqlInt>): WindowBuilder<SqlInt>;
-    sumOver<TValue extends SqlNumber>(this: ExprRef<TValue>, spec?: WindowSpecInput): ExprRef<TValue>;
+    sumOver<TValue extends NullableSqlNumber>(this: ExprRef<TValue>, spec?: WindowSpecInput): ExprRef<TValue>;
   }
 }
 
@@ -53,4 +55,3 @@ defineExprMethods([
   ["ntile", ntile],
   ["sumOver", sumOver],
 ]);
-

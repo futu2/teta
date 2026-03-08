@@ -6,6 +6,7 @@ export const DEFAULT_DIALECT: QueryDialect = {
   features: {
     lateralJoinKeyword: true,
     recursiveCte: true,
+    qualifyClause: false,
   },
   language: {
     functions: {},

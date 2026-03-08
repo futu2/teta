@@ -1,25 +1,108 @@
-import type { CteSpec, JoinType, JoinTypeInput, Stage } from "../core/types";
+import type {
+  CteSpec,
+  IdentifierInput,
+  JoinType,
+  JoinTypeInput,
+  SelectItem,
+  Source,
+  SqlIdentifier,
+  Stage,
+  TableSourceInput,
+} from "../core/types";
 import { OUTER_TABLE_ALIAS } from "../core/types";
 import { ColumnRef, type ColumnRefs } from "../core/expr";
 
-export function parseTableName(name: string): { table: string; schema: string | null } {
-  const parts = name.split(".");
-  if (parts.length === 2) {
-    const schema = parts[0];
-    const table = parts[1];
-    if (schema !== undefined && table !== undefined) {
-      return { schema, table };
-    }
+export function normalizeIdentifier<const Name extends string>(
+  input: IdentifierInput<Name>,
+  label = "identifier"
+): SqlIdentifier<Name> {
+  if (typeof input === "string") {
+    return {
+      name: normalizeSourcePart(input, label),
+      quoted: false,
+    };
   }
-  return { schema: null, table: name };
+
+  return {
+    name: normalizeSourcePart(input.name, label),
+    quoted: input.quoted ?? true,
+  };
 }
 
-export function autoAlias(table: string, stages: Stage[]): string {
+export function unquotedIdentifier<const Name extends string>(name: Name): SqlIdentifier<Name> {
+  return {
+    name: normalizeSourcePart(name, "identifier"),
+    quoted: false,
+  };
+}
+
+export function identifierName<const Name extends string>(value: SqlIdentifier<Name>): Name {
+  return value.name;
+}
+
+export function selectItemOutputIdentifier(item: SelectItem): SqlIdentifier | null {
+  if (item.as) return item.as;
+  if (item.expr.kind === "column") return unquotedIdentifier(item.expr.name);
+  return null;
+}
+
+export function selectItemOutputName(item: SelectItem): string | null {
+  const identifier = selectItemOutputIdentifier(item);
+  return identifier ? identifierName(identifier) : null;
+}
+
+export function selectItemsToIdentifierMap(
+  items: SelectItem[]
+): Readonly<Record<string, SqlIdentifier>> | null {
+  const mapping: Record<string, SqlIdentifier> = {};
+  for (const item of items) {
+    const identifier = selectItemOutputIdentifier(item);
+    if (!identifier) return null;
+    mapping[identifierName(identifier)] = identifier;
+  }
+  return mapping;
+}
+
+export function columnNamesToIdentifierMap(
+  columnNames: readonly string[] | null
+): Readonly<Record<string, SqlIdentifier>> | null {
+  if (!columnNames) return null;
+  const mapping: Record<string, SqlIdentifier> = {};
+  for (const name of columnNames) {
+    mapping[name] = unquotedIdentifier(name);
+  }
+  return mapping;
+}
+
+export function normalizeTableSource(input: TableSourceInput): Source {
+  if (typeof input === "string") {
+    return {
+      db: null,
+      schema: null,
+      table: normalizeIdentifier(input, "table"),
+      as: null,
+    };
+  }
+
+  if ("path" in input) {
+    return fromPath(input.path, input.as ?? null);
+  }
+
+  return {
+    db: normalizeOptionalIdentifier(input.db, "db"),
+    schema: normalizeOptionalIdentifier(input.schema, "schema"),
+    table: normalizeIdentifier(input.table, "table"),
+    as: normalizeOptionalIdentifier(input.as, "alias"),
+  };
+}
+
+export function autoAlias(table: string | SqlIdentifier, stages: Stage[]): string {
+  const tableName = typeof table === "string" ? table : identifierName(table);
   const joinCount = stages.reduce((count, stage) => {
     if (stage.kind === "join") return count + 1;
     return count;
   }, 0);
-  const base = table.replace(/[^A-Za-z0-9_]+/g, "_").replace(/^_+|_+$/g, "");
+  const base = tableName.replace(/[^A-Za-z0-9_]+/g, "_").replace(/^_+|_+$/g, "");
   const name = base.length ? base : "t";
   return `${name}_${joinCount + 1}`;
 }
@@ -88,4 +171,51 @@ export function mergeWiths(left: CteSpec[], right: CteSpec[]): CteSpec[] {
     merged.push(item);
   }
   return merged;
+}
+
+function fromPath(
+  path:
+    | readonly [IdentifierInput]
+    | readonly [IdentifierInput, IdentifierInput]
+    | readonly [IdentifierInput, IdentifierInput, IdentifierInput],
+  as: IdentifierInput | null
+): Source {
+  if (path.length === 1) {
+    return {
+      db: null,
+      schema: null,
+      table: normalizeIdentifier(path[0], "table"),
+      as: normalizeOptionalIdentifier(as, "alias"),
+    };
+  }
+  if (path.length === 2) {
+    return {
+      db: null,
+      schema: normalizeIdentifier(path[0], "schema"),
+      table: normalizeIdentifier(path[1], "table"),
+      as: normalizeOptionalIdentifier(as, "alias"),
+    };
+  }
+  return {
+    db: normalizeIdentifier(path[0], "db"),
+    schema: normalizeIdentifier(path[1], "schema"),
+    table: normalizeIdentifier(path[2], "table"),
+    as: normalizeOptionalIdentifier(as, "alias"),
+  };
+}
+
+function normalizeOptionalIdentifier(
+  value: IdentifierInput | null | undefined,
+  label: string
+): SqlIdentifier | null {
+  if (value === undefined || value === null) return null;
+  return normalizeIdentifier(value, label);
+}
+
+function normalizeSourcePart<const Name extends string>(value: Name, label: string): Name {
+  const normalized = value.toString().trim();
+  if (!normalized) {
+    throw new Error(`table source ${label} must be non-empty`);
+  }
+  return normalized as Name;
 }

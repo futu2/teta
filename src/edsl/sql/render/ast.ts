@@ -49,9 +49,11 @@ export function containsOuterAlias(node: unknown): boolean {
   return Object.values(node).some((value) => containsOuterAlias(value));
 }
 
-export function ensureAlias(from: { as?: string | null; table?: string | null }): string {
-  if (from.as) return from.as;
-  const base = from.table ?? "t";
+export function ensureAlias(from: { as?: unknown | null; table?: string | null }): string {
+  if (typeof from.as === "string" && from.as) return from.as;
+  const rawAlias = Reflect.get(from, "rawAlias") as string | null | undefined;
+  if (rawAlias) return rawAlias;
+  const base = (Reflect.get(from, "rawTable") as string | null | undefined) ?? from.table ?? "t";
   const alias = `${base}_0`;
   from.as = alias;
   return alias;

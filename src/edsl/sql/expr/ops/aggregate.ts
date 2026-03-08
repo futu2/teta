@@ -5,24 +5,27 @@ import {
   toExprNode,
   windowExpr,
   type ExprInput,
+  type PropagateNull,
   type WindowBuilder,
   type WindowSpecInput,
 } from "../core";
 
+type NullableSqlNumber = SqlNumber | null;
+
 export function group<T>(value: ExprInput<T>): ExprRef<T> {
-  return new ExprRef<T>({ kind: "group", expr: toExprNode(value) });
+  return new ExprRef<T>({ kind: "group", expr: toExprNode(value) as any });
 }
 
 export function count(value: ExprInput<unknown>): ExprRef<SqlInt> {
   return aggregateExpr<SqlInt>("COUNT", value);
 }
 
-export function sum<T extends SqlNumber>(value: ExprInput<T>): ExprRef<T> {
-  return aggregateExpr<T>("SUM", value);
+export function sum<TValue extends NullableSqlNumber>(value: ExprInput<TValue>): ExprRef<TValue> {
+  return aggregateExpr<TValue>("SUM", value);
 }
 
-export function avg(value: ExprInput<SqlNumber>): ExprRef<SqlFloat> {
-  return aggregateExpr<SqlFloat>("AVG", value);
+export function avg<TValue extends NullableSqlNumber>(value: ExprInput<TValue>): ExprRef<PropagateNull<TValue, SqlFloat>> {
+  return aggregateExpr<PropagateNull<TValue, SqlFloat>>("AVG", value);
 }
 
 export function min<T>(value: ExprInput<T>): ExprRef<T> {
@@ -84,9 +87,9 @@ export function ntile(
   return windowExpr<SqlInt>("NTILE", buckets);
 }
 
-export function sumOver<T extends SqlNumber>(
-  value: ExprInput<T>,
+export function sumOver<TValue extends NullableSqlNumber>(
+  value: ExprInput<TValue>,
   spec: WindowSpecInput = {}
-): ExprRef<T> {
-  return windowExpr<T>("SUM", value).over(spec);
+): ExprRef<TValue> {
+  return windowExpr<TValue>("SUM", value).over(spec);
 }

@@ -1,11 +1,18 @@
 import type { With } from "node-sql-parser";
-import type { JoinSource, QuerySpec, SourceRef, Stage } from "../../core/types";
+import type { JoinSource, SourceRef, SqlIdentifier, Stage } from "../../core/types";
+import { identifierName } from "../../query/utils";
 import type { QueryDialect } from "../types";
-import type { BaseFromRef, SelectAst } from "./types";
+import type { BaseFromRef, ScopeBindings, SelectAst } from "./types";
 import { ensureAlias, ensureSelectAst, replaceOuterAlias, toParserSelect } from "./ast";
 import { buildPipelineAst } from "./build";
 import { getDefaultDialect } from "../dialect";
-import { exprToAst, lateralJoinPrefix, qualifyForBase } from "./render";
+import { getSqlRenderContext, bindExprScopes, exprToAst, lateralJoinPrefix } from "./render";
+import {
+  registerColumnIdentifierBindings,
+  registerIdentifierBinding,
+  renderIdentifier,
+  renderSourceSql,
+} from "./identifiers";
 
 export type CompileSourceRef =
   | SourceRef
@@ -13,34 +20,44 @@ export type CompileSourceRef =
       kind: "subquery";
       ast: SelectAst;
       as: string | null;
+      columnIdentifiers?: Readonly<Record<string, SqlIdentifier>> | null;
     };
 
 export function stageToSelect(
   stage: Stage,
   source: CompileSourceRef,
-  keepTables?: Set<string>,
+  sourceScopeId: string,
+  inheritedBindings: ScopeBindings | undefined,
   dialect: QueryDialect = getDefaultDialect(),
   ctePrefix = ""
 ): SelectAst {
-  const baseFrom = sourceToFrom(source);
+  const baseFrom = sourceToFrom(source, dialect);
   const baseAlias = ensureAlias(baseFrom);
+  registerSourceColumnBindings(source, baseAlias, dialect);
+  const baseBindings: ScopeBindings = {
+    ...(inheritedBindings ?? {}),
+    [sourceScopeId]: baseAlias,
+  };
+
   switch (stage.kind) {
     case "select":
       return buildSelectAst({
         from: [baseFrom],
         columns: stage.items.map((item) => ({
-          expr: exprToAst(qualifyForBase(item.expr, baseAlias, keepTables, dialect)),
-          as: item.as,
+          expr: exprToAst(bindExprScopes(item.expr, baseBindings, dialect)),
+          as: renderIdentifier(item.as, dialect, getSqlRenderContext()),
         })),
         where: null,
         groupby: stage.groupBy
           ? {
               columns: stage.groupBy.map((expr) =>
-                exprToAst(qualifyForBase(expr, baseAlias, keepTables, dialect))
+                exprToAst(bindExprScopes(expr, baseBindings, dialect))
               ),
               modifiers: [],
             }
           : null,
+        having: null,
+        qualify: null,
         orderby: null,
         limit: null,
       });
@@ -48,11 +65,13 @@ export function stageToSelect(
       return buildSelectAst({
         from: [baseFrom],
         columns: stage.selectAll.map((item) => ({
-          expr: exprToAst(qualifyForBase(item.expr, baseAlias, keepTables, dialect)),
-          as: item.as,
+          expr: exprToAst(bindExprScopes(item.expr, baseBindings, dialect)),
+          as: renderIdentifier(item.as, dialect, getSqlRenderContext()),
         })),
-        where: exprToAst(qualifyForBase(stage.predicate, baseAlias, keepTables, dialect)),
+        where: exprToAst(bindExprScopes(stage.predicate, baseBindings, dialect)),
         groupby: null,
+        having: null,
+        qualify: null,
         orderby: null,
         limit: null,
       });
@@ -60,13 +79,15 @@ export function stageToSelect(
       return buildSelectAst({
         from: [baseFrom],
         columns: stage.selectAll.map((item) => ({
-          expr: exprToAst(qualifyForBase(item.expr, baseAlias, keepTables, dialect)),
-          as: item.as,
+          expr: exprToAst(bindExprScopes(item.expr, baseBindings, dialect)),
+          as: renderIdentifier(item.as, dialect, getSqlRenderContext()),
         })),
         where: null,
         groupby: null,
+        having: null,
+        qualify: null,
         orderby: stage.items.map((item) => ({
-          expr: exprToAst(qualifyForBase(item.expr, baseAlias, keepTables, dialect)),
+          expr: exprToAst(bindExprScopes(item.expr, baseBindings, dialect)),
           type: item.direction,
         })),
         limit: null,
@@ -75,11 +96,13 @@ export function stageToSelect(
       return buildSelectAst({
         from: [baseFrom],
         columns: stage.selectAll.map((item) => ({
-          expr: exprToAst(qualifyForBase(item.expr, baseAlias, keepTables, dialect)),
-          as: item.as,
+          expr: exprToAst(bindExprScopes(item.expr, baseBindings, dialect)),
+          as: renderIdentifier(item.as, dialect, getSqlRenderContext()),
         })),
         where: null,
         groupby: null,
+        having: null,
+        qualify: null,
         orderby: null,
         limit: {
           seperator: "",
@@ -88,29 +111,44 @@ export function stageToSelect(
       });
     case "join": {
       const join = `${stage.joinType} JOIN`;
-      const nextKeep = new Set<string>(keepTables ?? []);
-      if (stage.as) nextKeep.add(stage.as);
-      nextKeep.add(baseAlias);
+      const rightAlias = stage.as ?? fail("Join stage requires an alias");
+      const joinBindings: ScopeBindings = {
+        ...baseBindings,
+        [stage.rightScopeId]: rightAlias,
+      };
+      registerColumnIdentifierBindings(
+        rightAlias,
+        stage.source.kind === "table"
+          ? stage.source.columnIdentifiers ?? null
+          : stage.source.query.columnIdentifiers,
+        dialect,
+        getSqlRenderContext()
+      );
       const compiledSubquery =
         stage.source.kind === "subquery"
           ? compileJoinSource(stage.source, `${ctePrefix}join_`, dialect)
           : null;
       const subqueryAst =
         compiledSubquery && stage.lateral
-          ? ensureSelectAst(replaceOuterAlias(toParserSelect(compiledSubquery), baseAlias), "lateral join")
+          ? ensureSelectAst(
+              replaceOuterAlias(toParserSelect(compiledSubquery), baseAlias),
+              "lateral join"
+            )
           : compiledSubquery;
       return buildSelectAst({
         from: [
           baseFrom,
           stage.source.kind === "table"
             ? {
-                db: null,
-                schema: stage.source.schema,
-                table: stage.source.table,
-                as: stage.as,
+                ...buildTableFromRef({
+                  db: stage.source.db,
+                  schema: stage.source.schema,
+                  table: stage.source.table,
+                  alias: stage.as,
+                }, dialect),
                 join,
                 prefix: lateralJoinPrefix(stage.lateral, dialect),
-                on: exprToAst(qualifyForBase(stage.on, baseAlias, nextKeep, dialect)),
+                on: exprToAst(bindExprScopes(stage.on, joinBindings, dialect)),
               }
             : {
                 expr: {
@@ -122,15 +160,17 @@ export function stageToSelect(
                 as: stage.as,
                 join,
                 prefix: lateralJoinPrefix(stage.lateral, dialect),
-                on: exprToAst(qualifyForBase(stage.on, baseAlias, nextKeep, dialect)),
+                on: exprToAst(bindExprScopes(stage.on, joinBindings, dialect)),
               },
         ],
         columns: stage.selectAll.map((item) => ({
-          expr: exprToAst(qualifyForBase(item.expr, baseAlias, nextKeep, dialect)),
-          as: item.as,
+          expr: exprToAst(bindExprScopes(item.expr, joinBindings, dialect)),
+          as: renderIdentifier(item.as, dialect, getSqlRenderContext()),
         })),
         where: null,
         groupby: null,
+        having: null,
+        qualify: null,
         orderby: null,
         limit: null,
       });
@@ -142,8 +182,22 @@ export function stageToSelect(
   }
 }
 
+function registerSourceColumnBindings(
+  source: CompileSourceRef,
+  tableAlias: string,
+  dialect: QueryDialect
+): void {
+  registerColumnIdentifierBindings(
+    tableAlias,
+    source.columnIdentifiers ?? null,
+    dialect,
+    getSqlRenderContext()
+  );
+}
+
 export function sourceToFrom(
-  source: CompileSourceRef
+  source: CompileSourceRef,
+  dialect: QueryDialect = getDefaultDialect()
 ):
   | BaseFromRef
   | {
@@ -167,14 +221,17 @@ export function sourceToFrom(
     };
   }
   if (source.kind === "cte") {
-    return { db: null, table: source.name, as: null };
+    return { db: null, table: source.name, rawTable: source.name, as: null };
   }
-  return {
-    db: null,
-    schema: source.schema,
-    table: source.name,
-    as: source.as,
-  };
+  return buildTableFromRef(
+    {
+      db: source.db,
+      schema: source.schema,
+      table: source.name,
+      alias: source.as,
+    },
+    dialect
+  );
 }
 
 export function buildSelectAst(params: {
@@ -182,6 +239,8 @@ export function buildSelectAst(params: {
   columns: unknown;
   where: unknown | null;
   groupby: unknown | null;
+  having: unknown | null;
+  qualify: unknown | null;
   orderby: unknown | null;
   limit: unknown | null;
 }): SelectAst {
@@ -195,7 +254,8 @@ export function buildSelectAst(params: {
     from: params.from,
     where: params.where,
     groupby: params.groupby,
-    having: null,
+    having: params.having,
+    qualify: params.qualify,
     orderby: params.orderby,
     limit: params.limit,
     locking_read: null,
@@ -228,25 +288,94 @@ export function hoistJoinSubquery(
   });
   return {
     ...stage,
-    source: { kind: "table", table: cteName, schema: null },
+    source: {
+      kind: "table",
+      db: null,
+      table: { name: cteName, quoted: false },
+      schema: null,
+      columnIdentifiers: stage.source.query.columnIdentifiers,
+    },
     as: stage.as,
   };
 }
 
 function compileJoinSource(
-  source: Extract<JoinSource, { kind: "subquery" }>,
+  source: JoinSource & { kind: "subquery" },
   ctePrefix: string,
   dialect: QueryDialect
 ): SelectAst {
-  const keepTables = source.keepTables ? new Set(source.keepTables) : undefined;
-  const compiled = buildPipelineAst(source.query.source, source.query.stages, source.query.columnNames, {
-    ctePrefix,
-    keepTables,
-    dialect,
-  });
+  const compiled = buildPipelineAst(
+    source.query.source,
+    source.query.stages,
+    source.query.columnNames,
+    source.query.scopeId,
+    {
+      ctePrefix,
+      scopeBindings: source.inheritedBindings ?? undefined,
+      dialect,
+    }
+  );
   const ast = compiled.ast;
   ast.with = compiled.ctes.length ? compiled.ctes : null;
   return ast;
+}
+
+export function buildTableFromRef(
+  params: {
+    db: SqlIdentifier | null;
+    schema: SqlIdentifier | null;
+    table: SqlIdentifier;
+    alias: SqlIdentifier | string | null;
+  },
+  dialect: QueryDialect
+): BaseFromRef {
+  const renderContext = getSqlRenderContext();
+  const rawAlias =
+    typeof params.alias === "string"
+      ? params.alias
+      : params.alias
+        ? identifierName(params.alias)
+        : null;
+  if (typeof params.alias !== "string") {
+    registerIdentifierBinding(rawAlias, params.alias, dialect, renderContext);
+  }
+  const renderedAlias =
+    typeof params.alias === "string"
+      ? params.alias
+      : renderIdentifier(params.alias, dialect, renderContext);
+
+  if (renderContext?.mode === "ast") {
+    return {
+      type: "expr",
+      expr: {
+        type: "default",
+        value: renderSourceSql(
+          {
+            db: params.db,
+            schema: params.schema,
+            table: params.table,
+          },
+          dialect
+        ),
+      },
+      rawTable: identifierName(params.table),
+      as: renderedAlias,
+      rawAlias,
+    };
+  }
+
+  return {
+    db: renderIdentifier(params.db, dialect, renderContext) as string | null,
+    schema: renderIdentifier(params.schema, dialect, renderContext) as string | null,
+    table: renderIdentifier(params.table, dialect, renderContext) as string,
+    rawTable: identifierName(params.table),
+    as: renderedAlias,
+    rawAlias,
+  };
+}
+
+function fail(message: string): never {
+  throw new Error(message);
 }
 
 function assertNever(value: never): never {
