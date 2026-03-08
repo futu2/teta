@@ -30,7 +30,7 @@ const q = users
   .orderBy((u) => [u.age.desc(), u.id.asc()])
   .limit(5);
 
-console.log(q.toSql(sqlRenderer({ dialect: "postgresql", format: "pretty" })).sql);
+console.log(q.toSql(sqlRenderer({ dialect: "postgresql", format: "pretty" })));
 ```
 
 Generated SQL:
@@ -74,7 +74,7 @@ const q = users
     total_spend: u.total.sum(),
   }));
 
-console.log(q.toSql(sqlRenderer({ dialect: "postgresql", format: "pretty" })).sql);
+console.log(q.toSql(sqlRenderer({ dialect: "postgresql", format: "pretty" })));
 ```
 
 Generated SQL:
@@ -107,7 +107,7 @@ const q = names.select((t) => ({
   title: f`${t.prefix} ${t.first} ${t.last} ${t.suffix}`,
 }));
 
-console.log(q.toSql(sqlRenderer({ dialect: "postgresql", format: "pretty" })).sql);
+console.log(q.toSql(sqlRenderer({ dialect: "postgresql", format: "pretty" })));
 ```
 
 Generated SQL:
@@ -154,7 +154,7 @@ const q = users
   .filter((u) => u.age_plus_one.gt(30))
   .select((u) => ({ id: u.id, name: u.name, age_plus_one: u.age_plus_one }));
 
-console.log(q.toSql(sqlRenderer()).sql);
+console.log(q.toSql(sqlRenderer()));
 ```
 
 ### Join (auto alias)
@@ -182,7 +182,7 @@ const q = users
     total: u.total,
   }));
 
-console.log(q.toSql(sqlRenderer()).sql);
+console.log(q.toSql(sqlRenderer()));
 ```
 
 You can pass a join type as the third argument to `join`, for example `"left"` or `"right"`.
@@ -217,7 +217,7 @@ const q = users.lateralJoin(
   () => lit(true)
 );
 
-console.log(q.toSql(sqlRenderer()).sql);
+console.log(q.toSql(sqlRenderer()));
 ```
 
 Note: `JOIN LATERAL` is emitted for dialects with `lateralJoinKeyword=true`.
@@ -244,8 +244,8 @@ console.log(users.select((u) => ({ id: u.id })).toSql(sqlRenderer({
   format: "pretty",
 })).sql);
 
-console.log(users.toSql(sqlRenderer({ dialect: "sqlite" })).sql);
-console.log(users.toSql(sqlRenderer({ dialect: "hetu" })).sql);
+console.log(users.toSql(sqlRenderer({ dialect: "sqlite" })));
+console.log(users.toSql(sqlRenderer({ dialect: "hetu" })));
 ```
 
 ### Built-in HetuEngine DQL dialect
@@ -357,7 +357,7 @@ const q = orders
     total_spend: o.total.sum(),
   }));
 
-console.log(q.toSql(sqlRenderer()).sql);
+console.log(q.toSql(sqlRenderer()));
 ```
 
 ### Window function
@@ -388,7 +388,7 @@ const q = orders.select((o) => ({
   bucket: o.total.ntile(4).over({ orderBy: o.total.desc() }),
 }));
 
-console.log(q.toSql(sqlRenderer({ dialect: "postgresql", format: "pretty" })).sql);
+console.log(q.toSql(sqlRenderer({ dialect: "postgresql", format: "pretty" })));
 ```
 
 ### Custom SQL functions (UDF)

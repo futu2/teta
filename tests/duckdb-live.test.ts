@@ -40,7 +40,7 @@ describe("live duckdb dialect", () => {
       VALUES ('duck', TIMESTAMP '2024-01-02 03:04:05');
     `);
 
-    const sql = buildLiveDialectQuery().toSql(duckdbRenderer({ format: "compact" })).sql;
+    const sql = buildLiveDialectQuery().toSql(duckdbRenderer({ format: "compact" }));
     const rows = await (await connection.run(sql)).getRowObjectsJS();
     const [row] = rows as Array<{
       len: number | bigint;

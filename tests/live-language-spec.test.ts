@@ -31,11 +31,11 @@ async function runCase(
   adapterFactory: () => Promise<LiveDialectAdapter>,
   dialect: LiveDialect,
   outcome: LiveOutcome,
-  build: () => { toSql: (renderer: SqlRenderer<any, SqlResult>) => SqlResult }
+  build: () => { toSql: (renderer: SqlRenderer<any, SqlResult>) => string }
 ): Promise<void> {
   const adapter = await adapterFactory();
   try {
-    const sql = build().toSql(sqlRenderer({ dialect, format: "compact" })).sql;
+    const sql = build().toSql(sqlRenderer({ dialect, format: "compact" }));
     if (isErrorOutcome(outcome)) {
       await expect(adapter.run(sql)).rejects.toThrow(outcome.error);
       return;

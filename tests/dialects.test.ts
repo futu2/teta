@@ -18,15 +18,13 @@ describe("dialect SQL generation", () => {
   for (const dialect of DIALECTS) {
     test(`renders expected ${dialect} SQL`, () => {
       const sql = buildDialectMatrixQuery()
-        .toSql(sqlRenderer({ dialect, format: "compact" }))
-        .sql;
+        .toSql(sqlRenderer({ dialect, format: "compact" }));
       expect(sql).toBe(DIALECT_MATRIX_SQL[dialect]);
     });
 
     test(`parses generated ${dialect} SQL`, () => {
       const sql = buildDialectMatrixQuery()
-        .toSql(sqlRenderer({ dialect, format: "compact" }))
-        .sql;
+        .toSql(sqlRenderer({ dialect, format: "compact" }));
       const parser = new Parser();
 
       expect(() =>

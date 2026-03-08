@@ -13,7 +13,7 @@ describe("Query.toSql", () => {
     const query = buildUserPipelineQuery();
 
     expect(
-      query.toSql(sqlRenderer({ dialect: "postgresql", format: "compact" })).sql
+      query.toSql(sqlRenderer({ dialect: "postgresql", format: "compact" }))
     ).toBe(USER_PIPELINE_POSTGRES_COMPACT);
   });
 
@@ -21,7 +21,7 @@ describe("Query.toSql", () => {
     const query = buildUserPipelineQuery();
 
     expect(
-      query.toSql(sqlRenderer({ dialect: "postgresql", format: "pretty" })).sql
+      query.toSql(sqlRenderer({ dialect: "postgresql", format: "pretty" }))
     ).toBe(USER_PIPELINE_POSTGRES_PRETTY);
   });
 
@@ -33,7 +33,7 @@ describe("Query.toSql", () => {
     }));
 
     expect(
-      query.toSql(sqlRenderer({ dialect: "sqlite", format: "compact" })).sql
+      query.toSql(sqlRenderer({ dialect: "sqlite", format: "compact" }))
     ).toBe(USERS_NAME_LENGTH_SQLITE_COMPACT);
   });
 });

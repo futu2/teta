@@ -156,12 +156,13 @@ For example:
 
 Eventually everything becomes an `ExprRef` containing an `ExprNode` tree.
 
-### 2) `ExprRef.toSql(renderer)`
+### 2) `ExprRef.toSql(renderer)` and `ExprRef.toSqlResult(renderer)`
 
 `ExprRef.toSql(...)` in `src/edsl/core/expr/core.ts` is just sugar:
 
 ```text
 ExprRef -> renderer.toSql(expr)
+ExprRef -> renderer.toSqlResult(expr) when params
 ```
 
 It does not render anything itself.
@@ -221,7 +222,12 @@ The final return value is:
 }
 ```
 
-Note: built-in renderers currently return an empty `params` array.
+Note: built-in renderers currently return an empty `params` array through `toSqlResult(...)`.
+
+Rule of thumb:
+
+- use `toSql(...)` by default
+- use `toSqlResult(...)` only when you need `params` or other structured render metadata
 
 ## Flow: from `Query` to final SQL
 
@@ -285,12 +291,13 @@ Useful checkpoints:
 
 These are the best places to inspect internal state while debugging.
 
-### 4) `Query.toSql(renderer)`
+### 4) `Query.toSql(renderer)` and `Query.toSqlResult(renderer)`
 
 Like expressions, `Query.toSql(...)` is only sugar:
 
 ```text
 Query -> renderer.toSql(query)
+Query -> renderer.toSqlResult(query) when params
 ```
 
 The real lowering happens in `src/edsl/sql/renderer.ts`.

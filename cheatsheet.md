@@ -87,14 +87,15 @@ All `Query` methods are immutable and return a new `Query`.
 - `toIR()`
 - `toAst()`
 - `toSql(renderer)`
+- `toSqlResult(renderer)`
 
 `toSql` examples:
 
 ```ts
-q.toSql(sqlRenderer({ dialect: "postgresql" })).sql;
-q.toSql(sqlRenderer({ dialect: "postgresql", format: "pretty" })).sql;
-q.toSql(sqlRenderer({ dialect: "duckdb", format: "compact" })).sql;
-q.toSql(duckdbRenderer({ format: "compact" })).sql;
+q.toSql(sqlRenderer({ dialect: "postgresql" }));
+q.toSql(sqlRenderer({ dialect: "postgresql", format: "pretty" }));
+q.toSql(sqlRenderer({ dialect: "duckdb", format: "compact" }));
+q.toSql(duckdbRenderer({ format: "compact" }));
 ```
 
 ## 3) `ExprRef` Methods
@@ -319,5 +320,5 @@ const q = users
   .orderBy((u) => [u.created_day.desc(), u.id.asc()])
   .limit(100);
 
-console.log(q.toSql(sqlRenderer({ dialect: "postgresql", format: "pretty" })).sql);
+console.log(q.toSql(sqlRenderer({ dialect: "postgresql", format: "pretty" })));
 ```

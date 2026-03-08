@@ -404,8 +404,12 @@ export class Query<TColumns extends Record<string, any>> {
     );
   }
 
-  toSql<TReturn extends SqlResult>(renderer: SqlRenderer<any, TReturn>): TReturn {
+  toSql(renderer: SqlRenderer<any, SqlResult>): string {
     return renderer.toSql(this);
+  }
+
+  toSqlResult<TReturn extends SqlResult>(renderer: SqlRenderer<any, TReturn>): TReturn {
+    return renderer.toSqlResult(this);
   }
 
   private unionInternal(right: Query<TColumns>, op: "union" | "union all"): Query<TColumns> {

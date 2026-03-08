@@ -14,7 +14,7 @@ export type ClipboardTool =
   | "clip";
 
 export type QueryLike = {
-  toSql: (renderer: SqlRenderer<any, SqlResult>) => SqlResult;
+  toSql: (renderer: SqlRenderer<any, SqlResult>) => string;
 };
 
 export type WatchQuerySourceOptions = {
@@ -58,17 +58,7 @@ const CLIPBOARD_COMMANDS: Record<Exclude<ClipboardTool, "auto">, ClipboardComman
 const RENDER_RESULT_PREFIX = "__teta_render_sql__";
 const RENDER_SQL_EVAL_SCRIPT = String.raw`(async () => {
   const PREFIX = "__teta_render_sql__";
-  const respond = (payload) => process.stdout.write(PREFIX + JSON.stringify(payload) + "\n");
-  const normalizeSqlOutput = (value) => {
-    if (typeof value === "string") {
-      return value;
-    }
-    if (value && typeof value === "object" && typeof value.sql === "string") {
-      return value.sql;
-    }
-    throw new Error("toSql(...) must return a SQL string or an object with a sql field");
-  };
-  try {
+  const respond = (payload) => process.stdout.write(PREFIX + JSON.stringify(payload) + "\n");  try {
     const { resolve } = await import("node:path");
     const { pathToFileURL } = await import("node:url");
     const source = (process.env.TETA_SOURCE ?? "").trim();
@@ -104,7 +94,7 @@ const RENDER_SQL_EVAL_SCRIPT = String.raw`(async () => {
       );
     }
 
-    respond({ ok: true, sql: normalizeSqlOutput(target.toSql(sqlRenderer(rendererOptions))) });
+    respond({ ok: true, sql: target.toSql(sqlRenderer(rendererOptions)) });
   } catch (error) {
     const message = error instanceof Error ? (error.stack ?? error.message) : String(error);
     respond({ ok: false, error: message });
@@ -161,7 +151,7 @@ export async function renderSqlFromSource(
       `Export '${exportName}' must be a SQL string, Query-like object, or a function returning one`
     );
   }
-  return normalizeSqlOutput(target.toSql(sqlRenderer(rendererOptions)));
+  return target.toSql(sqlRenderer(rendererOptions));
 }
 
 function renderSqlFromSourceIsolated(
@@ -327,14 +317,6 @@ function isQueryLike(value: unknown): value is QueryLike {
     && typeof (value as Record<string, unknown>).toSql === "function";
 }
 
-function normalizeSqlOutput(value: unknown): string {
-  if (typeof value === "string") return value;
-  if (typeof value === "object" && value !== null && "sql" in value) {
-    const sql = (value as { sql?: unknown }).sql;
-    if (typeof sql === "string") return sql;
-  }
-  throw new Error("toSql(...) must return a SQL string or an object with a sql field");
-}
 
 function normalizeWatchPaths(source: string, watchPaths?: string | string[]): string[] {
   if (!watchPaths) return [source];

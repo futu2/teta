@@ -21,7 +21,7 @@ describe("joins and aggregates", () => {
       }));
 
     expect(
-      query.toSql(sqlRenderer({ dialect: "postgresql", format: "compact" })).sql
+      query.toSql(sqlRenderer({ dialect: "postgresql", format: "compact" }))
     ).toBe(USERS_ORDERS_LEFT_JOIN_AGG_POSTGRES_COMPACT);
   });
 
@@ -37,7 +37,7 @@ describe("joins and aggregates", () => {
       }));
 
     expect(
-      query.toSql(sqlRenderer({ dialect: "postgresql", format: "compact" })).sql
+      query.toSql(sqlRenderer({ dialect: "postgresql", format: "compact" }))
     ).toBe(ORDERS_GROUPED_TOTALS_POSTGRES_COMPACT);
   });
 });

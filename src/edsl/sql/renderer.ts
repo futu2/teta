@@ -47,12 +47,17 @@ export function sqlRenderer(
     sqlFormat: resolved.sqlFormat,
   };
 
+  const toSqlResult = (target: SqlCompilable): SqlResult => {
+    return isExprSqlTarget(target)
+      ? renderExprTarget(target, state)
+      : renderQueryTarget(target, state);
+  };
+
   return {
-    toSql(target: SqlCompilable): SqlResult {
-      return isExprSqlTarget(target)
-        ? renderExprTarget(target, state)
-        : renderQueryTarget(target, state);
+    toSql(target: SqlCompilable): string {
+      return toSqlResult(target).sql;
     },
+    toSqlResult,
   };
 }
 

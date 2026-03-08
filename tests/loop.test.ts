@@ -7,8 +7,7 @@ describe("recursive loop queries", () => {
   test("renders a recursive employee tree CTE", () => {
     const sql = buildOrgTreeQuery()
       .select((employee) => ({ id: employee.id, name: employee.name }))
-      .toSql(sqlRenderer({ dialect: "postgresql", format: "compact" }))
-      .sql;
+      .toSql(sqlRenderer({ dialect: "postgresql", format: "compact" }));
 
     const match = sql.match(/^WITH RECURSIVE (loop_\d+)\(id, name, manager_id\) AS \(/);
     expect(match).not.toBeNull();

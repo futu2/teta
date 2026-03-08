@@ -99,7 +99,7 @@ const q = users
   .orderBy((u) => [u.name.asc(), u.id.desc()])
   .limit(20);
 
-console.log(q.toSql(sqlRenderer({ dialect: "postgresql", format: "pretty" })).sql);
+console.log(q.toSql(sqlRenderer({ dialect: "postgresql", format: "pretty" })));
 ```
 
 ## Dialect-neutral EDSL, dialect at render time
@@ -123,8 +123,13 @@ build a renderer once and reuse it:
 import { duckdbRenderer } from "./mod.ts";
 
 const renderer = duckdbRenderer({ format: "pretty" });
-const { sql, params } = q.toSql(renderer);
+const { sql, params } = q.toSqlResult(renderer);
 ```
+
+Rule of thumb:
+
+- use `toSql(...)` by default
+- use `toSqlResult(...)` only when you need `params` or structured render metadata
 
 Built-in HetuEngine DQL support is available via `hetuRenderer()`.
 Internally, SQL stringification uses the `Trino` parser dialect while preserving Hetu-oriented function mappings.

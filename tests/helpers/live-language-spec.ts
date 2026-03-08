@@ -15,7 +15,7 @@ export type LiveOutcome =
 
 export type LiveSpecCase = {
   name: string;
-  build: () => { toSql: (renderer: SqlRenderer<any, SqlResult>) => SqlResult };
+  build: () => { toSql: (renderer: SqlRenderer<any, SqlResult>) => string };
   outcomes: Record<LiveDialect, LiveOutcome>;
 };
 

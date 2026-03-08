@@ -106,5 +106,6 @@ export type SqlResult = {
 };
 
 export interface SqlRenderer<TInput = unknown, TResult extends SqlResult = SqlResult> {
-  toSql(input: TInput): TResult;
+  toSql(input: TInput): string;
+  toSqlResult(input: TInput): TResult;
 }

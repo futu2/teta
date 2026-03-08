@@ -25,7 +25,7 @@ describe("live sqlite dialect", () => {
       VALUES ('duck', '2024-01-02 03:04:05');
     `);
 
-    const sql = buildLiveDialectQuery().toSql(sqliteRenderer({ format: "compact" })).sql;
+    const sql = buildLiveDialectQuery().toSql(sqliteRenderer({ format: "compact" }));
     const row = database
       .query(sql)
       .get() as

@@ -22,7 +22,17 @@ describe("renderer API", () => {
       format: "compact",
     });
 
-    expect(query.toSql(renderer)).toEqual({
+    expect(query.toSql(renderer)).toBe(USER_PIPELINE_POSTGRES_COMPACT);
+  });
+
+  test("Query.toSqlResult returns structured SQL output", () => {
+    const query = buildUserPipelineQuery();
+    const renderer = sqlRenderer({
+      dialect: "postgresql",
+      format: "compact",
+    });
+
+    expect(query.toSqlResult(renderer)).toEqual({
       sql: USER_PIPELINE_POSTGRES_COMPACT,
       params: [],
     });
@@ -32,16 +42,15 @@ describe("renderer API", () => {
     const query = buildDialectMatrixQuery();
     const renderer = duckdbRenderer({ format: "compact" });
 
-    expect(query.toSql(renderer)).toEqual({
-      sql: DIALECT_MATRIX_SQL.duckdb,
-      params: [],
-    });
+    expect(query.toSql(renderer)).toBe(DIALECT_MATRIX_SQL.duckdb);
   });
 
   test("ExprRef.toSql uses the same renderer interface", () => {
-    const result = add(1, 2).toSql(duckdbRenderer());
+    expect(add(1, 2).toSql(duckdbRenderer())).toBe("1 + 2");
+  });
 
-    expect(result).toEqual({
+  test("ExprRef.toSqlResult returns structured SQL output", () => {
+    expect(add(1, 2).toSqlResult(duckdbRenderer())).toEqual({
       sql: "1 + 2",
       params: [],
     });

@@ -33,8 +33,12 @@ export interface ExprRef<T> {}
 export class ExprRef<T> {
   constructor(readonly node: ExprNode<T>) {}
 
-  toSql<TReturn extends SqlResult>(renderer: SqlRenderer<any, TReturn>): TReturn {
+  toSql(renderer: SqlRenderer<any, SqlResult>): string {
     return renderer.toSql(this);
+  }
+
+  toSqlResult<TReturn extends SqlResult>(renderer: SqlRenderer<any, TReturn>): TReturn {
+    return renderer.toSqlResult(this);
   }
 
   via<A extends unknown[], R>(
