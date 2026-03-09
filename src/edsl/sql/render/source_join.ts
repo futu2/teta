@@ -1,5 +1,5 @@
 import type { With } from "node-sql-parser";
-import type { JoinSource, Stage } from "../../core/types";
+import { generatedCteName, type GeneratedCteName, type JoinSource, type Stage } from "../../core/types";
 import type { QueryDialect } from "../types";
 import type { SelectAst } from "./types";
 import { toParserSelect } from "./ast";
@@ -25,7 +25,7 @@ export function hoistJoinSubquery(
     subqueryAst.with = null;
   }
 
-  const cteName = `${ctePrefix}join_${ctes.length}`;
+  const cteName: GeneratedCteName = generatedCteName(ctePrefix, "join", ctes.length);
   ctes.push({
     name: { value: cteName },
     stmt: {

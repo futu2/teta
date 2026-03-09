@@ -1,11 +1,12 @@
 import type { QueryDialect } from "../types";
 import type {
   ExprNode,
+  ScopeId,
   SqlIdentifier,
   Stage,
 } from "../../core/types";
 import { selectItemsToIdentifierMap } from "../../query/utils";
-import type { ScopeBindings } from "./types";
+import type { FromAst, ScopeBindings } from "./types";
 import { ensureAlias } from "./ast";
 import { getSqlRenderContext } from "./render";
 import type { CompileSourceRef } from "./source";
@@ -30,12 +31,12 @@ export type FusedBuildPhase =
 
 export type FusedBuildState = {
   baseAlias: string;
-  from: unknown[];
+  from: FromAst[];
   scopeExprs: ScopeExprLookup;
   currentBindings: ScopeBindings;
-  currentScopeId: string;
-  currentColumnNames: readonly string[] | null;
-  currentColumnIdentifiers: Readonly<Record<string, SqlIdentifier>> | null;
+  currentScopeId: ScopeId;
+  currentColumnNames: readonly string[];
+  currentColumnIdentifiers: Readonly<Record<string, SqlIdentifier>>;
   projection: Extract<Stage, { kind: "select" }> | null;
   orderStage: Extract<Stage, { kind: "orderBy" }> | null;
   limitStage: Extract<Stage, { kind: "limit" }> | null;
@@ -48,9 +49,9 @@ export type FusedBuildState = {
 
 export function createFusedBuildState(
   source: CompileSourceRef,
-  sourceScopeId: string,
-  inputColumnNames: readonly string[] | null,
-  inputColumnIdentifiers: Readonly<Record<string, SqlIdentifier>> | null,
+  sourceScopeId: ScopeId,
+  inputColumnNames: readonly string[],
+  _inputColumnIdentifiers: Readonly<Record<string, SqlIdentifier>>,
   inheritedBindings: ScopeBindings | undefined,
   dialect: QueryDialect
 ): FusedBuildState {
@@ -58,7 +59,7 @@ export function createFusedBuildState(
   const baseAlias = ensureAlias(baseFrom);
   registerColumnIdentifierBindings(
     baseAlias,
-    source.columnIdentifiers ?? inputColumnIdentifiers,
+    source.columnIdentifiers,
     dialect,
     getSqlRenderContext()
   );
@@ -74,7 +75,7 @@ export function createFusedBuildState(
     currentBindings,
     currentScopeId: sourceScopeId,
     currentColumnNames: inputColumnNames,
-    currentColumnIdentifiers: source.columnIdentifiers ?? inputColumnIdentifiers,
+    currentColumnIdentifiers: source.columnIdentifiers,
     projection: null,
     orderStage: null,
     limitStage: null,

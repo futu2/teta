@@ -17,10 +17,6 @@ export function loop<TColumns extends Record<string, any>>(
   base: Query<TColumns>,
   step: (self: Query<TColumns>) => Query<TColumns>
 ): Query<TColumns> {
-  if (!base.columnNames) {
-    throw new Error("loop base query must have explicit columns");
-  }
-
   const name = freshInternalCteName("loop");
   const selfColumnNames = [...base.columnNames];
   const loopSource = {

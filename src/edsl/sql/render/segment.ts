@@ -1,8 +1,8 @@
 import type { QueryDialect } from "../types";
-import type { ExprNode, Source, SqlIdentifier, Stage } from "../../core/types";
+import type { ExprNode, ScopeId, Source, SqlIdentifier, Stage } from "../../core/types";
 import { createColumnRefs, selectAllItems } from "../../core/expr";
 import { columnNamesToIdentifierMap, selectItemsToIdentifierMap } from "../../query/utils";
-import type { ScopeBindings, SelectAst } from "./types";
+import type { FromAst, GroupByAst, LimitAst, OrderByAst, ScopeBindings, SelectAst, SelectColumnAst } from "./types";
 import { ensureAlias } from "./ast";
 import { bindExprScopes, exprToAst, getSqlRenderContext } from "./render";
 import { sourceToFrom, type CompileSourceRef, buildSelectAst } from "./source";
@@ -18,8 +18,8 @@ export type CompiledSegment = {
 
 export function buildBaseSelectAst(
   source: Source,
-  columnNames: readonly string[] | null,
-  sourceScopeId: string,
+  columnNames: readonly string[],
+  sourceScopeId: ScopeId,
   inheritedBindings: ScopeBindings | undefined,
   dialect: QueryDialect
 ): SelectAst {
@@ -35,7 +35,7 @@ export function buildBaseSelectAst(
   const baseAlias = ensureAlias(from);
   registerColumnIdentifierBindings(
     baseAlias,
-    baseFrom.columnIdentifiers ?? null,
+    baseFrom.columnIdentifiers,
     dialect,
     getSqlRenderContext()
   );
@@ -60,7 +60,7 @@ export function buildBaseSelectAst(
 }
 
 export function buildCompiledSegment(
-  from: unknown[],
+  from: FromAst[],
   projection: Extract<Stage, { kind: "select" }> | null,
   orderStage: Extract<Stage, { kind: "orderBy" }> | null,
   limitStage: Extract<Stage, { kind: "limit" }> | null,
@@ -69,19 +69,19 @@ export function buildCompiledSegment(
   qualifyExpr: ExprNode<unknown> | null,
   scopeExprs: ScopeExprLookup,
   currentBindings: ScopeBindings,
-  currentScopeId: string,
-  currentColumnNames: readonly string[] | null,
-  currentColumnIdentifiers: Readonly<Record<string, SqlIdentifier>> | null,
+  currentScopeId: ScopeId,
+  currentColumnNames: readonly string[],
+  currentColumnIdentifiers: Readonly<Record<string, SqlIdentifier>>,
   dialect: QueryDialect,
   consumed = 0
 ): CompiledSegment {
-  const columns = projection
+  const columns: SelectColumnAst[] = projection
     ? projection.items.map((item) => ({
         expr: exprToAst(bindFusedExpr(item.expr, scopeExprs, currentBindings, dialect)),
         as: renderIdentifier(item.as, dialect, getSqlRenderContext()),
       }))
     : selectExpandedColumns(currentScopeId, currentColumnNames, scopeExprs, currentBindings, dialect);
-  const groupby = projection?.groupBy
+  const groupby: GroupByAst | null = projection?.groupBy
     ? {
         columns: projection.groupBy.map((expr) =>
           exprToAst(bindFusedExpr(expr, scopeExprs, currentBindings, dialect))
@@ -89,7 +89,7 @@ export function buildCompiledSegment(
         modifiers: [],
       }
     : null;
-  const orderby = orderStage
+  const orderby: OrderByAst[] | null = orderStage
     ? orderStage.items.map((item) => ({
         expr: exprToAst(
           projection
@@ -103,7 +103,7 @@ export function buildCompiledSegment(
         type: item.direction,
       }))
     : null;
-  const limit = limitStage
+  const limit: LimitAst | null = limitStage
     ? {
         seperator: "",
         value: [{ type: "number", value: limitStage.count }],

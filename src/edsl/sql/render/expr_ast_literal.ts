@@ -1,10 +1,10 @@
 import type { Value } from "../../core/types";
-import type { SqlRenderContext } from "./types";
+import type { LiteralAst, ParamAst, SqlRenderContext } from "./types";
 
 export function literalToAst(
   value: Value,
   renderContext: SqlRenderContext | null
-): unknown {
+): LiteralAst | ParamAst {
   if (
     renderContext?.mode === "sql" &&
     renderContext.parameterMode !== "inline" &&
@@ -43,7 +43,7 @@ export function paramToAst(
   value: unknown,
   name: string | null,
   renderContext: SqlRenderContext | null
-): { type: "param"; value: string; prefix: string } {
+): ParamAst {
   const resolved = resolveExplicitParameterRender(name, renderContext);
   return parameterizeValue(value, renderContext, resolved);
 }
@@ -60,7 +60,7 @@ function parameterizeValue(
   value: unknown,
   renderContext: SqlRenderContext | null,
   config: ParameterRender
-): { type: "param"; value: string; prefix: string } {
+): ParamAst {
   const index = (renderContext?.params.length ?? 0) + 1;
   const parameterName = config.mode === "named" ? (config.name ?? `p${index}`) : null;
 

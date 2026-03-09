@@ -86,11 +86,11 @@ export function resolveJoinColumns<
 >(
   leftColumns: ColumnRefs<TLeft>,
   rightColumns: ColumnRefs<TRight>,
-  leftNames: readonly string[] | null,
-  rightNames: readonly string[] | null,
+  leftNames: readonly string[],
+  rightNames: readonly string[],
   joinType: JoinType,
   mergeColumns?: JoinColumnMerger<Record<string, any>, Record<string, any>, TMerged>
-): { mergedColumns: ExprRefs<TMerged>; nextNames: readonly string[] | null } {
+): { mergedColumns: ExprRefs<TMerged>; nextNames: readonly string[] } {
   const mergeResolver =
     (mergeColumns ?? defaultJoinColumnMerger) as JoinColumnMerger<
       Record<string, any>,
@@ -124,9 +124,9 @@ function defaultJoinColumnMerger<
 
 function resolveMergedColumnNames<TColumns extends Record<string, any>>(
   columns: ExprRefs<TColumns>,
-  left: readonly string[] | null,
-  right: readonly string[] | null
-): readonly string[] | null {
+  left: readonly string[],
+  right: readonly string[]
+): readonly string[] {
   const merged = Object.keys(columns);
   if (merged.length) return merged;
   return mergeColumnNames(left, right);

@@ -1,5 +1,5 @@
 import { Parser, type Option } from "node-sql-parser";
-import type { CteSpec, ExprNode, Source, Stage } from "../core/types";
+import type { CteSpec, ExprNode, ScopeId, Source, Stage } from "../core/types";
 import type {
   QueryDialect,
   SqlFormat,
@@ -11,8 +11,8 @@ import type {
 export type QuerySqlTarget = {
   source: Source;
   stages: Stage[];
-  columnNames: readonly string[] | null;
-  sourceScopeId: string;
+  columnNames: readonly string[];
+  sourceScopeId: ScopeId;
   withs?: CteSpec[];
 };
 

@@ -1,6 +1,6 @@
-import type { SelectItem, Stage } from "../../core/types";
+import type { ScopeId, SelectItem, Stage } from "../../core/types";
 import type { QueryDialect } from "../types";
-import type { ScopeBindings, SelectAst } from "./types";
+import type { FromAst, GroupByAst, ScopeBindings, SelectAst, SelectColumnAst } from "./types";
 import { ensureAlias } from "./ast";
 import {
   getSqlRenderContext,
@@ -18,7 +18,7 @@ import {
 } from "./source";
 
 export type StageSelectContext = {
-  baseFrom: unknown;
+  baseFrom: FromAst;
   baseAlias: string;
   baseBindings: ScopeBindings;
   dialect: QueryDialect;
@@ -26,7 +26,7 @@ export type StageSelectContext = {
 
 export function createStageSelectContext(
   source: CompileSourceRef,
-  sourceScopeId: string,
+  sourceScopeId: ScopeId,
   inheritedBindings: ScopeBindings | undefined,
   dialect: QueryDialect
 ): StageSelectContext {
@@ -53,12 +53,12 @@ export function buildSelectStageAst(
     columns: renderBoundSelectItems(stage.items, context.baseBindings, context.dialect),
     where: null,
     groupby: stage.groupBy
-      ? {
+      ? ({
           columns: stage.groupBy.map((expr) =>
             exprToAst(bindExprScopes(expr, context.baseBindings, context.dialect))
           ),
           modifiers: [],
-        }
+        } satisfies GroupByAst)
       : null,
     having: null,
     qualify: null,
@@ -137,7 +137,7 @@ export function renderBoundSelectItems(
   items: SelectItem[],
   bindings: ScopeBindings,
   dialect: QueryDialect
-): Array<{ expr: unknown; as: unknown }> {
+): SelectColumnAst[] {
   const renderContext = getSqlRenderContext();
   return items.map((item) => ({
     expr: exprToAst(bindExprScopes(item.expr, bindings, dialect)),
@@ -152,7 +152,7 @@ function registerSourceColumnBindings(
 ): void {
   registerColumnIdentifierBindings(
     tableAlias,
-    source.columnIdentifiers ?? null,
+    source.columnIdentifiers,
     dialect,
     getSqlRenderContext()
   );

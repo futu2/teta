@@ -1,6 +1,6 @@
 import type { AST, Select } from "node-sql-parser";
 import { OUTER_TABLE_ALIAS } from "../../core/types";
-import type { SelectAst } from "./types";
+import type { FromAst, GroupByAst, LimitAst, OrderByAst, ParserExprAst, SelectAst, SelectColumnAst } from "./types";
 
 export function toParserSelect(ast: SelectAst): Select {
   if (!isParserSelect(ast)) {
@@ -16,7 +16,15 @@ export function toParserAst(ast: SelectAst): AST {
 export function fromParserSelect(ast: Select): SelectAst {
   return {
     ...ast,
-    groupby: ast.groupby ?? null,
+    columns: ast.columns as SelectColumnAst[],
+    from: ast.from as FromAst[] | FromAst | null,
+    where: (ast.where ?? null) as ParserExprAst | null,
+    groupby: (ast.groupby ?? null) as GroupByAst | null,
+    having: (ast.having ?? null) as ParserExprAst | null,
+    qualify: (ast.qualify ?? null) as ParserExprAst | null,
+    orderby: ast.orderby as OrderByAst[] | null,
+    limit: ast.limit as LimitAst | null,
+    options: ast.options ?? null,
   };
 }
 

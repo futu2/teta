@@ -6,6 +6,7 @@ import type {
   SelectItem,
   SqlIdentifier,
 } from "./types_expr";
+import type { GeneratedCteName, InternalCteName, ScopeId } from "./types_internal";
 
 export type StructuredTableSource = {
   db: SqlIdentifier | null;
@@ -38,16 +39,20 @@ export type SourceRef =
       name: SqlIdentifier;
       schema: SqlIdentifier | null;
       as: SqlIdentifier | null;
-      columnIdentifiers?: Readonly<Record<string, SqlIdentifier>> | null;
+      columnIdentifiers: Readonly<Record<string, SqlIdentifier>>;
     }
-  | { kind: "cte"; name: string; columnIdentifiers?: Readonly<Record<string, SqlIdentifier>> | null };
+  | {
+      kind: "cte";
+      name: GeneratedCteName | InternalCteName;
+      columnIdentifiers: Readonly<Record<string, SqlIdentifier>>;
+    };
 
 export type QuerySpec = {
   source: Source;
   stages: Stage[];
-  columnNames: readonly string[] | null;
-  columnIdentifiers: Readonly<Record<string, SqlIdentifier>> | null;
-  scopeId: string;
+  columnNames: readonly string[];
+  columnIdentifiers: Readonly<Record<string, SqlIdentifier>>;
+  scopeId: ScopeId;
 };
 
 export type JoinSource =
@@ -56,12 +61,12 @@ export type JoinSource =
       db: SqlIdentifier | null;
       table: SqlIdentifier;
       schema: SqlIdentifier | null;
-      columnIdentifiers?: Readonly<Record<string, SqlIdentifier>> | null;
+      columnIdentifiers: Readonly<Record<string, SqlIdentifier>>;
     }
   | {
       kind: "subquery";
       query: QuerySpec;
-      inheritedBindings: Readonly<Record<string, string | null>> | null;
+      inheritedBindings: Readonly<Partial<Record<ScopeId, string | null>>> | null;
     };
 
 export type Stage =
@@ -70,7 +75,7 @@ export type Stage =
       items: SelectItem[];
       keys: string[];
       groupBy: ExprNode<any>[] | null;
-      outputScopeId: string;
+      outputScopeId: ScopeId;
     }
   | { kind: "filter"; predicate: ExprNode<boolean>; selectAll: SelectItem[] }
   | { kind: "orderBy"; items: OrderItem[]; selectAll: SelectItem[] }
@@ -83,28 +88,28 @@ export type Stage =
       as: string | null;
       on: ExprNode<boolean>;
       selectAll: SelectItem[];
-      rightScopeId: string;
-      outputScopeId: string;
+      rightScopeId: ScopeId;
+      outputScopeId: ScopeId;
     }
   | {
       kind: "union";
       op: "union" | "union all";
       right: QuerySpec;
       selectAll: SelectItem[];
-      outputScopeId: string;
+      outputScopeId: ScopeId;
     };
 
 export type QueryIR = {
   source: Source;
   stages: Stage[];
-  scopeId: string;
+  scopeId: ScopeId;
 };
 
 export type CteSpec =
   | { kind: "query"; name: string; query: QuerySpec }
   | {
       kind: "recursive";
-      name: string;
+      name: InternalCteName;
       columnNames: readonly string[];
       base: QuerySpec;
       step: QuerySpec;

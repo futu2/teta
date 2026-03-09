@@ -1,7 +1,7 @@
 import type { SourceRef, SqlIdentifier } from "../../core/types";
 import { identifierName } from "../../query/utils";
 import type { QueryDialect } from "../types";
-import type { BaseFromRef, SelectAst } from "./types";
+import type { BaseFromRef, FromAst, SelectAst, SubqueryFromRef } from "./types";
 import { getDefaultDialect } from "../dialect";
 import { getSqlRenderContext } from "./render";
 import {
@@ -17,25 +17,15 @@ export type CompileSourceRef =
       kind: "subquery";
       ast: SelectAst;
       as: string | null;
-      columnIdentifiers?: Readonly<Record<string, SqlIdentifier>> | null;
+      columnIdentifiers: Readonly<Record<string, SqlIdentifier>>;
     };
 
 export function sourceToFrom(
   source: CompileSourceRef,
   dialect: QueryDialect = getDefaultDialect()
-):
-  | BaseFromRef
-  | {
-      expr: {
-        ast: SelectAst;
-        tableList: [];
-        columnList: [];
-        parentheses: true;
-      };
-      as: string | null;
-    } {
+): FromAst {
   if (source.kind === "subquery") {
-    return {
+    const subquery: SubqueryFromRef = {
       expr: {
         ast: source.ast,
         tableList: [],
@@ -44,6 +34,7 @@ export function sourceToFrom(
       },
       as: source.as,
     };
+    return subquery;
   }
   if (source.kind === "cte") {
     const renderContext = getSqlRenderContext();

@@ -1,11 +1,13 @@
-import type {
-  AggFunc,
-  BinaryOp,
-  DateLiteral,
-  ExprNode,
-  OrderItem,
-  TimestampLiteral,
-  Value,
+import {
+  OUTER_TABLE_ALIAS,
+  type AggFunc,
+  type BinaryOp,
+  type DateLiteral,
+  type ExprNode,
+  type OrderItem,
+  type ScopeId,
+  type TimestampLiteral,
+  type Value,
 } from "../types";
 import type { SqlRenderer, SqlResult } from "../../sql/types";
 import type { SqlDate, SqlTimestamp } from "../../sql/types";
@@ -59,11 +61,13 @@ export class ExprRef<T> {
   }
 }
 
+export type ColumnTableRef = ScopeId | typeof OUTER_TABLE_ALIAS | null;
+
 export class ColumnRef<T, Name extends string> extends ExprRef<T> {
-  readonly table: string | null;
+  readonly table: ColumnTableRef;
   readonly name: Name;
 
-  constructor(table: string | null, name: Name) {
+  constructor(table: ColumnTableRef, name: Name) {
     super({ kind: "column", table, name });
     this.table = table;
     this.name = name;

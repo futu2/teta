@@ -1,8 +1,7 @@
 import type { With } from "node-sql-parser";
-import type { CteSpec, QuerySpec, SqlIdentifier } from "../../core/types";
-import { selectItemsToIdentifierMap } from "../../query/utils";
+import type { CteSpec, InternalCteName, QuerySpec, SqlIdentifier } from "../../core/types";
 import type { QueryDialect } from "../types";
-import type { SelectAst } from "./types";
+import type { ColumnRefAst, SelectAst } from "./types";
 import { toParserSelect } from "./ast";
 import { buildPipelineAst } from "./build";
 import { getDefaultDialect } from "../dialect";
@@ -18,7 +17,7 @@ import { advanceStagePlanningState, type StagePlanningState } from "./planner";
 export type RecursivePart = QuerySpec;
 
 export function createDeferredRecursiveCte(
-  name: string,
+  name: InternalCteName,
   columnNames: readonly string[],
   base: RecursivePart,
   step: RecursivePart
@@ -33,7 +32,7 @@ export function createDeferredRecursiveCte(
 }
 
 export function buildRecursiveCte(
-  name: string,
+  name: InternalCteName,
   columnNames: readonly string[],
   base: RecursivePart,
   step: RecursivePart,
@@ -91,7 +90,7 @@ export function materializeCte(cte: CteSpec, dialect: QueryDialect): With {
   }
 }
 
-function toCteColumnRef(name: string): unknown {
+function toCteColumnRef(name: string): ColumnRefAst {
   return {
     type: "column_ref",
     table: null,

@@ -1,6 +1,6 @@
 import type { With } from "node-sql-parser";
 import type { QueryDialect } from "../types";
-import type { Source, Stage } from "../../core/types";
+import { generatedCteName, type GeneratedCteName, type ScopeId, type Source, type Stage } from "../../core/types";
 import { columnNamesToIdentifierMap } from "../../query/utils";
 import type { ScopeBindings, SelectAst } from "./types";
 import { toParserSelect } from "./ast";
@@ -27,8 +27,8 @@ export type BuildPipelineOptions = {
 export function buildPipelineAst(
   source: Source,
   stages: Stage[],
-  columnNames: readonly string[] | null,
-  sourceScopeId: string,
+  columnNames: readonly string[],
+  sourceScopeId: ScopeId,
   options?: BuildPipelineOptions
 ): { ast: SelectAst; ctes: With[] } {
   const ctePrefix = options?.ctePrefix ?? "";
@@ -110,8 +110,8 @@ function appendIntermediateCte(
   ctePrefix: string,
   stageIndex: number,
   ast: SelectAst
-): string {
-  const name = `${ctePrefix}cte_${stageIndex}`;
+): GeneratedCteName {
+  const name = generatedCteName(ctePrefix, "cte", stageIndex);
   ctes.push({
     name: { value: name },
     stmt: {

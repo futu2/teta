@@ -1,10 +1,10 @@
-import type { SelectItem, SqlIdentifier, Stage } from "../../core/types";
+import type { ScopeId, SelectItem, SqlIdentifier, Stage } from "../../core/types";
 import { selectItemOutputName, selectItemsToIdentifierMap } from "../../query/utils";
 
 export type StagePlanningState = {
-  scopeId: string;
-  columnNames: readonly string[] | null;
-  columnIdentifiers: Readonly<Record<string, SqlIdentifier>> | null;
+  scopeId: ScopeId;
+  columnNames: readonly string[];
+  columnIdentifiers: Readonly<Record<string, SqlIdentifier>>;
 };
 
 export function advanceStagePlanningState(
@@ -18,7 +18,7 @@ export function advanceStagePlanningState(
   };
 }
 
-export function nextStageScopeId(stage: Stage, currentScopeId: string): string {
+export function nextStageScopeId(stage: Stage, currentScopeId: ScopeId): ScopeId {
   switch (stage.kind) {
     case "select":
     case "join":
@@ -35,36 +35,30 @@ export function nextStageScopeId(stage: Stage, currentScopeId: string): string {
 
 export function nextStageColumnNames(
   stage: Stage,
-  currentColumnNames: readonly string[] | null
-): readonly string[] | null {
-  switch (stage.kind) {
-    case "union":
-      return currentColumnNames;
-    default:
-      return stageOutputNames(stage) ?? currentColumnNames;
-  }
+  _currentColumnNames: readonly string[]
+): readonly string[] {
+  return stageOutputNames(stage);
 }
 
 export function nextStageColumnIdentifiers(
   stage: Stage,
-  currentColumnIdentifiers: Readonly<Record<string, SqlIdentifier>> | null
-): Readonly<Record<string, SqlIdentifier>> | null {
+  _currentColumnIdentifiers: Readonly<Record<string, SqlIdentifier>>
+): Readonly<Record<string, SqlIdentifier>> {
   switch (stage.kind) {
-    case "union":
-      return currentColumnIdentifiers;
     case "select":
-      return selectItemsToIdentifierMap(stage.items) ?? currentColumnIdentifiers;
+      return selectItemsToIdentifierMap(stage.items);
     case "filter":
     case "join":
     case "orderBy":
     case "limit":
-      return selectItemsToIdentifierMap(stage.selectAll) ?? currentColumnIdentifiers;
+    case "union":
+      return selectItemsToIdentifierMap(stage.selectAll);
     default:
       return assertNever(stage);
   }
 }
 
-export function stageOutputNames(stage: Stage): readonly string[] | null {
+export function stageOutputNames(stage: Stage): readonly string[] {
   switch (stage.kind) {
     case "select":
       return stage.keys;
@@ -72,26 +66,21 @@ export function stageOutputNames(stage: Stage): readonly string[] | null {
     case "join":
     case "orderBy":
     case "limit":
-      return selectItemNames(stage.selectAll);
     case "union":
-      return null;
+      return selectItemNames(stage.selectAll);
     default:
       return assertNever(stage);
   }
 }
 
-function selectItemNames(items: SelectItem[]): string[] | null {
-  const names: string[] = [];
-  for (const item of items) {
-    const name = selectItemName(item);
-    if (!name) return null;
-    names.push(name);
-  }
-  return names;
-}
-
-function selectItemName(item: SelectItem): string | null {
-  return selectItemOutputName(item);
+function selectItemNames(items: SelectItem[]): string[] {
+  return items.map((item) => {
+    const name = selectItemOutputName(item);
+    if (!name) {
+      throw new Error("Internal error: stage select item is missing an output name");
+    }
+    return name;
+  });
 }
 
 function assertNever(value: never): never {

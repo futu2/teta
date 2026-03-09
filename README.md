@@ -189,6 +189,47 @@ The `name` field in `SqlResult.params` is only used for named placeholders. With
 default positional rendering you will usually see `name: null` together with an
 `index` such as `$1` or `$2`.
 
+## Function-first query composition
+
+If you prefer a more functional style, the query layer also exposes data-first
+helpers plus `pipeQuery(...)`. The class methods remain thin immutable sugar on
+top of the same pure operations.
+
+```ts
+import {
+  filter,
+  limit,
+  orderBy,
+  pipeQuery,
+  select,
+  sqlRenderer,
+  toSql,
+  table,
+  t,
+} from "./mod.ts";
+
+const users = table("users", {
+  id: t.int(),
+  name: t.string(),
+  age: t.int(),
+  active: t.boolean(),
+});
+
+const q = pipeQuery(
+  users,
+  (query) => filter(query, (user) => user.active.eq(true).and(user.age.gte(18))),
+  (query) => select(query, (user) => ({
+    id: user.id,
+    name: user.name.replace(" ", "_").coalesce("unknown"),
+    age: user.age,
+  })),
+  (query) => orderBy(query, (row) => [row.name.asc(), row.id.desc()]),
+  (query) => limit(query, 20)
+);
+
+console.log(toSql(q, sqlRenderer({ dialect: "postgresql", format: "pretty" })));
+```
+
 If you want a named placeholder for your own integration layer, pass a second
 argument such as `param(email, "customer_email")` and render with
 `parameterMode: "named"`:

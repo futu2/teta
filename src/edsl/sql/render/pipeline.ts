@@ -1,5 +1,5 @@
 import type { AST } from "node-sql-parser";
-import type { CteSpec, Source, Stage } from "../../core/types";
+import type { CteSpec, ScopeId, Source, Stage } from "../../core/types";
 import type { QueryDialect } from "../types";
 import type { ScopeBindings } from "./types";
 import { buildPipelineAst } from "./build";
@@ -20,8 +20,8 @@ export type RenderPipelineOptions = {
 export function renderPipelineAst(
   source: Source,
   stages: Stage[],
-  columnNames: readonly string[] | null,
-  scopeId: string,
+  columnNames: readonly string[],
+  scopeId: ScopeId,
   options?: RenderPipelineOptions
 ): AST {
   const dialect = options?.dialect ?? getDefaultDialect();

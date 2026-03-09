@@ -1,7 +1,14 @@
+import type { ExprNode } from "../../core/types";
 import type {
-  ExprNode,
-} from "../../core/types";
-import type { SqlRenderContext } from "./types";
+  AggrFuncAst,
+  BinaryExprAst,
+  CastAst,
+  ColumnRefAst,
+  ExtractAst,
+  ParserExprAst,
+  SqlRenderContext,
+  UnaryExprAst,
+} from "./types";
 import { literalToAst, paramToAst } from "./expr_ast_literal";
 import {
   arrayExprToAst,
@@ -14,45 +21,50 @@ import {
 export function exprNodeToAst(
   expr: ExprNode<unknown>,
   renderContext: SqlRenderContext | null
-): unknown {
+): ParserExprAst {
   switch (expr.kind) {
     case "column": {
-      const table =
+      const table: ColumnRefAst["table"] =
         expr.table === null
           ? null
           : renderContext?.mode === "ast"
             ? (renderContext.identifierBindings[expr.table] ?? expr.table)
             : expr.table;
-      const column =
+      const column: ColumnRefAst["column"] =
         expr.table === null
           ? expr.name
           : (renderContext?.columnIdentifierBindings[`${expr.table}.${expr.name}`] ?? expr.name);
-      return {
+      const columnRef: ColumnRefAst = {
         type: "column_ref",
         table,
         column,
         collate: null,
       };
+      return columnRef;
     }
     case "literal":
       return literalToAst(expr.value, renderContext);
     case "param":
       return paramToAst(expr.value, expr.name, renderContext);
-    case "binary":
-      return {
+    case "binary": {
+      const binaryExpr: BinaryExprAst = {
         type: "binary_expr",
         operator: expr.op,
         left: exprNodeToAst(expr.left, renderContext),
         right: exprNodeToAst(expr.right, renderContext),
       };
-    case "unary":
-      return {
+      return binaryExpr;
+    }
+    case "unary": {
+      const unaryExpr: UnaryExprAst = {
         type: "unary_expr",
         operator: expr.op,
         expr: exprNodeToAst(expr.expr, renderContext),
       };
-    case "agg":
-      return {
+      return unaryExpr;
+    }
+    case "agg": {
+      const aggregateExpr: AggrFuncAst = {
         type: "aggr_func",
         name: expr.name,
         args: {
@@ -63,10 +75,12 @@ export function exprNodeToAst(
         },
         over: null,
       };
+      return aggregateExpr;
+    }
     case "group":
       return exprNodeToAst(expr.expr, renderContext);
-    case "extract":
-      return {
+    case "extract": {
+      const extractExpr: ExtractAst = {
         type: "extract",
         args: {
           field: expr.field.toLowerCase(),
@@ -74,14 +88,18 @@ export function exprNodeToAst(
           source: exprNodeToAst(expr.source, renderContext),
         },
       };
-    case "cast":
-      return {
+      return extractExpr;
+    }
+    case "cast": {
+      const castExpr: CastAst = {
         type: "cast",
         keyword: "cast",
         expr: exprNodeToAst(expr.expr, renderContext),
         symbol: "as",
         target: [{ dataType: expr.target.toUpperCase() }],
       };
+      return castExpr;
+    }
     case "func":
       return funcExprToAst(expr, renderContext, exprNodeToAst);
     case "list":

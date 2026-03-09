@@ -1,6 +1,6 @@
 import type { QueryDialect } from "../types";
 import type { Stage } from "../../core/types";
-import type { ScopeBindings } from "./types";
+import type { FromAst, ScopeBindings, SubqueryFromRef } from "./types";
 import { ensureSelectAst, replaceOuterAlias, toParserSelect } from "./ast";
 import { exprToAst, getSqlRenderContext, lateralJoinPrefix } from "./render";
 import { buildTableFromRef, compileJoinSource } from "./source";
@@ -8,7 +8,7 @@ import { registerColumnIdentifierBindings } from "./identifiers";
 import { bindFusedExpr, type ScopeExprLookup } from "./fused";
 
 export type FusedJoinFrom = {
-  from: unknown;
+  from: FromAst;
   bindings: ScopeBindings;
 };
 
@@ -29,7 +29,7 @@ export function buildFusedJoinFrom(
   registerColumnIdentifierBindings(
     alias,
     stage.source.kind === "table"
-      ? stage.source.columnIdentifiers ?? null
+      ? stage.source.columnIdentifiers
       : stage.source.query.columnIdentifiers,
     dialect,
     getSqlRenderContext()
@@ -63,20 +63,22 @@ export function buildFusedJoinFrom(
       )
     : compiledSubquery;
 
+  const subqueryFrom: SubqueryFromRef = {
+    expr: {
+      ast: subqueryAst,
+      tableList: [],
+      columnList: [],
+      parentheses: true,
+    },
+    as: stage.as,
+    join,
+    prefix: lateralJoinPrefix(stage.lateral, dialect),
+    on: exprToAst(bindFusedExpr(stage.on, scopeExprs, joinBindings, dialect)),
+  };
+
   return {
     bindings: joinBindings,
-    from: {
-      expr: {
-        ast: subqueryAst,
-        tableList: [],
-        columnList: [],
-        parentheses: true,
-      },
-      as: stage.as,
-      join,
-      prefix: lateralJoinPrefix(stage.lateral, dialect),
-      on: exprToAst(bindFusedExpr(stage.on, scopeExprs, joinBindings, dialect)),
-    },
+    from: subqueryFrom,
   };
 }
 

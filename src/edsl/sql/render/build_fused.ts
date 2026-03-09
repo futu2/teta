@@ -1,11 +1,11 @@
 import type { With } from "node-sql-parser";
 import type { QueryDialect } from "../types";
-import type { ExprNode, SqlIdentifier, Stage } from "../../core/types";
+import type { ExprNode, ScopeId, SqlIdentifier, Stage } from "../../core/types";
 import type { ScopeBindings, SelectAst } from "./types";
 import { hoistJoinSubquery, type CompileSourceRef } from "./source";
 import { compileUnionStage } from "./union";
 import { mergePredicates } from "./predicate";
-import { nextStageColumnIdentifiers, nextStageColumnNames } from "./planner";
+import { nextStageColumnIdentifiers, stageOutputNames } from "./planner";
 import { bindFusedExpr, type ScopeExprLookup } from "./fused";
 import { buildFusedJoinFrom } from "./build_fused_join";
 import { handlePostProjectionFilterStage } from "./build_fused_filter";
@@ -30,9 +30,9 @@ export type FusedBuildOptions = {
 
 export function tryBuildFusedSegmentAst(
   source: CompileSourceRef,
-  sourceScopeId: string,
-  inputColumnNames: readonly string[] | null,
-  inputColumnIdentifiers: Readonly<Record<string, SqlIdentifier>> | null,
+  sourceScopeId: ScopeId,
+  inputColumnNames: readonly string[],
+  inputColumnIdentifiers: Readonly<Record<string, SqlIdentifier>>,
   stages: Stage[],
   options: FusedBuildOptions
 ): CompiledSegment | null {
@@ -177,7 +177,7 @@ export function tryBuildFusedSegmentAst(
 export function compileSingleStageAst(
   stage: Stage,
   source: CompileSourceRef,
-  sourceScopeId: string,
+  sourceScopeId: ScopeId,
   options: FusedBuildOptions
 ): SelectAst {
   if (stage.kind === "union") {
@@ -195,8 +195,8 @@ export function compileSingleStageAst(
   const compiled = tryBuildFusedSegmentAst(
     source,
     sourceScopeId,
-    nextStageColumnNames(stage, null),
-    nextStageColumnIdentifiers(stage, source.columnIdentifiers ?? null),
+    stageOutputNames(stage),
+    nextStageColumnIdentifiers(stage, source.columnIdentifiers),
     [stage],
     options
   );

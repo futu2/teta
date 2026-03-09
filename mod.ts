@@ -1,5 +1,25 @@
 /** Main query builder type returned by `table(...)`. */
-export { Query, table, loop, ident, t } from "./src/edsl/query";
+export {
+  Query,
+  aggregate,
+  filter,
+  ident,
+  join,
+  limit,
+  loop,
+  orderBy,
+  pipeQuery,
+  select,
+  t,
+  table,
+  toAst,
+  toIR,
+  toSql,
+  toSqlResult,
+  union,
+  unionAll,
+} from "./src/edsl/query";
+export type { QueryStep } from "./src/edsl/query";
 
 /** Expression builder and helpers for composing SQL expressions. */
 export {

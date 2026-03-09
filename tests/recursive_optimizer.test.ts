@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import type { ExprNode, SelectItem, Stage } from "../src/edsl/core/types.ts";
+import type { ExprNode, ScopeId, SelectItem, Stage } from "../src/edsl/core/types.ts";
 import { optimizeLoopStages } from "../src/edsl/sql/render/recursive_optimizer.ts";
 
 const column = (name: string, table: string | null = null): ExprNode<unknown> => ({
@@ -72,7 +72,7 @@ describe("recursive optimizer", () => {
       items: [select("id")],
       keys: ["id"],
       groupBy: null,
-      outputScopeId: "loop_scope_1",
+      outputScopeId: "loop_scope_1" as ScopeId,
     };
 
     const optimized = optimizeLoopStages([filter, selectStage], ["id"], "step");

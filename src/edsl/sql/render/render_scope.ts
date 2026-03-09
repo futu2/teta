@@ -106,10 +106,10 @@ function resolveColumnScope(
   if (expr.table === null) return expr;
   if (expr.table === OUTER_TABLE_ALIAS) return expr;
   if (!isInternalScopeName(expr.table)) return expr;
-  if (!(expr.table in scopeBindings)) {
+  const boundTable = scopeBindings[expr.table];
+  if (boundTable === undefined) {
     throw new Error(`Missing SQL scope binding for ${expr.table}.${expr.name}`);
   }
-  const boundTable = scopeBindings[expr.table];
   return {
     ...expr,
     table: boundTable ?? null,

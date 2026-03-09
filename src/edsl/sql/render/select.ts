@@ -1,4 +1,4 @@
-import type { Stage } from "../../core/types";
+import type { ScopeId, Stage } from "../../core/types";
 import type { QueryDialect } from "../types";
 import type { ScopeBindings, SelectAst } from "./types";
 import { getDefaultDialect } from "../dialect";
@@ -15,7 +15,7 @@ import { buildJoinStageAst } from "./select_join";
 export function stageToSelect(
   stage: Stage,
   source: CompileSourceRef,
-  sourceScopeId: string,
+  sourceScopeId: ScopeId,
   inheritedBindings: ScopeBindings | undefined,
   dialect: QueryDialect = getDefaultDialect(),
   ctePrefix = ""

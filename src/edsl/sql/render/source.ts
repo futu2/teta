@@ -1,18 +1,25 @@
-import type { SelectAst } from "./types";
+import type {
+  FromAst,
+  GroupByAst,
+  LimitAst,
+  OrderByAst,
+  SelectAst,
+  SelectColumnAst,
+} from "./types";
 
 export type { CompileSourceRef } from "./source_ref";
 export { buildTableFromRef, sourceToFrom } from "./source_ref";
 export { compileJoinSource, hoistJoinSubquery } from "./source_join";
 
 export function buildSelectAst(params: {
-  from: unknown[];
-  columns: unknown;
-  where: unknown | null;
-  groupby: unknown | null;
-  having: unknown | null;
-  qualify: unknown | null;
-  orderby: unknown | null;
-  limit: unknown | null;
+  from: FromAst[];
+  columns: SelectColumnAst[];
+  where: SelectAst["where"];
+  groupby: GroupByAst | null;
+  having: SelectAst["having"];
+  qualify: SelectAst["qualify"];
+  orderby: OrderByAst[] | null;
+  limit: LimitAst | null;
 }): SelectAst {
   return {
     with: null,

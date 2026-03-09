@@ -1,5 +1,5 @@
 import type { With } from "node-sql-parser";
-import type { Stage } from "../../core/types";
+import type { ScopeId, Stage } from "../../core/types";
 import type { QueryDialect } from "../types";
 import type { ScopeBindings, SelectAst } from "./types";
 import { ensureAlias, toParserSelect } from "./ast";
@@ -12,7 +12,7 @@ import { buildSelectAst, sourceToFrom, type CompileSourceRef } from "./source";
 export function compileUnionStage(
   stage: Extract<Stage, { kind: "union" }>,
   source: CompileSourceRef,
-  leftScopeId: string,
+  leftScopeId: ScopeId,
   ctes: With[],
   rightPrefix: string,
   inheritedBindings?: ScopeBindings,
@@ -22,7 +22,7 @@ export function compileUnionStage(
   const baseAlias = ensureAlias(baseFrom);
   registerColumnIdentifierBindings(
     baseAlias,
-    source.columnIdentifiers ?? null,
+    source.columnIdentifiers,
     dialect,
     getSqlRenderContext()
   );

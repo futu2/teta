@@ -2,6 +2,8 @@ import {
   INTERNAL_CTE_PREFIX,
   INTERNAL_SCOPE_PREFIX,
   type ExprNode,
+  type InternalCteName,
+  type ScopeId,
   type SqlIdentifier,
 } from "../core/types";
 import {
@@ -24,12 +26,12 @@ type ResolvedAggregateProjection = ResolvedProjection & {
   groupBy: ExprNode<any>[];
 };
 
-export function freshScopeId(): string {
-  return `${INTERNAL_SCOPE_PREFIX}${freshInternalToken()}`;
+export function freshScopeId(): ScopeId {
+  return `${INTERNAL_SCOPE_PREFIX}${freshInternalToken()}` as ScopeId;
 }
 
-export function freshInternalCteName(label: string): string {
-  return `${INTERNAL_CTE_PREFIX}${label}_${freshInternalToken()}`;
+export function freshInternalCteName(label: string): InternalCteName {
+  return `${INTERNAL_CTE_PREFIX}${label}_${freshInternalToken()}` as InternalCteName;
 }
 
 export function resolveSelectProjection(selection: SelectSelection): ResolvedProjection {

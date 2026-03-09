@@ -1,12 +1,12 @@
 import type { QueryDialect } from "../types";
-import type { ExprNode, SelectItem } from "../../core/types";
+import { isInternalScopeName, type ExprNode, type ScopeId, type SelectItem } from "../../core/types";
 import { shouldAlias } from "../../core/expr";
 import { selectItemOutputName } from "../../query/utils";
 import type { ScopeBindings } from "./types";
 import { renderIdentifier } from "./identifiers";
 import { bindExprScopes, exprToAst, getSqlRenderContext } from "./render";
 
-export type ScopeExprLookup = Record<string, Record<string, ExprNode<unknown>>>;
+export type ScopeExprLookup = Partial<Record<ScopeId, Record<string, ExprNode<unknown>>>>;
 
 export function bindFusedExpr(
   expr: ExprNode<unknown>,
@@ -18,15 +18,12 @@ export function bindFusedExpr(
 }
 
 export function selectExpandedColumns(
-  scopeId: string,
-  columnNames: readonly string[] | null,
+  scopeId: ScopeId,
+  columnNames: readonly string[],
   scopeExprs: ScopeExprLookup,
   bindings: ScopeBindings,
   dialect: QueryDialect
-): Array<{ expr: unknown; as: unknown }> {
-  if (!columnNames) {
-    throw new Error("Cannot expand fused columns without a schema");
-  }
+): import("./types").SelectColumnAst[] {
   return columnNames.map((name) => {
     const expr = bindFusedExpr({ kind: "column", table: scopeId, name }, scopeExprs, bindings, dialect);
     return {
@@ -56,7 +53,7 @@ function expandScopeExprs(
 ): ExprNode<unknown> {
   switch (expr.kind) {
     case "column": {
-      if (!expr.table) return expr;
+      if (!expr.table || !isInternalScopeName(expr.table)) return expr;
       const mapping = scopeExprs[expr.table];
       if (!mapping) return expr;
       const expanded = mapping[expr.name];

@@ -1,5 +1,5 @@
 import type { Stage } from "../../core/types";
-import type { ScopeBindings, SelectAst } from "./types";
+import type { FromAst, ScopeBindings, SelectAst, SubqueryFromRef, TableFromAst } from "./types";
 import { ensureSelectAst, replaceOuterAlias, toParserSelect } from "./ast";
 import { getSqlRenderContext, bindExprScopes, exprToAst, lateralJoinPrefix } from "./render";
 import { registerColumnIdentifierBindings } from "./identifiers";
@@ -28,7 +28,7 @@ export function buildJoinStageAst(
   registerColumnIdentifierBindings(
     rightAlias,
     stage.source.kind === "table"
-      ? stage.source.columnIdentifiers ?? null
+      ? stage.source.columnIdentifiers
       : stage.source.query.columnIdentifiers,
     context.dialect,
     getSqlRenderContext()
@@ -55,7 +55,7 @@ function buildJoinFromRef(
   joinBindings: ScopeBindings,
   ctePrefix: string,
   join: string
-): unknown {
+): FromAst {
   const on = exprToAst(bindExprScopes(stage.on, joinBindings, context.dialect));
   const prefix = lateralJoinPrefix(stage.lateral, context.dialect);
 
@@ -88,7 +88,7 @@ function buildJoinFromRef(
       )
     : compiledSubquery;
 
-  return {
+  const subqueryFrom: SubqueryFromRef = {
     expr: {
       ast: subqueryAst,
       tableList: [],
@@ -100,6 +100,7 @@ function buildJoinFromRef(
     prefix,
     on,
   };
+  return subqueryFrom;
 }
 
 function fail(message: string): never {

@@ -87,8 +87,11 @@ export function optimizeLoopStage(
   }
 }
 
-export function compactLoopStages(stages: Stage[]): Stage[] {
-  return mergeAdjacentLoopFilters(removeNoOpLoopSelects(stages));
+export function compactLoopStages(
+  stages: Stage[],
+  inputNames: readonly string[]
+): Stage[] {
+  return mergeAdjacentLoopFilters(removeNoOpLoopSelects(stages, inputNames));
 }
 
 function validateLoopStage(stage: Stage, label: LoopPartLabel): void {
@@ -138,9 +141,12 @@ function pruneSelectItems(
   return pruned;
 }
 
-function removeNoOpLoopSelects(stages: Stage[]): Stage[] {
+function removeNoOpLoopSelects(
+  stages: Stage[],
+  initialInputNames: readonly string[]
+): Stage[] {
   const compact: Stage[] = [];
-  let inputNames: readonly string[] | null = null;
+  let inputNames = initialInputNames;
   for (const stage of stages) {
     if (stage.kind === "select" && isNoOpLoopSelect(stage, inputNames)) {
       continue;
@@ -153,9 +159,8 @@ function removeNoOpLoopSelects(stages: Stage[]): Stage[] {
 
 function isNoOpLoopSelect(
   stage: Extract<Stage, { kind: "select" }>,
-  inputNames: readonly string[] | null
+  inputNames: readonly string[]
 ): boolean {
-  if (!inputNames) return false;
   if (stage.groupBy && stage.groupBy.length > 0) return false;
   if (inputNames.length !== stage.keys.length) return false;
   for (let index = 0; index < stage.keys.length; index += 1) {

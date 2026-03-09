@@ -53,20 +53,21 @@ export function selectItemOutputName(item: SelectItem): string | null {
 
 export function selectItemsToIdentifierMap(
   items: SelectItem[]
-): Readonly<Record<string, SqlIdentifier>> | null {
+): Readonly<Record<string, SqlIdentifier>> {
   const mapping: Record<string, SqlIdentifier> = {};
   for (const item of items) {
     const identifier = selectItemOutputIdentifier(item);
-    if (!identifier) return null;
+    if (!identifier) {
+      throw new Error("Internal error: select item is missing an output identifier");
+    }
     mapping[identifierName(identifier)] = identifier;
   }
   return mapping;
 }
 
 export function columnNamesToIdentifierMap(
-  columnNames: readonly string[] | null
-): Readonly<Record<string, SqlIdentifier>> | null {
-  if (!columnNames) return null;
+  columnNames: readonly string[]
+): Readonly<Record<string, SqlIdentifier>> {
   const mapping: Record<string, SqlIdentifier> = {};
   for (const name of columnNames) {
     mapping[name] = unquotedIdentifier(name);
@@ -138,12 +139,9 @@ export function assertUnionCompatible(
 }
 
 export function assertLoopColumns(
-  base: readonly string[] | null,
-  step: readonly string[] | null
+  base: readonly string[],
+  step: readonly string[]
 ): void {
-  if (!base || !step) {
-    throw new Error("loop requires explicit column lists for base and step");
-  }
   assertUnionCompatible(base, step);
 }
 

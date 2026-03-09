@@ -1,4 +1,4 @@
-import type { SelectItem } from "../types";
+import type { ScopeId, SelectItem } from "../types";
 import {
   ColumnRef,
   ExprRef,
@@ -9,11 +9,11 @@ import {
 } from "./core";
 
 export function createColumnRefs<TColumns extends Record<string, unknown>>(
-  tableName: string | null,
-  columnNames?: readonly string[] | null
+  tableName: ScopeId | null,
+  columnNames: readonly string[]
 ): ColumnRefs<TColumns> {
   const cache = new Map<string, ColumnRef<unknown, string>>();
-  const columns = columnNames ? [...columnNames] : [];
+  const columns = [...columnNames];
   const getColumn = (name: string) => {
     const existing = cache.get(name);
     if (existing) return existing;
@@ -52,13 +52,13 @@ export function mergeColumnRefs<
 >(
   left: ColumnRefs<TLeft>,
   right: ColumnRefs<TRight>,
-  leftKeys: readonly string[] | null,
-  rightKeys: readonly string[] | null
+  leftKeys: readonly string[],
+  rightKeys: readonly string[]
 ): ColumnRefs<TLeft & TRight> {
   const mergedKeys = mergeColumnNames(leftKeys, rightKeys);
   const getColumn = (prop: string) => {
-    const leftHas = leftKeys ? leftKeys.includes(prop) : false;
-    const rightHas = rightKeys ? rightKeys.includes(prop) : false;
+    const leftHas = leftKeys.includes(prop);
+    const rightHas = rightKeys.includes(prop);
     const leftValue = Reflect.get(left, prop);
     const rightValue = Reflect.get(right, prop);
     const leftRef = leftValue instanceof ExprRef ? leftValue : undefined;
@@ -75,11 +75,11 @@ export function mergeColumnRefs<
         return getColumn(prop);
       },
       ownKeys() {
-        return mergedKeys ?? [];
+        return mergedKeys;
       },
       getOwnPropertyDescriptor(_target, prop) {
         if (typeof prop !== "string") return undefined;
-        if (!mergedKeys || !mergedKeys.includes(prop)) return undefined;
+        if (!mergedKeys.includes(prop)) return undefined;
         return {
           enumerable: true,
           configurable: true,
@@ -92,12 +92,9 @@ export function mergeColumnRefs<
 }
 
 export function mergeColumnNames(
-  left: readonly string[] | null,
-  right: readonly string[] | null
-): readonly string[] | null {
-  if (!left && !right) return null;
-  if (!left) return right ? [...right] : null;
-  if (!right) return [...left];
+  left: readonly string[],
+  right: readonly string[]
+): readonly string[] {
   const seen = new Set<string>();
   const merged: string[] = [];
   for (const key of left) {
@@ -117,11 +114,8 @@ export function mergeColumnNames(
 
 export function selectAllItems<TColumns extends Record<string, unknown>>(
   columns: ExprRefs<TColumns>,
-  columnNames: readonly string[] | null
+  columnNames: readonly string[]
 ): SelectItem[] {
-  if (!columnNames) {
-    throw new Error("Cannot expand select-all without a schema");
-  }
   return columnNames.map((name) => {
     const value = Reflect.get(columns, name);
     if (!(value instanceof ExprRef)) {

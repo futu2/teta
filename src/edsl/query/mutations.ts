@@ -132,7 +132,7 @@ export function resolveJoinQuery<
 ): QueryDeriveInit<TMerged> {
   const normalizedJoinType = normalizeJoinType(joinType);
   const alias = autoAlias(rightQuery.source.table, leftQuery.stages);
-  const rightKeys = rightQuery.columnNames ? [...rightQuery.columnNames] : null;
+  const rightKeys = [...rightQuery.columnNames];
   const rightColumns = createColumnRefs<TRight>(rightQuery.scopeId, rightKeys);
   const predicate = on(leftQuery.columns, rightColumns).node;
   const { mergedColumns, nextNames } = resolveJoinColumns(
@@ -157,6 +157,7 @@ export function resolveJoinQuery<
           db: rightQuery.source.db,
           table: rightQuery.source.table,
           schema: rightQuery.source.schema,
+          columnIdentifiers: rightQuery.columnIdentifiers,
         };
   const stage: Stage = {
     kind: "join",
@@ -184,12 +185,7 @@ export function resolveUnionQuery<TColumns extends Record<string, any>>(
   rightQuery: QueryState<TColumns>,
   op: "union" | "union all"
 ): QueryDeriveInit<TColumns> {
-  const leftNames = leftQuery.columnNames;
-  const rightNames = rightQuery.columnNames;
-  if (!leftNames || !rightNames) {
-    throw new Error("union requires both queries to have explicit column lists");
-  }
-  assertUnionCompatible(leftNames, rightNames);
+  assertUnionCompatible(leftQuery.columnNames, rightQuery.columnNames);
   const outputScopeId = freshScopeId();
   const stage: Stage = {
     kind: "union",

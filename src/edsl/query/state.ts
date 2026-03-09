@@ -1,6 +1,7 @@
 import type {
   CteSpec,
   QuerySpec,
+  ScopeId,
   Source,
   SqlIdentifier,
   Stage,
@@ -12,22 +13,22 @@ export type QueryState<TColumns extends Record<string, any>> = {
   source: Source;
   stages: Stage[];
   columns: ColumnRefs<TColumns>;
-  columnNames: readonly string[] | null;
-  sourceScopeId: string;
-  scopeId: string;
+  columnNames: readonly string[];
+  sourceScopeId: ScopeId;
+  scopeId: ScopeId;
   withs: CteSpec[];
-  columnIdentifiers: Readonly<Record<string, SqlIdentifier>> | null;
+  columnIdentifiers: Readonly<Record<string, SqlIdentifier>>;
 };
 
 export type QueryInit<TColumns extends Record<string, any>> = {
   source: Source;
   stages: Stage[];
   columns: ColumnRefs<TColumns>;
-  columnNames: readonly string[] | null;
-  sourceScopeId: string;
-  scopeId: string;
+  columnNames: readonly string[];
+  sourceScopeId: ScopeId;
+  scopeId: ScopeId;
   withs?: CteSpec[];
-  columnIdentifiers?: Readonly<Record<string, SqlIdentifier>> | null;
+  columnIdentifiers?: Readonly<Record<string, SqlIdentifier>>;
 };
 
 export type QueryDeriveInit<TColumns extends Record<string, any>> = Omit<
@@ -35,10 +36,10 @@ export type QueryDeriveInit<TColumns extends Record<string, any>> = Omit<
   "source" | "sourceScopeId" | "scopeId" | "withs" | "columnIdentifiers"
 > & {
   source?: Source;
-  sourceScopeId?: string;
-  scopeId?: string;
+  sourceScopeId?: ScopeId;
+  scopeId?: ScopeId;
   withs?: CteSpec[];
-  columnIdentifiers?: Readonly<Record<string, SqlIdentifier>> | null;
+  columnIdentifiers?: Readonly<Record<string, SqlIdentifier>>;
 };
 
 export function resolveQueryInitDefaults<TColumns extends Record<string, any>>(
@@ -52,10 +53,7 @@ export function resolveQueryInitDefaults<TColumns extends Record<string, any>>(
     sourceScopeId: init.sourceScopeId,
     scopeId: init.scopeId,
     withs: init.withs ?? [],
-    columnIdentifiers:
-      init.columnIdentifiers === undefined
-        ? columnNamesToIdentifierMap(init.columnNames)
-        : init.columnIdentifiers,
+    columnIdentifiers: init.columnIdentifiers ?? columnNamesToIdentifierMap(init.columnNames),
   };
 }
 
@@ -74,10 +72,7 @@ export function resolveDerivedQueryInit<
     sourceScopeId: init.sourceScopeId ?? current.sourceScopeId,
     scopeId: init.scopeId ?? current.scopeId,
     withs: init.withs ?? current.withs,
-    columnIdentifiers:
-      init.columnIdentifiers === undefined
-        ? current.columnIdentifiers
-        : init.columnIdentifiers,
+    columnIdentifiers: init.columnIdentifiers ?? current.columnIdentifiers,
   };
 }
 

@@ -38,11 +38,11 @@ export function registerIdentifierBinding(
 export function registerColumnIdentifierBinding(
   tableAlias: string | null | undefined,
   bindingName: string | null | undefined,
-  identifier: SqlIdentifier | null,
+  identifier: SqlIdentifier,
   dialect: QueryDialect,
   renderContext: SqlRenderContext | null
 ): void {
-  if (!tableAlias || !bindingName || !identifier?.quoted || !renderContext) return;
+  if (!tableAlias || !bindingName || !identifier.quoted || !renderContext) return;
   const rendered = renderIdentifier(identifier, dialect, renderContext);
   if (!rendered) return;
   renderContext.columnIdentifierBindings[`${tableAlias}.${bindingName}`] = rendered;
@@ -50,11 +50,11 @@ export function registerColumnIdentifierBinding(
 
 export function registerColumnIdentifierBindings(
   tableAlias: string | null | undefined,
-  identifiers: Readonly<Record<string, SqlIdentifier>> | null | undefined,
+  identifiers: Readonly<Record<string, SqlIdentifier>>,
   dialect: QueryDialect,
   renderContext: SqlRenderContext | null
 ): void {
-  if (!tableAlias || !identifiers || !renderContext) return;
+  if (!tableAlias || !renderContext) return;
   for (const [name, identifier] of Object.entries(identifiers)) {
     registerColumnIdentifierBinding(tableAlias, name, identifier, dialect, renderContext);
   }
