@@ -19,7 +19,7 @@ export {
   union,
   unionAll,
 } from "./src/edsl/query";
-export type { QueryStep } from "./src/edsl/query";
+export type { QueryIR, QueryStep } from "./src/edsl/query";
 
 /** Expression builder and helpers for composing SQL expressions. */
 export {

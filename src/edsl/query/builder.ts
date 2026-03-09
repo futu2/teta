@@ -57,6 +57,12 @@ export type QueryStep<
   TOutputColumns extends QueryColumns,
 > = (query: Query<TInputColumns>) => Query<TOutputColumns>;
 
+export type QueryIR<TColumns extends QueryColumns> = {
+  source: Query<TColumns>["source"];
+  stages: Query<TColumns>["stages"];
+  scopeId: Query<TColumns>["sourceScopeId"];
+};
+
 /** Composable query builder with typed columns and SQL rendering. */
 export class Query<TColumns extends QueryColumns> implements QueryState<TColumns> {
   constructor(
@@ -134,7 +140,7 @@ export class Query<TColumns extends QueryColumns> implements QueryState<TColumns
     return join(this, right, on, options);
   }
 
-  toIR() {
+  toIR(): QueryIR<TColumns> {
     return toIR(this);
   }
 
@@ -274,7 +280,7 @@ export function join<
   );
 }
 
-export function toIR<TColumns extends QueryColumns>(query: Query<TColumns>) {
+export function toIR<TColumns extends QueryColumns>(query: Query<TColumns>): QueryIR<TColumns> {
   return {
     source: query.source,
     stages: query.stages,
