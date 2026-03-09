@@ -76,12 +76,10 @@ All `Query` methods are immutable and return a new `Query`.
 - `union(right)`
 
 ### Joins
-- `join(right, on, joinType = "inner")`
-- `innerJoin(right, on)`
-- `leftJoin(right, on)`
-- `rightJoin(right, on)`
-- `fullJoin(right, on)`
-- `lateralJoin(rightOrBuilder, on, joinType = "inner")`
+- `join(rightOrBuilder, on, { type?, lateral?, merge? })`
+- `type`: `"inner" | "left" | "right" | "full"`
+- `lateral: true` enables correlated joins with a right-side builder
+- `merge` customizes the projected joined shape
 
 ### Output and introspection
 - `toIR()`

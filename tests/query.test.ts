@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { Parser } from "node-sql-parser";
 
-import { alias, ident, namespace, omit, pick, prefix, preset, project, projects, remap, rename, selectAll, spread, sqlRenderer, table, t } from "../mod.ts";
+import { alias, ident, lit, namespace, omit, pick, prefix, preset, project, projects, remap, rename, selectAll, spread, sqlRenderer, table, t } from "../mod.ts";
 
 import {
   USER_PIPELINE_POSTGRES_COMPACT,
@@ -39,7 +39,7 @@ describe("Query.toSql", () => {
     const users = createUsersTable();
     const orders = createOrdersTable();
     const query = users
-      .leftJoin(orders, (user, order) => user.id.eq(order.user_id))
+      .join(orders, (user, order) => user.id.eq(order.user_id), { type: "left" })
       .select((row) => ({
         user_id: row.id,
         total: row.total,
@@ -62,6 +62,52 @@ describe("Query.toSql", () => {
     ).toBe(USERS_SELECT_FILTER_POSTGRES_COMPACT);
   });
 
+  test("renders a lateral join through join options", () => {
+    const users = table("users", {
+      id: t.int(),
+      name: t.string(),
+    });
+    const orders = table("orders", {
+      id: t.int(),
+      user_id: t.int(),
+      total: t.float(),
+    });
+    const query = users.join(
+      (user) =>
+        orders
+          .filter((order) => order.user_id.eq(user.id))
+          .select((order) => ({
+            order_id: order.id,
+            total: order.total,
+          })),
+      () => lit(true),
+      { lateral: true }
+    );
+
+    const sql = query.toSql(sqlRenderer({ dialect: "postgresql", format: "compact" }));
+    expect(sql).toContain("JOIN LATERAL (");
+    expect(sql).toContain("WHERE orders_0.user_id = users_0.id");
+  });
+
+  test("hoists a non-lateral subquery join into a CTE", () => {
+    const users = createUsersTable();
+    const orders = createOrdersTable();
+    const query = users.join(
+      orders
+        .filter((order) => order.total.gt(0))
+        .select((order) => ({
+          user_id: order.user_id,
+          total: order.total,
+        })),
+      (user, order) => user.id.eq(order.user_id)
+    );
+
+    const sql = query.toSql(sqlRenderer({ dialect: "postgresql", format: "compact" }));
+    expect(sql).toContain("WITH join_0 AS (SELECT");
+    expect(sql).toContain("JOIN join_0 AS");
+    expect(sql).not.toContain("JOIN (SELECT");
+  });
+
   test("renders a self-join with distinct aliases", () => {
     const employees = table("employees", {
       id: t.int(),
@@ -76,11 +122,11 @@ describe("Query.toSql", () => {
     const query = employees.join(
       managers,
       (employee, manager) => employee.manager_id.eq(manager.id),
-      (employee, manager) => ({
+      { merge: (employee, manager) => ({
         employee_id: employee.id,
         employee_name: employee.name,
         manager_name: manager.name,
-      })
+      }) }
     );
 
     expect(

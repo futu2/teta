@@ -15,7 +15,7 @@ All rendering examples below assume `sqlRenderer` is imported alongside the EDSL
 ### 1) Filter + select + order + limit
 
 ```ts
-import { table, t } from "./src/edsl";
+import { table, t } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -53,7 +53,7 @@ LIMIT 5
 ### 2) Join + aggregate with group()
 
 ```ts
-import { table, t } from "./src/edsl";
+import { table, t } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -67,7 +67,7 @@ const orders = table("orders", {
 });
 
 const q = users
-  .leftJoin(orders, (u, o) => u.id.eq(o.user_id))
+  .join(orders, (u, o) => u.id.eq(o.user_id), { type: "left" })
   .aggregate((u) => ({
     user_id: u.id.group(),
     order_count: u.order_id.count(),
@@ -93,7 +93,7 @@ GROUP BY cte_0_0.id
 ### 3) String concat with template helper
 
 ```ts
-import { table, t, f } from "./src/edsl";
+import { table, t, f } from "./mod.ts";
 
 const names = table("names", {
   id: t.int(),
@@ -120,7 +120,7 @@ FROM names AS names_0
 ## Schema-qualified tables
 
 ```ts
-import { table, t } from "./src/edsl";
+import { table, t } from "./mod.ts";
 
 const users = table("analytics.users", {
   id: t.int(),
@@ -140,7 +140,7 @@ Each chained step is compiled into a CTE, so changing the order of operations is
 ### Pipeline steps (CTE per stage)
 
 ```ts
-import { table, t } from "./src/edsl";
+import { table, t } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -160,7 +160,7 @@ console.log(q.toSql(sqlRenderer()));
 ### Join (auto alias)
 
 ```ts
-import { table, t } from "./src/edsl";
+import { table, t } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -174,7 +174,7 @@ const orders = table("orders", {
 });
 
 const q = users
-  .leftJoin(orders, (u, o) => u.id.eq(o.user_id))
+  .join(orders, (u, o) => u.id.eq(o.user_id), { type: "left" })
   .select((u) => ({
     user_id: u.id,
     user_name: u.name,
@@ -185,15 +185,14 @@ const q = users
 console.log(q.toSql(sqlRenderer()));
 ```
 
-You can pass a join type as the third argument to `join`, for example `"left"` or `"right"`.
-Shortcuts are available: `innerJoin`, `leftJoin`, `rightJoin`, `fullJoin`.
+Use the `options` object to control join behavior, for example `{ type: "left" }` or `{ type: "right" }`.
 
 ### Lateral join
 
-Use `lateralJoin` when the right-hand query needs to reference columns from the left side.
+Use `join(..., { lateral: true })` when the right-hand query needs to reference columns from the left side.
 
 ```ts
-import { table, t, lit } from "./src/edsl";
+import { table, t, lit } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -206,7 +205,7 @@ const orders = table("orders", {
   total: t.float(),
 });
 
-const q = users.lateralJoin(
+const q = users.join(
   (u) =>
     orders
       .filter((o) => o.user_id.eq(u.id))
@@ -214,7 +213,8 @@ const q = users.lateralJoin(
         order_id: o.id,
         total: o.total,
       })),
-  () => lit(true)
+  () => lit(true),
+  { lateral: true }
 );
 
 console.log(q.toSql(sqlRenderer()));
@@ -228,7 +228,7 @@ For `sqlite`, the keyword is omitted during SQL rendering because correlated sub
 Use a custom dialect config when runtime dialect and parser dialect differ:
 
 ```ts
-import { table, t } from "./src/edsl";
+import { table, t } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -242,7 +242,7 @@ console.log(users.select((u) => ({ id: u.id })).toSql(sqlRenderer({
     features: { lateralJoinKeyword: true },
   },
   format: "pretty",
-})).sql);
+})));
 
 console.log(users.toSql(sqlRenderer({ dialect: "sqlite" })));
 console.log(users.toSql(sqlRenderer({ dialect: "hetu" })));
@@ -275,7 +275,7 @@ Teta language spec categories:
 Method-centric EDSL is preferred when possible. Date/time and array operations are exposed as instance methods:
 
 ```ts
-import { table, t } from "./src/edsl";
+import { table, t } from "./mod.ts";
 
 const sessions = table("sessions", {
   id: t.int(),
@@ -302,7 +302,7 @@ const q = sessions.select((s) => ({
 You can customize a dialect so unsupported direct functions map to equivalents/fallbacks:
 
 ```ts
-import { table, t } from "./src/edsl";
+import { table, t } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -332,7 +332,7 @@ console.log(q.toSql(sqlRenderer({
       unsupported: ["OVERLAY"],
     },
   },
-})).sql);
+})));
 ```
 
 ### Aggregate with group()
@@ -341,7 +341,7 @@ Grouping is expressed by calling `.group()` on the grouping key inside `aggregat
 There is no separate `groupBy` step.
 
 ```ts
-import { table, t } from "./src/edsl";
+import { table, t } from "./mod.ts";
 
 const orders = table("orders", {
   id: t.int(),
@@ -363,7 +363,7 @@ console.log(q.toSql(sqlRenderer()));
 ### Window function
 
 ```ts
-import { table, t } from "./src/edsl";
+import { table, t } from "./mod.ts";
 
 const orders = table("orders", {
   id: t.int(),
@@ -394,7 +394,7 @@ console.log(q.toSql(sqlRenderer({ dialect: "postgresql", format: "pretty" })));
 ### Custom SQL functions (UDF)
 
 ```ts
-import { table, t, fn, windowFn } from "./src/edsl";
+import { table, t, fn, windowFn } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -411,7 +411,7 @@ const q = users.select((u) => ({
 ### SQL92 string helpers
 
 ```ts
-import { table, t } from "./src/edsl";
+import { table, t } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -435,7 +435,7 @@ const q = users.select((u) => ({
 ### Array helpers
 
 ```ts
-import { table, t } from "./src/edsl";
+import { table, t } from "./mod.ts";
 
 const sessions = table("sessions", {
   id: t.int(),
@@ -456,7 +456,7 @@ const q = sessions.select((s) => ({
 ### IN operator
 
 ```ts
-import { table, t } from "./src/edsl";
+import { table, t } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -471,7 +471,7 @@ const q = users
 ### SQL standard date/time helpers
 
 ```ts
-import { table, t, currentDate, currentTimestamp, dateLiteral, timestampLiteral } from "./src/edsl";
+import { table, t, currentDate, currentTimestamp, dateLiteral, timestampLiteral } from "./mod.ts";
 
 const posts = table("posts", {
   id: t.int(),
@@ -503,7 +503,7 @@ If you already know the type you want, add a generic to keep the result typed.
 For timestamps, `toDate()` is a convenience for `CAST(ts AS DATE)`.
 
 ```ts
-import { table, t } from "./src/edsl";
+import { table, t } from "./mod.ts";
 
 const orders = table("orders", {
   id: t.int(),
@@ -518,7 +518,7 @@ const q = orders.select((o) => ({
 ```
 
 ```ts
-import { table, t } from "./src/edsl";
+import { table, t } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -538,7 +538,7 @@ const q = users
 ### CASE WHEN
 
 ```ts
-import { table, t, when } from "./src/edsl";
+import { table, t, when } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -556,7 +556,7 @@ const q = users.select((u) => ({
 ### UNION / UNION ALL
 
 ```ts
-import { table, t } from "./src/edsl";
+import { table, t } from "./mod.ts";
 
 const activeUsers = table("users", {
   id: t.int(),
@@ -578,7 +578,7 @@ const allUsers = activeUsers.unionAll(inactiveUsers);
 ### Recursive loop (WITH RECURSIVE)
 
 ```ts
-import { loop, table, t } from "./src/edsl";
+import { loop, table, t } from "./mod.ts";
 
 const employees = table("employees", {
   id: t.int(),

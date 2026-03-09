@@ -1,4 +1,4 @@
-import type { SqlIdentifier } from "../../core/types";
+import { internalCteLabel, isInternalCteName, type SqlIdentifier } from "../../core/types";
 import type { QueryDialect } from "../types";
 import type { AstIdentifierExpr, SqlRenderContext } from "./types";
 
@@ -10,16 +10,17 @@ export function renderIdentifier(
   renderContext: SqlRenderContext | null
 ): string | AstIdentifierExpr | null {
   if (!identifier) return null;
-  if (!identifier.quoted) return identifier.name;
+  const resolvedName = resolveIdentifierName(identifier.name, renderContext);
+  if (!identifier.quoted) return resolvedName;
   if (renderContext?.mode === "ast") {
-    return quotedIdentifierExpr(identifier.name, dialect);
+    return quotedIdentifierExpr(resolvedName, dialect);
   }
-  if (!renderContext) return identifier.name;
+  if (!renderContext) return resolvedName;
 
   const token = `${QUOTED_IDENTIFIER_PREFIX}${renderContext.quotedIdentifiers.length}__`;
   renderContext.quotedIdentifiers.push({
     token,
-    sql: quoteIdentifier(identifier.name, dialect),
+    sql: quoteIdentifier(resolvedName, dialect),
   });
   return token;
 }
@@ -59,15 +60,35 @@ export function registerColumnIdentifierBindings(
   }
 }
 
-export function renderSourceSql(parts: {
-  db: SqlIdentifier | null;
-  schema: SqlIdentifier | null;
-  table: SqlIdentifier;
-}, dialect: QueryDialect): string {
+export function renderSourceSql(
+  parts: {
+    db: SqlIdentifier | null;
+    schema: SqlIdentifier | null;
+    table: SqlIdentifier;
+  },
+  dialect: QueryDialect,
+  renderContext: SqlRenderContext | null
+): string {
   return [parts.db, parts.schema, parts.table]
     .filter((part): part is SqlIdentifier => part !== null)
-    .map((part) => (part.quoted ? quoteIdentifier(part.name, dialect) : part.name))
+    .map((part) => {
+      const name = resolveIdentifierName(part.name, renderContext);
+      return part.quoted ? quoteIdentifier(name, dialect) : name;
+    })
     .join(".");
+}
+
+export function resolveIdentifierName(
+  name: string,
+  renderContext: SqlRenderContext | null
+): string {
+  if (!renderContext || !isInternalCteName(name)) return name;
+  const existing = renderContext.cteNameBindings[name];
+  if (existing) return existing;
+  const label = internalCteLabel(name) ?? "cte";
+  const rendered = `${label}_${renderContext.nextInternalCteIndex++}`;
+  renderContext.cteNameBindings[name] = rendered;
+  return rendered;
 }
 
 export function restoreQuotedIdentifiers(
@@ -113,13 +134,11 @@ function identifierDelimiters(dialect: QueryDialect): [string, string] {
 }
 
 function escapeIdentifier(name: string, open: string, close: string): string {
-  if (open === "[") {
-    return name.replace(/\]/g, "]]" );
-  }
-  if (open === "`") {
-    return name.replace(/`/g, "``");
-  }
-  return name.replace(/"/g, '""');
+  const delimiter = open === close ? open : close;
+  return name.replace(
+    new RegExp(escapeRegExp(delimiter), "g"),
+    `${delimiter}${delimiter}`
+  );
 }
 
 function escapeRegExp(value: string): string {

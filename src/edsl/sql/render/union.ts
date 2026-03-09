@@ -7,7 +7,7 @@ import { buildPipelineAst } from "./build";
 import { getDefaultDialect } from "../dialect";
 import { bindExprScopes, exprToAst, getSqlRenderContext } from "./render";
 import { registerColumnIdentifierBindings, renderIdentifier } from "./identifiers";
-import { buildSelectAst, sourceToFrom, type CompileSourceRef } from "./select";
+import { buildSelectAst, sourceToFrom, type CompileSourceRef } from "./source";
 
 export function compileUnionStage(
   stage: Extract<Stage, { kind: "union" }>,

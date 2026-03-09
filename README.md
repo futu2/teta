@@ -80,7 +80,7 @@ Generated SQL always uses auto-generated aliases (e.g., `users_0`, `orders_1`) a
 qualified column references.
 
 ```ts
-import { sqlRenderer, table, t } from "./src/edsl";
+import { sqlRenderer, table, t } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -113,7 +113,7 @@ console.log(q.toSql(sqlRenderer({
     parserDialect: "Trino",
   },
   format: "pretty",
-})).sql);
+})));
 ```
 
 If you want compilation config to live outside the expression/query definition,
@@ -146,7 +146,7 @@ through `.via(...)`. Free functions follow method order, so the receiver express
 argument.
 
 ```ts
-import { lower, replace, table, t, trim } from "./src/edsl";
+import { lower, replace, table, t, trim } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -207,7 +207,7 @@ You can watch a source module, regenerate SQL on changes, and copy it to clipboa
 
 ```ts
 // dev/query-source.ts
-import { table, t } from "../src/edsl";
+import { table, t } from "../mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -227,7 +227,7 @@ export const query = users
 
 ```ts
 // watch-sql.ts
-import { watchQuerySourceToClipboard } from "./src/edsl";
+import { watchQuerySourceToClipboard } from "./mod.ts";
 
 const controller = await watchQuerySourceToClipboard({
   source: "./dev/query-source.ts",
@@ -309,7 +309,7 @@ console.log(q.toSql(sqlRenderer({
       unsupported: ["OVERLAY"],
     },
   },
-})).sql);
+})));
 ```
 
 ## Tutorial

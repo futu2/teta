@@ -46,4 +46,6 @@ export type SqlRenderContext = {
   quotedIdentifiers: Array<{ token: string; sql: string }>;
   identifierBindings: Record<string, AstIdentifierExpr>;
   columnIdentifierBindings: Record<string, string | AstIdentifierExpr>;
+  cteNameBindings: Record<string, string>;
+  nextInternalCteIndex: number;
 };

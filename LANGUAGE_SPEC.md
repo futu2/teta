@@ -148,7 +148,7 @@ Convenience date part methods (method-centric wrappers over `EXTRACT`):
 
 | Spec item | Preferred EDSL entry | PostgreSQL | MySQL | SQLite | HetuEngine DQL | Other built-ins |
 |---|---|---|---|---|---|---|
-| `LATERAL_JOIN` | `query.lateralJoin(...)` | Direct (`LATERAL` kept) | Direct (MySQL 8+, engine-dependent) | Keyword removed when unsupported | Direct | Direct |
+| `LATERAL_JOIN` | `query.join(..., { lateral: true })` | Direct (`LATERAL` kept) | Direct (MySQL 8+, engine-dependent) | Keyword removed when unsupported | Direct | Direct |
 | `RECURSIVE_CTE` | `loop(...)` | Direct | Direct (MySQL 8+) | Direct | Direct | Direct |
 
 If `dialect.features.recursiveCte = false`, SQL rendering throws an explicit error.

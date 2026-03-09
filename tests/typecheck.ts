@@ -19,10 +19,10 @@ const orders = table("orders", {
   total: t.float(),
 });
 
-const leftJoined = users.leftJoin(orders, (user, order) => user.id.eq(order.user_id));
-const rightJoined = users.rightJoin(orders, (user, order) => user.id.eq(order.user_id));
-const fullJoined = users.fullJoin(orders, (user, order) => user.id.eq(order.user_id));
-const leftViaJoin = users.join(orders, (user, order) => user.id.eq(order.user_id), "left");
+const leftJoined = users.join(orders, (user, order) => user.id.eq(order.user_id), { type: "left" });
+const rightJoined = users.join(orders, (user, order) => user.id.eq(order.user_id), { type: "right" });
+const fullJoined = users.join(orders, (user, order) => user.id.eq(order.user_id), { type: "full" });
+const leftViaJoin = users.join(orders, (user, order) => user.id.eq(order.user_id), { type: "left" });
 
 const leftSelected = leftJoined.select((row) => ({
   total: row.total.coalesce(0),
@@ -44,10 +44,15 @@ const leftViaJoinSelected = leftViaJoin.select((row) => ({
   total: row.total.coalesce(0),
 }));
 
+const leftJoinTotal = leftJoined.columns.total.coalesce(0);
+const leftJoinTotalRemaining = leftJoinTotal.sub(1);
+
 type _LeftJoinTotal = Expect<Equal<ExprType<typeof leftJoined.columns.total>, SqlFloat | null>>;
 type _RightJoinId = Expect<Equal<ExprType<typeof rightJoined.columns.id>, SqlInt | null>>;
 type _FullJoinTotal = Expect<Equal<ExprType<typeof fullJoined.columns.total>, SqlFloat | null>>;
 type _LeftViaJoinTotal = Expect<Equal<ExprType<typeof leftViaJoin.columns.total>, SqlFloat | null>>;
+type _LeftJoinCoalescedTotal = Expect<Equal<ExprType<typeof leftJoinTotal>, SqlFloat>>;
+type _LeftJoinCoalescedSub = Expect<Equal<ExprType<typeof leftJoinTotalRemaining>, SqlFloat>>;
 
 void leftSelected;
 void rightSelected;

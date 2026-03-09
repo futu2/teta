@@ -9,7 +9,7 @@ import type {
   Stage,
   TableSourceInput,
 } from "../core/types";
-import { OUTER_TABLE_ALIAS } from "../core/types";
+import { OUTER_TABLE_ALIAS, internalCteLabel, isInternalCteName } from "../core/types";
 import { ColumnRef, type ColumnRefs } from "../core/expr";
 
 export function normalizeIdentifier<const Name extends string>(
@@ -98,11 +98,14 @@ export function normalizeTableSource(input: TableSourceInput): Source {
 
 export function autoAlias(table: string | SqlIdentifier, stages: Stage[]): string {
   const tableName = typeof table === "string" ? table : identifierName(table);
+  const aliasBase = isInternalCteName(tableName)
+    ? (internalCteLabel(tableName) ?? "cte")
+    : tableName;
   const joinCount = stages.reduce((count, stage) => {
     if (stage.kind === "join") return count + 1;
     return count;
   }, 0);
-  const base = tableName.replace(/[^A-Za-z0-9_]+/g, "_").replace(/^_+|_+$/g, "");
+  const base = aliasBase.replace(/[^A-Za-z0-9_]+/g, "_").replace(/^_+|_+$/g, "");
   const name = base.length ? base : "t";
   return `${name}_${joinCount + 1}`;
 }

@@ -1,0 +1,97 @@
+import type {
+  CteSpec,
+  QuerySpec,
+  Source,
+  SqlIdentifier,
+  Stage,
+} from "../core/types";
+import type { ColumnRefs } from "../expr";
+import { columnNamesToIdentifierMap } from "./utils";
+
+export type QueryState<TColumns extends Record<string, any>> = {
+  source: Source;
+  stages: Stage[];
+  columns: ColumnRefs<TColumns>;
+  columnNames: readonly string[] | null;
+  sourceScopeId: string;
+  scopeId: string;
+  withs: CteSpec[];
+  columnIdentifiers: Readonly<Record<string, SqlIdentifier>> | null;
+};
+
+export type QueryInit<TColumns extends Record<string, any>> = {
+  source: Source;
+  stages: Stage[];
+  columns: ColumnRefs<TColumns>;
+  columnNames: readonly string[] | null;
+  sourceScopeId: string;
+  scopeId: string;
+  withs?: CteSpec[];
+  columnIdentifiers?: Readonly<Record<string, SqlIdentifier>> | null;
+};
+
+export type QueryDeriveInit<TColumns extends Record<string, any>> = Omit<
+  QueryInit<TColumns>,
+  "source" | "sourceScopeId" | "scopeId" | "withs" | "columnIdentifiers"
+> & {
+  source?: Source;
+  sourceScopeId?: string;
+  scopeId?: string;
+  withs?: CteSpec[];
+  columnIdentifiers?: Readonly<Record<string, SqlIdentifier>> | null;
+};
+
+export function resolveQueryInitDefaults<TColumns extends Record<string, any>>(
+  init: QueryInit<TColumns>
+): QueryState<TColumns> {
+  return {
+    source: init.source,
+    stages: init.stages,
+    columns: init.columns,
+    columnNames: init.columnNames,
+    sourceScopeId: init.sourceScopeId,
+    scopeId: init.scopeId,
+    withs: init.withs ?? [],
+    columnIdentifiers:
+      init.columnIdentifiers === undefined
+        ? columnNamesToIdentifierMap(init.columnNames)
+        : init.columnIdentifiers,
+  };
+}
+
+export function resolveDerivedQueryInit<
+  TCurrentColumns extends Record<string, any>,
+  TNextColumns extends Record<string, any>,
+>(
+  current: QueryState<TCurrentColumns>,
+  init: QueryDeriveInit<TNextColumns>
+): QueryInit<TNextColumns> {
+  return {
+    source: init.source ?? current.source,
+    stages: init.stages,
+    columns: init.columns,
+    columnNames: init.columnNames,
+    sourceScopeId: init.sourceScopeId ?? current.sourceScopeId,
+    scopeId: init.scopeId ?? current.scopeId,
+    withs: init.withs ?? current.withs,
+    columnIdentifiers:
+      init.columnIdentifiers === undefined
+        ? current.columnIdentifiers
+        : init.columnIdentifiers,
+  };
+}
+
+export function toQuerySpec<TColumns extends Record<string, any>>(
+  query: Pick<
+    QueryState<TColumns>,
+    "source" | "stages" | "columnNames" | "columnIdentifiers" | "sourceScopeId"
+  >
+): QuerySpec {
+  return {
+    source: query.source,
+    stages: query.stages,
+    columnNames: query.columnNames,
+    columnIdentifiers: query.columnIdentifiers,
+    scopeId: query.sourceScopeId,
+  };
+}

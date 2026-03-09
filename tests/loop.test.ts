@@ -4,6 +4,18 @@ import { sqlRenderer } from "../mod.ts";
 import { buildOrgTreeQuery } from "./helpers/fixtures.ts";
 
 describe("recursive loop queries", () => {
+  test("renders stable recursive CTE names across separate query instances", () => {
+    const renderer = sqlRenderer({ dialect: "postgresql", format: "compact" });
+    const sqlA = buildOrgTreeQuery()
+      .select((employee) => ({ id: employee.id, name: employee.name }))
+      .toSql(renderer);
+    const sqlB = buildOrgTreeQuery()
+      .select((employee) => ({ id: employee.id, name: employee.name }))
+      .toSql(renderer);
+
+    expect(sqlA).toBe(sqlB);
+  });
+
   test("renders a recursive employee tree CTE", () => {
     const sql = buildOrgTreeQuery()
       .select((employee) => ({ id: employee.id, name: employee.name }))
@@ -18,7 +30,7 @@ describe("recursive loop queries", () => {
       "SELECT employees_0.id, employees_0.name, employees_0.manager_id FROM employees AS employees_0 WHERE employees_0.manager_id IS NULL"
     );
     expect(sql).toContain(
-      `INNER JOIN ${loopName} AS ${loopName}_1 ON employees_0.manager_id = ${loopName}_1.id`
+      `INNER JOIN ${loopName} AS loop_1 ON employees_0.manager_id = loop_1.id`
     );
     expect(sql).toContain(
       `SELECT ${loopName}_0.id, ${loopName}_0.name FROM ${loopName} AS ${loopName}_0`

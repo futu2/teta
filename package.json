@@ -1,16 +1,19 @@
 {
   "name": "teta",
-  "module": "index.ts",
+  "module": "./mod.ts",
+  "exports": "./mod.ts",
+  "types": "./mod.ts",
   "type": "module",
   "private": true,
   "scripts": {
-    "test": "bun test"
+    "test": "bun test tests",
+    "test:all": "bun test",
+    "typecheck": "tsc --noEmit",
+    "check": "bun run test && bun run typecheck"
   },
   "devDependencies": {
     "@duckdb/node-api": "^1.4.4-r.3",
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
+    "@types/bun": "latest",
     "typescript": "^5.9.3"
   },
   "dependencies": {

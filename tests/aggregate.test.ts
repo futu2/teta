@@ -23,7 +23,7 @@ describe("joins and aggregates", () => {
     const orders = createOrdersTable();
 
     const query = users
-      .leftJoin(orders, (user, order) => user.id.eq(order.user_id))
+      .join(orders, (user, order) => user.id.eq(order.user_id), { type: "left" })
       .aggregate((row) => ({
         user_id: row.id.group(),
         order_count: row.order_id.count(),

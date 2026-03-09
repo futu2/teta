@@ -68,11 +68,11 @@ export function buildOrgTreeQuery() {
       employees.join(
           self,
           (employee, current) => employee.manager_id.eq(current.id),
-          (employee) => ({
+          { merge: (employee) => ({
             id: employee.id,
             name: employee.name,
             manager_id: employee.manager_id,
-          })
+          }) }
         )
   );
 }

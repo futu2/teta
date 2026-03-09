@@ -39,7 +39,7 @@ describe("error paths", () => {
     const orders = createOrdersTable();
 
     expect(() =>
-      users.join(orders, (user, order) => user.id.eq(order.user_id), "cross" as never)
+      users.join(orders, (user, order) => user.id.eq(order.user_id), { type: "cross" as never })
     ).toThrow(UNSUPPORTED_CROSS_JOIN_ERROR);
   });
 

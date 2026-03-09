@@ -23,7 +23,9 @@
 
     // Some stricter flags (disabled by default)
     "noUnusedLocals": false,
-    "noUnusedParameters": false,
+    "noUnusedParameters": true,
     "noPropertyAccessFromIndexSignature": false
-  }
+  },
+  "include": ["mod.ts", "src/**/*.ts", "tests/**/*.ts"],
+  "exclude": ["node_modules", "tmp/**"]
 }

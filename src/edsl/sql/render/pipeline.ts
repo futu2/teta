@@ -1,41 +1,36 @@
-import type { AST, With } from "node-sql-parser";
+import type { AST } from "node-sql-parser";
 import type { CteSpec, Source, Stage } from "../../core/types";
 import type { QueryDialect } from "../types";
 import type { ScopeBindings } from "./types";
-import { toParserAst } from "./ast";
 import { buildPipelineAst } from "./build";
 import { getDefaultDialect } from "../dialect";
-import { createAstRenderContext, getSqlRenderContext, withSqlRenderContext } from "./render";
-import { buildRecursiveCte, createDeferredRecursiveCte, materializeCte } from "./recursive";
+import { withPipelineAstRenderContext } from "./pipeline_context";
+import { buildPipelineParserAst, materializeBaseCtes } from "./pipeline_cte";
+import { buildRecursiveCte, createDeferredRecursiveCte } from "./recursive";
 
 export { buildRecursiveCte, createDeferredRecursiveCte } from "./recursive";
+
+export type RenderPipelineOptions = {
+  ctePrefix?: string;
+  baseCtes?: CteSpec[];
+  scopeBindings?: ScopeBindings;
+  dialect?: QueryDialect;
+};
 
 export function renderPipelineAst(
   source: Source,
   stages: Stage[],
   columnNames: readonly string[] | null,
   scopeId: string,
-  options?: {
-    ctePrefix?: string;
-    baseCtes?: CteSpec[];
-    scopeBindings?: ScopeBindings;
-    dialect?: QueryDialect;
-  }
+  options?: RenderPipelineOptions
 ): AST {
   const dialect = options?.dialect ?? getDefaultDialect();
-  const render = (): AST => {
+  return withPipelineAstRenderContext(() => {
+    const baseCtes = materializeBaseCtes(options?.baseCtes ?? [], dialect);
     const { ast, ctes } = buildPipelineAst(source, stages, columnNames, scopeId, {
       ...options,
       dialect,
     });
-    const baseCtes = (options?.baseCtes ?? []).map((item) => materializeCte(item, dialect));
-    const merged: With[] = baseCtes.length ? [...baseCtes, ...ctes] : ctes;
-    ast.with = merged.length ? merged : null;
-    return toParserAst(ast);
-  };
-
-  if (getSqlRenderContext()) {
-    return render();
-  }
-  return withSqlRenderContext(createAstRenderContext(), render);
+    return buildPipelineParserAst(ast, baseCtes, ctes);
+  });
 }

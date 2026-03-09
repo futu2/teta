@@ -2,12 +2,35 @@ import type { Option } from "node-sql-parser";
 
 declare const __sqlInt: unique symbol;
 declare const __sqlFloat: unique symbol;
+declare const __sqlDate: unique symbol;
+declare const __sqlTimestamp: unique symbol;
 
 export type SqlInt = number & { readonly [__sqlInt]: true };
 export type SqlFloat = number & { readonly [__sqlFloat]: true };
 export type SqlNumber = SqlInt | SqlFloat;
-export type SqlDate = string;
-export type SqlTimestamp = string;
+export type SqlDate = string & { readonly [__sqlDate]: true };
+export type SqlTimestamp = string & { readonly [__sqlTimestamp]: true };
+
+type ContextSqlNumber<TContext> = Extract<Exclude<TContext, null>, SqlNumber>;
+
+export type NormalizeNumericLiteral<TContext, TValue> = TValue extends number
+  ? [ContextSqlNumber<TContext>] extends [never]
+    ? TValue
+    : [Extract<ContextSqlNumber<TContext>, SqlInt>] extends [never]
+      ? [Extract<ContextSqlNumber<TContext>, SqlFloat>] extends [never]
+        ? TValue
+        : SqlFloat
+      : [Extract<ContextSqlNumber<TContext>, SqlFloat>] extends [never]
+        ? SqlInt
+        : SqlNumber
+  : TValue;
+
+export type NormalizeNumericLiteralTuple<
+  TContext,
+  TValues extends readonly unknown[],
+> = {
+  [K in keyof TValues]: NormalizeNumericLiteral<TContext, TValues[K]>;
+};
 
 export type BuiltinDialect =
   | "mysql"
