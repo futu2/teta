@@ -117,7 +117,7 @@ export type QueryDialect = {
 };
 
 export type SqlFormat = "compact" | "pretty";
-export type SqlParameterMode = "inline" | "named";
+export type SqlParameterMode = "inline" | "named" | "positional";
 export type SqlParameterPrefix = ":" | "$" | "@";
 
 export type SqlOptions = Option & {
@@ -128,8 +128,11 @@ export type SqlOptions = Option & {
 };
 
 export type SqlParam = {
-  val: unknown;
+  /** Runtime value passed alongside the SQL string. */
+  value: unknown;
+  /** 1-based placeholder order, used by positional styles such as `$1`. */
   index: number;
+  /** Placeholder name for named styles such as `:email`; null for positional styles. */
   name: string | null;
 };
 

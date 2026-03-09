@@ -32,6 +32,7 @@ type ExprNodeResult<T> = {
 export type ExprNode<T> = (
   | ColumnNode
   | LiteralNode
+  | ParamNode
   | BinaryNode
   | UnaryNode
   | AggNode
@@ -54,6 +55,12 @@ export type ColumnNode = {
 export type LiteralNode = {
   kind: "literal";
   value: Value;
+};
+
+export type ParamNode = {
+  kind: "param";
+  value: unknown;
+  name: string | null;
 };
 
 export type BinaryNode = {

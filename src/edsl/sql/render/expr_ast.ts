@@ -2,7 +2,7 @@ import type {
   ExprNode,
 } from "../../core/types";
 import type { SqlRenderContext } from "./types";
-import { literalToAst } from "./expr_ast_literal";
+import { literalToAst, paramToAst } from "./expr_ast_literal";
 import {
   arrayExprToAst,
   caseExprToAst,
@@ -36,6 +36,8 @@ export function exprNodeToAst(
     }
     case "literal":
       return literalToAst(expr.value, renderContext);
+    case "param":
+      return paramToAst(expr.value, expr.name, renderContext);
     case "binary":
       return {
         type: "binary_expr",

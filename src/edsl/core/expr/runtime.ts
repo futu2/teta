@@ -81,6 +81,16 @@ export function lit<T extends Value>(value: T): ExprRef<T> {
   return new ExprRef<T>({ kind: "literal", value });
 }
 
+export function param<T>(value: T, name: string | null = null): ExprRef<T> {
+  if (value === undefined) {
+    throw new Error("Unsupported parameter value: undefined");
+  }
+  if (name !== null && !name.trim()) {
+    throw new Error("param name cannot be empty");
+  }
+  return new ExprRef<T>({ kind: "param", value, name });
+}
+
 export function array<T = unknown>(...values: ExprInput<T>[]): ExprRef<T[]> {
   return new ExprRef<T[]>({
     kind: "array",

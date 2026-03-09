@@ -131,6 +131,81 @@ Rule of thumb:
 - use `toSql(...)` by default
 - use `toSqlResult(...)` only when you need `params` or structured render metadata
 
+## Safe SQL parameters with `param(...)`
+
+Use `param(...)` for values that come from request input, auth/session context,
+or any other runtime source. Keep trusted application constants inline.
+
+For example, imagine a support dashboard endpoint that lists paid orders for the
+currently signed-in tenant and an email typed into a search box. Here `session`
+and `request` come from your web framework:
+
+```ts
+import { param, sqlRenderer, table, t } from "./mod.ts";
+
+const orders = table("orders", {
+  id: t.int(),
+  tenant_id: t.string(),
+  customer_email: t.string(),
+  status: t.string(),
+  total_cents: t.int(),
+});
+
+const tenantId = session.tenantId;
+const email = request.query.email?.trim() ?? "";
+
+const result = orders
+  .filter((o) =>
+    o.tenant_id.eq(param(tenantId)).and(
+      o.customer_email.eq(param(email)).and(
+        o.status.eq("paid")
+      )
+    )
+  )
+  .select((o) => ({
+    id: o.id,
+    customer_email: o.customer_email,
+    total_cents: o.total_cents,
+  }))
+  .toSqlResult(sqlRenderer({
+    dialect: "postgresql",
+    format: "compact",
+  }));
+
+console.log(result);
+// {
+//   sql: "SELECT orders_0.id, orders_0.customer_email, orders_0.total_cents FROM orders AS orders_0 WHERE orders_0.tenant_id = $1 AND orders_0.customer_email = $2 AND orders_0.status = 'paid'",
+//   params: [
+//     { value: tenantId, index: 1, name: null },
+//     { value: email, index: 2, name: null }
+//   ]
+// }
+```
+
+In that example, `tenantId` and `email` are runtime values so they use `param(...)`,
+while `"paid"` is a trusted constant that can stay inline.
+
+The `name` field in `SqlResult.params` is only used for named placeholders. With
+default positional rendering you will usually see `name: null` together with an
+`index` such as `$1` or `$2`.
+
+If you want a named placeholder for your own integration layer, pass a second
+argument such as `param(email, "customer_email")` and render with
+`parameterMode: "named"`:
+
+```ts
+const result = orders
+  .filter((o) => o.customer_email.eq(param(email, "customer_email")))
+  .toSqlResult(sqlRenderer({
+    dialect: "postgresql",
+    parameterMode: "named",
+    parameterPrefix: ":",
+  }));
+
+// result.sql === "SELECT ... WHERE orders_0.customer_email = :customer_email"
+// result.params === [{ value: email, index: 1, name: "customer_email" }]
+```
+
 Built-in HetuEngine DQL support is available via `hetuRenderer()`.
 Internally, SQL stringification uses the `Trino` parser dialect while preserving Hetu-oriented function mappings.
 

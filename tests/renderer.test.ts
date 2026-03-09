@@ -3,12 +3,15 @@ import { describe, expect, test } from "bun:test";
 import {
   add,
   duckdbRenderer,
+  param,
   sqlRenderer,
   table,
   t,
 } from "../mod.ts";
 import {
   DIALECT_MATRIX_SQL,
+  EXPLICIT_PARAM_EXPR_POSTGRES_COMPACT,
+  EXPLICIT_PARAM_USERS_FILTER_POSTGRES_COMPACT,
   PARAMETERIZED_EXPR_POSTGRES_COMPACT,
   PARAMETERIZED_USERS_FILTER_POSTGRES_COMPACT,
   USER_PIPELINE_POSTGRES_COMPACT,
@@ -62,8 +65,33 @@ describe("renderer API", () => {
     ).toEqual({
       sql: PARAMETERIZED_USERS_FILTER_POSTGRES_COMPACT,
       params: [
-        { val: 42, index: 1, name: "p1" },
-        { val: "Ada", index: 2, name: "p2" },
+        { value: 42, index: 1, name: "p1" },
+        { value: "Ada", index: 2, name: "p2" },
+      ],
+    });
+  });
+
+  test("Query.toSqlResult captures explicit params by default", () => {
+    const users = table("users", {
+      id: t.int(),
+      name: t.string(),
+    });
+    const name = "SQL injection string ;)";
+    const query = users
+      .filter((user) => user.name.eq(param(name)))
+      .select((user) => ({ id: user.id }));
+
+    expect(
+      query.toSqlResult(
+        sqlRenderer({
+          dialect: "postgresql",
+          format: "compact",
+        })
+      )
+    ).toEqual({
+      sql: EXPLICIT_PARAM_USERS_FILTER_POSTGRES_COMPACT,
+      params: [
+        { value: name, index: 1, name: null },
       ],
     });
   });
@@ -98,8 +126,25 @@ describe("renderer API", () => {
     ).toEqual({
       sql: PARAMETERIZED_EXPR_POSTGRES_COMPACT,
       params: [
-        { val: 1, index: 1, name: "p1" },
-        { val: 2, index: 2, name: "p2" },
+        { value: 1, index: 1, name: "p1" },
+        { value: 2, index: 2, name: "p2" },
+      ],
+    });
+  });
+
+  test("ExprRef.toSqlResult captures explicit params by default", () => {
+    expect(
+      param(1).eq(param(2)).toSqlResult(
+        sqlRenderer({
+          dialect: "postgresql",
+          format: "compact",
+        })
+      )
+    ).toEqual({
+      sql: EXPLICIT_PARAM_EXPR_POSTGRES_COMPACT,
+      params: [
+        { value: 1, index: 1, name: null },
+        { value: 2, index: 2, name: null },
       ],
     });
   });

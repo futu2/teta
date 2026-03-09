@@ -57,6 +57,7 @@ export function collectExprColumns(
       if (expr.elseExpr) collectExprColumns(expr.elseExpr, out, options);
       return;
     case "literal":
+    case "param":
       return;
     default:
       assertNever(expr);

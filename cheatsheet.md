@@ -9,12 +9,14 @@ import {
   loop,
   t,
   ExprRef,
+  sqlRenderer,
   fn,
   windowFn,
   when,
   shape,
   f,
   lit,
+  param,
   currentDate,
   currentTimestamp,
   dateLiteral,
@@ -216,8 +218,39 @@ Use these on column refs and expression refs (for example `u.age.gte(18)`).
 
 ### Core builders
 - `lit(value)` -> literal expression
+- `param(value, name?)` -> runtime SQL parameter; `name` is only populated for named placeholders
 - `fn(name, ...args)` -> generic SQL function call
 - `windowFn(name, ...args).over(spec)` -> generic window function call
+
+```ts
+const orders = table("orders", {
+  id: t.int(),
+  tenant_id: t.string(),
+  customer_email: t.string(),
+  status: t.string(),
+  total_cents: t.int(),
+});
+
+const tenantId = session.tenantId;
+const email = request.query.email?.trim() ?? "";
+
+const result = orders
+  .filter((o) =>
+    o.tenant_id.eq(param(tenantId)).and(
+      o.customer_email.eq(param(email)).and(o.status.eq("paid"))
+    )
+  )
+  .toSqlResult(sqlRenderer({ dialect: "postgresql" }));
+
+result.sql;
+// SELECT orders_0.id, orders_0.tenant_id, orders_0.customer_email, orders_0.status, orders_0.total_cents FROM orders AS orders_0 WHERE orders_0.tenant_id = $1 AND orders_0.customer_email = $2 AND orders_0.status = 'paid'
+
+result.params;
+// [{ value: tenantId, index: 1, name: null }, { value: email, index: 2, name: null }]
+
+// `name` is null here because the SQL is using positional placeholders ($1, $2).
+// Use `param(email, "customer_email")` with `parameterMode: "named"` to populate it.
+```
 
 ### Date/time constants and literals
 - `currentDate()`

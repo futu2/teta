@@ -2,6 +2,7 @@ export {
   ExprRef,
   ColumnRef,
   lit,
+  param,
   array,
   fn,
   windowFn,

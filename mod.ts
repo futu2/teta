@@ -114,6 +114,7 @@ export {
   shape,
   f,
   lit,
+  param,
   currentDate,
   currentTimestamp,
   dateLiteral,
