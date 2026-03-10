@@ -61,9 +61,9 @@ export function buildBaseSelectAst(
 
 export function buildCompiledSegment(
   from: FromAst[],
-  projection: Extract<Stage, { kind: "select" }> | null,
-  orderStage: Extract<Stage, { kind: "orderBy" }> | null,
-  limitStage: Extract<Stage, { kind: "limit" }> | null,
+  projection: Extract<Stage, { kind: "map" | "fold" }> | null,
+  orderStage: Extract<Stage, { kind: "sort" }> | null,
+  limitStage: Extract<Stage, { kind: "take" }> | null,
   whereExpr: ExprNode<unknown> | null,
   havingExpr: ExprNode<unknown> | null,
   qualifyExpr: ExprNode<unknown> | null,
@@ -81,7 +81,7 @@ export function buildCompiledSegment(
         as: renderIdentifier(item.as, dialect, getSqlRenderContext()),
       }))
     : selectExpandedColumns(currentScopeId, currentColumnNames, scopeExprs, currentBindings, dialect);
-  const groupby: GroupByAst | null = projection?.groupBy
+  const groupby: GroupByAst | null = projection?.kind === "fold" && projection.groupBy
     ? {
         columns: projection.groupBy.map((expr) =>
           exprToAst(bindFusedExpr(expr, scopeExprs, currentBindings, dialect))

@@ -7,7 +7,7 @@ import {
 } from "./predicate_factor.ts";
 import { containsAggregate, containsWindow } from "./predicate_contains.ts";
 
-export function isAggregateProjection(stage: Extract<Stage, { kind: "select" }>): boolean {
+export function isAggregateProjection(stage: Extract<Stage, { kind: "map" | "fold" }>): boolean {
   if (stage.groupBy && stage.groupBy.length > 0) return true;
   return stage.items.some((item) => containsAggregate(item.expr));
 }

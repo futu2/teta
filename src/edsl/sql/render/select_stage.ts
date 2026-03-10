@@ -45,14 +45,14 @@ export function createStageSelectContext(
 }
 
 export function buildSelectStageAst(
-  stage: Extract<Stage, { kind: "select" }>,
+  stage: Extract<Stage, { kind: "map" | "fold" }>,
   context: StageSelectContext
 ): SelectAst {
   return buildSelectAst({
     from: [context.baseFrom],
     columns: renderBoundSelectItems(stage.items, context.baseBindings, context.dialect),
     where: null,
-    groupby: stage.groupBy
+    groupby: stage.kind === "fold" && stage.groupBy
       ? ({
           columns: stage.groupBy.map((expr) =>
             exprToAst(bindExprScopes(expr, context.baseBindings, context.dialect))
@@ -87,8 +87,8 @@ export function buildFilterStageAst(
   });
 }
 
-export function buildOrderByStageAst(
-  stage: Extract<Stage, { kind: "orderBy" }>,
+export function buildSortStageAst(
+  stage: Extract<Stage, { kind: "sort" }>,
   context: StageSelectContext
 ): SelectAst {
   return buildSelectAst({
@@ -110,8 +110,8 @@ export function buildOrderByStageAst(
   });
 }
 
-export function buildLimitStageAst(
-  stage: Extract<Stage, { kind: "limit" }>,
+export function buildTakeStageAst(
+  stage: Extract<Stage, { kind: "take" }>,
   context: StageSelectContext
 ): SelectAst {
   return buildSelectAst({

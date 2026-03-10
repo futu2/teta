@@ -83,13 +83,14 @@ export function tryBuildFusedSegmentAst(
             applyFusedJoinStage(state, stage, nextJoin);
             continue;
           }
-          case "select":
+          case "map":
+          case "fold":
             applyFusedProjectionStage(state, stage);
             continue;
-          case "orderBy":
+          case "sort":
             applyFusedOrderStage(state, stage);
             continue;
-          case "limit":
+          case "take":
             applyFusedLimitStage(state, stage);
             continue;
           case "union":
@@ -147,17 +148,17 @@ export function tryBuildFusedSegmentAst(
           break;
         }
 
-        if (stage.kind === "orderBy" && !state.orderStage) {
+        if (stage.kind === "sort" && !state.orderStage) {
           applyFusedOrderStage(state, stage);
           continue;
         }
-        if (stage.kind === "limit" && !state.limitStage) {
+        if (stage.kind === "take" && !state.limitStage) {
           applyFusedLimitStage(state, stage);
           continue;
         }
         break;
       case "postorder":
-        if (stage.kind === "limit" && !state.limitStage) {
+        if (stage.kind === "take" && !state.limitStage) {
           applyFusedLimitStage(state, stage);
           continue;
         }

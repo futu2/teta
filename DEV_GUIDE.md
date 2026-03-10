@@ -120,16 +120,17 @@ A `Query<TColumns>` in `src/edsl/query.ts` stores:
 - `columnNames`
 - `withs`
 
-The important part is that query-building is **immutable**: each method returns a new `Query` with another stage appended or merged.
+The important part is that query-building is **immutable**: each helper function returns a new `Query` with another stage appended or merged.
 
 ### `Stage`
 
 A query pipeline is a list of `Stage` values:
 
-- `select`
+- `map`
+- `fold`
 - `filter`
-- `orderBy`
-- `limit`
+- `sort`
+- `take`
 - `join`
 - `union`
 
@@ -264,10 +265,10 @@ Examples:
 - `map(...)`
   - evaluates the selector
   - converts each selected value with `toExprNode(...)`
-  - creates a `select` stage
+  - creates a `map` stage
 - `fold(...)`
   - unwraps `group(...)` markers
-  - builds grouped `select` stage + `groupBy`
+  - builds a `fold` stage + `groupBy`
 - `filter(...)`
   - stores a predicate expression
   - merges adjacent filters with `AND`
@@ -355,14 +356,14 @@ This is why the same logical query may render as a flat `SELECT`, a staged `WITH
 
 Per stage kind:
 
-- `select`
+- `map` / `fold`
   - writes projected columns
-  - optionally writes `GROUP BY`
+  - `fold` optionally writes `GROUP BY`
 - `filter`
   - writes `WHERE`
-- `orderBy`
+- `sort`
   - writes `ORDER BY`
-- `limit`
+- `take`
   - writes `LIMIT`
 - `join`
   - builds joined `FROM` entries

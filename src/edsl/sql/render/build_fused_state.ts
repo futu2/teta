@@ -37,9 +37,9 @@ export type FusedBuildState = {
   currentScopeId: ScopeId;
   currentColumnNames: readonly string[];
   currentColumnIdentifiers: Readonly<Record<string, SqlIdentifier>>;
-  projection: Extract<Stage, { kind: "select" }> | null;
-  orderStage: Extract<Stage, { kind: "orderBy" }> | null;
-  limitStage: Extract<Stage, { kind: "limit" }> | null;
+  projection: Extract<Stage, { kind: "map" | "fold" }> | null;
+  orderStage: Extract<Stage, { kind: "sort" }> | null;
+  limitStage: Extract<Stage, { kind: "take" }> | null;
   whereExpr: ExprNode<unknown> | null;
   havingExpr: ExprNode<unknown> | null;
   qualifyExpr: ExprNode<unknown> | null;
@@ -110,7 +110,7 @@ export function applyFusedJoinStage(
 
 export function applyFusedProjectionStage(
   state: FusedBuildState,
-  stage: Extract<Stage, { kind: "select" }>
+  stage: Extract<Stage, { kind: "map" | "fold" }>
 ): void {
   state.projection = stage;
   state.scopeExprs[stage.outputScopeId] = selectItemsToScopeMap(stage.items);
@@ -123,7 +123,7 @@ export function applyFusedProjectionStage(
 
 export function applyFusedOrderStage(
   state: FusedBuildState,
-  stage: Extract<Stage, { kind: "orderBy" }>
+  stage: Extract<Stage, { kind: "sort" }>
 ): void {
   state.orderStage = stage;
   state.phase = "postorder";
@@ -132,7 +132,7 @@ export function applyFusedOrderStage(
 
 export function applyFusedLimitStage(
   state: FusedBuildState,
-  stage: Extract<Stage, { kind: "limit" }>
+  stage: Extract<Stage, { kind: "take" }>
 ): void {
   state.limitStage = stage;
   state.phase = "postlimit";

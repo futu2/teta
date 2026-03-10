@@ -21,13 +21,14 @@ export function advanceStagePlanningState(
 
 export function nextStageScopeId(stage: Stage, currentScopeId: ScopeId): ScopeId {
   switch (stage.kind) {
-    case "select":
+    case "map":
+    case "fold":
     case "join":
     case "union":
       return stage.outputScopeId;
     case "filter":
-    case "orderBy":
-    case "limit":
+    case "sort":
+    case "take":
       return currentScopeId;
     default:
       return assertNever(stage);
@@ -46,12 +47,13 @@ export function nextStageColumnIdentifiers(
   _currentColumnIdentifiers: Readonly<Record<string, SqlIdentifier>>
 ): Readonly<Record<string, SqlIdentifier>> {
   switch (stage.kind) {
-    case "select":
+    case "map":
+    case "fold":
       return selectItemsToIdentifierMap(stage.items);
     case "filter":
     case "join":
-    case "orderBy":
-    case "limit":
+    case "sort":
+    case "take":
     case "union":
       return selectItemsToIdentifierMap(stage.selectAll);
     default:
@@ -61,12 +63,13 @@ export function nextStageColumnIdentifiers(
 
 export function stageOutputNames(stage: Stage): readonly string[] {
   switch (stage.kind) {
-    case "select":
+    case "map":
+    case "fold":
       return stage.keys;
     case "filter":
     case "join":
-    case "orderBy":
-    case "limit":
+    case "sort":
+    case "take":
     case "union":
       return selectItemNames(stage.selectAll);
     default:

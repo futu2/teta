@@ -61,14 +61,14 @@ describe("recursive optimizer", () => {
     });
   });
 
-  test("removes no-op loop selects", () => {
+  test("removes no-op loop maps", () => {
     const filter: Stage = {
       kind: "filter",
       predicate: equals(column("active"), literal(true)),
       selectAll: [select("id")],
     };
     const selectStage: Stage = {
-      kind: "select",
+      kind: "map",
       items: [select("id")],
       keys: ["id"],
       groupBy: null,

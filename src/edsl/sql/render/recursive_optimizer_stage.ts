@@ -19,7 +19,8 @@ export function optimizeLoopStage(
   validateLoopStage(stage, label);
 
   switch (stage.kind) {
-    case "select": {
+    case "map":
+    case "fold": {
       const keptIndexes = stage.keys
         .map((key, itemIndex) => ({ key, itemIndex }))
         .filter(({ key }) => needed.has(key))
@@ -79,8 +80,8 @@ export function optimizeLoopStage(
         needed: before.size ? before : new Set<string>(needed),
       };
     }
-    case "orderBy":
-    case "limit":
+    case "sort":
+    case "take":
     case "union":
       userError("LOOP_UNSUPPORTED_STAGE", `loop ${label} does not allow ${stage.kind} stages`);
     default:
@@ -92,13 +93,13 @@ export function compactLoopStages(
   stages: Stage[],
   inputNames: readonly string[]
 ): Stage[] {
-  return mergeAdjacentLoopFilters(removeNoOpLoopSelects(stages, inputNames));
+  return mergeAdjacentLoopFilters(removeNoOpLoopMaps(stages, inputNames));
 }
 
 function validateLoopStage(stage: Stage, label: LoopPartLabel): void {
   switch (stage.kind) {
-    case "orderBy":
-    case "limit":
+    case "sort":
+    case "take":
     case "union":
       userError("LOOP_UNSUPPORTED_STAGE", `loop ${label} does not allow ${stage.kind} stages`);
     default:
@@ -142,14 +143,14 @@ function pruneSelectItems(
   return pruned;
 }
 
-function removeNoOpLoopSelects(
+function removeNoOpLoopMaps(
   stages: Stage[],
   initialInputNames: readonly string[]
 ): Stage[] {
   const compact: Stage[] = [];
   let inputNames = initialInputNames;
   for (const stage of stages) {
-    if (stage.kind === "select" && isNoOpLoopSelect(stage, inputNames)) {
+    if (stage.kind === "map" && isNoOpLoopMap(stage, inputNames)) {
       continue;
     }
     compact.push(stage);
@@ -158,11 +159,10 @@ function removeNoOpLoopSelects(
   return compact;
 }
 
-function isNoOpLoopSelect(
-  stage: Extract<Stage, { kind: "select" }>,
+function isNoOpLoopMap(
+  stage: Extract<Stage, { kind: "map" }>,
   inputNames: readonly string[]
 ): boolean {
-  if (stage.groupBy && stage.groupBy.length > 0) return false;
   if (inputNames.length !== stage.keys.length) return false;
   for (let index = 0; index < stage.keys.length; index += 1) {
     const key = stage.keys[index]!;

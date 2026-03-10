@@ -5,9 +5,9 @@ import { getDefaultDialect } from "../dialect.ts";
 import type { CompileSourceRef } from "./source.ts";
 import {
   buildFilterStageAst,
-  buildLimitStageAst,
-  buildOrderByStageAst,
   buildSelectStageAst,
+  buildSortStageAst,
+  buildTakeStageAst,
   createStageSelectContext,
 } from "./select_stage.ts";
 import { buildJoinStageAst } from "./select_join.ts";
@@ -29,14 +29,15 @@ export function stageToSelect(
   );
 
   switch (stage.kind) {
-    case "select":
+    case "map":
+    case "fold":
       return buildSelectStageAst(stage, context);
     case "filter":
       return buildFilterStageAst(stage, context);
-    case "orderBy":
-      return buildOrderByStageAst(stage, context);
-    case "limit":
-      return buildLimitStageAst(stage, context);
+    case "sort":
+      return buildSortStageAst(stage, context);
+    case "take":
+      return buildTakeStageAst(stage, context);
     case "join":
       return buildJoinStageAst(stage, context, ctePrefix);
     case "union":

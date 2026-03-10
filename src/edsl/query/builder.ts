@@ -53,16 +53,15 @@ import {
   resolveQueryInitDefaults,
 } from "./state.ts";
 import {
-  resolveAggregateQuery,
+  resolveFoldQuery,
   resolveFilterQuery,
   resolveJoinQuery,
-  resolveLimitQuery,
-  resolveOrderQuery,
-  resolveSelectQuery,
+  resolveTakeQuery,
+  resolveSortQuery,
+  resolveMapQuery,
   resolveUnionQuery,
 } from "./mutations.ts";
 import { userError } from "../errors.ts";
-import { containsAggregate } from "../sql/render/predicate_contains.ts";
 
 type QueryColumns = Record<string, any>;
 
@@ -182,7 +181,7 @@ function buildMap<
   query: Query<TColumns>,
   selector: (cols: ColumnRefs<TColumns>) => TSelection
 ): Query<SelectResult<TSelection>> {
-  return deriveQuery(query, resolveSelectQuery(query, selector(query.columns)));
+  return deriveQuery(query, resolveMapQuery(query, selector(query.columns)));
 }
 
 function buildFold<
@@ -192,7 +191,7 @@ function buildFold<
   query: Query<TColumns>,
   selector: (cols: ColumnRefs<TColumns>) => TSelection
 ): Query<SelectResult<TSelection>> {
-  return deriveQuery(query, resolveAggregateQuery(query, selector(query.columns)));
+  return deriveQuery(query, resolveFoldQuery(query, selector(query.columns)));
 }
 
 function buildFilter<TColumns extends QueryColumns>(
@@ -207,14 +206,14 @@ function buildSort<TColumns extends QueryColumns>(
   selector: (cols: ColumnRefs<TColumns>) => OrderItem | OrderItem[]
 ): Query<TColumns> {
   const next = selector(query.columns);
-  return deriveQuery(query, resolveOrderQuery(query, Array.isArray(next) ? next : [next]));
+  return deriveQuery(query, resolveSortQuery(query, Array.isArray(next) ? next : [next]));
 }
 
 function buildTake<TColumns extends QueryColumns>(
   query: Query<TColumns>,
   count: number
 ): Query<TColumns> {
-  return deriveQuery(query, resolveLimitQuery(query, count));
+  return deriveQuery(query, resolveTakeQuery(query, count));
 }
 
 function buildUnion<TColumns extends QueryColumns>(
@@ -536,30 +535,6 @@ export function toSqlResult<TTarget extends SqlCompilable, TReturn extends SqlRe
 }
 
 
-function toPublicStageKind(stage: Query<any>["stages"][number]): QueryStageKind {
-  switch (stage.kind) {
-    case "select":
-      return stage.groupBy && stage.groupBy.length > 0
-        ? "fold"
-        : stage.items.some((item) => containsAggregate(item.expr))
-          ? "fold"
-          : "map";
-    case "filter":
-      return "filter";
-    case "orderBy":
-      return "sort";
-    case "limit":
-      return "take";
-    case "join":
-      return "join";
-    case "union":
-      return "union";
-  }
-
-  const exhaustiveCheck: never = stage;
-  return exhaustiveCheck;
-}
-
 export function explain<TColumns extends QueryColumns>(
   query: Query<TColumns>,
   options: SqlOptions = {}
@@ -585,7 +560,7 @@ export function explain<TColumns extends QueryColumns>(
     columnNames: query.columnNames,
     stages: query.stages.map((stage, index) => ({
       index,
-      kind: toPublicStageKind(stage),
+      kind: stage.kind,
     })),
     ctes: query.withs.map((cte) => ({
       name: cte.name,

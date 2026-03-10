@@ -69,17 +69,41 @@ export type JoinSource =
       inheritedBindings: Readonly<Partial<Record<ScopeId, string | null>>> | null;
     };
 
+export type MapStage = {
+  kind: "map";
+  items: SelectItem[];
+  keys: string[];
+  groupBy: null;
+  outputScopeId: ScopeId;
+};
+
+export type FoldStage = {
+  kind: "fold";
+  items: SelectItem[];
+  keys: string[];
+  groupBy: ExprNode<any>[] | null;
+  outputScopeId: ScopeId;
+};
+
+export type ProjectionStage = MapStage | FoldStage;
+
+export type SortStage = {
+  kind: "sort";
+  items: OrderItem[];
+  selectAll: SelectItem[];
+};
+
+export type TakeStage = {
+  kind: "take";
+  count: number;
+  selectAll: SelectItem[];
+};
+
 export type Stage =
-  | {
-      kind: "select";
-      items: SelectItem[];
-      keys: string[];
-      groupBy: ExprNode<any>[] | null;
-      outputScopeId: ScopeId;
-    }
+  | ProjectionStage
   | { kind: "filter"; predicate: ExprNode<boolean>; selectAll: SelectItem[] }
-  | { kind: "orderBy"; items: OrderItem[]; selectAll: SelectItem[] }
-  | { kind: "limit"; count: number; selectAll: SelectItem[] }
+  | SortStage
+  | TakeStage
   | {
       kind: "join";
       joinType: JoinType;
@@ -94,8 +118,8 @@ export type Stage =
   | {
       kind: "union";
       op: "union" | "union all";
-      right: QuerySpec;
       selectAll: SelectItem[];
+      right: QuerySpec;
       outputScopeId: ScopeId;
     };
 
