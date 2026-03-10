@@ -1,4 +1,25 @@
-import { duckdbRenderer, postgresqlRenderer, sqlRenderer, table, t } from "../mod.ts";
+import { pipe } from "remeda";
+import {
+  and,
+  asc,
+  coalesce,
+  dateTrunc,
+  desc,
+  duckdbRenderer,
+  eq,
+  filter,
+  join,
+  lower,
+  map,
+  postgresqlRenderer,
+  sort,
+  sqlRenderer,
+  table,
+  t,
+  take,
+  toSql,
+  trim,
+} from "../mod.ts";
 import type { SqlRenderer, SqlResult } from "../mod.ts";
 
 export type RenderBenchmarkCase = {
@@ -37,19 +58,20 @@ const orders = table("orders", {
   created_at: t.timestamp(),
 });
 
-export const renderBenchmarkQuery = users
-  .join(orders, (user, order) => user.id.eq(order.user_id), { type: "left" })
-  .filter((row) => row.active.eq(true).and(row.status.eq("paid")))
-  .select((row) => ({
+export const renderBenchmarkQuery = pipe(
+  join(users, orders, (user, order) => eq(user.id, order.user_id), { type: "left" }),
+  filter((row) => and(eq(row.active, true), eq(row.status, "paid"))),
+  map((row) => ({
     id: row.id,
     tenant_id: row.tenant_id,
-    normalized_name: row.name.trim().lower(),
+    normalized_name: lower(trim(row.name)),
     spend_cents: row.spend_cents,
-    total_cents: row.total_cents.coalesce(0),
-    created_day: row.created_at.dateTrunc("day"),
-  }))
-  .orderBy((row) => [row.created_day.desc(), row.id.asc()])
-  .limit(100);
+    total_cents: coalesce(row.total_cents, 0),
+    created_day: dateTrunc(row.created_at, "day"),
+  })),
+  sort((row) => [desc(row.created_day), asc(row.id)]),
+  take(100)
+);
 
 export const renderBenchmarkCases: RenderBenchmarkCase[] = [
   {
@@ -83,7 +105,7 @@ export function runRenderBenchmark(
 
   return renderBenchmarkCases.map((benchmarkCase) => {
     for (let warmupIndex = 0; warmupIndex < warmupRuns; warmupIndex += 1) {
-      renderBenchmarkQuery.toSql(benchmarkCase.renderer);
+      toSql(renderBenchmarkQuery, benchmarkCase.renderer);
     }
 
     const sampleDurations: number[] = [];
@@ -91,7 +113,7 @@ export function runRenderBenchmark(
     for (let sampleIndex = 0; sampleIndex < samples; sampleIndex += 1) {
       const start = performance.now();
       for (let runIndex = 0; runIndex < runs; runIndex += 1) {
-        lastSql = renderBenchmarkQuery.toSql(benchmarkCase.renderer);
+        lastSql = toSql(renderBenchmarkQuery, benchmarkCase.renderer);
       }
       const elapsed = performance.now() - start;
       sampleDurations.push(elapsed / runs);
