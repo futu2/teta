@@ -1,5 +1,5 @@
-import type { SelectItem, Stage } from "../../core/types.ts";
-import { selectItemOutputName } from "../../query/utils.ts";
+import type { ProjectionItem, Stage } from "../../core/types.ts";
+import { projectionItemOutputName } from "../../query/utils.ts";
 import { internalError, userError } from "../../errors.ts";
 import { stageOutputNames } from "./planner.ts";
 import { collectExprColumns } from "./recursive_optimizer_expr.ts";
@@ -48,34 +48,34 @@ export function optimizeLoopStage(
       };
     }
     case "filter": {
-      const selectAll = pruneSelectItems(stage.selectAll, needed);
+      const projectAll = pruneProjectionItems(stage.projectAll, needed);
       const before = new Set<string>(needed);
       collectExprColumns(stage.predicate, before);
       return {
         stage:
-          selectAll === stage.selectAll
+          projectAll === stage.projectAll
             ? stage
             : {
                 ...stage,
-                selectAll,
+                projectAll,
               },
         needed: before,
       };
     }
     case "join": {
-      const selectAll = pruneSelectItems(stage.selectAll, needed);
+      const projectAll = pruneProjectionItems(stage.projectAll, needed);
       const before = new Set<string>();
-      selectAll.forEach((item) =>
+      projectAll.forEach((item) =>
         collectExprColumns(item.expr, before, { excludeTable: stage.as })
       );
       collectExprColumns(stage.on, before, { excludeTable: stage.as });
       return {
         stage:
-          selectAll === stage.selectAll
+          projectAll === stage.projectAll
             ? stage
             : {
                 ...stage,
-                selectAll,
+                projectAll,
               },
         needed: before.size ? before : new Set<string>(needed),
       };
@@ -121,7 +121,7 @@ function mergeAdjacentLoopFilters(stages: Stage[]): Stage[] {
           left: previous.predicate,
           right: stage.predicate,
         },
-        selectAll: stage.selectAll,
+        projectAll: stage.projectAll,
       };
       continue;
     }
@@ -130,12 +130,12 @@ function mergeAdjacentLoopFilters(stages: Stage[]): Stage[] {
   return merged;
 }
 
-function pruneSelectItems(
-  items: SelectItem[],
+function pruneProjectionItems(
+  items: ProjectionItem[],
   needed: ReadonlySet<string>
-): SelectItem[] {
+): ProjectionItem[] {
   const pruned = items.filter((item) => {
-    const name = selectItemOutputName(item);
+    const name = projectionItemOutputName(item);
     if (!name) return true;
     return needed.has(name);
   });
@@ -170,7 +170,7 @@ function isNoOpLoopMap(
     const item = stage.items[index];
     if (!item) return false;
     if (key !== input) return false;
-    if (item.as && selectItemOutputName(item) !== key) return false;
+    if (item.as && projectionItemOutputName(item) !== key) return false;
     if (item.expr.kind !== "column") return false;
     if (item.expr.table !== null) return false;
     if (item.expr.name !== key) return false;

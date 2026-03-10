@@ -1,4 +1,4 @@
-import type { ScopeId, SelectItem, SqlIdentifier } from "../types.ts";
+import type { ScopeId, ProjectionItem, SqlIdentifier } from "../types.ts";
 import {
   ColumnRef,
   ExprRef,
@@ -119,11 +119,11 @@ export function mergeColumnNames(
   return merged;
 }
 
-export function selectAllItems<TColumns extends Record<string, unknown>>(
+export function projectAllItems<TColumns extends Record<string, unknown>>(
   columns: ExprRefs<TColumns>,
   columnNames: readonly string[],
   columnIdentifiers?: Readonly<Record<string, SqlIdentifier>>
-): SelectItem[] {
+): ProjectionItem[] {
   return columnNames.map((name) => {
     const value = Reflect.get(columns, name);
     if (!(value instanceof ExprRef)) {

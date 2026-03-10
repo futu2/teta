@@ -7,7 +7,7 @@ import { buildPipelineAst } from "./build.ts";
 import { getDefaultDialect } from "../dialect.ts";
 import { bindExprScopes, exprToAst, getSqlRenderContext } from "./render.ts";
 import { registerColumnIdentifierBindings, renderIdentifier } from "./identifiers.ts";
-import { buildSelectAst, sourceToFrom, type CompileSourceRef } from "./source.ts";
+import { buildSqlSelectAst, sourceToFrom, type CompileSourceRef } from "./source.ts";
 
 export function compileUnionStage(
   stage: Extract<Stage, { kind: "union" }>,
@@ -30,9 +30,9 @@ export function compileUnionStage(
     ...(inheritedBindings ?? {}),
     [leftScopeId]: baseAlias,
   };
-  const leftAst = buildSelectAst({
+  const leftAst = buildSqlSelectAst({
     from: [baseFrom],
-    columns: stage.selectAll.map((item) => ({
+    columns: stage.projectAll.map((item) => ({
       expr: exprToAst(bindExprScopes(item.expr, leftBindings, dialect)),
       as: renderIdentifier(item.as, dialect, getSqlRenderContext()),
     })),

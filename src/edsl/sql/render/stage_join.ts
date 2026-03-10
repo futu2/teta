@@ -4,12 +4,12 @@ import { ensureSelectAst, replaceOuterAlias, toParserSelect } from "./ast.ts";
 import { getSqlRenderContext, bindExprScopes, exprToAst, lateralJoinPrefix } from "./render.ts";
 import { registerColumnIdentifierBindings } from "./identifiers.ts";
 import {
-  buildSelectAst,
+  buildSqlSelectAst,
   buildTableFromRef,
   compileJoinSource,
 } from "./source.ts";
 import {
-  renderBoundSelectItems,
+  renderBoundProjectionItems,
   type StageRenderContext,
 } from "./stage_ast.ts";
 import { internalError } from "../../errors.ts";
@@ -35,12 +35,12 @@ export function buildJoinStageAst(
     getSqlRenderContext()
   );
 
-  return buildSelectAst({
+  return buildSqlSelectAst({
     from: [
       context.baseFrom,
       buildJoinFromRef(stage, context, joinBindings, ctePrefix, join),
     ],
-    columns: renderBoundSelectItems(stage.selectAll, joinBindings, context.dialect),
+    columns: renderBoundProjectionItems(stage.projectAll, joinBindings, context.dialect),
     where: null,
     groupby: null,
     having: null,

@@ -1,4 +1,4 @@
-import type { ScopeId, SelectItem, Stage } from "../../core/types.ts";
+import type { ScopeId, ProjectionItem, Stage } from "../../core/types.ts";
 import type { QueryDialect } from "../types.ts";
 import type { FromAst, GroupByAst, ScopeBindings, SelectAst, SelectColumnAst } from "./types.ts";
 import { ensureAlias } from "./ast.ts";
@@ -12,7 +12,7 @@ import {
   renderIdentifier,
 } from "./identifiers.ts";
 import {
-  buildSelectAst,
+  buildSqlSelectAst,
   sourceToFrom,
   type CompileSourceRef,
 } from "./source.ts";
@@ -48,9 +48,9 @@ export function buildProjectionStageAst(
   stage: Extract<Stage, { kind: "map" | "fold" }>,
   context: StageRenderContext
 ): SelectAst {
-  return buildSelectAst({
+  return buildSqlSelectAst({
     from: [context.baseFrom],
-    columns: renderBoundSelectItems(stage.items, context.baseBindings, context.dialect),
+    columns: renderBoundProjectionItems(stage.items, context.baseBindings, context.dialect),
     where: null,
     groupby: stage.kind === "fold" && stage.groupBy
       ? ({
@@ -71,10 +71,10 @@ export function buildFilterStageAst(
   stage: Extract<Stage, { kind: "filter" }>,
   context: StageRenderContext
 ): SelectAst {
-  return buildSelectAst({
+  return buildSqlSelectAst({
     from: [context.baseFrom],
-    columns: renderBoundSelectItems(
-      stage.selectAll,
+    columns: renderBoundProjectionItems(
+      stage.projectAll,
       context.baseBindings,
       context.dialect
     ),
@@ -91,10 +91,10 @@ export function buildSortStageAst(
   stage: Extract<Stage, { kind: "sort" }>,
   context: StageRenderContext
 ): SelectAst {
-  return buildSelectAst({
+  return buildSqlSelectAst({
     from: [context.baseFrom],
-    columns: renderBoundSelectItems(
-      stage.selectAll,
+    columns: renderBoundProjectionItems(
+      stage.projectAll,
       context.baseBindings,
       context.dialect
     ),
@@ -114,10 +114,10 @@ export function buildTakeStageAst(
   stage: Extract<Stage, { kind: "take" }>,
   context: StageRenderContext
 ): SelectAst {
-  return buildSelectAst({
+  return buildSqlSelectAst({
     from: [context.baseFrom],
-    columns: renderBoundSelectItems(
-      stage.selectAll,
+    columns: renderBoundProjectionItems(
+      stage.projectAll,
       context.baseBindings,
       context.dialect
     ),
@@ -133,8 +133,8 @@ export function buildTakeStageAst(
   });
 }
 
-export function renderBoundSelectItems(
-  items: SelectItem[],
+export function renderBoundProjectionItems(
+  items: ProjectionItem[],
   bindings: ScopeBindings,
   dialect: QueryDialect
 ): SelectColumnAst[] {

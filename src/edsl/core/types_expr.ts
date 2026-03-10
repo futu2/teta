@@ -137,7 +137,7 @@ export type CaseNode = {
 
 export type OrderExpr = ExprNode<any>;
 
-export type SelectItem = { expr: ExprNode<any>; as: SqlIdentifier | null };
+export type ProjectionItem = { expr: ExprNode<any>; as: SqlIdentifier | null };
 export type OrderItem = { expr: ExprNode<any>; direction: "ASC" | "DESC" };
 
 export type SqlIdentifier<Name extends string = string> = {

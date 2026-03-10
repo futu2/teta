@@ -21,8 +21,8 @@ import { ExprRef } from "../expr.ts";
 import { createColumnRefs } from "../expr.ts";
 import type {
   ColumnRefs,
-  SelectResult,
-  SelectShape,
+  ProjectionResult,
+  ProjectionShape,
 } from "../expr.ts";
 import {
   buildSqlOptions,
@@ -176,21 +176,21 @@ function buildJoin<
 
 function buildMap<
   TColumns extends QueryColumns,
-  TSelection extends SelectShape,
+  TSelection extends ProjectionShape,
 >(
   query: Query<TColumns>,
   selector: (cols: ColumnRefs<TColumns>) => TSelection
-): Query<SelectResult<TSelection>> {
+): Query<ProjectionResult<TSelection>> {
   return deriveQuery(query, resolveMapQuery(query, selector(query.columns)));
 }
 
 function buildFold<
   TColumns extends QueryColumns,
-  TSelection extends SelectShape,
+  TSelection extends ProjectionShape,
 >(
   query: Query<TColumns>,
   selector: (cols: ColumnRefs<TColumns>) => TSelection
-): Query<SelectResult<TSelection>> {
+): Query<ProjectionResult<TSelection>> {
   return deriveQuery(query, resolveFoldQuery(query, selector(query.columns)));
 }
 
@@ -271,43 +271,43 @@ function buildLoop<TColumns extends QueryColumns>(
   });
 }
 
-export function map<TColumns extends QueryColumns, const Sel extends SelectShape>(
+export function map<TColumns extends QueryColumns, const Sel extends ProjectionShape>(
   query: Query<TColumns>,
   selector: (cols: ColumnRefs<TColumns>) => Sel
-): Query<SelectResult<Sel>>;
+): Query<ProjectionResult<Sel>>;
 
-export function map<TColumns extends QueryColumns, const Sel extends SelectShape>(
+export function map<TColumns extends QueryColumns, const Sel extends ProjectionShape>(
   selector: (cols: ColumnRefs<TColumns>) => Sel
-): QueryStep<TColumns, SelectResult<Sel>>;
+): QueryStep<TColumns, ProjectionResult<Sel>>;
 
 export function map(...args: unknown[]): unknown {
   return purry(_map, args);
 }
 
-function _map<TColumns extends QueryColumns, const Sel extends SelectShape>(
+function _map<TColumns extends QueryColumns, const Sel extends ProjectionShape>(
   query: Query<TColumns>,
   selector: (cols: ColumnRefs<TColumns>) => Sel
-): Query<SelectResult<Sel>> {
+): Query<ProjectionResult<Sel>> {
   return buildMap(query, selector);
 }
 
-export function fold<TColumns extends QueryColumns, const Sel extends SelectShape>(
+export function fold<TColumns extends QueryColumns, const Sel extends ProjectionShape>(
   query: Query<TColumns>,
   selector: (cols: ColumnRefs<TColumns>) => Sel
-): Query<SelectResult<Sel>>;
+): Query<ProjectionResult<Sel>>;
 
-export function fold<TColumns extends QueryColumns, const Sel extends SelectShape>(
+export function fold<TColumns extends QueryColumns, const Sel extends ProjectionShape>(
   selector: (cols: ColumnRefs<TColumns>) => Sel
-): QueryStep<TColumns, SelectResult<Sel>>;
+): QueryStep<TColumns, ProjectionResult<Sel>>;
 
 export function fold(...args: unknown[]): unknown {
   return purry(_fold, args);
 }
 
-function _fold<TColumns extends QueryColumns, const Sel extends SelectShape>(
+function _fold<TColumns extends QueryColumns, const Sel extends ProjectionShape>(
   query: Query<TColumns>,
   selector: (cols: ColumnRefs<TColumns>) => Sel
-): Query<SelectResult<Sel>> {
+): Query<ProjectionResult<Sel>> {
   return buildFold(query, selector);
 }
 

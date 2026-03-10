@@ -3,7 +3,7 @@ import type {
   IdentifierInput,
   JoinType,
   JoinTypeInput,
-  SelectItem,
+  ProjectionItem,
   Source,
   SqlIdentifier,
   Stage,
@@ -42,25 +42,25 @@ export function identifierName<const Name extends string>(value: SqlIdentifier<N
   return value.name;
 }
 
-export function selectItemOutputIdentifier(item: SelectItem): SqlIdentifier | null {
+export function projectionItemOutputIdentifier(item: ProjectionItem): SqlIdentifier | null {
   if (item.as) return item.as;
-  if (item.expr.kind === "column") return normalizeIdentifier(item.expr.name, "select column");
+  if (item.expr.kind === "column") return normalizeIdentifier(item.expr.name, "projection column");
   return null;
 }
 
-export function selectItemOutputName(item: SelectItem): string | null {
-  const identifier = selectItemOutputIdentifier(item);
+export function projectionItemOutputName(item: ProjectionItem): string | null {
+  const identifier = projectionItemOutputIdentifier(item);
   return identifier ? identifierName(identifier) : null;
 }
 
-export function selectItemsToIdentifierMap(
-  items: SelectItem[]
+export function projectionItemsToIdentifierMap(
+  items: ProjectionItem[]
 ): Readonly<Record<string, SqlIdentifier>> {
   const mapping: Record<string, SqlIdentifier> = {};
   for (const item of items) {
-    const identifier = selectItemOutputIdentifier(item);
+    const identifier = projectionItemOutputIdentifier(item);
     if (!identifier) {
-      internalError("INTERNAL_SELECT_ITEM_OUTPUT_IDENTIFIER_MISSING", "Internal error: select item is missing an output identifier");
+      internalError("INTERNAL_PROJECTION_ITEM_OUTPUT_IDENTIFIER_MISSING", "Internal error: projection item is missing an output identifier");
     }
     mapping[identifierName(identifier)] = identifier;
   }

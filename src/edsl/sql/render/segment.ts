@@ -1,13 +1,13 @@
 import type { QueryDialect } from "../types.ts";
 import type { ExprNode, ScopeId, Source, SqlIdentifier, Stage } from "../../core/types.ts";
-import { createColumnRefs, selectAllItems } from "../../core/expr.ts";
-import { columnNamesToIdentifierMap, selectItemsToIdentifierMap } from "../../query/utils.ts";
+import { createColumnRefs, projectAllItems } from "../../core/expr.ts";
+import { columnNamesToIdentifierMap, projectionItemsToIdentifierMap } from "../../query/utils.ts";
 import type { FromAst, GroupByAst, LimitAst, OrderByAst, ScopeBindings, SelectAst, SelectColumnAst } from "./types.ts";
 import { ensureAlias } from "./ast.ts";
 import { bindExprScopes, exprToAst, getSqlRenderContext } from "./render.ts";
-import { sourceToFrom, type CompileSourceRef, buildSelectAst } from "./source.ts";
+import { sourceToFrom, type CompileSourceRef, buildSqlSelectAst } from "./source.ts";
 import { registerColumnIdentifierBindings, renderIdentifier } from "./identifiers.ts";
-import { bindFusedExpr, selectExpandedColumns, type ScopeExprLookup } from "./fused.ts";
+import { bindFusedExpr, expandProjectedColumns, type ScopeExprLookup } from "./fused.ts";
 import type { StagePlanningState } from "./planner.ts";
 
 export type CompiledSegment = {
@@ -44,9 +44,9 @@ export function buildBaseSelectAst(
     [sourceScopeId]: baseAlias,
   };
   const columns = createColumnRefs<Record<string, unknown>>(sourceScopeId, columnNames);
-  return buildSelectAst({
+  return buildSqlSelectAst({
     from: [from],
-    columns: selectAllItems(columns, columnNames, baseFrom.columnIdentifiers).map((item) => ({
+    columns: projectAllItems(columns, columnNames, baseFrom.columnIdentifiers).map((item) => ({
       expr: exprToAst(bindExprScopes(item.expr, baseBindings, dialect)),
       as: renderIdentifier(item.as, dialect, getSqlRenderContext()),
     })),
@@ -80,7 +80,7 @@ export function buildCompiledSegment(
         expr: exprToAst(bindFusedExpr(item.expr, scopeExprs, currentBindings, dialect)),
         as: renderIdentifier(item.as, dialect, getSqlRenderContext()),
       }))
-    : selectExpandedColumns(currentScopeId, currentColumnNames, scopeExprs, currentBindings, dialect);
+    : expandProjectedColumns(currentScopeId, currentColumnNames, scopeExprs, currentBindings, dialect);
   const groupby: GroupByAst | null = projection?.kind === "fold" && projection.groupBy
     ? {
         columns: projection.groupBy.map((expr) =>
@@ -111,7 +111,7 @@ export function buildCompiledSegment(
     : null;
 
   return {
-    ast: buildSelectAst({
+    ast: buildSqlSelectAst({
       from,
       columns,
       where: whereExpr ? exprToAst(whereExpr) : null,
@@ -126,7 +126,7 @@ export function buildCompiledSegment(
       scopeId: projection?.outputScopeId ?? currentScopeId,
       columnNames: projection?.keys ?? currentColumnNames,
       columnIdentifiers: projection
-        ? selectItemsToIdentifierMap(projection.items)
+        ? projectionItemsToIdentifierMap(projection.items)
         : currentColumnIdentifiers,
     },
   };

@@ -5,7 +5,7 @@ import type {
   SqlIdentifier,
   Stage,
 } from "../../core/types.ts";
-import { selectItemsToIdentifierMap } from "../../query/utils.ts";
+import { projectionItemsToIdentifierMap } from "../../query/utils.ts";
 import type { FromAst, ScopeBindings } from "./types.ts";
 import { ensureAlias } from "./ast.ts";
 import { getSqlRenderContext } from "./render.ts";
@@ -13,7 +13,7 @@ import type { CompileSourceRef } from "./source.ts";
 import { registerColumnIdentifierBindings } from "./identifiers.ts";
 import { nextStageColumnIdentifiers, nextStageColumnNames } from "./planner.ts";
 import {
-  selectItemsToScopeMap,
+  projectionItemsToScopeMap,
   type ScopeExprLookup,
 } from "./fused.ts";
 import type { FusedJoinFrom } from "./build_fused_join.ts";
@@ -103,7 +103,7 @@ export function applyFusedJoinStage(
 ): void {
   state.from.push(nextJoin.from);
   state.currentBindings = nextJoin.bindings;
-  state.scopeExprs[stage.outputScopeId] = selectItemsToScopeMap(stage.selectAll);
+  state.scopeExprs[stage.outputScopeId] = projectionItemsToScopeMap(stage.projectAll);
   state.currentScopeId = stage.outputScopeId;
   consumeFusedStage(state, stage);
 }
@@ -113,10 +113,10 @@ export function applyFusedProjectionStage(
   stage: Extract<Stage, { kind: "map" | "fold" }>
 ): void {
   state.projection = stage;
-  state.scopeExprs[stage.outputScopeId] = selectItemsToScopeMap(stage.items);
+  state.scopeExprs[stage.outputScopeId] = projectionItemsToScopeMap(stage.items);
   state.currentScopeId = stage.outputScopeId;
   state.currentColumnNames = stage.keys;
-  state.currentColumnIdentifiers = selectItemsToIdentifierMap(stage.items);
+  state.currentColumnIdentifiers = projectionItemsToIdentifierMap(stage.items);
   state.phase = "postprojection";
   state.consumed += 1;
 }

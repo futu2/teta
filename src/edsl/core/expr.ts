@@ -26,10 +26,10 @@ export {
   type ExprRefs,
   type NonNull,
   type PropagateNull,
-  type SelectResult,
-  type SelectSelection,
-  type SelectShape,
-  type SelectValue,
+  type ProjectionResult,
+  type ProjectionSelection,
+  type ProjectionShape,
+  type ProjectionValue,
   type WindowSpecInput,
 } from "./expr/core.ts";
-export { createColumnRefs, mergeColumnRefs, mergeColumnNames, selectAllItems } from "./expr/columns.ts";
+export { createColumnRefs, mergeColumnRefs, mergeColumnNames, projectAllItems } from "./expr/columns.ts";

@@ -13,7 +13,7 @@ import {
   unwrapGroupExpr,
 } from "../expr.ts";
 import { userError } from "../errors.ts";
-import type { SelectShape, SelectValue } from "../expr.ts";
+import type { ProjectionShape, ProjectionValue } from "../expr.ts";
 import { normalizeIdentifier } from "./utils.ts";
 
 type ResolvedProjection = {
@@ -35,7 +35,7 @@ export function freshInternalCteName(label: string): InternalCteName {
   return `${INTERNAL_CTE_PREFIX}${label}_${freshInternalToken()}` as InternalCteName;
 }
 
-export function resolveSelectProjection(selection: SelectShape): ResolvedProjection {
+export function resolveProjection(selection: ProjectionShape): ResolvedProjection {
   const entries = projectionEntries(selection);
   return {
     keys: entries.map((item) => item.key),
@@ -49,8 +49,8 @@ export function resolveSelectProjection(selection: SelectShape): ResolvedProject
   };
 }
 
-export function resolveAggregateProjection(
-  selection: SelectShape
+export function resolveFoldProjection(
+  selection: ProjectionShape
 ): ResolvedAggregateProjection {
   const entries = projectionEntries(selection);
   const groupBy: ExprNode<any>[] = [];
@@ -81,7 +81,7 @@ function freshInternalToken(): string {
   return `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
 }
 
-function resolveProjectionExpr(key: string, value: SelectValue): {
+function resolveProjectionExpr(key: string, value: ProjectionValue): {
   expr: ExprNode<any>;
   as: SqlIdentifier | null;
 } {
@@ -94,7 +94,7 @@ function resolveProjectionExpr(key: string, value: SelectValue): {
   };
 }
 
-function projectionEntries(selection: SelectShape): Array<{ key: string; value: SelectValue }> {
+function projectionEntries(selection: ProjectionShape): Array<{ key: string; value: ProjectionValue }> {
   if (Array.isArray(selection)) {
     userError("LEGACY_SELECTION_ARRAY", LEGACY_SELECTION_ARRAY_ERROR);
   }
