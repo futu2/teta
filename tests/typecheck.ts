@@ -1,5 +1,5 @@
 import type { ExprRef, SqlFloat, SqlIdentifier, SqlInt } from "../mod.ts";
-import { ident, namespace, omit, pick, prefix, preset, project, projects, remap, rename, selectAll, spread, table, t } from "../mod.ts";
+import { filter, ident, join, limit, namespace, omit, orderBy, pick, pipeQuery, prefix, preset, project, projects, remap, rename, select, selectAll, spread, table, t } from "../mod.ts";
 
 type Equal<A, B> = (
   (<T>() => T extends A ? 1 : 2) extends
@@ -23,6 +23,20 @@ const leftJoined = users.join(orders, (user, order) => user.id.eq(order.user_id)
 const rightJoined = users.join(orders, (user, order) => user.id.eq(order.user_id), { type: "right" });
 const fullJoined = users.join(orders, (user, order) => user.id.eq(order.user_id), { type: "full" });
 const leftViaJoin = users.join(orders, (user, order) => user.id.eq(order.user_id), { type: "left" });
+const curriedPipeline = pipeQuery(
+  users,
+  filter((user) => user.id.gt(0)),
+  select((user) => ({
+    id: user.id,
+    name: user.name.upper(),
+  })),
+  orderBy((row) => [row.name.asc(), row.id.desc()]),
+  limit(5)
+);
+const curriedJoin = pipeQuery(
+  users,
+  join(orders, (user, order) => user.id.eq(order.user_id), { type: "left" })
+);
 
 const leftSelected = leftJoined.select((row) => ({
   total: row.total.coalesce(0),
@@ -51,12 +65,17 @@ type _LeftJoinTotal = Expect<Equal<ExprType<typeof leftJoined.columns.total>, Sq
 type _RightJoinId = Expect<Equal<ExprType<typeof rightJoined.columns.id>, SqlInt | null>>;
 type _FullJoinTotal = Expect<Equal<ExprType<typeof fullJoined.columns.total>, SqlFloat | null>>;
 type _LeftViaJoinTotal = Expect<Equal<ExprType<typeof leftViaJoin.columns.total>, SqlFloat | null>>;
+type _CurriedPipelineId = Expect<Equal<ExprType<typeof curriedPipeline.columns.id>, SqlInt>>;
+type _CurriedPipelineName = Expect<Equal<ExprType<typeof curriedPipeline.columns.name>, string>>;
+type _CurriedJoinTotal = Expect<Equal<ExprType<typeof curriedJoin.columns.total>, SqlFloat | null>>;
 type _LeftJoinCoalescedTotal = Expect<Equal<ExprType<typeof leftJoinTotal>, SqlFloat>>;
 type _LeftJoinCoalescedSub = Expect<Equal<ExprType<typeof leftJoinTotalRemaining>, SqlFloat>>;
 
 void leftSelected;
 void rightSelected;
 void fullSelected;
+void curriedPipeline;
+void curriedJoin;
 const literalIdent = ident("Row Number");
 const projectedWithIdent = users.select((user) => [project(ident("User Id"), user.id)]);
 const aggregatedWithIdent = orders.aggregate((order) => [

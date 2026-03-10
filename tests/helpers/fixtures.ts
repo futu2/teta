@@ -1,4 +1,4 @@
-import { loop, table, t } from "../../mod.ts";
+import { table, t } from "../../mod.ts";
 
 export function createUsersTable() {
   return table("users", {
@@ -56,25 +56,24 @@ export function buildUserPipelineQuery() {
 export function buildOrgTreeQuery() {
   const employees = createEmployeesTable();
 
-  return loop(
-    employees
-      .filter((employee) => employee.manager_id.isNull())
-      .select((employee) => ({
-        id: employee.id,
-        name: employee.name,
-        manager_id: employee.manager_id,
-      })),
-    (self) =>
+  return employees
+    .filter((employee) => employee.manager_id.isNull())
+    .select((employee) => ({
+      id: employee.id,
+      name: employee.name,
+      manager_id: employee.manager_id,
+    }))
+    .loop((self) =>
       employees.join(
-          self,
-          (employee, current) => employee.manager_id.eq(current.id),
-          { merge: (employee) => ({
-            id: employee.id,
-            name: employee.name,
-            manager_id: employee.manager_id,
-          }) }
-        )
-  );
+        self,
+        (employee, current) => employee.manager_id.eq(current.id),
+        { merge: (employee) => ({
+          id: employee.id,
+          name: employee.name,
+          manager_id: employee.manager_id,
+        }) }
+      )
+    );
 }
 
 export function buildDialectMatrixQuery() {

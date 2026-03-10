@@ -191,9 +191,9 @@ default positional rendering you will usually see `name: null` together with an
 
 ## Function-first query composition
 
-If you prefer a more functional style, the query layer also exposes data-first
-helpers plus `pipeQuery(...)`. The class methods remain thin immutable sugar on
-top of the same pure operations.
+If you prefer a more functional style, the query layer exposes pipe-ready
+curried query builders. The class methods remain thin immutable sugar on top
+of the same pure operations.
 
 ```ts
 import {
@@ -217,14 +217,14 @@ const users = table("users", {
 
 const q = pipeQuery(
   users,
-  (query) => filter(query, (user) => user.active.eq(true).and(user.age.gte(18))),
-  (query) => select(query, (user) => ({
+  filter((user) => user.active.eq(true).and(user.age.gte(18))),
+  select((user) => ({
     id: user.id,
     name: user.name.replace(" ", "_").coalesce("unknown"),
     age: user.age,
   })),
-  (query) => orderBy(query, (row) => [row.name.asc(), row.id.desc()]),
-  (query) => limit(query, 20)
+  orderBy((row) => [row.name.asc(), row.id.desc()]),
+  limit(20)
 );
 
 console.log(toSql(q, sqlRenderer({ dialect: "postgresql", format: "pretty" })));

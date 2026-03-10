@@ -1,4 +1,4 @@
-import { employeeTable, loop, metricsTable, rankTable } from "./live-language-spec-shared.ts";
+import { employeeTable, metricsTable, rankTable } from "./live-language-spec-shared.ts";
 import type { LiveSpecCase } from "./live-language-spec-shared.ts";
 
 export const LIVE_LANGUAGE_ANALYTIC_CASES: LiveSpecCase[] = [
@@ -162,15 +162,14 @@ export const LIVE_LANGUAGE_ANALYTIC_CASES: LiveSpecCase[] = [
     name: "recursive cte",
     build: () => {
       const employees = employeeTable();
-      const orgTree = loop(
-        employees
-          .filter((employee) => employee.manager_id.isNull())
-          .select((employee) => ({
-            id: employee.id,
-            name: employee.name,
-            manager_id: employee.manager_id,
-          })),
-        (self) =>
+      const orgTree = employees
+        .filter((employee) => employee.manager_id.isNull())
+        .select((employee) => ({
+          id: employee.id,
+          name: employee.name,
+          manager_id: employee.manager_id,
+        }))
+        .loop((self) =>
           employees.join(
             self,
             (employee, current) => employee.manager_id.eq(current.id),
@@ -180,7 +179,7 @@ export const LIVE_LANGUAGE_ANALYTIC_CASES: LiveSpecCase[] = [
               manager_id: employee.manager_id,
             }) }
           )
-      );
+        );
 
       return orgTree
         .select((employee) => ({ id: employee.id, name: employee.name }))

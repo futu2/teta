@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { loop, omit, pick, project, projects, remap, rename, selectAll, spread, sqlRenderer } from "../mod.ts";
+import { omit, pick, project, projects, remap, rename, selectAll, spread, sqlRenderer } from "../mod.ts";
 import {
   GROUP_INSIDE_AGGREGATE_FUNCTION_ERROR,
   GROUP_OUTSIDE_AGGREGATE_ERROR,
@@ -53,7 +53,7 @@ describe("error paths", () => {
         user_id: order.user_id,
       })) as unknown as typeof base;
 
-    expect(() => loop(base, invalidStep)).toThrow(LOOP_COLUMN_MISMATCH_ERROR);
+    expect(() => base.loop(invalidStep)).toThrow(LOOP_COLUMN_MISMATCH_ERROR);
   });
 
   test("rejects duplicate projection names at runtime when type checks are bypassed", () => {

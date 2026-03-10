@@ -1,7 +1,6 @@
 import {
   currentDate,
   currentTimestamp,
-  loop,
   table,
   t,
 } from "../../mod.ts";
@@ -9,7 +8,7 @@ import {
 import type { SqlRenderer, SqlResult } from "../../mod.ts";
 import type { LiveDialect, LiveRow } from "./live-db.ts";
 
-export { currentDate, currentTimestamp, loop };
+export { currentDate, currentTimestamp };
 
 export type LiveOutcome =
   | { rows: LiveRow[] }

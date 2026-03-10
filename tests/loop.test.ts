@@ -37,7 +37,7 @@ describe("recursive loop queries", () => {
     );
   });
 
-  test("supports `base.loop(step)` as an alias", () => {
+  test("supports `base.loop(step)` as the recursive builder method", () => {
     const employees = createEmployeesTable();
     const base = employees
       .filter((employee) => employee.manager_id.isNull())

@@ -5,6 +5,7 @@ Quick reference for the public API exported from `mod.ts`.
 ```ts
 import {
   Query,
+  pipeQuery,
   table,
   loop,
   t,
@@ -42,21 +43,21 @@ const users = table("users", {
 });
 ```
 
-### `loop(base, step)`
-Create a recursive CTE query (base + step).
-
-```ts
-const q = loop(
-  table("seed", { n: t.int() }).select((s) => ({ n: s.n })),
-  (self) => self.select((s) => ({ n: s.n.add(1) }))
-);
-```
-
-You can also call it as a query method:
+### `loop(step)` / `base.loop(step)`
+Create a recursive CTE query from a base query and recursive step.
 
 ```ts
 const base = table("seed", { n: t.int() }).select((s) => ({ n: s.n }));
 const q = base.loop((self) => self.select((s) => ({ n: s.n.add(1) })));
+```
+
+For `pipeQuery(...)`, use the curried helper form:
+
+```ts
+const q = pipeQuery(
+  table("seed", { n: t.int() }).select((s) => ({ n: s.n })),
+  loop((self) => self.select((s) => ({ n: s.n.add(1) })))
+);
 ```
 
 ### `t` schema helpers
