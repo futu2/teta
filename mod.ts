@@ -117,6 +117,7 @@ export {
   array,
   fn,
   windowFn,
+  over,
   when,
   shape,
   f,

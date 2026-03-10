@@ -30,11 +30,11 @@ afterEach(async () => {
 describe("renderSqlFromSource", () => {
   test("renders SQL from an exported query object", async () => {
     const file = await writeTempModule(`
-import { table, t } from ${JSON.stringify(modPath)};
+import { select, table, t } from ${JSON.stringify(modPath)};
 
 const users = table("users", { id: t.int() });
 
-export const query = users.select((user) => ({ id: user.id }));
+export const query = select(users, (user) => ({ id: user.id }));
 `);
 
     expect(await renderSqlFromSource(file)).toBe(

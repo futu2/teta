@@ -1,4 +1,4 @@
-import { duckdbRenderer, postgresqlRenderer, table, t } from "../../mod.ts";
+import { dateTrunc, desc, duckdbRenderer, limit, orderBy, postgresqlRenderer, select, table, t, toSql } from "../../mod.ts";
 
 const events = table("events", {
   id: t.int(),
@@ -7,18 +7,15 @@ const events = table("events", {
   total_cents: t.decimal(),
 });
 
-const report = events
-  .select((event) => ({
+const report = limit(orderBy(select(events, (event) => ({
     id: event.id,
     account_id: event.account_id,
-    created_day: event.created_at.dateTrunc("day"),
+    created_day: dateTrunc(event.created_at, "day"),
     total_cents: event.total_cents,
-  }))
-  .orderBy((event) => [event.created_day.desc(), event.id.desc()])
-  .limit(20);
+  })), (event) => [desc(event.created_day), desc(event.id)]), 20);
 
 console.log("postgresql");
-console.log(report.toSql(postgresqlRenderer({ format: "pretty" })));
+console.log(toSql(report, postgresqlRenderer({ format: "pretty" })));
 console.log();
 console.log("duckdb");
-console.log(report.toSql(duckdbRenderer({ format: "pretty" })));
+console.log(toSql(report, duckdbRenderer({ format: "pretty" })));

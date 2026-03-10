@@ -1,11 +1,9 @@
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { sqlRenderer, type SqlOptions, type SqlRenderer, type SqlResult } from "../sql.ts";
+import { sqlRenderer, type SqlCompilable, type SqlOptions } from "../sql.ts";
 import { userError } from "../errors.ts";
 
-export type QueryLike = {
-  toSql: (renderer: SqlRenderer<any, SqlResult>) => string;
-};
+export type QueryLike = SqlCompilable;
 
 export function normalizeRenderSourcePath(source: string): string {
   const sourcePath = source.toString().trim();
@@ -53,10 +51,18 @@ export async function resolveRenderedSqlFromModule(
       `Export '${exportName}' must be a SQL string, Query-like object, or a function returning one`
     );
   }
-  return target.toSql(sqlRenderer(rendererOptions));
+  return sqlRenderer(rendererOptions).toSql(target);
 }
 
 export function isQueryLike(value: unknown): value is QueryLike {
-  return typeof value === "object" && value !== null && "toSql" in value
-    && typeof (value as Record<string, unknown>).toSql === "function";
+  if (typeof value !== "object" || value === null) return false;
+  return (
+    ("node" in value)
+    || (
+      "source" in value
+      && "stages" in value
+      && "columnNames" in value
+      && "sourceScopeId" in value
+    )
+  );
 }

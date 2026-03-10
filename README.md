@@ -25,7 +25,7 @@ Build typed queries, inspect how they lower, and render SQL for PostgreSQL, SQLi
 ## Quick start
 
 ```ts
-import { sqlRenderer, table, t } from "@teta/teta";
+import { eq, filter, limit, orderBy, select, sqlRenderer, table, t, toSql, asc } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -33,16 +33,12 @@ const users = table("users", {
   active: t.boolean(),
 });
 
-const query = users
-  .filter((user) => user.active.eq(true))
-  .select((user) => ({
+const query = limit(orderBy(select(filter(users, (user) => eq(user.active, true)), (user) => ({
     id: user.id,
     email: user.email,
-  }))
-  .orderBy((user) => user.email.asc())
-  .limit(10);
+  })), (user) => asc(user.email)), 10);
 
-const sql = query.toSql(sqlRenderer({
+const sql = toSql(query, sqlRenderer({
   dialect: "postgresql",
   format: "pretty",
 }));
@@ -64,8 +60,9 @@ LIMIT 10
 
 - SQL-first: Teta produces SQL instead of hiding it behind ORM entities.
 - Typed query building: schemas, columns, and expressions stay strongly typed.
+- Functional composition: query helpers are data-last friendly and work well with Remeda `pipe`.
 - Dialect-neutral authoring: choose `postgresql`, `sqlite`, `duckdb`, or a custom dialect at render time.
-- Inspectable lowering: debug with `toIR()`, `toAst()`, `explain()`, and `toSqlResult(...)`.
+- Inspectable lowering: debug with `toIR(query)`, `toAst(query)`, `explain(query)`, and `toSqlResult(query, ...)`.
 - Predictable rendering: use `optimized` for compact SQL or `readable` for stage-shaped SQL.
 
 Teta is a good fit for reporting endpoints, analytics queries, internal tools,
@@ -122,8 +119,8 @@ import { sqlRenderer, table, t } from "jsr:@teta/teta";
 Using the `query` from the quick start, render for the target backend:
 
 ```ts
-query.toSql(sqlRenderer({ dialect: "postgresql" }));
-query.toSql(sqlRenderer({ dialect: "sqlite" }));
+toSql(query, sqlRenderer({ dialect: "postgresql" }));
+toSql(query, sqlRenderer({ dialect: "sqlite" }));
 ```
 
 ### Safe runtime parameters
@@ -131,19 +128,16 @@ query.toSql(sqlRenderer({ dialect: "sqlite" }));
 Using the same `users` table, use `param(...)` and `toSqlResult(...)` when you need SQL plus bound params:
 
 ```ts
-import { param, sqlRenderer } from "@teta/teta";
+import { and, eq, filter, param, select, sqlRenderer, toSqlResult } from "@teta/teta";
 
-const result = users
-  .filter((user) =>
-    user.active.eq(param(true, "active")).and(
-      user.email.eq(param("ada@example.com", "email"))
+const result = toSqlResult(select(filter(users, (user) =>
+    and(eq(user.active, param(true, "active")),
+      eq(user.email, param("ada@example.com", "email"))
     )
-  )
-  .select((user) => ({
+  ), (user) => ({
     id: user.id,
     email: user.email,
-  }))
-  .toSqlResult(sqlRenderer({
+  })), sqlRenderer({
     dialect: "postgresql",
     parameterMode: "named",
   }));
@@ -167,7 +161,7 @@ result.params;
 Again using the same `query`, inspect the intermediate shape instead of guessing from the final string:
 
 ```ts
-const info = query.explain({
+const info = explain(query, {
   dialect: "postgresql",
   renderStrategy: "readable",
 });

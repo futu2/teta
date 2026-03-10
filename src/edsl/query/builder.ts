@@ -1,4 +1,5 @@
 import type { AST } from "node-sql-parser";
+import { purry } from "remeda";
 import type {
   CteSpec,
   JoinTypeInput,
@@ -30,6 +31,7 @@ import {
   resolveDialect,
   sqlRenderer,
 } from "../sql.ts";
+import type { SqlCompilable } from "../sql.ts";
 import { freshInternalCteName, freshScopeId } from "./planner.ts";
 import { toQuerySpec } from "./state.ts";
 import { assertLoopColumns, normalizeIdentifier, qualifyOuterColumns } from "./utils.ts";
@@ -109,84 +111,6 @@ export class Query<TColumns extends QueryColumns> implements QueryState<TColumns
     readonly withs: CteSpec[] = [],
     readonly columnIdentifiers: Readonly<Record<string, SqlIdentifier>>
   ) {}
-
-  select<const Sel extends SelectShape>(
-    selector: (cols: ColumnRefs<TColumns>) => Sel
-  ): Query<SelectResult<Sel>> {
-    return buildSelect(this, selector);
-  }
-
-  aggregate<const Sel extends SelectShape>(
-    selector: (cols: ColumnRefs<TColumns>) => Sel
-  ): Query<SelectResult<Sel>> {
-    return buildAggregate(this, selector);
-  }
-
-  filter(
-    predicate: (cols: ColumnRefs<TColumns>) => ExprRef<boolean>
-  ): Query<TColumns> {
-    return buildFilter(this, predicate);
-  }
-
-  orderBy(
-    selector: (cols: ColumnRefs<TColumns>) => OrderItem | OrderItem[]
-  ): Query<TColumns> {
-    return buildOrderBy(this, selector);
-  }
-
-  limit(count: number): Query<TColumns> {
-    return buildLimit(this, count);
-  }
-
-  unionAll(right: Query<TColumns>): Query<TColumns> {
-    return buildUnion(this, right, "union all");
-  }
-
-  union(right: Query<TColumns>): Query<TColumns> {
-    return buildUnion(this, right, "union");
-  }
-
-  loop(
-    step: (self: Query<TColumns>) => Query<TColumns>
-  ): Query<TColumns> {
-    return buildLoop(this, step);
-  }
-
-  join<
-    TRight extends Record<string, any>,
-    TType extends JoinTypeInput | undefined = undefined,
-    TMerged extends Record<string, any> = JoinColumnsForType<
-      TColumns,
-      TRight,
-      CanonicalJoinType<TType>
-    >,
-  >(
-    right: Query<TRight> | ((outer: ColumnRefs<TColumns>) => Query<TRight>),
-    on: (left: ColumnRefs<TColumns>, right: ColumnRefs<TRight>) => ExprRef<boolean>,
-    options: JoinOptions<TColumns, TRight, TType, TMerged> = {}
-  ): Query<TMerged> {
-    return buildJoin(this, right, on, options);
-  }
-
-  toIR(): QueryIR<TColumns> {
-    return toIR(this);
-  }
-
-  toAst(options?: { dialect?: Dialect; renderStrategy?: SqlRenderStrategy }): AST {
-    return toAst(this, options);
-  }
-
-  toSql(renderer: SqlRenderer<any, SqlResult>): string {
-    return toSql(this, renderer);
-  }
-
-  toSqlResult<TReturn extends SqlResult>(renderer: SqlRenderer<any, TReturn>): TReturn {
-    return toSqlResult(this, renderer);
-  }
-
-  explain(options: SqlOptions = {}): QueryExplainResult<TColumns> {
-    return explain(this, options);
-  }
 }
 
 export function createQuery<TColumns extends QueryColumns>(
@@ -344,50 +268,174 @@ function buildLoop<TColumns extends QueryColumns>(
 }
 
 export function select<TColumns extends QueryColumns, const Sel extends SelectShape>(
+  query: Query<TColumns>,
   selector: (cols: ColumnRefs<TColumns>) => Sel
-): QueryStep<TColumns, SelectResult<Sel>> {
-  return (query) => buildSelect(query, selector);
+): Query<SelectResult<Sel>>;
+
+export function select<TColumns extends QueryColumns, const Sel extends SelectShape>(
+  selector: (cols: ColumnRefs<TColumns>) => Sel
+): QueryStep<TColumns, SelectResult<Sel>>;
+
+export function select(...args: unknown[]): unknown {
+  return purry(_select, args);
+}
+
+function _select<TColumns extends QueryColumns, const Sel extends SelectShape>(
+  query: Query<TColumns>,
+  selector: (cols: ColumnRefs<TColumns>) => Sel
+): Query<SelectResult<Sel>> {
+  return buildSelect(query, selector);
 }
 
 export function aggregate<TColumns extends QueryColumns, const Sel extends SelectShape>(
+  query: Query<TColumns>,
   selector: (cols: ColumnRefs<TColumns>) => Sel
-): QueryStep<TColumns, SelectResult<Sel>> {
-  return (query) => buildAggregate(query, selector);
+): Query<SelectResult<Sel>>;
+
+export function aggregate<TColumns extends QueryColumns, const Sel extends SelectShape>(
+  selector: (cols: ColumnRefs<TColumns>) => Sel
+): QueryStep<TColumns, SelectResult<Sel>>;
+
+export function aggregate(...args: unknown[]): unknown {
+  return purry(_aggregate, args);
+}
+
+function _aggregate<TColumns extends QueryColumns, const Sel extends SelectShape>(
+  query: Query<TColumns>,
+  selector: (cols: ColumnRefs<TColumns>) => Sel
+): Query<SelectResult<Sel>> {
+  return buildAggregate(query, selector);
 }
 
 export function filter<TColumns extends QueryColumns>(
+  query: Query<TColumns>,
   predicate: (cols: ColumnRefs<TColumns>) => ExprRef<boolean>
-): QueryStep<TColumns, TColumns> {
-  return (query) => buildFilter(query, predicate);
+): Query<TColumns>;
+
+export function filter<TColumns extends QueryColumns>(
+  predicate: (cols: ColumnRefs<TColumns>) => ExprRef<boolean>
+): QueryStep<TColumns, TColumns>;
+
+export function filter(...args: unknown[]): unknown {
+  return purry(_filter, args);
+}
+
+function _filter<TColumns extends QueryColumns>(
+  query: Query<TColumns>,
+  predicate: (cols: ColumnRefs<TColumns>) => ExprRef<boolean>
+): Query<TColumns> {
+  return buildFilter(query, predicate);
 }
 
 export function orderBy<TColumns extends QueryColumns>(
+  query: Query<TColumns>,
   selector: (cols: ColumnRefs<TColumns>) => OrderItem | OrderItem[]
-): QueryStep<TColumns, TColumns> {
-  return (query) => buildOrderBy(query, selector);
+): Query<TColumns>;
+
+export function orderBy<TColumns extends QueryColumns>(
+  selector: (cols: ColumnRefs<TColumns>) => OrderItem | OrderItem[]
+): QueryStep<TColumns, TColumns>;
+
+export function orderBy(...args: unknown[]): unknown {
+  return purry(_orderBy, args);
 }
 
-export function limit<TColumns extends QueryColumns>(count: number): QueryStep<TColumns, TColumns> {
-  return (query) => buildLimit(query, count);
+function _orderBy<TColumns extends QueryColumns>(
+  query: Query<TColumns>,
+  selector: (cols: ColumnRefs<TColumns>) => OrderItem | OrderItem[]
+): Query<TColumns> {
+  return buildOrderBy(query, selector);
+}
+
+export function limit<TColumns extends QueryColumns>(
+  query: Query<TColumns>,
+  count: number
+): Query<TColumns>;
+
+export function limit<TColumns extends QueryColumns>(count: number): QueryStep<TColumns, TColumns>;
+
+export function limit(...args: unknown[]): unknown {
+  return purry(_limit, args);
+}
+
+function _limit<TColumns extends QueryColumns>(
+  query: Query<TColumns>,
+  count: number
+): Query<TColumns> {
+  return buildLimit(query, count);
 }
 
 export function unionAll<TColumns extends QueryColumns>(
+  left: Query<TColumns>,
   right: Query<TColumns>
-): QueryStep<TColumns, TColumns> {
-  return (left) => buildUnion(left, right, "union all");
+): Query<TColumns>;
+
+export function unionAll<TColumns extends QueryColumns>(right: Query<TColumns>): QueryStep<TColumns, TColumns>;
+
+export function unionAll(...args: unknown[]): unknown {
+  return purry(_unionAll, args);
+}
+
+function _unionAll<TColumns extends QueryColumns>(
+  left: Query<TColumns>,
+  right: Query<TColumns>
+): Query<TColumns> {
+  return buildUnion(left, right, "union all");
 }
 
 export function union<TColumns extends QueryColumns>(
+  left: Query<TColumns>,
   right: Query<TColumns>
-): QueryStep<TColumns, TColumns> {
-  return (left) => buildUnion(left, right, "union");
+): Query<TColumns>;
+
+export function union<TColumns extends QueryColumns>(right: Query<TColumns>): QueryStep<TColumns, TColumns>;
+
+export function union(...args: unknown[]): unknown {
+  return purry(_union, args);
+}
+
+function _union<TColumns extends QueryColumns>(
+  left: Query<TColumns>,
+  right: Query<TColumns>
+): Query<TColumns> {
+  return buildUnion(left, right, "union");
 }
 
 export function loop<TColumns extends QueryColumns>(
+  base: Query<TColumns>,
   step: (self: Query<TColumns>) => Query<TColumns>
-): QueryStep<TColumns, TColumns> {
-  return (base) => buildLoop(base, step);
+): Query<TColumns>;
+
+export function loop<TColumns extends QueryColumns>(
+  step: (self: Query<TColumns>) => Query<TColumns>
+): QueryStep<TColumns, TColumns>;
+
+export function loop(...args: unknown[]): unknown {
+  return purry(_loop, args);
 }
+
+function _loop<TColumns extends QueryColumns>(
+  base: Query<TColumns>,
+  step: (self: Query<TColumns>) => Query<TColumns>
+): Query<TColumns> {
+  return buildLoop(base, step);
+}
+
+export function join<
+  TLeft extends QueryColumns,
+  TRight extends QueryColumns,
+  TType extends JoinTypeInput | undefined = undefined,
+  TMerged extends QueryColumns = JoinColumnsForType<
+    TLeft,
+    TRight,
+    CanonicalJoinType<TType>
+  >,
+>(
+  left: Query<TLeft>,
+  right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
+  on: (left: ColumnRefs<TLeft>, right: ColumnRefs<TRight>) => ExprRef<boolean>,
+  options?: JoinOptions<TLeft, TRight, TType, TMerged>
+): Query<TMerged>;
 
 export function join<
   TLeft extends QueryColumns,
@@ -401,9 +449,46 @@ export function join<
 >(
   right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
   on: (left: ColumnRefs<TLeft>, right: ColumnRefs<TRight>) => ExprRef<boolean>,
+  options?: JoinOptions<TLeft, TRight, TType, TMerged>
+): QueryStep<TLeft, TMerged>;
+
+export function join(...args: unknown[]): unknown {
+  if (args[0] instanceof Query) {
+    const [left, right, on, options] = args;
+    return _join(
+      left as Query<QueryColumns>,
+      right as Query<QueryColumns> | ((outer: ColumnRefs<QueryColumns>) => Query<QueryColumns>),
+      on as (left: ColumnRefs<QueryColumns>, right: ColumnRefs<QueryColumns>) => ExprRef<boolean>,
+      options as JoinOptions<QueryColumns, QueryColumns, JoinTypeInput | undefined, QueryColumns> | undefined
+    );
+  }
+
+  const [right, on, options] = args;
+  return (left: Query<QueryColumns>) =>
+    _join(
+      left,
+      right as Query<QueryColumns> | ((outer: ColumnRefs<QueryColumns>) => Query<QueryColumns>),
+      on as (left: ColumnRefs<QueryColumns>, right: ColumnRefs<QueryColumns>) => ExprRef<boolean>,
+      options as JoinOptions<QueryColumns, QueryColumns, JoinTypeInput | undefined, QueryColumns> | undefined
+    );
+}
+
+function _join<
+  TLeft extends QueryColumns,
+  TRight extends QueryColumns,
+  TType extends JoinTypeInput | undefined = undefined,
+  TMerged extends QueryColumns = JoinColumnsForType<
+    TLeft,
+    TRight,
+    CanonicalJoinType<TType>
+  >,
+>(
+  left: Query<TLeft>,
+  right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
+  on: (left: ColumnRefs<TLeft>, right: ColumnRefs<TRight>) => ExprRef<boolean>,
   options: JoinOptions<TLeft, TRight, TType, TMerged> = {}
-): QueryStep<TLeft, TMerged> {
-  return (left) => buildJoin(left, right, on, options);
+): Query<TMerged> {
+  return buildJoin(left, right, on, options);
 }
 
 export function toIR<TColumns extends QueryColumns>(query: Query<TColumns>): QueryIR<TColumns> {
@@ -431,15 +516,15 @@ export function toAst<TColumns extends QueryColumns>(
   );
 }
 
-export function toSql<TColumns extends QueryColumns>(
-  query: Query<TColumns>,
+export function toSql<TTarget extends SqlCompilable>(
+  query: TTarget,
   renderer: SqlRenderer<any, SqlResult>
 ): string {
   return renderer.toSql(query);
 }
 
-export function toSqlResult<TColumns extends QueryColumns, TReturn extends SqlResult>(
-  query: Query<TColumns>,
+export function toSqlResult<TTarget extends SqlCompilable, TReturn extends SqlResult>(
+  query: TTarget,
   renderer: SqlRenderer<any, TReturn>
 ): TReturn {
   return renderer.toSqlResult(query);

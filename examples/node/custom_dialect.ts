@@ -1,4 +1,4 @@
-import { sqlRenderer, table, t } from "../../mod.ts";
+import { bitLength, characterLength, dateFormat, select, sqlRenderer, table, t, toSql } from "../../mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -24,11 +24,11 @@ const customSqliteRenderer = sqlRenderer({
   format: "pretty",
 });
 
-const report = users.select((user) => ({
+const report = select(users, (user) => ({
   id: user.id,
-  name_chars: user.name.characterLength(),
-  name_bits: user.name.bitLength(),
-  created_fmt: user.created_at.dateFormat("%Y-%m-%d"),
+  name_chars: characterLength(user.name),
+  name_bits: bitLength(user.name),
+  created_fmt: dateFormat(user.created_at, "%Y-%m-%d"),
 }));
 
-console.log(report.toSql(customSqliteRenderer));
+console.log(toSql(report, customSqliteRenderer));

@@ -1,4 +1,4 @@
-import { param, postgresqlRenderer, table, t } from "../../mod.ts";
+import { and, desc, eq, filter, limit, orderBy, param, postgresqlRenderer, select, t, table, toSqlResult } from "../../mod.ts";
 
 const orders = table("orders", {
   id: t.bigint(),
@@ -15,20 +15,15 @@ const renderer = postgresqlRenderer({
 });
 
 export function buildTenantOrdersQuery(tenantId: string, email: string) {
-  const result = orders
-    .filter((order) =>
-      order.tenant_id.eq(param(tenantId)).and(
-        order.customer_email.eq(param(email)).and(order.status.eq("paid"))
+  const result = toSqlResult(limit(orderBy(select(filter(orders, (order) =>
+      and(eq(order.tenant_id, param(tenantId)),
+        and(eq(order.customer_email, param(email)), eq(order.status, "paid"))
       )
-    )
-    .select((order) => ({
+    ), (order) => ({
       id: order.id,
       customer_email: order.customer_email,
       total_cents: order.total_cents,
-    }))
-    .orderBy((order) => order.id.desc())
-    .limit(50)
-    .toSqlResult(renderer);
+    })), (order) => desc(order.id)), 50), renderer);
 
   return {
     text: result.sql,

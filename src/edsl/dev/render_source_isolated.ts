@@ -61,14 +61,14 @@ export const RENDER_SQL_EVAL_SCRIPT = String.raw`(async () => {
       respond({ ok: true, sql: target });
       return;
     }
-    if (!target || typeof target !== "object" || typeof target.toSql !== "function") {
+    if (!target || typeof target !== "object") {
       userError(
         "INVALID_TABLE_SOURCE",
         "Export '" + exportName + "' must be a SQL string, Query-like object, or a function returning one"
       );
     }
 
-    respond({ ok: true, sql: target.toSql(sqlRenderer(rendererOptions)) });
+    respond({ ok: true, sql: sqlRenderer(rendererOptions).toSql(target) });
   } catch (error) {
     if (error instanceof Error && error.name === "SyntaxError") {
       fail("user", "INVALID_RENDERER_OPTIONS", error.message, error.stack);

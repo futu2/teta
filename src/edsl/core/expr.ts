@@ -12,6 +12,7 @@ export {
   binaryExpr,
   funcExpr,
   WindowBuilder,
+  over,
   containsGroup,
   dedupeExprs,
   shouldAlias,

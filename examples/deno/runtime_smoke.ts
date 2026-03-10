@@ -1,4 +1,4 @@
-import { sqlRenderer, table, t } from "../../mod.ts";
+import { eq, filter, select, sqlRenderer, table, t, toSql } from "../../mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -7,14 +7,11 @@ const users = table("users", {
   active: t.boolean(),
 });
 
-const sql = users
-  .filter((user) => user.active.eq(true))
-  .select((user) => ({
+const sql = toSql(select(filter(users, (user) => eq(user.active, true)), (user) => ({
     id: user.id,
     email: user.email,
     tenant_id: user.tenant_id,
-  }))
-  .toSql(sqlRenderer({
+  })), sqlRenderer({
     dialect: "postgresql",
     format: "compact",
   }));

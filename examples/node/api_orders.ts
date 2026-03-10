@@ -1,4 +1,4 @@
-import { param, postgresqlRenderer, table, t } from "../../mod.ts";
+import { and, desc, eq, filter, limit, orderBy, param, postgresqlRenderer, select, t, table, toSqlResult } from "../../mod.ts";
 
 type Session = {
   tenantId: string;
@@ -26,23 +26,19 @@ const renderer = postgresqlRenderer({
 export function handleListPaidOrders(request: RequestLike, session: Session) {
   const url = new URL(request.url, "https://app.example");
   const email = url.searchParams.get("email")?.trim() ?? "";
-  const baseQuery = orders.filter((order) =>
-    order.tenant_id.eq(param(session.tenantId)).and(order.status.eq("paid"))
+  const baseQuery = filter(orders, (order) =>
+    and(eq(order.tenant_id, param(session.tenantId)), eq(order.status, "paid"))
   );
   const filteredQuery = email
-    ? baseQuery.filter((order) => order.customer_email.eq(param(email)))
+    ? filter(baseQuery, (order) => eq(order.customer_email, param(email)))
     : baseQuery;
 
-  const result = filteredQuery
-    .select((order) => ({
+  const result = toSqlResult(limit(orderBy(select(filteredQuery, (order) => ({
       id: order.id,
       customer_email: order.customer_email,
       total_cents: order.total_cents,
       created_at: order.created_at,
-    }))
-    .orderBy((order) => order.created_at.desc())
-    .limit(25)
-    .toSqlResult(renderer);
+    })), (order) => desc(order.created_at)), 25), renderer);
 
   return {
     status: 200,
