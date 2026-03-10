@@ -11,4 +11,4 @@ Most multi-stage examples use Remeda's `pipe(...)` with named imports instead of
 - `examples/bun/dialect_report.ts` renders the same query for multiple engines.
 - `examples/deno/runtime_smoke.ts` shows a minimal Deno-friendly query module.
 
-Run them from the repository root with your preferred runtime. See `../doc/README.md` for the surrounding concepts and API walkthrough.
+Run them from the repository root with your preferred runtime. See `../README.md` for the surrounding concepts and API walkthrough.
