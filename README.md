@@ -50,6 +50,16 @@ const sql = query.toSql(sqlRenderer({
 console.log(sql);
 ```
 
+Typical output:
+
+```sql
+SELECT users_0.id, users_0.email
+FROM users AS users_0
+WHERE users_0.active = TRUE
+ORDER BY email ASC
+LIMIT 10
+```
+
 ## Why Teta?
 
 - SQL-first: Teta produces SQL instead of hiding it behind ORM entities.
@@ -118,13 +128,21 @@ query.toSql(sqlRenderer({ dialect: "sqlite" }));
 
 ### Safe runtime parameters
 
-Using that same `query`, use `param(...)` for request/session input and `toSqlResult(...)` when you need SQL plus bound params:
+Using the same `users` table, use `param(...)` and `toSqlResult(...)` when you need SQL plus bound params:
 
 ```ts
 import { param, sqlRenderer } from "@teta/teta";
 
-const result = query
-  .filter((user) => user.email.eq(param("ada@example.com")))
+const result = users
+  .filter((user) =>
+    user.active.eq(param(true, "active")).and(
+      user.email.eq(param("ada@example.com", "email"))
+    )
+  )
+  .select((user) => ({
+    id: user.id,
+    email: user.email,
+  }))
   .toSqlResult(sqlRenderer({
     dialect: "postgresql",
     parameterMode: "named",
@@ -132,6 +150,16 @@ const result = query
 
 console.log(result.sql);
 console.log(result.params);
+```
+
+Typical result:
+
+```ts
+result.sql;
+// "SELECT users_0.id, users_0.email FROM users AS users_0 WHERE users_0.active = :active AND users_0.email = :email"
+
+result.params;
+// [{ value: true, index: 1, name: "active" }, { value: "ada@example.com", index: 2, name: "email" }]
 ```
 
 ### Inspect lowering with `explain()`
@@ -147,6 +175,17 @@ const info = query.explain({
 console.log(info.stages);
 console.log(info.ctes);
 console.log(info.sql);
+```
+
+Typical `stages` value:
+
+```ts
+[
+  { index: 0, kind: "filter" },
+  { index: 1, kind: "select" },
+  { index: 2, kind: "orderBy" },
+  { index: 3, kind: "limit" },
+]
 ```
 
 Quick rule of thumb:
@@ -226,12 +265,6 @@ Optional Nix shell:
 
 ```bash
 nix develop
-```
-
-If the flake is not tracked by Git yet, use:
-
-```bash
-nix develop path:$PWD
 ```
 
 ## License
