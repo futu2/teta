@@ -1,42 +1,64 @@
 import type { CaseWhenNode, ExprNode } from "../../core/types.ts";
-import { ExprRef, fn, lit, toExprNode, type CaseBuilder, type ExprInput } from "./core.ts";
+import { ExprRef, fn, lit, toExprNode, type ExprInput } from "./core.ts";
 import { group } from "./ops/aggregate.ts";
 
-export type ExprShape<T extends Record<string, ExprRef<unknown>>> = {
-  map: (mapper: (value: T[keyof T]) => ExprRef<unknown>) => {
-    [K in keyof T]: ExprRef<unknown>;
-  };
-  group: () => { [K in keyof T]: ExprRef<unknown> };
+export type CaseBranch<T> = {
+  when: ExprInput<boolean>;
+  then: ExprInput<T>;
 };
 
-export function when<T>(
-  condition: ExprInput<boolean>,
-  value: ExprInput<T>
-): CaseBuilder<T> {
-  return new CaseBuilderImpl<T>([
-    { when: toExprNode(condition), then: toExprNode(value) },
-  ]);
+export function when<T>(condition: ExprInput<boolean>, value: ExprInput<T>): CaseBranch<T> {
+  return {
+    when: condition,
+    then: value,
+  };
 }
 
-export function shape<T extends Record<string, ExprRef<unknown>>>(value: T): ExprShape<T> {
-  return {
-    map(mapper) {
-      const result: Record<string, ExprRef<unknown>> = {};
-      for (const key of Object.keys(value) as Array<keyof T>) {
-        result[key as string] = mapper(value[key]);
-      }
-      return result as { [K in keyof T]: ExprRef<unknown> };
-    },
-    group() {
-      const result: Record<string, ExprRef<unknown>> = {};
-      for (const key of Object.keys(value) as Array<keyof T>) {
-        const item = value[key];
-        if (!item) continue;
-        result[key as string] = group(item);
-      }
-      return result as { [K in keyof T]: ExprRef<unknown> };
-    },
-  };
+export function caseWhen<T>(branches: readonly CaseBranch<T>[]): ExprRef<T | null>;
+export function caseWhen<T>(
+  branches: readonly CaseBranch<T>[],
+  elseValue: ExprInput<T>
+): ExprRef<T>;
+export function caseWhen<T>(
+  branches: readonly CaseBranch<T>[],
+  elseValue?: ExprInput<T>
+): ExprRef<T | null> {
+  const whens = branches.map((branch) => ({
+    when: toExprNode(branch.when),
+    then: toExprNode(branch.then),
+  }));
+  const elseExpr = elseValue === undefined ? null : toExprNode(elseValue);
+  return buildCaseExpr<T>(whens, elseExpr) as ExprRef<T | null>;
+}
+
+export function mapShape<
+  T extends Record<string, ExprRef<unknown>>,
+  TOutput extends ExprRef<unknown>,
+>(
+  value: T,
+  mapper: (value: T[keyof T]) => TOutput
+): { [K in keyof T]: TOutput } {
+  const result: Partial<{ [K in keyof T]: TOutput }> = {};
+  for (const key of Object.keys(value) as Array<keyof T>) {
+    result[key] = mapper(value[key]);
+  }
+  return result as { [K in keyof T]: TOutput };
+}
+
+export type GroupShapeResult<T extends Record<string, ExprRef<unknown>>> = {
+  [K in keyof T]: T[K] extends ExprRef<infer TValue> ? ExprRef<TValue> : never;
+};
+
+export function groupShape<T extends Record<string, ExprRef<unknown>>>(
+  value: T
+): GroupShapeResult<T> {
+  const result: Partial<GroupShapeResult<T>> = {};
+  for (const key of Object.keys(value) as Array<keyof T>) {
+    const item = value[key];
+    if (!item) continue;
+    result[key] = group(item) as GroupShapeResult<T>[typeof key];
+  }
+  return result as GroupShapeResult<T>;
 }
 
 export function f(
@@ -63,23 +85,4 @@ function buildCaseExpr<T>(
     whens,
     elseExpr,
   });
-}
-
-class CaseBuilderImpl<T> implements CaseBuilder<T> {
-  constructor(private readonly whens: CaseWhenNode[]) {}
-
-  when(condition: ExprInput<boolean>, value: ExprInput<T>): CaseBuilder<T> {
-    return new CaseBuilderImpl<T>([
-      ...this.whens,
-      { when: toExprNode(condition), then: toExprNode(value) },
-    ]);
-  }
-
-  else(value: ExprInput<T>): ExprRef<T> {
-    return buildCaseExpr<T>(this.whens, toExprNode(value)) as ExprRef<T>;
-  }
-
-  end(): ExprRef<T | null> {
-    return buildCaseExpr<T>(this.whens, null);
-  }
 }

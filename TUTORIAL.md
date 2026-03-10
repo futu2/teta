@@ -3,10 +3,13 @@
 This guide shows EDSL snippets and the SQL they generate.
 
 Note: `table(...)` requires a schema to avoid `SELECT *` and keep column names explicit.
-Generated SQL always uses auto-generated aliases (e.g., `users_0`, `orders_1`) and fully
+Generated SQL always uses auto-generated aliases (for example `users_0`, `orders_1`) and fully
 qualified column references.
 
-Keep EDSL queries dialect-neutral. Choose dialect by creating a renderer at render time.
+Keep EDSL queries dialect-neutral. Choose the dialect by creating a renderer at render time.
+
+Most multi-stage examples below use Remeda's `pipe(...)` with named imports. Query helpers are dual-mode,
+so `select(users, ...)` and `pipe(users, select(...))` are both valid, but `pipe(...)` usually reads best.
 
 All rendering examples below assume `sqlRenderer` is imported alongside the EDSL helpers.
 
@@ -15,7 +18,8 @@ All rendering examples below assume `sqlRenderer` is imported alongside the EDSL
 ### 1) Filter + select + order + limit
 
 ```ts
-import { table, t } from "./mod.ts";
+import { pipe } from "remeda";
+import { and, asc, desc, eq, filter, gte, limit, orderBy, select, sqlRenderer, table, t, toSql } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -24,13 +28,15 @@ const users = table("users", {
   active: t.boolean(),
 });
 
-const q = users
-  .filter((u) => u.active.eq(true).and(u.age.gte(18)))
-  .select((u) => ({ id: u.id, name: u.name, age: u.age }))
-  .orderBy((u) => [u.age.desc(), u.id.asc()])
-  .limit(5);
+const q = pipe(
+  users,
+  filter((u) => and(eq(u.active, true), gte(u.age, 18))),
+  select((u) => ({ id: u.id, name: u.name, age: u.age })),
+  orderBy((u) => [desc(u.age), asc(u.id)]),
+  limit(5)
+);
 
-console.log(q.toSql(sqlRenderer({ dialect: "postgresql", format: "pretty" })));
+console.log(toSql(q, sqlRenderer({ dialect: "postgresql", format: "pretty" })));
 ```
 
 Generated SQL:
@@ -53,7 +59,8 @@ LIMIT 5
 ### 2) Join + aggregate with group()
 
 ```ts
-import { table, t } from "./mod.ts";
+import { pipe } from "remeda";
+import { aggregate, count, eq, group, join, sqlRenderer, sum, table, t, toSql } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -66,15 +73,17 @@ const orders = table("orders", {
   total: t.float(),
 });
 
-const q = users
-  .join(orders, (u, o) => u.id.eq(o.user_id), { type: "left" })
-  .aggregate((u) => ({
-    user_id: u.id.group(),
-    order_count: u.order_id.count(),
-    total_spend: u.total.sum(),
-  }));
+const q = pipe(
+  users,
+  join(orders, (u, o) => eq(u.id, o.user_id), { type: "left" }),
+  aggregate((row) => ({
+    user_id: group(row.id),
+    order_count: count(row.order_id),
+    total_spend: sum(row.total),
+  }))
+);
 
-console.log(q.toSql(sqlRenderer({ dialect: "postgresql", format: "pretty" })));
+console.log(toSql(q, sqlRenderer({ dialect: "postgresql", format: "pretty" })));
 ```
 
 Generated SQL:
@@ -93,7 +102,7 @@ GROUP BY cte_0_0.id
 ### 3) String concat with template helper
 
 ```ts
-import { table, t, f } from "./mod.ts";
+import { f, select, sqlRenderer, table, t, toSql } from "./mod.ts";
 
 const names = table("names", {
   id: t.int(),
@@ -103,11 +112,11 @@ const names = table("names", {
   suffix: t.string(),
 });
 
-const q = names.select((t) => ({
-  title: f`${t.prefix} ${t.first} ${t.last} ${t.suffix}`,
+const q = select(names, (name) => ({
+  title: f`${name.prefix} ${name.first} ${name.last} ${name.suffix}`,
 }));
 
-console.log(q.toSql(sqlRenderer({ dialect: "postgresql", format: "pretty" })));
+console.log(toSql(q, sqlRenderer({ dialect: "postgresql", format: "pretty" })));
 ```
 
 Generated SQL:
@@ -135,16 +144,17 @@ const orders = table("sales.orders", {
 
 ## More examples
 
-Teta keeps the logical stage order stable, but the rendered SQL shape depends on
+Teta keeps logical stage order stable, but the rendered SQL shape depends on
 `renderStrategy` and dialect features.
 
 ### Pipeline shape in `readable` mode
 
-Use `renderStrategy: "readable"` when you want SQL that tracks the query chain
+Use `renderStrategy: "readable"` when you want SQL that tracks the query pipeline
 more literally with staged CTEs.
 
 ```ts
-import { table, t } from "./mod.ts";
+import { pipe } from "remeda";
+import { add, filter, gt, select, sqlRenderer, table, t, toSql } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -153,12 +163,14 @@ const users = table("users", {
   active: t.boolean(),
 });
 
-const q = users
-  .select((u) => ({ ...u, age_plus_one: u.age.add(1) }))
-  .filter((u) => u.age_plus_one.gt(30))
-  .select((u) => ({ id: u.id, name: u.name, age_plus_one: u.age_plus_one }));
+const q = pipe(
+  users,
+  select((u) => ({ ...u, age_plus_one: add(u.age, 1) })),
+  filter((u) => gt(u.age_plus_one, 30)),
+  select((u) => ({ id: u.id, name: u.name, age_plus_one: u.age_plus_one }))
+);
 
-console.log(q.toSql(sqlRenderer({
+console.log(toSql(q, sqlRenderer({
   dialect: "postgresql",
   format: "pretty",
   renderStrategy: "readable",
@@ -167,11 +179,13 @@ console.log(q.toSql(sqlRenderer({
 
 ### Inspect lowering with `explain()`
 
-Use `query.explain(...)` when you want to inspect logical stages without guessing
+Use `explain(query, ...)` when you want to inspect logical stages without guessing
 from the final SQL string alone.
 
 ```ts
-const info = q.explain({
+import { explain } from "./mod.ts";
+
+const info = explain(q, {
   dialect: "postgresql",
   format: "compact",
   renderStrategy: "readable",
@@ -190,11 +204,11 @@ Quick rule of thumb:
 
 ### Optional: Remeda for projection shaping
 
-If you already use `remeda` in your app, it pairs nicely with Teta's object-shaped `select(...)` / `aggregate(...)` callbacks.
+If you already use `remeda` in your app, it pairs nicely with Teta's object-shaped `select(...)` and `aggregate(...)` callbacks.
 
 ```ts
-import * as R from "remeda";
-import { table, t } from "./mod.ts";
+import { mapKeys, merge, omit, pick, pipe } from "remeda";
+import { replace, select, table, t, upper } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -203,39 +217,34 @@ const users = table("users", {
   active: t.boolean(),
 });
 
-const compact = users.select((u) =>
-  R.pipe(
-    u,
-    R.pick(["id", "name", "age"] as const),
-    (base) =>
-      R.merge(base, {
-        normalized_name: u.name.replace(" ", "_").coalesce("unknown"),
-      })
-  )
-);
+const compact = select(users, pipe(
+  pick(["id", "name", "age"] as const),
+  (base) => merge(base, {
+    normalized_name: upper(replace(base.name, " ", "_")),
+  })
+));
 
-const publicUsers = users.select((u) => R.omit(u, ["active"] as const));
+const publicUsers = select(users, omit(["active"] as const));
 
-const namespacedUsers = users.select((u) =>
-  R.pipe(
-    u,
-    R.pick(["id", "name"] as const),
-    R.mapKeys((key) => "user_" + key)
-  )
-);
+const namespacedUsers = select(users, pipe(
+  pick(["id", "name"] as const),
+  mapKeys((key) => "user_" + key)
+));
 ```
 
-Use it when you want:
-- `R.pick(...)` for reusable column subsets
-- `R.omit(...)` to keep most columns but drop a few
-- `R.merge(...)` for "base shape + computed fields"
-- `R.pipe(...)` when the reshaping reads better as a small pipeline
-- `R.mapKeys(...)` for systematic renaming like prefixes or namespaces
+Typical patterns:
+
+- `pick(...)` for reusable column subsets
+- `omit(...)` to keep most columns but drop a few
+- `merge(...)` for "base shape + computed fields"
+- `pipe(...)` when the reshaping reads better as a small pipeline
+- `mapKeys(...)` for systematic renaming like prefixes or namespaces
 
 ### Join (auto alias)
 
 ```ts
-import { table, t } from "./mod.ts";
+import { pipe } from "remeda";
+import { eq, join, select, sqlRenderer, table, t, toSql } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -248,16 +257,18 @@ const orders = table("orders", {
   total: t.float(),
 });
 
-const q = users
-  .join(orders, (u, o) => u.id.eq(o.user_id), { type: "left" })
-  .select((u) => ({
-    user_id: u.id,
-    user_name: u.name,
-    order_id: u.order_id,
-    total: u.total,
-  }));
+const q = pipe(
+  users,
+  join(orders, (u, o) => eq(u.id, o.user_id), { type: "left" }),
+  select((row) => ({
+    user_id: row.id,
+    user_name: row.name,
+    order_id: row.order_id,
+    total: row.total,
+  }))
+);
 
-console.log(q.toSql(sqlRenderer()));
+console.log(toSql(q, sqlRenderer()));
 ```
 
 Use the `options` object to control join behavior, for example `{ type: "left" }` or `{ type: "right" }`.
@@ -267,7 +278,8 @@ Use the `options` object to control join behavior, for example `{ type: "left" }
 Use `join(..., { lateral: true })` when the right-hand query needs to reference columns from the left side.
 
 ```ts
-import { table, t, lit } from "./mod.ts";
+import { pipe } from "remeda";
+import { eq, filter, join, lit, select, sqlRenderer, table, t, toSql } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -280,22 +292,26 @@ const orders = table("orders", {
   total: t.float(),
 });
 
-const q = users.join(
-  (u) =>
-    orders
-      .filter((o) => o.user_id.eq(u.id))
-      .select((o) => ({
+const q = pipe(
+  users,
+  join(
+    (u) => pipe(
+      orders,
+      filter((o) => eq(o.user_id, u.id)),
+      select((o) => ({
         order_id: o.id,
         total: o.total,
-      })),
-  () => lit(true),
-  { lateral: true }
+      }))
+    ),
+    () => lit(true),
+    { lateral: true }
+  )
 );
 
-console.log(q.toSql(sqlRenderer()));
+console.log(toSql(q, sqlRenderer()));
 ```
 
-Note: `JOIN LATERAL` is emitted for dialects with `lateralJoinKeyword=true`.
+Note: `JOIN LATERAL` is emitted for dialects with `lateralJoinKeyword = true`.
 For `sqlite`, the keyword is omitted during SQL rendering because correlated subqueries are allowed.
 
 ### Dialect configuration and parser fallback
@@ -303,14 +319,14 @@ For `sqlite`, the keyword is omitted during SQL rendering because correlated sub
 Use a custom dialect config when runtime dialect and parser dialect differ:
 
 ```ts
-import { table, t } from "./mod.ts";
+import { select, sqlRenderer, table, t, toSql } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
   name: t.string(),
 });
 
-console.log(users.select((u) => ({ id: u.id })).toSql(sqlRenderer({
+console.log(toSql(select(users, (u) => ({ id: u.id })), sqlRenderer({
   dialect: {
     name: "presto",
     parserDialect: "Trino",
@@ -319,8 +335,8 @@ console.log(users.select((u) => ({ id: u.id })).toSql(sqlRenderer({
   format: "pretty",
 })));
 
-console.log(users.toSql(sqlRenderer({ dialect: "sqlite" })));
-console.log(users.toSql(sqlRenderer({ dialect: "hetu" })));
+console.log(toSql(users, sqlRenderer({ dialect: "sqlite" })));
+console.log(toSql(users, sqlRenderer({ dialect: "hetu" })));
 ```
 
 ### Built-in HetuEngine DQL dialect
@@ -329,7 +345,8 @@ Teta includes a built-in HetuEngine DQL profile. Use the canonical backend name:
 
 - `"hetu"`
 
-This profile uses `Trino` as parser fallback for SQL stringification and applies Hetu-oriented function naming (for example array cardinality/slice mappings).
+This profile uses `Trino` as parser fallback for SQL stringification and applies Hetu-oriented function naming
+(for example array cardinality and slice mappings).
 
 ### Language specification
 
@@ -343,14 +360,31 @@ Teta language spec categories:
 - date and time functions
 - type conversion + null handling
 - array manipulation
-- window/aggregation functions
+- window and aggregation functions
 - lateral join
 - recursive CTE
 
-Method-centric EDSL is preferred when possible. Date/time and array operations are exposed as instance methods:
+The expression API is function-first, so query code stays friendly to pipelines and ordinary function composition.
 
 ```ts
-import { table, t } from "./mod.ts";
+import {
+  arrayContains,
+  arrayJoin,
+  arrayLength,
+  cast,
+  dateDiff,
+  dateFormat,
+  dateParse,
+  dateTrunc,
+  regexLike,
+  regexReplace,
+  select,
+  sqlRenderer,
+  table,
+  t,
+  toSql,
+  toUnixTime,
+} from "./mod.ts";
 
 const sessions = table("sessions", {
   id: t.int(),
@@ -359,25 +393,27 @@ const sessions = table("sessions", {
   tags: t.string(),
 });
 
-const q = sessions.select((s) => ({
+const q = select(sessions, (s) => ({
   id: s.id,
-  started_day: s.started_at.dateTrunc("day"),
-  started_fmt: s.started_at.dateFormat("%Y-%m-%d"),
-  duration_sec: s.started_at.dateDiff("second", s.ended_at),
-  started_epoch: s.started_at.toUnixTime(),
-  parsed_start: s.started_at.cast<string>("TEXT").dateParse("%Y-%m-%d %H:%M:%S"),
-  has_prod: s.tags.arrayContains("prod"),
-  tag_count: s.tags.arrayLength(),
-  tag_label: s.tags.arrayJoin("|"),
-  normalized_tag: s.tags.regexReplace("[^a-zA-Z0-9_]+", "_"),
-  has_uuid: s.tags.regexLike("^[0-9a-fA-F-]{36}$"),
+  started_day: dateTrunc(s.started_at, "day"),
+  started_fmt: dateFormat(s.started_at, "%Y-%m-%d"),
+  duration_sec: dateDiff(s.started_at, "second", s.ended_at),
+  started_epoch: toUnixTime(s.started_at),
+  parsed_start: dateParse(cast<string>(s.started_at, "TEXT"), "%Y-%m-%d %H:%M:%S"),
+  has_prod: arrayContains(s.tags, "prod"),
+  tag_count: arrayLength(s.tags),
+  tag_label: arrayJoin(s.tags, "|"),
+  normalized_tag: regexReplace(s.tags, "[^a-zA-Z0-9_]+", "_"),
+  has_uuid: regexLike(s.tags, "^[0-9a-fA-F-]{36}$"),
 }));
+
+console.log(toSql(q, sqlRenderer({ dialect: "postgresql", format: "pretty" })));
 ```
 
-You can customize a dialect so unsupported direct functions map to equivalents/fallbacks:
+You can customize a dialect so unsupported direct functions map to equivalents or fallbacks:
 
 ```ts
-import { table, t } from "./mod.ts";
+import { bitLength, dateFormat, select, sqlRenderer, table, t, toSql } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -385,13 +421,13 @@ const users = table("users", {
   created_at: t.timestamp(),
 });
 
-const q = users.select((u) => ({
+const q = select(users, (u) => ({
   id: u.id,
-  created_fmt: u.created_at.dateFormat("%Y-%m-%d"),
-  bits: u.name.bitLength(),
+  created_fmt: dateFormat(u.created_at, "%Y-%m-%d"),
+  bits: bitLength(u.name),
 }));
 
-console.log(q.toSql(sqlRenderer({
+console.log(toSql(q, sqlRenderer({
   dialect: {
     name: "sqlite_custom",
     parserDialect: "SQLite",
@@ -412,11 +448,12 @@ console.log(q.toSql(sqlRenderer({
 
 ### Aggregate with group()
 
-Grouping is expressed by calling `.group()` on the grouping key inside `aggregate(...)`.
-There is no separate `groupBy` step.
+Grouping is expressed with `group(expr)` inside `aggregate(...)`.
+There is no separate `groupBy` stage.
 
 ```ts
-import { table, t } from "./mod.ts";
+import { pipe } from "remeda";
+import { aggregate, count, filter, group, gt, sqlRenderer, sum, table, t, toSql } from "./mod.ts";
 
 const orders = table("orders", {
   id: t.int(),
@@ -424,21 +461,23 @@ const orders = table("orders", {
   total: t.float(),
 });
 
-const q = orders
-  .filter((o) => o.total.gt(0))
-  .aggregate((o) => ({
-    user_id: o.user_id.group(),
-    order_count: o.id.count(),
-    total_spend: o.total.sum(),
-  }));
+const q = pipe(
+  orders,
+  filter((o) => gt(o.total, 0)),
+  aggregate((o) => ({
+    user_id: group(o.user_id),
+    order_count: count(o.id),
+    total_spend: sum(o.total),
+  }))
+);
 
-console.log(q.toSql(sqlRenderer()));
+console.log(toSql(q, sqlRenderer()));
 ```
 
 ### Window function
 
 ```ts
-import { table, t } from "./mod.ts";
+import { asc, desc, lag, lead, ntile, over, rank, rowNumber, select, sqlRenderer, sumOver, table, t, toSql } from "./mod.ts";
 
 const orders = table("orders", {
   id: t.int(),
@@ -447,106 +486,147 @@ const orders = table("orders", {
   created_at: t.timestamp(),
 });
 
-const q = orders.select((o) => ({
+const q = select(orders, (o) => ({
   id: o.id,
   user_id: o.user_id,
-  running_total: o.total.sumOver({ orderBy: o.created_at.asc() }),
-  rank_in_time: o.total.rank().over({ orderBy: o.created_at.desc() }),
-  prev_total: o.total.lag(1, 0).over({
+  running_total: sumOver(o.total, { orderBy: asc(o.created_at) }),
+  rank_in_time: over(rank(), { orderBy: desc(o.created_at) }),
+  row_num: over(rowNumber(), { orderBy: asc(o.created_at) }),
+  prev_total: over(lag(o.total, 1, 0), {
     partitionBy: o.user_id,
-    orderBy: o.created_at.asc(),
+    orderBy: asc(o.created_at),
   }),
-  next_total: o.total.lead(1, 0).over({
+  next_total: over(lead(o.total, 1, 0), {
     partitionBy: o.user_id,
-    orderBy: o.created_at.asc(),
+    orderBy: asc(o.created_at),
   }),
-  bucket: o.total.ntile(4).over({ orderBy: o.total.desc() }),
+  bucket: over(ntile(4), { orderBy: desc(o.total) }),
 }));
 
-console.log(q.toSql(sqlRenderer({ dialect: "postgresql", format: "pretty" })));
+console.log(toSql(q, sqlRenderer({ dialect: "postgresql", format: "pretty" })));
 ```
 
 ### Custom SQL functions (UDF)
 
 ```ts
-import { table, t, fn, windowFn } from "./mod.ts";
+import { desc, fn, over, select, sqlRenderer, table, t, toSql, windowFn } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
   name: t.string(),
 });
 
-const q = users.select((u) => ({
+const q = select(users, (u) => ({
   id: u.id,
   name_hash: fn<string>("my_hash_udf", u.name),
-  score_rank: windowFn<number>("percent_rank").over({ orderBy: u.id.desc() }),
+  score_rank: over(windowFn<number>("percent_rank"), { orderBy: desc(u.id) }),
 }));
+
+console.log(toSql(q, sqlRenderer({ dialect: "postgresql", format: "pretty" })));
 ```
 
 ### SQL92 string helpers
 
 ```ts
-import { table, t } from "./mod.ts";
+import {
+  charLength,
+  lower,
+  position,
+  regexExtract,
+  regexLike,
+  regexReplace,
+  select,
+  sqlRenderer,
+  substring,
+  table,
+  t,
+  toSql,
+  trim,
+  upper,
+} from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
   name: t.string(),
 });
 
-const q = users.select((u) => ({
+const q = select(users, (u) => ({
   id: u.id,
-  name_lower: u.name.lower(),
-  name_upper: u.name.upper(),
-  name_trim: u.name.trim(),
-  name_prefix: u.name.substring(1, 3),
-  name_pos: u.name.position("a"),
-  name_len: u.name.charLength(),
-  name_clean: u.name.regexReplace("\\s+", "_"),
-  has_digits: u.name.regexLike(".*\\d+.*"),
-  first_digits: u.name.regexExtract("(\\d+)", 1),
+  name_lower: lower(u.name),
+  name_upper: upper(u.name),
+  name_trim: trim(u.name),
+  name_prefix: substring(u.name, 1, 3),
+  name_pos: position(u.name, "a"),
+  name_len: charLength(u.name),
+  name_clean: regexReplace(u.name, "\\s+", "_"),
+  has_digits: regexLike(u.name, ".*\\d+.*"),
+  first_digits: regexExtract(u.name, "(\\d+)", 1),
 }));
+
+console.log(toSql(q, sqlRenderer({ dialect: "postgresql", format: "pretty" })));
 ```
 
 ### Array helpers
 
 ```ts
-import { table, t } from "./mod.ts";
+import { arrayAppend, arrayContains, arrayJoin, arrayLength, arrayPosition, arraySlice, select, sqlRenderer, table, t, toSql } from "./mod.ts";
 
 const sessions = table("sessions", {
   id: t.int(),
   tags: t.string(),
 });
 
-const q = sessions.select((s) => ({
+const q = select(sessions, (s) => ({
   id: s.id,
-  tag_count: s.tags.arrayLength(),
-  has_prod: s.tags.arrayContains("prod"),
-  prod_pos: s.tags.arrayPosition("prod"),
-  first_two: s.tags.arraySlice(1, 2),
-  tag_csv: s.tags.arrayJoin(","),
-  with_debug: s.tags.arrayAppend("debug"),
+  tag_count: arrayLength(s.tags),
+  has_prod: arrayContains(s.tags, "prod"),
+  prod_pos: arrayPosition(s.tags, "prod"),
+  first_two: arraySlice(s.tags, 1, 2),
+  tag_csv: arrayJoin(s.tags, ","),
+  with_debug: arrayAppend(s.tags, "debug"),
 }));
+
+console.log(toSql(q, sqlRenderer({ dialect: "postgresql", format: "pretty" })));
 ```
 
 ### IN operator
 
 ```ts
-import { table, t } from "./mod.ts";
+import { pipe } from "remeda";
+import { filter, isIn, select, table, t } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
   status: t.string(),
 });
 
-const q = users
-  .filter((u) => u.status.in(["active", "trial", "paused"]))
-  .select((u) => ({ id: u.id, status: u.status }));
+const q = pipe(
+  users,
+  filter((u) => isIn(u.status, ["active", "trial", "paused"])),
+  select((u) => ({ id: u.id, status: u.status }))
+);
 ```
 
 ### SQL standard date/time helpers
 
 ```ts
-import { table, t, currentDate, currentTimestamp, dateLiteral, timestampLiteral } from "./mod.ts";
+import {
+  currentDate,
+  currentTimestamp,
+  dateAdd,
+  dateDiff,
+  dateFormat,
+  dateLiteral,
+  dateParse,
+  dateTrunc,
+  month,
+  select,
+  table,
+  t,
+  timestampLiteral,
+  toUnixTime,
+  year,
+} from "./mod.ts";
 
 const posts = table("posts", {
   id: t.int(),
@@ -555,30 +635,29 @@ const posts = table("posts", {
   event_text: t.string(),
 });
 
-const q = posts.select((p) => ({
+const q = select(posts, (p) => ({
   today: currentDate(),
   now: currentTimestamp(),
   go_live: dateLiteral("2024-02-03"),
   pinned_at: timestampLiteral("2024-02-03 12:34:56"),
-  created_day: p.created_at.dateTrunc("day"),
-  created_fmt: p.created_at.dateFormat("%Y-%m-%d"),
-  next_week: p.created_at.dateAdd("day", 7),
-  age_days: p.published_on.dateDiff("day", currentDate()),
-  created_epoch: p.created_at.toUnixTime(),
-  parsed_event_ts: p.event_text.dateParse("%Y-%m-%d %H:%M:%S"),
-  created_year: p.created_at.year(),
-  created_month: p.created_at.month(),
+  created_day: dateTrunc(p.created_at, "day"),
+  created_fmt: dateFormat(p.created_at, "%Y-%m-%d"),
+  next_week: dateAdd(p.created_at, "day", 7),
+  age_days: dateDiff(p.published_on, "day", currentDate()),
+  created_epoch: toUnixTime(p.created_at),
+  parsed_event_ts: dateParse(p.event_text, "%Y-%m-%d %H:%M:%S"),
+  created_year: year(p.created_at),
+  created_month: month(p.created_at),
 }));
 ```
 
 ### CAST helpers
 
-Use `cast<T>(type)` on any expression to emit `CAST(expr AS type)`.
-If you already know the type you want, add a generic to keep the result typed.
-For timestamps, `toDate()` is a convenience for `CAST(ts AS DATE)`.
+Use `cast(expr, type)` to emit `CAST(expr AS type)`.
+Use `toDate(expr)` as a convenience when you want `CAST(expr AS DATE)`.
 
 ```ts
-import { table, t } from "./mod.ts";
+import { cast, select, table, t, toDate } from "./mod.ts";
 
 const orders = table("orders", {
   id: t.int(),
@@ -586,14 +665,15 @@ const orders = table("orders", {
   created_at: t.timestamp(),
 });
 
-const q = orders.select((o) => ({
-  total_text: o.total.cast<string>("TEXT"),
-  created_date: o.created_at.toDate(),
+const q = select(orders, (o) => ({
+  total_text: cast<string>(o.total, "TEXT"),
+  created_date: toDate(o.created_at),
 }));
 ```
 
 ```ts
-import { table, t } from "./mod.ts";
+import { pipe } from "remeda";
+import { cast, filter, gt, select, table, t } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -601,60 +681,70 @@ const users = table("users", {
   created_at: t.timestamp(),
 });
 
-const q = users
-  .filter((u) => u.age_text.cast<number>("INTEGER").gt(18))
-  .select((u) => ({
+const q = pipe(
+  users,
+  filter((u) => gt(cast<number>(u.age_text, "INTEGER"), 18)),
+  select((u) => ({
     id: u.id,
-    age_int: u.age_text.cast<number>("INTEGER"),
-    created_day: u.created_at.cast<string>("DATE"),
-  }));
+    age_int: cast<number>(u.age_text, "INTEGER"),
+    created_day: cast<string>(u.created_at, "DATE"),
+  }))
+);
 ```
 
 ### CASE WHEN
 
 ```ts
-import { table, t, when } from "./mod.ts";
+import { caseWhen, lt, select, table, t, when } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
   age: t.int(),
 });
 
-const q = users.select((u) => ({
+const q = select(users, (u) => ({
   id: u.id,
-  age_group: when(u.age.lt(18), "minor")
-    .when(u.age.lt(65), "adult")
-    .else("senior"),
+  age_group: caseWhen([
+    when(lt(u.age, 18), "minor"),
+    when(lt(u.age, 65), "adult"),
+  ], "senior"),
 }));
 ```
 
 ### UNION / UNION ALL
 
 ```ts
-import { table, t } from "./mod.ts";
+import { pipe } from "remeda";
+import { eq, filter, select, table, t, unionAll } from "./mod.ts";
 
-const activeUsers = table("users", {
-  id: t.int(),
-  name: t.string(),
-  active: t.boolean(),
-}).filter((u) => u.active.eq(true))
-  .select((u) => ({ id: u.id, name: u.name }));
+const activeUsers = pipe(
+  table("users", {
+    id: t.int(),
+    name: t.string(),
+    active: t.boolean(),
+  }),
+  filter((u) => eq(u.active, true)),
+  select((u) => ({ id: u.id, name: u.name }))
+);
 
-const inactiveUsers = table("users", {
-  id: t.int(),
-  name: t.string(),
-  active: t.boolean(),
-}).filter((u) => u.active.eq(false))
-  .select((u) => ({ id: u.id, name: u.name }));
+const inactiveUsers = pipe(
+  table("users", {
+    id: t.int(),
+    name: t.string(),
+    active: t.boolean(),
+  }),
+  filter((u) => eq(u.active, false)),
+  select((u) => ({ id: u.id, name: u.name }))
+);
 
-const allUsers = activeUsers.unionAll(inactiveUsers);
+const allUsers = unionAll(activeUsers, inactiveUsers);
 ```
 
 ### Recursive loop (WITH RECURSIVE)
 
 ```ts
-import * as R from "remeda";
-import { table, t } from "./mod.ts";
+import { pick, pipe } from "remeda";
+import { eq, filter, isNull, join, loop, select, table, t } from "./mod.ts";
 
 const treeCols = ["id", "name", "manager_id"] as const;
 
@@ -664,14 +754,20 @@ const employees = table("employees", {
   manager_id: t.int(),
 });
 
-const orgTree = employees
-  .filter((e) => e.manager_id.isNull())
-  .select(R.pick(treeCols))
-  .loop((self) =>
-    employees
-      .join(self, (e, s) => e.manager_id.eq(s.id))
-      .select(R.pick(treeCols))
-  );
+const base = pipe(
+  employees,
+  filter((e) => isNull(e.manager_id)),
+  select(pick(treeCols))
+);
 
-const q = orgTree.select(R.pick(["id", "name"] as const));
+const orgTree = pipe(
+  base,
+  loop((self) => pipe(
+    employees,
+    join(self, (e, s) => eq(e.manager_id, s.id)),
+    select(pick(treeCols))
+  ))
+);
+
+const q = select(orgTree, pick(["id", "name"] as const));
 ```

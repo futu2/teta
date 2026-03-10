@@ -1,4 +1,4 @@
-import type { Option } from "node-sql-parser";
+import type { Option, Parser } from "node-sql-parser";
 
 declare const __sqlInt: unique symbol;
 declare const __sqlFloat: unique symbol;
@@ -147,7 +147,14 @@ export type SqlResult = {
   params: SqlParam[];
 };
 
-export interface SqlRenderer<TInput = unknown, TResult extends SqlResult = SqlResult> {
-  toSql(input: TInput): string;
-  toSqlResult(input: TInput): TResult;
-}
+export type SqlRenderer<TInput = unknown, TResult extends SqlResult = SqlResult> = {
+  parser: Parser;
+  dialect: QueryDialect;
+  options?: Option;
+  sqlFormat: SqlFormat;
+  renderStrategy: SqlRenderStrategy;
+  parameterMode: SqlParameterMode;
+  parameterPrefix: SqlParameterPrefix;
+  readonly __inputType?: TInput;
+  readonly __resultType?: TResult;
+};

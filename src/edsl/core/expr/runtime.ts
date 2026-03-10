@@ -44,12 +44,6 @@ export type ExprInputTuple<T extends readonly unknown[]> = {
 };
 export type NonNull<T> = Exclude<T, null>;
 export type PropagateNull<TInput, TResult> = null extends TInput ? TResult | null : TResult;
-export type CaseBuilder<T> = {
-  when: (condition: ExprInput<boolean>, value: ExprInput<T>) => CaseBuilder<T>;
-  else: (value: ExprInput<T>) => ExprRef<T>;
-  end: () => ExprRef<T | null>;
-};
-
 export type WindowSpecInput = {
   partitionBy?: ExprRef<unknown> | ExprRef<unknown>[];
   orderBy?: OrderItem | OrderItem[];

@@ -4,6 +4,8 @@ export {
   duckdbRenderer,
   hetuRenderer,
   postgresqlRenderer,
+  renderSql,
+  renderSqlResult,
   sqlRenderer,
   sqliteRenderer,
 } from "./sql/renderer.ts";

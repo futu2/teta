@@ -37,7 +37,7 @@ export const RENDER_SQL_EVAL_SCRIPT = String.raw`(async () => {
     const errorsModule = await import(process.env.TETA_ERRORS_MODULE);
     TetaError = errorsModule.TetaError;
     const { userError } = errorsModule;
-    const { sqlRenderer } = await import(process.env.TETA_SQL_RENDERER_MODULE);
+    const { renderSql, sqlRenderer } = await import(process.env.TETA_SQL_RENDERER_MODULE);
 
     const source = (process.env.TETA_SOURCE ?? "").trim();
     if (!source) {
@@ -68,7 +68,7 @@ export const RENDER_SQL_EVAL_SCRIPT = String.raw`(async () => {
       );
     }
 
-    respond({ ok: true, sql: sqlRenderer(rendererOptions).toSql(target) });
+    respond({ ok: true, sql: renderSql(target, sqlRenderer(rendererOptions)) });
   } catch (error) {
     if (error instanceof Error && error.name === "SyntaxError") {
       fail("user", "INVALID_RENDERER_OPTIONS", error.message, error.stack);

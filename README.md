@@ -15,8 +15,9 @@ Build typed queries, inspect how they lower, and render SQL for PostgreSQL, SQLi
 ## Getting started in 30 seconds
 
 1. Install `@teta/teta` from JSR.
-2. Copy the quick-start example below.
-3. If you want more, open the playground or jump into `TUTORIAL.md`.
+2. Add `remeda` if you want the same `pipe(...)` style used in the docs.
+3. Copy the quick-start example below.
+4. If you want more, open the playground or jump into `TUTORIAL.md`.
 
 - Playground: https://futu2.github.io/teta-tutorial/
 - Examples: `examples/README.md`
@@ -25,18 +26,26 @@ Build typed queries, inspect how they lower, and render SQL for PostgreSQL, SQLi
 ## Quick start
 
 ```ts
-import { eq, filter, limit, orderBy, select, sqlRenderer, table, t, toSql, asc } from "@teta/teta";
+import { pipe } from "remeda";
+import { and, asc, eq, filter, gte, limit, orderBy, select, sqlRenderer, table, t, toSql } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
   email: t.string(),
   active: t.boolean(),
+  age: t.int(),
 });
 
-const query = limit(orderBy(select(filter(users, (user) => eq(user.active, true)), (user) => ({
+const query = pipe(
+  users,
+  filter((user) => and(eq(user.active, true), gte(user.age, 18))),
+  select((user) => ({
     id: user.id,
     email: user.email,
-  })), (user) => asc(user.email)), 10);
+  })),
+  orderBy((user) => asc(user.email)),
+  limit(10)
+);
 
 const sql = toSql(query, sqlRenderer({
   dialect: "postgresql",
@@ -51,7 +60,7 @@ Typical output:
 ```sql
 SELECT users_0.id, users_0.email
 FROM users AS users_0
-WHERE users_0.active = TRUE
+WHERE users_0.active = TRUE AND users_0.age >= 18
 ORDER BY email ASC
 LIMIT 10
 ```
@@ -60,7 +69,7 @@ LIMIT 10
 
 - SQL-first: Teta produces SQL instead of hiding it behind ORM entities.
 - Typed query building: schemas, columns, and expressions stay strongly typed.
-- Functional composition: query helpers are data-last friendly and work well with Remeda `pipe`.
+- Functional composition: query helpers work data-first or data-last, so they fit naturally into Remeda `pipe(...)` pipelines.
 - Dialect-neutral authoring: choose `postgresql`, `sqlite`, `duckdb`, or a custom dialect at render time.
 - Inspectable lowering: debug with `toIR(query)`, `toAst(query)`, `explain(query)`, and `toSqlResult(query, ...)`.
 - Predictable rendering: use `optimized` for compact SQL or `readable` for stage-shaped SQL.
@@ -100,6 +109,19 @@ npx jsr add @teta/teta
 
 JSR may create or update `.npmrc` for Node-based setups. Commit that file if your package manager needs it.
 
+### Optional: Remeda
+
+The examples in this README and `TUTORIAL.md` use named Remeda imports such as `pipe`, `pick`, and `omit`.
+Add it to your app if you want the same functional composition style.
+
+```bash
+pnpm add remeda
+# or
+bun add remeda
+# or
+deno add npm:remeda
+```
+
 Published package import:
 
 ```ts
@@ -128,19 +150,24 @@ toSql(query, sqlRenderer({ dialect: "sqlite" }));
 Using the same `users` table, use `param(...)` and `toSqlResult(...)` when you need SQL plus bound params:
 
 ```ts
-import { and, eq, filter, param, select, sqlRenderer, toSqlResult } from "@teta/teta";
+import { pipe } from "remeda";
+import { eq, filter, param, select, sqlRenderer, toSqlResult } from "@teta/teta";
 
-const result = toSqlResult(select(filter(users, (user) =>
-    and(eq(user.active, param(true, "active")),
-      eq(user.email, param("ada@example.com", "email"))
-    )
-  ), (user) => ({
-    id: user.id,
-    email: user.email,
-  })), sqlRenderer({
+const result = toSqlResult(
+  pipe(
+    users,
+    filter((user) => eq(user.active, param(true, "active"))),
+    filter((user) => eq(user.email, param("ada@example.com", "email"))),
+    select((user) => ({
+      id: user.id,
+      email: user.email,
+    }))
+  ),
+  sqlRenderer({
     dialect: "postgresql",
     parameterMode: "named",
-  }));
+  })
+);
 
 console.log(result.sql);
 console.log(result.params);
@@ -161,6 +188,8 @@ result.params;
 Again using the same `query`, inspect the intermediate shape instead of guessing from the final string:
 
 ```ts
+import { explain } from "@teta/teta";
+
 const info = explain(query, {
   dialect: "postgresql",
   renderStrategy: "readable",
@@ -188,9 +217,23 @@ Quick rule of thumb:
 - `readable` preserves stage boundaries as `cte_0`, `cte_1`, ...
 - nested derived tables usually mean the compiler introduced a deliberate scope barrier
 
-### Stable error types
+### Projection shaping with Remeda
 
-Use `TetaUserError` for invalid query usage or config, and `TetaInternalError` for compiler/runtime failures that likely indicate a bug.
+Because `select(...)` and `aggregate(...)` work with plain objects, Remeda helpers compose naturally.
+
+```ts
+import { merge, omit, pick, pipe } from "remeda";
+import { replace, select, upper } from "@teta/teta";
+
+const compactUsers = select(users, pipe(
+  pick(["id", "email"] as const),
+  (base) => merge(base, {
+    email_normalized: upper(replace(base.email, "@", "_at_")),
+  })
+));
+
+const internalUsers = select(users, omit(["active"] as const));
+```
 
 ## Examples
 
@@ -206,61 +249,5 @@ See `examples/README.md` for runnable examples.
 
 - `TUTORIAL.md` — end-to-end examples
 - `cheatsheet.md` — compact API reference
-- `LANGUAGE_SPEC.md` — function support and dialect notes
-- `DEV_GUIDE.md` — internal architecture and lowering flow
-- `ROADMAP.md` — shipped milestone snapshot
-- Playground — https://futu2.github.io/teta-tutorial/
-
-Local dev helpers such as source watching and clipboard output live under `@teta/teta/dev`.
-See `cheatsheet.md` for the dev utility API.
-
-## Contributing
-
-Contributions are very welcome.
-Docs fixes, examples, bug reports, regression tests, dialect work, and compiler improvements are all useful.
-
-Good places to start:
-
-- `README.md`, `TUTORIAL.md`, and `cheatsheet.md` for docs and examples
-- `tests/` for behavior-first bug fixes and regression coverage
-- `examples/` for runtime-specific usage patterns
-- `DEV_GUIDE.md` for the lowering pipeline and internal architecture
-
-Before opening a PR, run:
-
-```bash
-bun run check
-```
-
-For larger changes, opening an issue or draft PR first is a great way to align on direction.
-
-## Developing Teta
-
-Install dependencies:
-
-```bash
-bun install
-```
-
-Run tests and typecheck:
-
-```bash
-bun run check
-```
-
-Run render benchmarks:
-
-```bash
-bun run bench:render
-bun run bench:render:check
-```
-
-Optional Nix shell:
-
-```bash
-nix develop
-```
-
-## License
-
-See `LICENSE`.
+- `LANGUAGE_SPEC.md` — canonical SQL operation coverage and dialect notes
+- `DEV_GUIDE.md` — internals, lowering stages, and dev utilities

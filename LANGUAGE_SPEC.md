@@ -18,138 +18,139 @@ Dialect columns in this file:
 - **HetuEngine DQL**: built-in profile (`Trino` parser fallback + selected function mappings)
 - **Other built-ins**: mostly identity behavior unless overridden
 
-Method-centric policy:
+Function-first policy:
 
-- EDSL entry points are method-based when possible (`expr.someFunction(...)`)
-- Global helpers remain for cases without a receiver (`currentDate()`, `currentTimestamp()`, literals)
+- Expression entry points are plain functions such as `add(left, right)` and `dateTrunc(value, unit)`
+- Query entry points are plain functions such as `select(query, selector)` or `pipe(query, select(selector))`
+- Runtime literals and constants stay as functions like `currentDate()`, `currentTimestamp()`, and `dateLiteral(...)`
 
 ## 1) Math (basic arithmetic)
 
-| Spec item | Preferred EDSL entry | PostgreSQL | MySQL | SQLite | HetuEngine DQL | Other built-ins |
+| Spec item | Preferred functional entry | PostgreSQL | MySQL | SQLite | HetuEngine DQL | Other built-ins |
 |---|---|---|---|---|---|---|
-| `+` | `expr.add(...)` | Direct | Direct | Direct | Direct | Direct |
-| `-` | `expr.sub(...)` | Direct | Direct | Direct | Direct | Direct |
-| `*` | `expr.mul(...)` | Direct | Direct | Direct | Direct | Direct |
-| `/` | `expr.div(...)` | Direct | Direct | Direct | Direct | Direct |
-| `MOD` | `expr.mod(...)` | Direct | Direct | Direct | Direct | Direct |
-| `ABS` | `expr.abs()` | Direct | Direct | Direct | Direct | Direct |
-| `CEIL` | `expr.ceil()` | Direct | Direct | Mapped → `CEILING` | Direct | Direct |
-| `FLOOR` | `expr.floor()` | Direct | Direct | Direct | Direct | Direct |
-| `SQRT` | `expr.sqrt()` | Direct | Direct | Direct | Direct | Direct |
-| `POWER` | `expr.pow(...)` | Direct | Direct | Direct | Direct | Direct |
-| `ROUND` | `expr.round(...)` | Direct | Direct | Direct | Direct | Direct |
-| `GREATEST` | `expr.greatest(...)` | Direct | Direct | Direct | Direct | Direct |
-| `LEAST` | `expr.least(...)` | Direct | Direct | Direct | Direct | Direct |
+| `+` | `add(left, right)` | Direct | Direct | Direct | Direct | Direct |
+| `-` | `sub(left, right)` | Direct | Direct | Direct | Direct | Direct |
+| `*` | `mul(left, right)` | Direct | Direct | Direct | Direct | Direct |
+| `/` | `div(left, right)` | Direct | Direct | Direct | Direct | Direct |
+| `MOD` | `mod(left, right)` | Direct | Direct | Direct | Direct | Direct |
+| `ABS` | `abs(value)` | Direct | Direct | Direct | Direct | Direct |
+| `CEIL` | `ceil(value)` | Direct | Direct | Mapped → `CEILING` | Direct | Direct |
+| `FLOOR` | `floor(value)` | Direct | Direct | Direct | Direct | Direct |
+| `SQRT` | `sqrt(value)` | Direct | Direct | Direct | Direct | Direct |
+| `POWER` | `pow(value, exponent)` | Direct | Direct | Direct | Direct | Direct |
+| `ROUND` | `round(value, scale?)` | Direct | Direct | Direct | Direct | Direct |
+| `GREATEST` | `greatest(value, ...values)` | Direct | Direct | Direct | Direct | Direct |
+| `LEAST` | `least(value, ...values)` | Direct | Direct | Direct | Direct | Direct |
 
 ## 2) String manipulation
 
-| Spec item | Preferred EDSL entry | PostgreSQL | MySQL | SQLite | HetuEngine DQL | Other built-ins |
+| Spec item | Preferred functional entry | PostgreSQL | MySQL | SQLite | HetuEngine DQL | Other built-ins |
 |---|---|---|---|---|---|---|
-| `CONCAT` | `expr.concat(...)`, `f\`...\`` | Direct | Direct | Direct | Direct | Direct |
-| `UPPER` | `expr.upper()` | Direct | Direct | Direct | Direct | Direct |
-| `LOWER` | `expr.lower()` | Direct | Direct | Direct | Direct | Direct |
-| `TRIM` | `expr.trim()` | Direct | Direct | Direct | Direct | Direct |
-| `SUBSTRING` | `expr.substring(...)` | Direct | Direct | Direct | Direct | Direct |
-| `POSITION` | `expr.position(...)` | Direct | Direct (engine-dependent) | Direct | Direct | Direct |
-| `OVERLAY` | `expr.overlay(...)` | Direct | Configurable | Direct (engine-dependent) | Configurable | Direct (engine-dependent) |
-| `CHAR_LENGTH` | `expr.charLength()` | Direct | Direct | Mapped → `LENGTH` | Mapped → `LENGTH` | Direct |
-| `CHARACTER_LENGTH` | `expr.characterLength()` | Mapped → `CHAR_LENGTH` | Direct | Mapped → `LENGTH` | Mapped → `LENGTH` | Direct |
-| `OCTET_LENGTH` | `expr.octetLength()` | Direct | Direct | Mapped → `LENGTH` | Direct (engine-dependent) | Direct |
-| `BIT_LENGTH` | `expr.bitLength()` | Direct | Direct | Fallback → `LENGTH(x) * 8` | Direct | Direct |
-| `REPLACE` | `expr.replace(...)` | Direct | Direct | Direct | Direct | Direct |
-| `REVERSE` | `expr.reverse()` | Direct | Direct | Direct | Direct | Direct |
-| `LEFT` | `expr.left(...)` | Direct | Direct | Direct (engine-dependent) | Direct (engine-dependent) | Direct |
-| `RIGHT` | `expr.right(...)` | Direct | Direct | Direct (engine-dependent) | Direct (engine-dependent) | Direct |
-| `LPAD` | `expr.lpad(...)` | Direct | Direct | Direct (engine-dependent) | Direct (engine-dependent) | Direct |
-| `RPAD` | `expr.rpad(...)` | Direct | Direct | Direct (engine-dependent) | Direct (engine-dependent) | Direct |
-| `REGEXP_LIKE` | `expr.regexLike(pattern)` | Fallback → `REGEXP_MATCH(x, p) IS NOT NULL` | Direct (MySQL 8+) | Best-effort fallback → `REGEXP(p, x)` (requires regexp function) | Direct | Direct (dialect-dependent) |
-| `REGEXP_REPLACE` | `expr.regexReplace(pattern, replacement, flags?)` | Direct | Direct (MySQL 8+) | Configurable (requires regexp UDF) | Direct | Direct (dialect-dependent) |
-| `REGEXP_EXTRACT` | `expr.regexExtract(pattern, group?)` | Mapped → `REGEXP_SUBSTR` (version-dependent) | Configurable | Configurable | Mapped → `REGEXP_EXTRACT` | Direct (dialect-dependent) |
+| `CONCAT` | `concat(value, ...parts)`, ``f`...` `` | Direct | Direct | Direct | Direct | Direct |
+| `UPPER` | `upper(value)` | Direct | Direct | Direct | Direct | Direct |
+| `LOWER` | `lower(value)` | Direct | Direct | Direct | Direct | Direct |
+| `TRIM` | `trim(value)` | Direct | Direct | Direct | Direct | Direct |
+| `SUBSTRING` | `substring(value, start, length?)` | Direct | Direct | Direct | Direct | Direct |
+| `POSITION` | `position(value, needle)` | Direct | Direct (engine-dependent) | Direct | Direct | Direct |
+| `OVERLAY` | `overlay(value, placing, start, length?)` | Direct | Configurable | Direct (engine-dependent) | Configurable | Direct (engine-dependent) |
+| `CHAR_LENGTH` | `charLength(value)` | Direct | Direct | Mapped → `LENGTH` | Mapped → `LENGTH` | Direct |
+| `CHARACTER_LENGTH` | `characterLength(value)` | Mapped → `CHAR_LENGTH` | Direct | Mapped → `LENGTH` | Mapped → `LENGTH` | Direct |
+| `OCTET_LENGTH` | `octetLength(value)` | Direct | Direct | Mapped → `LENGTH` | Direct (engine-dependent) | Direct |
+| `BIT_LENGTH` | `bitLength(value)` | Direct | Direct | Fallback → `LENGTH(x) * 8` | Direct | Direct |
+| `REPLACE` | `replace(value, search, replacement)` | Direct | Direct | Direct | Direct | Direct |
+| `REVERSE` | `reverse(value)` | Direct | Direct | Direct | Direct | Direct |
+| `LEFT` | `left(value, length)` | Direct | Direct | Direct (engine-dependent) | Direct (engine-dependent) | Direct |
+| `RIGHT` | `right(value, length)` | Direct | Direct | Direct (engine-dependent) | Direct (engine-dependent) | Direct |
+| `LPAD` | `lpad(value, length, padding?)` | Direct | Direct | Direct (engine-dependent) | Direct (engine-dependent) | Direct |
+| `RPAD` | `rpad(value, length, padding?)` | Direct | Direct | Direct (engine-dependent) | Direct (engine-dependent) | Direct |
+| `REGEXP_LIKE` | `regexLike(value, pattern)` | Fallback → `REGEXP_MATCH(x, p) IS NOT NULL` | Direct (MySQL 8+) | Best-effort fallback → `REGEXP(p, x)` (requires regexp function) | Direct | Direct (dialect-dependent) |
+| `REGEXP_REPLACE` | `regexReplace(value, pattern, replacement, flags?)` | Direct | Direct (MySQL 8+) | Configurable (requires regexp UDF) | Direct | Direct (dialect-dependent) |
+| `REGEXP_EXTRACT` | `regexExtract(value, pattern, group?)` | Mapped → `REGEXP_SUBSTR` (version-dependent) | Configurable | Configurable | Mapped → `REGEXP_EXTRACT` | Direct (dialect-dependent) |
 
 ## 3) Logical operators
 
-| Spec item | Preferred EDSL entry | PostgreSQL | MySQL | SQLite | HetuEngine DQL | Other built-ins |
+| Spec item | Preferred functional entry | PostgreSQL | MySQL | SQLite | HetuEngine DQL | Other built-ins |
 |---|---|---|---|---|---|---|
-| `=` | `expr.eq(...)` | Direct | Direct | Direct | Direct | Direct |
-| `!=` | `expr.ne(...)` | Direct | Direct | Direct | Direct | Direct |
-| `<` | `expr.lt(...)` | Direct | Direct | Direct | Direct | Direct |
-| `<=` | `expr.lte(...)` | Direct | Direct | Direct | Direct | Direct |
-| `>` | `expr.gt(...)` | Direct | Direct | Direct | Direct | Direct |
-| `>=` | `expr.gte(...)` | Direct | Direct | Direct | Direct | Direct |
-| `AND` | `expr.and(...)` | Direct | Direct | Direct | Direct | Direct |
-| `OR` | `expr.or(...)` | Direct | Direct | Direct | Direct | Direct |
-| `NOT` | `expr.not()` | Direct | Direct | Direct | Direct | Direct |
-| `LIKE` | `expr.like(...)` | Direct | Direct | Direct | Direct | Direct |
-| `IN` | `expr.in([...])` | Direct | Direct | Direct | Direct | Direct |
+| `=` | `eq(left, right)` | Direct | Direct | Direct | Direct | Direct |
+| `!=` | `ne(left, right)` | Direct | Direct | Direct | Direct | Direct |
+| `<` | `lt(left, right)` | Direct | Direct | Direct | Direct | Direct |
+| `<=` | `lte(left, right)` | Direct | Direct | Direct | Direct | Direct |
+| `>` | `gt(left, right)` | Direct | Direct | Direct | Direct | Direct |
+| `>=` | `gte(left, right)` | Direct | Direct | Direct | Direct | Direct |
+| `AND` | `and(left, right)` | Direct | Direct | Direct | Direct | Direct |
+| `OR` | `or(left, right)` | Direct | Direct | Direct | Direct | Direct |
+| `NOT` | `not(value)` | Direct | Direct | Direct | Direct | Direct |
+| `LIKE` | `like(value, pattern)` | Direct | Direct | Direct | Direct | Direct |
+| `IN` | `isIn(value, values)` | Direct | Direct | Direct | Direct | Direct |
 
 ## 4) Date and time functions
 
-| Spec item | Preferred EDSL entry | PostgreSQL | MySQL | SQLite | HetuEngine DQL | Other built-ins |
+| Spec item | Preferred functional entry | PostgreSQL | MySQL | SQLite | HetuEngine DQL | Other built-ins |
 |---|---|---|---|---|---|---|
 | `CURRENT_DATE` | `currentDate()` | Direct | Direct | Direct | Direct | Direct |
 | `CURRENT_TIMESTAMP` | `currentTimestamp()` | Direct | Direct | Direct | Direct | Direct |
-| `EXTRACT` | `expr.extract("...")` | Direct | Direct | Direct | Direct | Direct |
-| `DATE_TRUNC` | `expr.dateTrunc(unit)` | Direct | Configurable | Fallback → `STRFTIME`/`DATE` | Direct | Direct |
-| `DATE_ADD` | `expr.dateAdd(unit, amount)` | Fallback → epoch + `TO_TIMESTAMP` (week/day/hour/minute/second) | Configurable | Fallback → `DATETIME(..., PRINTF(...))` | Direct | Direct (dialect-dependent) |
-| `DATE_DIFF` | `expr.dateDiff(unit, other)` | Fallback → `EXTRACT(EPOCH ...)` + calendar diff | Configurable | Fallback → `JULIANDAY(...)` + calendar diff | Direct | Direct (dialect-dependent) |
-| `DATE_PARSE` | `expr.dateParse(format)` | Mapped → `TO_TIMESTAMP` | Configurable | Fallback → `DATETIME(x)` | Direct | Direct (dialect-dependent) |
-| `DATE_FORMAT` | `expr.dateFormat(format)` | Mapped → `TO_CHAR` | Direct | Fallback → `STRFTIME(format, x)` | Direct | Direct (dialect-dependent) |
-| `TO_UNIXTIME` | `expr.toUnixTime()` | Fallback → `EXTRACT(EPOCH ...)` | Configurable | Fallback → `CAST(STRFTIME('%s', x) AS INTEGER)` | Direct | Direct (dialect-dependent) |
-| `FROM_UNIXTIME` | `expr.fromUnixTime()` | Mapped → `TO_TIMESTAMP` | Direct | Fallback → `DATETIME(x, 'unixepoch')` | Direct | Direct (dialect-dependent) |
+| `EXTRACT` | `extract(value, field)` | Direct | Direct | Direct | Direct | Direct |
+| `DATE_TRUNC` | `dateTrunc(value, unit)` | Direct | Configurable | Fallback → `STRFTIME`/`DATE` | Direct | Direct |
+| `DATE_ADD` | `dateAdd(value, unit, amount)` | Fallback → epoch + `TO_TIMESTAMP` (week/day/hour/minute/second) | Configurable | Fallback → `DATETIME(..., PRINTF(...))` | Direct | Direct (dialect-dependent) |
+| `DATE_DIFF` | `dateDiff(value, unit, other)` | Fallback → `EXTRACT(EPOCH ...)` + calendar diff | Configurable | Fallback → `JULIANDAY(...)` + calendar diff | Direct | Direct (dialect-dependent) |
+| `DATE_PARSE` | `dateParse(value, format)` | Mapped → `TO_TIMESTAMP` | Configurable | Fallback → `DATETIME(x)` | Direct | Direct (dialect-dependent) |
+| `DATE_FORMAT` | `dateFormat(value, format)` | Mapped → `TO_CHAR` | Direct | Fallback → `STRFTIME(format, x)` | Direct | Direct (dialect-dependent) |
+| `TO_UNIXTIME` | `toUnixTime(value)` | Fallback → `EXTRACT(EPOCH ...)` | Configurable | Fallback → `CAST(STRFTIME('%s', x) AS INTEGER)` | Direct | Direct (dialect-dependent) |
+| `FROM_UNIXTIME` | `fromUnixTime(value)` | Mapped → `TO_TIMESTAMP` | Direct | Fallback → `DATETIME(x, 'unixepoch')` | Direct | Direct (dialect-dependent) |
 
-Convenience date part methods (method-centric wrappers over `EXTRACT`):
+Convenience date-part helpers over `extract(...)`:
 
-- `expr.year()`, `expr.month()`, `expr.day()`
-- `expr.hour()`, `expr.minute()`, `expr.second()`
+- `year(value)`, `month(value)`, `day(value)`
+- `hour(value)`, `minute(value)`, `second(value)`
 
 ## 5) Type conversion and null handling
 
-| Spec item | Preferred EDSL entry | PostgreSQL | MySQL | SQLite | HetuEngine DQL | Other built-ins |
+| Spec item | Preferred functional entry | PostgreSQL | MySQL | SQLite | HetuEngine DQL | Other built-ins |
 |---|---|---|---|---|---|---|
-| `CAST` | `expr.cast(...)`, `toInt()`, `toFloat()`, `toDate()` | Direct | Direct | Direct | Direct | Direct |
-| `COALESCE` | `expr.coalesce(...)` | Direct | Direct | Direct | Direct | Direct |
-| `NULLIF` | `expr.nullIf(...)` | Direct | Direct | Direct | Direct | Direct |
-| `IS NULL` | `expr.isNull()` | Direct | Direct | Direct | Direct | Direct |
-| `IS NOT NULL` | `expr.isNotNull()` | Direct | Direct | Direct | Direct | Direct |
+| `CAST` | `cast(value, type)`, `toInt(value)`, `toFloat(value)`, `toDate(value)` | Direct | Direct | Direct | Direct | Direct |
+| `COALESCE` | `coalesce(value, ...values)` | Direct | Direct | Direct | Direct | Direct |
+| `NULLIF` | `nullIf(value, other)` | Direct | Direct | Direct | Direct | Direct |
+| `IS NULL` | `isNull(value)` | Direct | Direct | Direct | Direct | Direct |
+| `IS NOT NULL` | `isNotNull(value)` | Direct | Direct | Direct | Direct | Direct |
 | `TRY_CAST` | `fn("TRY_CAST", ...)` | Configurable | Configurable | Configurable | Direct | Configurable |
 
 ## 6) Array manipulation
 
-| Spec item | Preferred EDSL entry | PostgreSQL | MySQL | SQLite | HetuEngine DQL | Other built-ins |
+| Spec item | Preferred functional entry | PostgreSQL | MySQL | SQLite | HetuEngine DQL | Other built-ins |
 |---|---|---|---|---|---|---|
-| `ARRAY_LENGTH` | `expr.arrayLength()` | Fallback → `ARRAY_LENGTH(x, 1)` | Configurable | Fallback → `JSON_ARRAY_LENGTH(x)` | Mapped → `CARDINALITY` | Direct (dialect-dependent) |
-| `ARRAY_CONTAINS` | `expr.arrayContains(v)` | Fallback → `ARRAY_POSITION(...) IS NOT NULL` | Configurable | Best-effort fallback via JSON text search | Direct (dialect-dependent) | Configurable |
-| `ARRAY_POSITION` | `expr.arrayPosition(v)` | Direct | Configurable | Best-effort fallback via JSON text search | Direct | Direct (dialect-dependent) |
-| `ARRAY_SLICE` | `expr.arraySlice(start, len?)` | Configurable | Configurable | Configurable | Mapped → `SLICE` | Configurable |
-| `ARRAY_JOIN` | `expr.arrayJoin(sep)` | Mapped → `ARRAY_TO_STRING` | Configurable | Best-effort fallback via JSON text cleanup | Direct | Configurable |
-| `ARRAY_APPEND` | `expr.arrayAppend(v)` | Direct | Configurable | Fallback → `JSON_INSERT(x, '$[#]', v)` | Configurable | Direct (dialect-dependent) |
-| `ARRAY_PREPEND` | `expr.arrayPrepend(v)` | Direct | Configurable | Configurable | Configurable | Direct (dialect-dependent) |
-| `ARRAY_CONCAT` | `expr.arrayConcat(...)` | Configurable (or map to `ARRAY_CAT`) | Configurable | Configurable | Mapped → `CONCAT` | Direct (dialect-dependent) |
-| `ARRAY_DISTINCT` | `expr.arrayDistinct()` | Configurable | Configurable | Configurable | Direct | Configurable |
+| `ARRAY_LENGTH` | `arrayLength(value)` | Fallback → `ARRAY_LENGTH(x, 1)` | Configurable | Fallback → `JSON_ARRAY_LENGTH(x)` | Mapped → `CARDINALITY` | Direct (dialect-dependent) |
+| `ARRAY_CONTAINS` | `arrayContains(value, item)` | Fallback → `ARRAY_POSITION(...) IS NOT NULL` | Configurable | Best-effort fallback via JSON text search | Direct (dialect-dependent) | Configurable |
+| `ARRAY_POSITION` | `arrayPosition(value, item)` | Direct | Configurable | Best-effort fallback via JSON text search | Direct | Direct (dialect-dependent) |
+| `ARRAY_SLICE` | `arraySlice(value, start, len?)` | Configurable | Configurable | Configurable | Mapped → `SLICE` | Configurable |
+| `ARRAY_JOIN` | `arrayJoin(value, separator)` | Mapped → `ARRAY_TO_STRING` | Configurable | Best-effort fallback via JSON text cleanup | Direct | Configurable |
+| `ARRAY_APPEND` | `arrayAppend(value, item)` | Direct | Configurable | Fallback → `JSON_INSERT(x, '$[#]', v)` | Configurable | Direct (dialect-dependent) |
+| `ARRAY_PREPEND` | `arrayPrepend(value, item)` | Direct | Configurable | Configurable | Configurable | Direct (dialect-dependent) |
+| `ARRAY_CONCAT` | `arrayConcat(value, ...values)` | Configurable (or map to `ARRAY_CAT`) | Configurable | Configurable | Mapped → `CONCAT` | Direct (dialect-dependent) |
+| `ARRAY_DISTINCT` | `arrayDistinct(value)` | Configurable | Configurable | Configurable | Direct | Configurable |
 
 ## 7) Window / aggregation
 
-| Spec item | Preferred EDSL entry | PostgreSQL | MySQL | SQLite | HetuEngine DQL | Other built-ins |
+| Spec item | Preferred functional entry | PostgreSQL | MySQL | SQLite | HetuEngine DQL | Other built-ins |
 |---|---|---|---|---|---|---|
-| `COUNT` | `expr.count()` | Direct | Direct | Direct | Direct | Direct |
-| `SUM` | `expr.sum()`, `expr.sumOver(...)` | Direct | Direct | Direct | Direct | Direct |
-| `AVG` | `expr.avg()` | Direct | Direct | Direct | Direct | Direct |
-| `MIN` | `expr.min()` | Direct | Direct | Direct | Direct | Direct |
-| `MAX` | `expr.max()` | Direct | Direct | Direct | Direct | Direct |
-| `RANK` | `expr.rank().over(...)` | Direct | Direct (MySQL 8+) | Direct | Direct | Direct |
-| `DENSE_RANK` | `expr.denseRank().over(...)` | Direct | Direct (MySQL 8+) | Direct | Direct | Direct |
-| `ROW_NUMBER` | `expr.rowNumber().over(...)` | Direct | Direct (MySQL 8+) | Direct | Direct | Direct |
-| `LAG` | `expr.lag(...).over(...)` | Direct | Direct (MySQL 8+) | Direct | Direct | Direct |
-| `LEAD` | `expr.lead(...).over(...)` | Direct | Direct (MySQL 8+) | Direct | Direct | Direct |
-| `PERCENT_RANK` | `expr.percentRank().over(...)` | Direct | Direct (MySQL 8+) | Direct | Direct | Direct |
-| `NTILE` | `expr.ntile(n).over(...)` | Direct | Direct (MySQL 8+) | Direct | Direct | Direct |
+| `COUNT` | `count(value)` | Direct | Direct | Direct | Direct | Direct |
+| `SUM` | `sum(value)`, `sumOver(value, spec)` | Direct | Direct | Direct | Direct | Direct |
+| `AVG` | `avg(value)` | Direct | Direct | Direct | Direct | Direct |
+| `MIN` | `min(value)` | Direct | Direct | Direct | Direct | Direct |
+| `MAX` | `max(value)` | Direct | Direct | Direct | Direct | Direct |
+| `RANK` | `over(rank(), spec)` | Direct | Direct (MySQL 8+) | Direct | Direct | Direct |
+| `DENSE_RANK` | `over(denseRank(), spec)` | Direct | Direct (MySQL 8+) | Direct | Direct | Direct |
+| `ROW_NUMBER` | `over(rowNumber(), spec)` | Direct | Direct (MySQL 8+) | Direct | Direct | Direct |
+| `LAG` | `over(lag(value, offset?, fallback?), spec)` | Direct | Direct (MySQL 8+) | Direct | Direct | Direct |
+| `LEAD` | `over(lead(value, offset?, fallback?), spec)` | Direct | Direct (MySQL 8+) | Direct | Direct | Direct |
+| `PERCENT_RANK` | `over(percentRank(), spec)` | Direct | Direct (MySQL 8+) | Direct | Direct | Direct |
+| `NTILE` | `over(ntile(buckets), spec)` | Direct | Direct (MySQL 8+) | Direct | Direct | Direct |
 
 ## 8) Query features
 
-| Spec item | Preferred EDSL entry | PostgreSQL | MySQL | SQLite | HetuEngine DQL | Other built-ins |
+| Spec item | Preferred functional entry | PostgreSQL | MySQL | SQLite | HetuEngine DQL | Other built-ins |
 |---|---|---|---|---|---|---|
-| `LATERAL_JOIN` | `query.join(..., { lateral: true })` | Direct (`LATERAL` kept) | Direct (MySQL 8+, engine-dependent) | Keyword removed when unsupported | Direct | Direct |
-| `RECURSIVE_CTE` | `loop(...)` | Direct | Direct (MySQL 8+) | Direct | Direct | Direct |
+| `LATERAL_JOIN` | `join(left, right, on, { lateral: true })` or `pipe(left, join(right, on, { lateral: true }))` | Direct (`LATERAL` kept) | Direct (MySQL 8+, engine-dependent) | Keyword removed when unsupported | Direct | Direct |
+| `RECURSIVE_CTE` | `loop(base, step)` or `pipe(base, loop(step))` | Direct | Direct (MySQL 8+) | Direct | Direct | Direct |
 
 If `dialect.features.recursiveCte = false`, SQL rendering throws an explicit error.
 
@@ -169,10 +170,17 @@ Current defaults:
 
 ## Dialect customization hooks
 
-You can override any item through `toSql(sqlRenderer({ dialect: { language: ... } }))`:
+You can override any item through the renderer's `dialect.language` config:
 
 ```ts
-toSql(sqlRenderer({
+import { sqlRenderer, table, t, toSql } from "@teta/teta";
+
+const users = table("users", {
+  name: t.string(),
+  created_at: t.timestamp(),
+});
+
+const renderer = sqlRenderer({
   dialect: {
     name: "my_dialect",
     parserDialect: "Trino",
@@ -194,7 +202,9 @@ toSql(sqlRenderer({
       unsupported: ["OVERLAY"],
     },
   },
-})).sql;
+});
+
+console.log(toSql(users, renderer));
 ```
 
 Available fallback identifiers:

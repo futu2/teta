@@ -3,7 +3,7 @@ import { add, duckdbRenderer, param, sqlRenderer, table, t, eq, filter, toSql, t
 import { DIALECT_MATRIX_SQL, EXPLICIT_PARAM_EXPR_POSTGRES_COMPACT, EXPLICIT_PARAM_USERS_FILTER_POSTGRES_COMPACT, PARAMETERIZED_EXPR_POSTGRES_COMPACT, PARAMETERIZED_USERS_FILTER_POSTGRES_COMPACT, USER_PIPELINE_POSTGRES_COMPACT, } from "./helpers/expected-sql.ts";
 import { buildDialectMatrixQuery, buildUserPipelineQuery, } from "./helpers/fixtures.ts";
 describe("renderer API", () => {
-    test("Query.toSql delegates to renderer objects", () => {
+    test("toSql(query, renderer) delegates to renderer state", () => {
         const query = buildUserPipelineQuery();
         const renderer = sqlRenderer({
             dialect: "postgresql",
@@ -11,7 +11,7 @@ describe("renderer API", () => {
         });
         expect(toSql(query, renderer)).toBe(USER_PIPELINE_POSTGRES_COMPACT);
     });
-    test("Query.toSqlResult returns structured SQL output", () => {
+    test("toSqlResult(query, renderer) returns structured SQL output", () => {
         const query = buildUserPipelineQuery();
         const renderer = sqlRenderer({
             dialect: "postgresql",
@@ -22,7 +22,7 @@ describe("renderer API", () => {
             params: [],
         });
     });
-    test("Query.toSqlResult can parameterize literals", () => {
+    test("toSqlResult(query, renderer) can parameterize literals", () => {
         const users = table("users", {
             id: t.int(),
             name: t.string(),
@@ -40,7 +40,7 @@ describe("renderer API", () => {
             ],
         });
     });
-    test("Query.toSqlResult captures explicit params by default", () => {
+    test("toSqlResult(query, renderer) captures explicit params by default", () => {
         const users = table("users", {
             id: t.int(),
             name: t.string(),
@@ -62,16 +62,16 @@ describe("renderer API", () => {
         const renderer = duckdbRenderer({ format: "compact" });
         expect(toSql(query, renderer)).toBe(DIALECT_MATRIX_SQL.duckdb);
     });
-    test("ExprRef.toSql uses the same renderer interface", () => {
+    test("toSql(expr, renderer) uses the same renderer state", () => {
         expect(toSql(add(1, 2), duckdbRenderer())).toBe("1 + 2");
     });
-    test("ExprRef.toSqlResult returns structured SQL output", () => {
+    test("toSqlResult(expr, renderer) returns structured SQL output", () => {
         expect(toSqlResult(add(1, 2), duckdbRenderer())).toEqual({
             sql: "1 + 2",
             params: [],
         });
     });
-    test("ExprRef.toSqlResult can parameterize literals", () => {
+    test("toSqlResult(expr, renderer) can parameterize literals", () => {
         expect(toSqlResult(add(1, 2), sqlRenderer({
             dialect: "postgresql",
             format: "compact",
@@ -84,7 +84,7 @@ describe("renderer API", () => {
             ],
         });
     });
-    test("ExprRef.toSqlResult captures explicit params by default", () => {
+    test("toSqlResult(expr, renderer) captures explicit params by default", () => {
         expect(toSqlResult(eq(param(1), param(2)), sqlRenderer({
             dialect: "postgresql",
             format: "compact",
@@ -96,7 +96,7 @@ describe("renderer API", () => {
             ],
         });
     });
-    test("Query.toSql supports bigint literals on bigint columns", () => {
+    test("toSql(query, renderer) supports bigint literals on bigint columns", () => {
         const sessions = table("sessions", {
             session_id: t.bigint(),
         });

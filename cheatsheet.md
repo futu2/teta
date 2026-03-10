@@ -2,27 +2,119 @@
 
 Quick reference for the public API exported from `mod.ts`.
 
+Teta is function-first. Query helpers are dual-mode, so you can write either `select(users, fn)`
+or `pipe(users, select(fn))`. In practice, the examples here prefer Remeda's `pipe(...)`.
+
 ```ts
+import { pick, pipe } from "remeda";
+
 import {
-  Query,
-  table,
-  loop,
-  t,
-  ExprRef,
-  sqlRenderer,
-  fn,
-  windowFn,
-  when,
-  shape,
-  f,
-  lit,
-  param,
+  aggregate,
+  and,
+  arrayAppend,
+  arrayContains,
+  arrayJoin,
+  arrayLength,
+  arrayPosition,
+  arraySlice,
+  asc,
+  avg,
+  bitLength,
+  cast,
+  charLength,
+  characterLength,
+  coalesce,
+  concat,
+  count,
   currentDate,
   currentTimestamp,
+  dateAdd,
+  dateDiff,
+  dateFormat,
   dateLiteral,
+  dateParse,
+  dateTrunc,
+  day,
+  desc,
+  eq,
+  explain,
+  ExprRef,
+  f,
+  filter,
+  fn,
+  fromUnixTime,
+  group,
+  gt,
+  gte,
+  hour,
+  isIn,
+  isNotNull,
+  isNull,
+  join,
+  lag,
+  lead,
+  left,
+  like,
+  limit,
+  loop,
+  lower,
+  lt,
+  lte,
+  max,
+  min,
+  minute,
+  mod,
+  month,
+  mul,
+  ne,
+  not,
+  ntile,
+  nullIf,
+  octetLength,
+  orderBy,
+  over,
+  overlay,
+  param,
+  percentRank,
+  position,
+  pow,
+  Query,
+  rank,
+  regexExtract,
+  regexLike,
+  regexReplace,
+  replace,
+  reverse,
+  right,
+  round,
+  rowNumber,
+  rpad,
+  select,
+  shape,
+  sqlRenderer,
+  sqrt,
+  sub,
+  substring,
+  sum,
+  sumOver,
+  t,
+  table,
   timestampLiteral,
-  LANGUAGE_SPEC,
-  getLanguageSpec,
+  toAst,
+  toDate,
+  toFloat,
+  toIR,
+  toInt,
+  toSql,
+  toSqlResult,
+  toUnixTime,
+  trim,
+  union,
+  unionAll,
+  upper,
+  when,
+  windowFn,
+  year,
 } from "@teta/teta";
 
 import {
@@ -32,7 +124,7 @@ import {
 } from "@teta/teta/dev";
 ```
 
-## 1) Query Builders
+## 1) Query roots and composition
 
 ### `table(name, schema)`
 Create a typed table query root.
@@ -45,25 +137,126 @@ const users = table("users", {
 });
 ```
 
-### `loop(step)` / `base.loop(step)`
-Create a recursive CTE query from a base query and recursive step.
+### Multi-stage pipelines
+Use Remeda's `pipe(...)` to compose query stages.
 
 ```ts
-const base = table("seed", { n: t.int() }).select((s) => ({ n: s.n }));
-const q = base.loop((self) => self.select((s) => ({ n: s.n.add(1) })));
+const q = pipe(
+  users,
+  filter((u) => gt(u.id, 0)),
+  select((u) => ({ id: u.id, name: upper(u.name) })),
+  orderBy((u) => asc(u.name)),
+  limit(10)
+);
 ```
 
-Curried query helpers like `loop(...)`, `select(...)`, and `filter(...)`
-return `QueryStep` functions, so you can apply them directly when building
-higher-order utilities.
+### Dual-mode helpers
+Every query helper can be used data-first or data-last.
 
 ```ts
-const base = table("seed", { n: t.int() }).select((s) => ({ n: s.n }));
-const recursive = loop((self) => self.select((s) => ({ n: s.n.add(1) })));
-const q = recursive(base);
+const q1 = select(users, (u) => ({ id: u.id }));
+const q2 = pipe(users, select((u) => ({ id: u.id })));
 ```
 
-### `t` schema helpers
+### `loop(step)`
+Build a recursive CTE from a base query plus a recursive step.
+
+```ts
+const base = select(table("seed", { n: t.int() }), (s) => ({ n: s.n }));
+const q = loop(base, (self) => select(self, (s) => ({ n: add(s.n, 1) })));
+```
+
+### `join(right, on, options?)`
+Join queries with `inner`, `left`, `right`, or `full` behavior.
+
+```ts
+const usersWithOrders = pipe(
+  users,
+  join(orders, (u, o) => eq(u.id, o.user_id), { type: "left" }),
+  select((row) => ({
+    user_id: row.id,
+    user_name: row.name,
+    order_total: row.total,
+  }))
+);
+```
+
+### `aggregate(selector)`
+Use `group(expr)` inside the selector for grouping keys.
+
+```ts
+const spend = pipe(
+  orders,
+  aggregate((o) => ({
+    user_id: group(o.user_id),
+    order_count: count(o.id),
+    total_spend: sum(o.total),
+  }))
+);
+```
+
+### Set operations
+
+```ts
+const allUsers = unionAll(activeUsers, inactiveUsers);
+const uniqueUsers = union(activeUsers, inactiveUsers);
+```
+
+## 2) Query helpers
+
+- `select(selector)`
+- `aggregate(selector)`
+- `filter(predicate)`
+- `orderBy(selector)`
+- `limit(count)`
+- `join(rightOrBuilder, on, { type?, lateral?, merge? })`
+- `unionAll(right)`
+- `union(right)`
+- `loop(step)`
+
+`select(...)`, `aggregate(...)`, `filter(...)`, `orderBy(...)`, `limit(...)`, `join(...)`, `union(...)`, `unionAll(...)`, and `loop(...)`
+all return `QueryStep` functions when called without the left query.
+
+## 3) Rendering and introspection
+
+### SQL output
+
+```ts
+toSql(q, sqlRenderer({ dialect: "postgresql" }));
+toSql(q, sqlRenderer({ dialect: "postgresql", format: "pretty" }));
+toSql(q, sqlRenderer({ dialect: "duckdb", format: "compact" }));
+toSql(q, sqlRenderer({ dialect: "postgresql", renderStrategy: "readable" }));
+```
+
+### Structured SQL output
+
+```ts
+const result = toSqlResult(q, sqlRenderer({
+  dialect: "postgresql",
+  parameterMode: "named",
+}));
+
+result.sql;
+result.params;
+```
+
+### Lowering helpers
+
+```ts
+const ir = toIR(q);
+const ast = toAst(q, { dialect: "postgresql" });
+const info = explain(q, { dialect: "postgresql", renderStrategy: "readable" });
+```
+
+### Lowering tips
+
+- `explain(query, ...)` is the fastest way to inspect `stages`, `ctes`, `sql`, and `params`
+- `optimized` may fuse stages into one `SELECT`
+- `readable` preserves stage boundaries as `cte_0`, `cte_1`, ...
+- a nested derived table usually means the compiler needed a scope barrier
+
+## 4) Schema helpers
+
 - `t.string()`
 - `t.int()`
 - `t.float()`
@@ -77,270 +270,191 @@ const q = recursive(base);
 - `t.bytes()`
 - `t.nullable(inner)`
 
-## 2) `Query` Methods
-
-All `Query` methods are immutable and return a new `Query`.
-
-### Projection and filtering
-- `select(selector)`
-- `aggregate(selector)` (supports grouping via `expr.group()`)
-- `filter(predicate)`
-
-### Ordering and limiting
-- `orderBy(selector)`
-- `limit(count)`
-
-### Set operations
-- `unionAll(right)`
-- `union(right)`
-
-### Recursive CTEs
-- `loop(step)`
-
-### Joins
-- `join(rightOrBuilder, on, { type?, lateral?, merge? })`
-- `type`: `"inner" | "left" | "right" | "full"`
-- `lateral: true` enables correlated joins with a right-side builder
-- `merge` customizes the projected joined shape
-
-### Output and introspection
-- `toIR()`
-- `toAst()`
-- `explain(options?)`
-- `toSql(renderer)`
-- `toSqlResult(renderer)`
-
-`toSql` examples:
-
-```ts
-q.toSql(sqlRenderer({ dialect: "postgresql" }));
-q.toSql(sqlRenderer({ dialect: "postgresql", format: "pretty" }));
-q.toSql(sqlRenderer({ dialect: "duckdb", format: "compact" }));
-q.toSql(sqlRenderer({ dialect: "postgresql", renderStrategy: "readable" }));
-q.toSql(duckdbRenderer({ format: "compact" }));
-```
-
-### Lowering tips
-- `query.explain(...)` is the fastest way to inspect `stages`, `ctes`, `sql`, and `params`
-- `optimized` may fuse stages into one `SELECT`; `readable` preserves `cte_0`, `cte_1`, ...
-- a nested derived table usually means the compiler needed a scope barrier, not that SQL generation went off track
-
-### Error handling
-- `TetaUserError` -> invalid query usage or invalid render/dev-tooling config
-- `TetaInternalError` -> unexpected compiler/runtime failure
-- `isTetaError(error)` -> narrows either error class
-- Common codes: `GROUP_OUTSIDE_AGGREGATE`, `LEGACY_SELECTION_ARRAY`, `INVALID_JOIN_TYPE`, `INVALID_BUILTIN_DIALECT_NAME`, `INVALID_TABLE_SOURCE`, `INVALID_RENDERER_OPTIONS`
-
-## 3) `ExprRef` Methods
-
-Use these on column refs and expression refs (for example `u.age.gte(18)`).
+## 5) Expression helpers
 
 ### Comparison and boolean
-- `eq(value)`
-- `ne(value)`
-- `gt(value)`
-- `gte(value)`
-- `lt(value)`
-- `lte(value)`
-- `like(value)` (string)
-- `in(values)`
-- `and(value)`
-- `or(value)`
-- `not()`
+
+- `eq(left, right)`
+- `ne(left, right)`
+- `gt(left, right)`
+- `gte(left, right)`
+- `lt(left, right)`
+- `lte(left, right)`
+- `like(value, pattern)`
+- `isIn(value, values)`
+- `and(left, right)`
+- `or(left, right)`
+- `not(value)`
+- `isNull(value)`
+- `isNotNull(value)`
 
 ### Arithmetic and numeric
-- `add(value)`
-- `sub(value)`
-- `mul(value)`
-- `div(value)`
-- `mod(value)`
-- `ceil()`
-- `floor()`
-- `abs()`
-- `sqrt()`
-- `pow(exponent)`
-- `greatest(...values)`
-- `least(...values)`
-- `round(scale?)`
+
+- `add(left, right)`
+- `sub(left, right)`
+- `mul(left, right)`
+- `div(left, right)`
+- `mod(left, right)`
+- `ceil(value)`
+- `floor(value)`
+- `abs(value)`
+- `sqrt(value)`
+- `pow(value, exponent)`
+- `greatest(value, ...values)`
+- `least(value, ...values)`
+- `round(value, scale?)`
 
 ### Date and time
-- `extract(field)`
-- `dateTrunc(unit)`
-- `dateAdd(unit, amount)`
-- `dateDiff(unit, other)`
-- `dateFormat(format)`
-- `dateParse(format)`
-- `toUnixTime()`
-- `fromUnixTime()`
-- `year()`
-- `month()`
-- `day()`
-- `hour()`
-- `minute()`
-- `second()`
 
-### Aggregation and grouping
-- `group()`
-- `count()`
-- `sum()`
-- `avg()`
-- `min()`
-- `max()`
-
-### Window
-- `rank().over(spec)`
-- `denseRank().over(spec)`
-- `rowNumber().over(spec)`
-- `lag(offset?, fallback?).over(spec)`
-- `lead(offset?, fallback?).over(spec)`
-- `percentRank().over(spec)`
-- `ntile(buckets).over(spec)`
-- `sumOver(spec)`
-
-`spec` shape:
-- `{ partitionBy?: ExprRef | ExprRef[]; orderBy?: OrderItem | OrderItem[] }`
-
-### String
-- `replace(search, replacement)`
-- `upper()`
-- `lower()`
-- `reverse()`
-- `trim()`
-- `substring(start, length?)`
-- `position(needle)`
-- `overlay(placing, start, length?)`
-- `charLength()`
-- `characterLength()`
-- `octetLength()`
-- `bitLength()`
-- `left(length)`
-- `right(length)`
-- `lpad(length, padding = " ")`
-- `rpad(length, padding = " ")`
-- `concat(...parts)`
-
-### Regex
-- `regexLike(pattern)`
-- `regexReplace(pattern, replacement, flags?)`
-- `regexExtract(pattern, groupIndex?)`
-
-### Array
-- `arrayLength()`
-- `arrayContains(value)`
-- `arrayPosition(value)`
-- `arraySlice(start, length?)`
-- `arrayJoin(separator)`
-- `arrayAppend(value)`
-- `arrayPrepend(value)`
-- `arrayConcat(...values)`
-- `arrayDistinct()`
-
-### Nulls, casts, order items
-- `coalesce(...values)`
-- `nullIf(value)`
-- `isNull()`
-- `isNotNull()`
-- `cast(target)`
-- `toInt()`
-- `toFloat()`
-- `toDate()`
-- `asc()` (for `orderBy`)
-- `desc()` (for `orderBy`)
-
-## 4) Expression Utilities
-
-### Core builders
-- `lit(value)` -> literal expression
-- `param(value, name?)` -> runtime SQL parameter; `name` is only populated for named placeholders
-- `fn(name, ...args)` -> generic SQL function call
-- `windowFn(name, ...args).over(spec)` -> generic window function call
-
-```ts
-const orders = table("orders", {
-  id: t.int(),
-  tenant_id: t.string(),
-  customer_email: t.string(),
-  status: t.string(),
-  total_cents: t.int(),
-});
-
-const tenantId = session.tenantId;
-const email = request.query.email?.trim() ?? "";
-
-const result = orders
-  .filter((o) =>
-    o.tenant_id.eq(param(tenantId)).and(
-      o.customer_email.eq(param(email)).and(o.status.eq("paid"))
-    )
-  )
-  .toSqlResult(sqlRenderer({ dialect: "postgresql" }));
-
-result.sql;
-// SELECT orders_0.id, orders_0.tenant_id, orders_0.customer_email, orders_0.status, orders_0.total_cents FROM orders AS orders_0 WHERE orders_0.tenant_id = $1 AND orders_0.customer_email = $2 AND orders_0.status = 'paid'
-
-result.params;
-// [{ value: tenantId, index: 1, name: null }, { value: email, index: 2, name: null }]
-
-// `name` is null here because the SQL is using positional placeholders ($1, $2).
-// Use `param(email, "customer_email")` with `parameterMode: "named"` to populate it.
-```
-
-### Date/time constants and literals
+- `extract(value, field)`
+- `dateTrunc(value, unit)`
+- `dateAdd(value, unit, amount)`
+- `dateDiff(value, unit, other)`
+- `dateFormat(value, format)`
+- `dateParse(value, format)`
+- `toUnixTime(value)`
+- `fromUnixTime(value)`
+- `year(value)`
+- `month(value)`
+- `day(value)`
+- `hour(value)`
+- `minute(value)`
+- `second(value)`
 - `currentDate()`
 - `currentTimestamp()`
 - `dateLiteral("YYYY-MM-DD")`
 - `timestampLiteral("YYYY-MM-DD HH:MM:SS")`
 
-### CASE builder
-- `when(condition, value).when(...).else(value)`
-- `when(condition, value).when(...).end()`
+### Aggregation and grouping
 
-### Shape utilities
-- `shape(obj).map(mapper)` -> map each expression in a shape
-- `shape(obj).group()` -> apply `.group()` to each expression in a shape
+- `group(value)`
+- `count(value)`
+- `sum(value)`
+- `avg(value)`
+- `min(value)`
+- `max(value)`
 
-### Template helper
-- ``f`prefix ${expr} suffix` `` -> SQL `CONCAT(...)`
+### Window
 
-## 5) Language Utilities
+- `over(rank(), spec)`
+- `over(denseRank(), spec)`
+- `over(rowNumber(), spec)`
+- `over(lag(value, offset?, fallback?), spec)`
+- `over(lead(value, offset?, fallback?), spec)`
+- `over(percentRank(), spec)`
+- `over(ntile(buckets), spec)`
+- `sumOver(value, spec)`
+- `asc(value)`
+- `desc(value)`
 
-### `LANGUAGE_SPEC`
-Language categories and canonical operations/functions:
-- `math`
-- `string`
-- `logical`
-- `dateTime`
-- `conversionAndNull`
-- `array`
-- `windowAndAgg`
-- `queryFeatures`
+`spec` shape:
+- `{ partitionBy?: ExprRef | ExprRef[]; orderBy?: OrderItem | OrderItem[] }`
 
-### `getLanguageSpec()`
-Returns the same language spec object as `LANGUAGE_SPEC`.
+### String and regex
 
-## 6) Dev Utilities
+- `replace(value, search, replacement)`
+- `upper(value)`
+- `lower(value)`
+- `reverse(value)`
+- `trim(value)`
+- `substring(value, start, length?)`
+- `position(value, needle)`
+- `overlay(value, placing, start, length?)`
+- `charLength(value)`
+- `characterLength(value)`
+- `octetLength(value)`
+- `bitLength(value)`
+- `left(value, length)`
+- `right(value, length)`
+- `lpad(value, length, padding?)`
+- `rpad(value, length, padding?)`
+- `concat(value, ...parts)`
+- `regexLike(value, pattern)`
+- `regexReplace(value, pattern, replacement, flags?)`
+- `regexExtract(value, pattern, groupIndex?)`
+
+### Array
+
+- `arrayLength(value)`
+- `arrayContains(value, item)`
+- `arrayPosition(value, item)`
+- `arraySlice(value, start, length?)`
+- `arrayJoin(value, separator)`
+- `arrayAppend(value, item)`
+- `arrayPrepend(value, item)`
+- `arrayConcat(value, ...values)`
+- `arrayDistinct(value)`
+- `array(...values)`
+
+### Nulls and casts
+
+- `coalesce(value, ...fallbacks)`
+- `nullIf(value, other)`
+- `cast(value, type)`
+- `toInt(value)`
+- `toFloat(value)`
+- `toDate(value)`
+
+## 6) Builders and utilities
+
+### Core expression builders
+
+- `lit(value)`
+- `param(value, name?)`
+- `fn(name, ...args)`
+- `windowFn(name, ...args)`
+- `over(window, spec)`
+- `when(condition, value)` -> build a CASE branch
+- `caseWhen(branches, elseValue?)` -> build `CASE WHEN ... THEN ... [ELSE ...] END`
+- `mapShape(obj, mapper)` -> map each expression in a shape
+- `groupShape(obj)` -> apply `group(...)` to each expression in a shape
+- ``f`prefix ${expr} suffix` ``
+
+### Remeda-friendly projection helpers
+
+```ts
+import { merge, omit, pick, pipe } from "remeda";
+
+const compactUsers = select(users, pipe(
+  pick(["id", "name"] as const),
+  (base) => merge(base, { name_upper: upper(base.name) })
+));
+
+const publicUsers = select(users, omit(["created_at"] as const));
+
+const groupedUsers = aggregate(users, (user) => ({
+  ...groupShape({ id: user.id }),
+}));
+```
+
+## 7) Dev utilities
 
 ### `copyTextToClipboard(text, preferred = "auto")`
-Copy a SQL string to clipboard using one of:
+Copy SQL to the clipboard using one of:
 - `"auto"`, `"wl-copy"`, `"xclip"`, `"xsel"`, `"pbcopy"`, `"clip"`
 
 Returns the clipboard tool actually used.
 
 ### `renderSqlFromSource(source, exportName = "query", rendererOptions = {})`
 Load a module and render SQL from:
-- a `Query`-like object (`toSql(renderer)`)
+- a query-like object
 - a SQL string export
 - a function returning either of the above
 
 ### `watchQuerySourceToClipboard(options)`
-Watch source files, re-render SQL on change, optionally write output file and/or copy to clipboard.
+Watch source files, re-render SQL on change, optionally write an output file and/or copy to the clipboard.
 
-Returns a controller:
+Returns a controller with:
 - `stop()`
 - `runOnce()`
 
-## 7) Key Exported Types (from `mod.ts`)
+## 8) Key exported types
 
+- `Query`
+- `QueryIR`
+- `QueryExplainResult`
+- `QueryStep`
+- `ExprRef`
 - `BuiltinDialect`
 - `DialectSpec`
 - `Dialect`
@@ -360,17 +474,30 @@ Returns a controller:
 - `SqlTimestamp`
 - `SqlUuid`
 - `SqlBytes`
-- `SqlJson<T>`
+- `SqlJson`
 - `LanguageCategory`
-- `ClipboardTool`
-- `QueryLike`
-- `WatchQuerySourceOptions`
-- `WatchQueryController`
 
-## 8) End-to-End Mini Example
+## 9) End-to-end mini example
 
 ```ts
-import { table, t, currentTimestamp } from "@teta/teta";
+import { pipe } from "remeda";
+import {
+  asc,
+  desc,
+  currentTimestamp,
+  dateTrunc,
+  eq,
+  filter,
+  limit,
+  orderBy,
+  select,
+  sqlRenderer,
+  table,
+  t,
+  toSql,
+  trim,
+  upper,
+} from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -379,16 +506,18 @@ const users = table("users", {
   created_at: t.timestamp(),
 });
 
-const q = users
-  .filter((u) => u.active.eq(true))
-  .select((u) => ({
+const q = pipe(
+  users,
+  filter((u) => eq(u.active, true)),
+  select((u) => ({
     id: u.id,
-    name: u.name.trim().upper(),
-    created_day: u.created_at.dateTrunc("day"),
+    name: upper(trim(u.name)),
+    created_day: dateTrunc(u.created_at, "day"),
     generated_at: currentTimestamp(),
-  }))
-  .orderBy((u) => [u.created_day.desc(), u.id.asc()])
-  .limit(100);
+  })),
+  orderBy((u) => [desc(u.created_day), asc(u.id)]),
+  limit(100)
+);
 
-console.log(q.toSql(sqlRenderer({ dialect: "postgresql", format: "pretty" })));
+console.log(toSql(q, sqlRenderer({ dialect: "postgresql", format: "pretty" })));
 ```

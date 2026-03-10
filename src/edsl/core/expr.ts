@@ -20,7 +20,6 @@ export {
   toExprNode,
   toExprNodeList,
   toOrderItems,
-  type CaseBuilder,
   type ColumnRefs,
   type ExprInput,
   type ExprInputTuple,

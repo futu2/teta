@@ -1,6 +1,6 @@
 import { omit, pick, pipe } from "remeda";
 import type { ExprRef, SqlBigInt, SqlBytes, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlUuid, } from "../mod.ts";
-import { filter, join, limit, orderBy, param, select, table, t, aggregate, asc, desc, eq, gt, upper, add, coalesce, count, group, loop, sum, and, sub } from "../mod.ts";
+import { filter, join, limit, orderBy, param, select, table, t, aggregate, asc, desc, eq, gt, upper, add, coalesce, count, group, loop, sum, and, sub, caseWhen, when, mapShape, groupShape, lt } from "../mod.ts";
 type Equal<A, B> = ((<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false);
 type Expect<T extends true> = T;
 type ExprType<TExpr> = TExpr extends ExprRef<infer TValue> ? TValue : never;
@@ -74,6 +74,22 @@ const aggregatedWithQuotedKey = aggregate(orders, (order) => ({
 }));
 const loopBase = select(users, (user) => ({ id: user.id }));
 const looped = loop(loopBase, (self) => filter(self, (row) => gt(row.id, 0)));
+const projectedWithCase = select(users, (user) => ({
+    id: user.id,
+    age_bucket: caseWhen([
+        when(lt(user.id, 10), "small"),
+        when(lt(user.id, 100), "medium"),
+    ], "large"),
+    ...mapShape({
+        bumped_id: user.id,
+    }, (value) => add(value, 1)),
+}));
+const aggregatedWithGroupShape = aggregate(orders, (order) => ({
+    ...groupShape({
+        user_id: order.user_id,
+    }),
+    total_spend: sum(order.total),
+}));
 const projectedProfiles = select(profiles, (profile) => ({
     id: profile.id,
     external_id: add(profile.external_id, 1),
@@ -101,6 +117,9 @@ type _LeftJoinCoalescedSub = Expect<Equal<ExprType<typeof leftJoinTotalRemaining
 type _ProjectedWithQuotedKey = Expect<Equal<ExprType<typeof projectedWithQuotedKey.columns["User Id"]>, SqlInt>>;
 type _AggregatedWithQuotedKey = Expect<Equal<ExprType<typeof aggregatedWithQuotedKey.columns["Total Spend"]>, SqlFloat>>;
 type _LoopedId = Expect<Equal<ExprType<typeof looped.columns.id>, SqlInt>>;
+type _ProjectedWithCaseAgeBucket = Expect<Equal<ExprType<typeof projectedWithCase.columns.age_bucket>, string>>;
+type _ProjectedWithCaseBumpedId = Expect<Equal<ExprType<typeof projectedWithCase.columns.bumped_id>, SqlInt>>;
+type _AggregatedWithGroupShapeUserId = Expect<Equal<ExprType<typeof aggregatedWithGroupShape.columns.user_id>, SqlInt>>;
 type _ProfileId = Expect<Equal<ExprType<typeof profiles.columns.id>, SqlUuid>>;
 type _ProfileExternalId = Expect<Equal<ExprType<typeof profiles.columns.external_id>, SqlBigInt>>;
 type _ProfileCreditLimit = Expect<Equal<ExprType<typeof profiles.columns.credit_limit>, SqlDecimal | null>>;
@@ -124,6 +143,8 @@ void leftViaJoinSelected;
 void projectedWithQuotedKey;
 void aggregatedWithQuotedKey;
 void looped;
+void projectedWithCase;
+void aggregatedWithGroupShape;
 void projectedProfiles;
 void uuidFilteredProfiles;
 void bigintFilteredProfiles;

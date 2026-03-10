@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { sqlRenderer, type SqlCompilable, type SqlOptions } from "../sql.ts";
+import { renderSql, sqlRenderer, type SqlCompilable, type SqlOptions } from "../sql.ts";
 import { userError } from "../errors.ts";
 
 export type QueryLike = SqlCompilable;
@@ -51,7 +51,7 @@ export async function resolveRenderedSqlFromModule(
       `Export '${exportName}' must be a SQL string, Query-like object, or a function returning one`
     );
   }
-  return sqlRenderer(rendererOptions).toSql(target);
+  return renderSql(target, sqlRenderer(rendererOptions));
 }
 
 export function isQueryLike(value: unknown): value is QueryLike {

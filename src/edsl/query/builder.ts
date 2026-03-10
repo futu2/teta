@@ -28,6 +28,8 @@ import {
   buildSqlOptions,
   createDeferredRecursiveCte,
   renderPipelineAst,
+  renderSql,
+  renderSqlResult,
   resolveDialect,
   sqlRenderer,
 } from "../sql.ts";
@@ -518,16 +520,16 @@ export function toAst<TColumns extends QueryColumns>(
 
 export function toSql<TTarget extends SqlCompilable>(
   query: TTarget,
-  renderer: SqlRenderer<any, SqlResult>
+  renderer: SqlRenderer<TTarget, SqlResult>
 ): string {
-  return renderer.toSql(query);
+  return renderSql(query, renderer);
 }
 
 export function toSqlResult<TTarget extends SqlCompilable, TReturn extends SqlResult>(
   query: TTarget,
-  renderer: SqlRenderer<any, TReturn>
+  renderer: SqlRenderer<TTarget, TReturn>
 ): TReturn {
-  return renderer.toSqlResult(query);
+  return renderSqlResult(query, renderer);
 }
 
 export function explain<TColumns extends QueryColumns>(
@@ -536,7 +538,7 @@ export function explain<TColumns extends QueryColumns>(
 ): QueryExplainResult<TColumns> {
   const resolved = buildSqlOptions(options);
   const renderer = sqlRenderer(options);
-  const sqlResult = renderer.toSqlResult(query);
+  const sqlResult = renderSqlResult(query, renderer);
 
   return {
     ir: toIR(query),

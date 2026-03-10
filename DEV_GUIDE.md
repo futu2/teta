@@ -140,8 +140,8 @@ This stage list is the main query IR that the renderer lowers later.
 Take something like:
 
 ```ts
-const expr = user.name.replace(" ", "_").characterLength()
-const result = expr.toSql(sqlRenderer({ dialect: "sqlite" }))
+const expr = characterLength(replace(user.name, " ", "_"))
+const result = toSql(expr, sqlRenderer({ dialect: "sqlite" }))
 ```
 
 ### 1) Expression construction
@@ -150,22 +150,22 @@ Expression helpers build nested `ExprNode` values.
 
 For example:
 
-- method sugar from `src/edsl/sql/expr/methods/*`
-- operation helpers from `src/edsl/sql/expr/ops/*`
+- function helpers from `src/edsl/sql/expr/ops/*`
+- builders from `src/edsl/sql/expr/builders.ts`
 - low-level constructors in `src/edsl/core/expr/core.ts`
 
 Eventually everything becomes an `ExprRef` containing an `ExprNode` tree.
 
-### 2) `ExprRef.toSql(renderer)` and `ExprRef.toSqlResult(renderer)`
+### 2) `toSql(expr, renderer)` and `toSqlResult(expr, renderer)`
 
-`ExprRef.toSql(...)` in `src/edsl/core/expr/core.ts` is just sugar:
+Rendering stays function-first:
 
 ```text
-ExprRef -> renderer.toSql(expr)
-ExprRef -> renderer.toSqlResult(expr) when params
+expr -> toSql(expr, renderer) -> renderSql(expr, renderer)
+expr -> toSqlResult(expr, renderer) -> renderSqlResult(expr, renderer)
 ```
 
-It does not render anything itself.
+The expression object itself does not render anything.
 
 ### 3) Renderer setup
 
@@ -234,12 +234,14 @@ Rule of thumb:
 Take something like:
 
 ```ts
-const q = users
-  .filter((u) => u.active.eq(true))
-  .select((u) => ({ id: u.id, name: u.name }))
-  .orderBy((u) => u.name.asc())
+const q = pipe(
+  users,
+  filter((u) => eq(u.active, true)),
+  select((u) => ({ id: u.id, name: u.name })),
+  orderBy((u) => asc(u.name))
+)
 
-const result = q.toSql(sqlRenderer({ dialect: "postgresql", format: "pretty" }))
+const result = toSql(q, sqlRenderer({ dialect: "postgresql", format: "pretty" }))
 ```
 
 ### 1) `table(...)` creates the base query
@@ -253,9 +255,9 @@ const result = q.toSql(sqlRenderer({ dialect: "postgresql", format: "pretty" }))
   - empty `stages`
   - explicit `columnNames`
 
-### 2) Query methods append stages
+### 2) Query helpers append stages
 
-Each query method returns a new `Query`.
+Each query helper returns a new `Query` (or a `QueryStep` in data-last form).
 
 Examples:
 
@@ -280,25 +282,25 @@ Examples:
 
 At this point no SQL text exists yet.
 
-### 3) `Query.toIR()` and `Query.toAst()`
+### 3) `toIR(query)` and `toAst(query)`
 
 Useful checkpoints:
 
-- `toIR()` returns the neutral query representation:
+- `toIR(query)` returns the neutral query representation:
   - `{ source, stages }`
-- `toAst()` calls `renderPipelineAst(...)`
+- `toAst(query)` calls `renderPipelineAst(...)`
   - this gives the parser AST before final SQL stringification
-- `query.explain(...)` bundles IR, AST, SQL, params, stage metadata, and CTE metadata in one snapshot
+- `explain(query, ...)` bundles IR, AST, SQL, params, stage metadata, and CTE metadata in one snapshot
 
-In practice, `query.explain(...)` is usually the fastest debugging entrypoint, with `toIR()` and `toAst()` as lower-level follow-ups.
+In practice, `explain(query, ...)` is usually the fastest debugging entrypoint, with `toIR(query)` and `toAst(query)` as lower-level follow-ups.
 
-### 4) `Query.toSql(renderer)` and `Query.toSqlResult(renderer)`
+### 4) `toSql(query, renderer)` and `toSqlResult(query, renderer)`
 
-Like expressions, `Query.toSql(...)` is only sugar:
+Like expressions, query rendering stays function-first:
 
 ```text
-Query -> renderer.toSql(query)
-Query -> renderer.toSqlResult(query) when params
+query -> toSql(query, renderer) -> renderSql(query, renderer)
+query -> toSqlResult(query, renderer) -> renderSqlResult(query, renderer)
 ```
 
 The real lowering happens in `src/edsl/sql/renderer.ts`.
@@ -331,7 +333,7 @@ This is why generated SQL may look like a flat `SELECT`, a staged `WITH` pipelin
 
 ### 6a) Common lowering patterns
 
-A few patterns show up repeatedly when you inspect `query.explain(...)`, `toIR()`, or `toAst()`:
+A few patterns show up repeatedly when you inspect `explain(query, ...)`, `toIR(query)`, or `toAst(query)`:
 
 - **optimized render strategy**
   - adjacent stages are fused when they can share one `SELECT`
@@ -438,9 +440,9 @@ When something looks wrong, inspect from top to bottom:
 
 1. `ExprRef.node`
    - is the expression tree what you expect?
-2. `Query.toIR()`
+2. `toIR(query)`
    - are the stages right?
-3. `Query.toAst()`
+3. `toAst(query)`
    - did the stage lowering produce the right parser AST?
 4. `renderPipelineAst(...)`
    - is the CTE pipeline shaped correctly?
@@ -453,8 +455,8 @@ When something looks wrong, inspect from top to bottom:
 
 A fast way to isolate dialect issues is to render the same query twice:
 
-- `query.explain({ dialect: "postgresql" })`
-- `query.explain({ dialect: "sqlite" })`
+- `explain(query, { dialect: "postgresql" })`
+- `explain(query, { dialect: "sqlite" })`
 
 Interpret the differences like this:
 
