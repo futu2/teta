@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { sqlRenderer } from "../mod.ts";
-import { buildOrgTreeQuery } from "./helpers/fixtures.ts";
+import { buildOrgTreeQuery, createEmployeesTable } from "./helpers/fixtures.ts";
 
 describe("recursive loop queries", () => {
   test("renders stable recursive CTE names across separate query instances", () => {
@@ -35,5 +35,34 @@ describe("recursive loop queries", () => {
     expect(sql).toContain(
       `SELECT ${loopName}_0.id, ${loopName}_0.name FROM ${loopName} AS ${loopName}_0`
     );
+  });
+
+  test("supports `base.loop(step)` as an alias", () => {
+    const employees = createEmployeesTable();
+    const base = employees
+      .filter((employee) => employee.manager_id.isNull())
+      .select((employee) => ({
+        id: employee.id,
+        name: employee.name,
+        manager_id: employee.manager_id,
+      }));
+
+    const sql = base
+      .loop((self) =>
+        employees.join(
+          self,
+          (employee, current) => employee.manager_id.eq(current.id),
+          { merge: (employee) => ({
+            id: employee.id,
+            name: employee.name,
+            manager_id: employee.manager_id,
+          }) }
+        )
+      )
+      .select((employee) => ({ id: employee.id, name: employee.name }))
+      .toSql(sqlRenderer({ dialect: "postgresql", format: "compact" }));
+
+    expect(sql).toContain("WITH RECURSIVE");
+    expect(sql).toContain("INNER JOIN");
   });
 });

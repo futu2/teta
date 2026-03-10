@@ -11,6 +11,7 @@ import type {
   SqlResult,
 } from "../sql/types";
 import { ExprRef } from "../expr";
+import { createColumnRefs } from "../expr";
 import type {
   ColumnRefs,
   ProjectionList,
@@ -21,10 +22,13 @@ import type {
   ValidatedProjectionList,
 } from "../expr";
 import {
+  createDeferredRecursiveCte,
   renderPipelineAst,
   resolveDialect,
 } from "../sql";
-import { qualifyOuterColumns } from "./utils";
+import { freshInternalCteName, freshScopeId } from "./planner";
+import { toQuerySpec } from "./state";
+import { assertLoopColumns, normalizeIdentifier, qualifyOuterColumns } from "./utils";
 import type {
   CanonicalJoinType,
   JoinColumnMerger,
@@ -122,6 +126,12 @@ export class Query<TColumns extends QueryColumns> implements QueryState<TColumns
 
   union(right: Query<TColumns>): Query<TColumns> {
     return union(this, right);
+  }
+
+  loop(
+    step: (self: Query<TColumns>) => Query<TColumns>
+  ): Query<TColumns> {
+    return loop(this, step);
   }
 
   join<
@@ -247,6 +257,53 @@ export function union<TColumns extends QueryColumns>(
   right: Query<TColumns>
 ): Query<TColumns> {
   return deriveQuery(left, resolveUnionQuery(left, right, "union"));
+}
+
+export function loop<TColumns extends QueryColumns>(
+  base: Query<TColumns>,
+  step: (self: Query<TColumns>) => Query<TColumns>
+): Query<TColumns> {
+  const name = freshInternalCteName("loop");
+  const selfColumnNames = [...base.columnNames];
+  const loopSource = {
+    db: null,
+    table: normalizeIdentifier(name, "table"),
+    schema: null,
+    as: null,
+  };
+  const selfScopeId = freshScopeId();
+  const self = createQuery<TColumns>({
+    source: loopSource,
+    stages: [],
+    columns: createColumnRefs<TColumns>(selfScopeId, selfColumnNames),
+    columnNames: selfColumnNames,
+    sourceScopeId: selfScopeId,
+    scopeId: selfScopeId,
+    columnIdentifiers: base.columnIdentifiers,
+  });
+  const stepQuery = step(self);
+  assertLoopColumns(base.columnNames, stepQuery.columnNames);
+  if (base.withs.length || stepQuery.withs.length) {
+    throw new Error("loop does not allow nested CTEs in base or step queries");
+  }
+
+  const recursiveCte = createDeferredRecursiveCte(
+    name,
+    selfColumnNames,
+    toQuerySpec(base),
+    toQuerySpec(stepQuery)
+  );
+  const resultScopeId = freshScopeId();
+  return createQuery({
+    source: loopSource,
+    stages: [],
+    columns: createColumnRefs<TColumns>(resultScopeId, selfColumnNames),
+    columnNames: selfColumnNames,
+    sourceScopeId: resultScopeId,
+    scopeId: resultScopeId,
+    withs: [recursiveCte],
+    columnIdentifiers: base.columnIdentifiers,
+  });
 }
 
 export function join<

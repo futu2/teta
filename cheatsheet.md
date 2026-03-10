@@ -52,6 +52,13 @@ const q = loop(
 );
 ```
 
+You can also call it as a query method:
+
+```ts
+const base = table("seed", { n: t.int() }).select((s) => ({ n: s.n }));
+const q = base.loop((self) => self.select((s) => ({ n: s.n.add(1) })));
+```
+
 ### `t` schema helpers
 - `t.string()`
 - `t.int()`
@@ -76,6 +83,9 @@ All `Query` methods are immutable and return a new `Query`.
 ### Set operations
 - `unionAll(right)`
 - `union(right)`
+
+### Recursive CTEs
+- `loop(step)`
 
 ### Joins
 - `join(rightOrBuilder, on, { type?, lateral?, merge? })`

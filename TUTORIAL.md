@@ -578,7 +578,7 @@ const allUsers = activeUsers.unionAll(inactiveUsers);
 ### Recursive loop (WITH RECURSIVE)
 
 ```ts
-import { loop, table, t } from "./mod.ts";
+import { table, t } from "./mod.ts";
 
 const employees = table("employees", {
   id: t.int(),
@@ -586,15 +586,14 @@ const employees = table("employees", {
   manager_id: t.int(),
 });
 
-const orgTree = loop(
-  employees
-    .filter((e) => e.manager_id.isNull())
-    .select((e) => ({ id: e.id, name: e.name, manager_id: e.manager_id })),
-  (self) =>
+const orgTree = employees
+  .filter((e) => e.manager_id.isNull())
+  .select((e) => ({ id: e.id, name: e.name, manager_id: e.manager_id }))
+  .loop((self) =>
     employees
       .join(self, (e, s) => e.manager_id.eq(s.id))
       .select((e) => ({ id: e.id, name: e.name, manager_id: e.manager_id }))
-);
+  );
 
 const q = orgTree.select((o) => ({ id: o.id, name: o.name }));
 ```
