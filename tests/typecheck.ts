@@ -1,6 +1,6 @@
 import * as R from "remeda";
 import type { ExprRef, SqlFloat, SqlInt } from "../mod.ts";
-import { filter, join, limit, orderBy, pipeQuery, select, table, t } from "../mod.ts";
+import { filter, join, limit, orderBy, select, table, t } from "../mod.ts";
 
 type Equal<A, B> = (
   (<T>() => T extends A ? 1 : 2) extends
@@ -24,20 +24,19 @@ const leftJoined = users.join(orders, (user, order) => user.id.eq(order.user_id)
 const rightJoined = users.join(orders, (user, order) => user.id.eq(order.user_id), { type: "right" });
 const fullJoined = users.join(orders, (user, order) => user.id.eq(order.user_id), { type: "full" });
 const leftViaJoin = users.join(orders, (user, order) => user.id.eq(order.user_id), { type: "left" });
-const curriedPipeline = pipeQuery(
-  users,
-  filter((user) => user.id.gt(0)),
-  select((user) => ({
-    id: user.id,
-    name: user.name.upper(),
-  })),
-  orderBy((row) => [row.name.asc(), row.id.desc()]),
-  limit(5)
+const filteredUsers = filter((user: typeof users.columns) => user.id.gt(0))(users);
+const projectedUsers = select((user: typeof filteredUsers.columns) => ({
+  id: user.id,
+  name: user.name.upper(),
+}))(filteredUsers);
+const curriedPipeline = limit(5)(
+  orderBy((row: typeof projectedUsers.columns) => [row.name.asc(), row.id.desc()])(projectedUsers)
 );
-const curriedJoin = pipeQuery(
-  users,
-  join(orders, (user, order) => user.id.eq(order.user_id), { type: "left" })
-);
+const curriedJoin = join(
+  orders,
+  (user: typeof users.columns, order: typeof orders.columns) => user.id.eq(order.user_id),
+  { type: "left" }
+)(users);
 const remedaPickedSelection = users.select(R.pick(["id"]));
 const remedaOmittedSelection = users.select((user) => ({
   ...R.omit(user, ["name"]),
@@ -86,8 +85,8 @@ type _LeftJoinTotal = Expect<Equal<ExprType<typeof leftJoined.columns.total>, Sq
 type _RightJoinId = Expect<Equal<ExprType<typeof rightJoined.columns.id>, SqlInt | null>>;
 type _FullJoinTotal = Expect<Equal<ExprType<typeof fullJoined.columns.total>, SqlFloat | null>>;
 type _LeftViaJoinTotal = Expect<Equal<ExprType<typeof leftViaJoin.columns.total>, SqlFloat | null>>;
-type _CurriedPipelineId = Expect<Equal<ExprType<typeof curriedPipeline.columns.id>, SqlInt>>;
-type _CurriedPipelineName = Expect<Equal<ExprType<typeof curriedPipeline.columns.name>, string>>;
+type _ProjectedUsersId = Expect<Equal<ExprType<typeof projectedUsers.columns.id>, SqlInt>>;
+type _ProjectedUsersName = Expect<Equal<ExprType<typeof projectedUsers.columns.name>, string>>;
 type _CurriedJoinTotal = Expect<Equal<ExprType<typeof curriedJoin.columns.total>, SqlFloat | null>>;
 type _RemedaPickedId = Expect<Equal<ExprType<typeof remedaPickedSelection.columns.id>, SqlInt>>;
 type _RemedaOmittedId = Expect<Equal<ExprType<typeof remedaOmittedSelection.columns.id>, SqlInt>>;

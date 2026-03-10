@@ -7,7 +7,6 @@ export {
   limit,
   loop,
   orderBy,
-  pipeQuery,
   select,
   t,
   table,

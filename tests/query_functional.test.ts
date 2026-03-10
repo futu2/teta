@@ -1,10 +1,11 @@
 import { describe, expect, test } from "bun:test";
 
+import * as R from "remeda";
+
 import {
   filter,
   limit,
   orderBy,
-  pipeQuery,
   select,
   sqlRenderer,
   toSql,
@@ -13,11 +14,13 @@ import { USER_PIPELINE_POSTGRES_COMPACT } from "./helpers/expected-sql.ts";
 import { createUsersPipelineTable } from "./helpers/fixtures.ts";
 
 describe("function-first query api", () => {
-  test("composes a typed pipeline with curried query helpers", () => {
+  test("composes a pipeline with remeda pipe and curried query helpers", () => {
     const users = createUsersPipelineTable();
-    const query = pipeQuery(
+    const query = R.pipe(
       users,
-      filter((user) => user.active.eq(true).and(user.age.gte(18))),
+      filter((user: typeof users.columns) =>
+        user.active.eq(true).and(user.age.gte(18))
+      ),
       select((user) => ({
         id: user.id,
         name: user.name.replace(" ", "_").coalesce("unknown"),

@@ -5,7 +5,6 @@ Quick reference for the public API exported from `mod.ts`.
 ```ts
 import {
   Query,
-  pipeQuery,
   table,
   loop,
   t,
@@ -51,13 +50,14 @@ const base = table("seed", { n: t.int() }).select((s) => ({ n: s.n }));
 const q = base.loop((self) => self.select((s) => ({ n: s.n.add(1) })));
 ```
 
-For `pipeQuery(...)`, use the curried helper form:
+Curried query helpers like `loop(...)`, `select(...)`, and `filter(...)`
+return `QueryStep` functions, so you can apply them directly when building
+higher-order utilities.
 
 ```ts
-const q = pipeQuery(
-  table("seed", { n: t.int() }).select((s) => ({ n: s.n })),
-  loop((self) => self.select((s) => ({ n: s.n.add(1) })))
-);
+const base = table("seed", { n: t.int() }).select((s) => ({ n: s.n }));
+const recursive = loop((self) => self.select((s) => ({ n: s.n.add(1) })));
+const q = recursive(base);
 ```
 
 ### `t` schema helpers

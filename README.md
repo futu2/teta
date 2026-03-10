@@ -189,18 +189,20 @@ The `name` field in `SqlResult.params` is only used for named placeholders. With
 default positional rendering you will usually see `name: null` together with an
 `index` such as `$1` or `$2`.
 
-## Function-first query composition
+## Curried query helpers
 
-If you prefer a more functional style, the query layer exposes pipe-ready
-curried query builders. The class methods remain thin immutable sugar on top
-of the same pure operations.
+The helper functions such as `filter(...)`, `select(...)`, `orderBy(...)`, and
+`limit(...)` are still exported as curried `QueryStep` builders for advanced
+composition. In normal usage, method chaining is usually the clearest style.
+
+If you already use `remeda`, `R.pipe(...)` works nicely with those curried helpers:
 
 ```ts
+import * as R from "remeda";
 import {
   filter,
   limit,
   orderBy,
-  pipeQuery,
   select,
   sqlRenderer,
   toSql,
@@ -215,7 +217,7 @@ const users = table("users", {
   active: t.boolean(),
 });
 
-const q = pipeQuery(
+const q = R.pipe(
   users,
   filter((user) => user.active.eq(true).and(user.age.gte(18))),
   select((user) => ({

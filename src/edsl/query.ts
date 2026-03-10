@@ -5,7 +5,6 @@ export {
   join,
   limit,
   orderBy,
-  pipeQuery,
   select,
   toAst,
   toIR,

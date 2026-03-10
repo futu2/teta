@@ -157,6 +157,50 @@ const q = users
 console.log(q.toSql(sqlRenderer()));
 ```
 
+### Optional: Remeda for projection shaping
+
+If you already use `remeda` in your app, it pairs nicely with Teta's object-shaped `select(...)` / `aggregate(...)` callbacks.
+
+```ts
+import * as R from "remeda";
+import { table, t } from "./mod.ts";
+
+const users = table("users", {
+  id: t.int(),
+  name: t.string(),
+  age: t.int(),
+  active: t.boolean(),
+});
+
+const compact = users.select((u) =>
+  R.pipe(
+    u,
+    R.pick(["id", "name", "age"] as const),
+    (base) =>
+      R.merge(base, {
+        normalized_name: u.name.replace(" ", "_").coalesce("unknown"),
+      })
+  )
+);
+
+const publicUsers = users.select((u) => R.omit(u, ["active"] as const));
+
+const namespacedUsers = users.select((u) =>
+  R.pipe(
+    u,
+    R.pick(["id", "name"] as const),
+    R.mapKeys((key) => "user_" + key)
+  )
+);
+```
+
+Use it when you want:
+- `R.pick(...)` for reusable column subsets
+- `R.omit(...)` to keep most columns but drop a few
+- `R.merge(...)` for "base shape + computed fields"
+- `R.pipe(...)` when the reshaping reads better as a small pipeline
+- `R.mapKeys(...)` for systematic renaming like prefixes or namespaces
+
 ### Join (auto alias)
 
 ```ts
@@ -578,7 +622,10 @@ const allUsers = activeUsers.unionAll(inactiveUsers);
 ### Recursive loop (WITH RECURSIVE)
 
 ```ts
+import * as R from "remeda";
 import { table, t } from "./mod.ts";
+
+const treeCols = ["id", "name", "manager_id"] as const;
 
 const employees = table("employees", {
   id: t.int(),
@@ -588,12 +635,12 @@ const employees = table("employees", {
 
 const orgTree = employees
   .filter((e) => e.manager_id.isNull())
-  .select((e) => ({ id: e.id, name: e.name, manager_id: e.manager_id }))
+  .select(R.pick(treeCols))
   .loop((self) =>
     employees
       .join(self, (e, s) => e.manager_id.eq(s.id))
-      .select((e) => ({ id: e.id, name: e.name, manager_id: e.manager_id }))
+      .select(R.pick(treeCols))
   );
 
-const q = orgTree.select((o) => ({ id: o.id, name: o.name }));
+const q = orgTree.select(R.pick(["id", "name"] as const));
 ```
