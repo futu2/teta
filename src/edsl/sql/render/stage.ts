@@ -5,15 +5,15 @@ import { getDefaultDialect } from "../dialect.ts";
 import type { CompileSourceRef } from "./source.ts";
 import {
   buildFilterStageAst,
-  buildSelectStageAst,
+  buildProjectionStageAst,
   buildSortStageAst,
   buildTakeStageAst,
-  createStageSelectContext,
-} from "./select_stage.ts";
-import { buildJoinStageAst } from "./select_join.ts";
+  createStageRenderContext,
+} from "./stage_ast.ts";
+import { buildJoinStageAst } from "./stage_join.ts";
 import { internalError } from "../../errors.ts";
 
-export function stageToSelect(
+export function compileStageAst(
   stage: Stage,
   source: CompileSourceRef,
   sourceScopeId: ScopeId,
@@ -21,7 +21,7 @@ export function stageToSelect(
   dialect: QueryDialect = getDefaultDialect(),
   ctePrefix = ""
 ): SelectAst {
-  const context = createStageSelectContext(
+  const context = createStageRenderContext(
     source,
     sourceScopeId,
     inheritedBindings,
@@ -31,7 +31,7 @@ export function stageToSelect(
   switch (stage.kind) {
     case "map":
     case "fold":
-      return buildSelectStageAst(stage, context);
+      return buildProjectionStageAst(stage, context);
     case "filter":
       return buildFilterStageAst(stage, context);
     case "sort":

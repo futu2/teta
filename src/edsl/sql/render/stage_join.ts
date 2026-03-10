@@ -10,13 +10,13 @@ import {
 } from "./source.ts";
 import {
   renderBoundSelectItems,
-  type StageSelectContext,
-} from "./select_stage.ts";
+  type StageRenderContext,
+} from "./stage_ast.ts";
 import { internalError } from "../../errors.ts";
 
 export function buildJoinStageAst(
   stage: Extract<Stage, { kind: "join" }>,
-  context: StageSelectContext,
+  context: StageRenderContext,
   ctePrefix: string
 ): SelectAst {
   const join = `${stage.joinType} JOIN`;
@@ -52,7 +52,7 @@ export function buildJoinStageAst(
 
 function buildJoinFromRef(
   stage: Extract<Stage, { kind: "join" }>,
-  context: StageSelectContext,
+  context: StageRenderContext,
   joinBindings: ScopeBindings,
   ctePrefix: string,
   join: string

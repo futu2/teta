@@ -69,7 +69,7 @@ ExprRef / Query
   - Turns a query pipeline into a parser AST.
 - `src/edsl/sql/render/build.ts`
   - Builds the staged CTE pipeline.
-- `src/edsl/sql/render/select.ts`
+- `src/edsl/sql/render/stage.ts`
   - Lowers a single `Stage` into a `SELECT` AST.
 - `src/edsl/sql/render/render.ts`
   - Lowers `ExprNode` values into parser expression AST nodes.
@@ -352,7 +352,7 @@ This is why the same logical query may render as a flat `SELECT`, a staged `WITH
 
 ### 7) Lowering each stage
 
-`stageToSelect(...)` in `src/edsl/sql/render/select.ts` turns one `Stage` into one `SELECT` AST.
+`compileStageAst(...)` in `src/edsl/sql/render/stage.ts` turns one `Stage` into one `SELECT` AST.
 
 Per stage kind:
 
@@ -388,7 +388,7 @@ This is the key bridge between neutral expression IR and query-local SQL names.
 
 #### Join subqueries
 
-`hoistJoinSubquery(...)` in `src/edsl/sql/render/select.ts` can hoist a non-lateral join subquery into a CTE before rendering the join.
+`hoistJoinSubquery(...)` in `src/edsl/sql/render/source.ts` can hoist a non-lateral join subquery into a CTE before rendering the join.
 
 #### Unions
 
@@ -484,7 +484,7 @@ Usually touch:
 
 - `src/edsl/core/types.ts` to add a new `Stage`
 - `src/edsl/query.ts` to build that stage
-- `src/edsl/sql/render/select.ts` and/or `src/edsl/sql/render/build.ts` to lower it
+- `src/edsl/sql/render/stage.ts` and/or `src/edsl/sql/render/build.ts` to lower it
 
 ### Add dialect behavior
 

@@ -17,19 +17,19 @@ import {
   type CompileSourceRef,
 } from "./source.ts";
 
-export type StageSelectContext = {
+export type StageRenderContext = {
   baseFrom: FromAst;
   baseAlias: string;
   baseBindings: ScopeBindings;
   dialect: QueryDialect;
 };
 
-export function createStageSelectContext(
+export function createStageRenderContext(
   source: CompileSourceRef,
   sourceScopeId: ScopeId,
   inheritedBindings: ScopeBindings | undefined,
   dialect: QueryDialect
-): StageSelectContext {
+): StageRenderContext {
   const baseFrom = sourceToFrom(source, dialect);
   const baseAlias = ensureAlias(baseFrom);
   registerSourceColumnBindings(source, baseAlias, dialect);
@@ -44,9 +44,9 @@ export function createStageSelectContext(
   };
 }
 
-export function buildSelectStageAst(
+export function buildProjectionStageAst(
   stage: Extract<Stage, { kind: "map" | "fold" }>,
-  context: StageSelectContext
+  context: StageRenderContext
 ): SelectAst {
   return buildSelectAst({
     from: [context.baseFrom],
@@ -69,7 +69,7 @@ export function buildSelectStageAst(
 
 export function buildFilterStageAst(
   stage: Extract<Stage, { kind: "filter" }>,
-  context: StageSelectContext
+  context: StageRenderContext
 ): SelectAst {
   return buildSelectAst({
     from: [context.baseFrom],
@@ -89,7 +89,7 @@ export function buildFilterStageAst(
 
 export function buildSortStageAst(
   stage: Extract<Stage, { kind: "sort" }>,
-  context: StageSelectContext
+  context: StageRenderContext
 ): SelectAst {
   return buildSelectAst({
     from: [context.baseFrom],
@@ -112,7 +112,7 @@ export function buildSortStageAst(
 
 export function buildTakeStageAst(
   stage: Extract<Stage, { kind: "take" }>,
-  context: StageSelectContext
+  context: StageRenderContext
 ): SelectAst {
   return buildSelectAst({
     from: [context.baseFrom],
