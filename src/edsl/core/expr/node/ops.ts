@@ -53,7 +53,7 @@ export function unwrapGroupExpr(
   switch (expr.kind) {
     case "group":
       if (inAgg) {
-        userError("GROUP_INSIDE_AGGREGATE_FUNCTION", "group() cannot be used inside aggregate functions");
+        userError("GROUP_INSIDE_AGGREGATE_FUNCTION", "group() cannot be used inside fold functions");
       }
       groupBy.push(expr.expr);
       return unwrapGroupExpr(expr.expr, groupBy, false);

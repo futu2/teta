@@ -27,7 +27,7 @@ Build typed queries, inspect how they lower, and render SQL for PostgreSQL, SQLi
 
 ```ts
 import { pipe } from "remeda";
-import { and, asc, eq, filter, gte, limit, orderBy, select, sqlRenderer, table, t, toSql } from "@teta/teta";
+import { and, asc, eq, filter, gte, take, sort, map, sqlRenderer, table, t, toSql } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -39,12 +39,12 @@ const users = table("users", {
 const query = pipe(
   users,
   filter((user) => and(eq(user.active, true), gte(user.age, 18))),
-  select((user) => ({
+  map((user) => ({
     id: user.id,
     email: user.email,
   })),
-  orderBy((user) => asc(user.email)),
-  limit(10)
+  sort((user) => asc(user.email)),
+  take(10)
 );
 
 const sql = toSql(query, sqlRenderer({
@@ -151,14 +151,14 @@ Using the same `users` table, use `param(...)` and `toSqlResult(...)` when you n
 
 ```ts
 import { pipe } from "remeda";
-import { eq, filter, param, select, sqlRenderer, toSqlResult } from "@teta/teta";
+import { eq, filter, param, map, sqlRenderer, toSqlResult } from "@teta/teta";
 
 const result = toSqlResult(
   pipe(
     users,
     filter((user) => eq(user.active, param(true, "active"))),
     filter((user) => eq(user.email, param("ada@example.com", "email"))),
-    select((user) => ({
+    map((user) => ({
       id: user.id,
       email: user.email,
     }))
@@ -205,9 +205,9 @@ Typical `stages` value:
 ```ts
 [
   { index: 0, kind: "filter" },
-  { index: 1, kind: "select" },
-  { index: 2, kind: "orderBy" },
-  { index: 3, kind: "limit" },
+  { index: 1, kind: "map" },
+  { index: 2, kind: "sort" },
+  { index: 3, kind: "take" },
 ]
 ```
 
@@ -219,20 +219,20 @@ Quick rule of thumb:
 
 ### Projection shaping with Remeda
 
-Because `select(...)` and `aggregate(...)` work with plain objects, Remeda helpers compose naturally.
+Because `map(...)` and `fold(...)` work with plain objects, Remeda helpers compose naturally.
 
 ```ts
 import { merge, omit, pick, pipe } from "remeda";
-import { replace, select, upper } from "@teta/teta";
+import { replace, map, upper } from "@teta/teta";
 
-const compactUsers = select(users, pipe(
+const compactUsers = map(users, pipe(
   pick(["id", "email"] as const),
   (base) => merge(base, {
     email_normalized: upper(replace(base.email, "@", "_at_")),
   })
 ));
 
-const internalUsers = select(users, omit(["active"] as const));
+const internalUsers = map(users, omit(["active"] as const));
 ```
 
 ## Examples

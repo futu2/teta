@@ -58,7 +58,7 @@ ExprRef / Query
 - `src/edsl/expr.ts`
   - Loads expression methods and re-exports the public expression API.
 - `src/edsl/sql/expr/*`
-  - Higher-level expression operations like math, string, date, aggregate, array.
+  - Higher-level expression operations like math, string, date, fold, array.
 
 ### Rendering
 
@@ -237,8 +237,8 @@ Take something like:
 const q = pipe(
   users,
   filter((u) => eq(u.active, true)),
-  select((u) => ({ id: u.id, name: u.name })),
-  orderBy((u) => asc(u.name))
+  map((u) => ({ id: u.id, name: u.name })),
+  sort((u) => asc(u.name))
 )
 
 const result = toSql(q, sqlRenderer({ dialect: "postgresql", format: "pretty" }))
@@ -261,19 +261,19 @@ Each query helper returns a new `Query` (or a `QueryStep` in data-last form).
 
 Examples:
 
-- `select(...)`
+- `map(...)`
   - evaluates the selector
   - converts each selected value with `toExprNode(...)`
   - creates a `select` stage
-- `aggregate(...)`
+- `fold(...)`
   - unwraps `group(...)` markers
   - builds grouped `select` stage + `groupBy`
 - `filter(...)`
   - stores a predicate expression
   - merges adjacent filters with `AND`
-- `orderBy(...)`
+- `sort(...)`
   - stores order items
-- `limit(...)`
+- `take(...)`
   - stores the limit count
 - `join(...)`
   - stores join metadata + join predicate + output projection

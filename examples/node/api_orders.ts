@@ -1,5 +1,5 @@
 import { pipe } from "remeda";
-import { desc, eq, filter, limit, orderBy, param, postgresqlRenderer, select, t, table, toSqlResult } from "../../mod.ts";
+import { desc, eq, filter, take, sort, param, postgresqlRenderer, map, t, table, toSqlResult } from "../../mod.ts";
 
 type Session = {
   tenantId: string;
@@ -41,14 +41,14 @@ export function handleListPaidOrders(request: RequestLike, session: Session) {
   const result = toSqlResult(
     pipe(
       filteredQuery,
-      select((order) => ({
+      map((order) => ({
         id: order.id,
         customer_email: order.customer_email,
         total_cents: order.total_cents,
         created_at: order.created_at,
       })),
-      orderBy((order) => desc(order.created_at)),
-      limit(25)
+      sort((order) => desc(order.created_at)),
+      take(25)
     ),
     renderer
   );

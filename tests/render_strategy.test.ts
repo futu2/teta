@@ -1,12 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import { sqlRenderer, table, t, filter, eq, select, limit, toSql } from "../mod.ts";
+import { sqlRenderer, table, t, filter, eq, map, take, toSql } from "../mod.ts";
 describe("render strategy", () => {
     test("optimized strategy keeps simple pipelines fused", () => {
         const users = table("users", {
             id: t.int(),
             active: t.boolean(),
         });
-        const sql = toSql(limit(select(filter(users, (user) => eq(user.active, true)), (user) => ({ id: user.id })), 1), sqlRenderer({
+        const sql = toSql(take(map(filter(users, (user) => eq(user.active, true)), (user) => ({ id: user.id })), 1), sqlRenderer({
             dialect: "postgresql",
             format: "compact",
             renderStrategy: "optimized",
@@ -19,7 +19,7 @@ describe("render strategy", () => {
             id: t.int(),
             active: t.boolean(),
         });
-        const sql = toSql(limit(select(filter(users, (user) => eq(user.active, true)), (user) => ({ id: user.id })), 1), sqlRenderer({
+        const sql = toSql(take(map(filter(users, (user) => eq(user.active, true)), (user) => ({ id: user.id })), 1), sqlRenderer({
             dialect: "postgresql",
             format: "compact",
             renderStrategy: "readable",

@@ -2,14 +2,14 @@
 
 Quick reference for the public API exported from `mod.ts`.
 
-Teta is function-first. Query helpers are dual-mode, so you can write either `select(users, fn)`
-or `pipe(users, select(fn))`. In practice, the examples here prefer Remeda's `pipe(...)`.
+Teta is function-first. Query helpers are dual-mode, so you can write either `map(users, fn)`
+or `pipe(users, map(fn))`. In practice, the examples here prefer Remeda's `pipe(...)`.
 
 ```ts
 import { pick, pipe } from "remeda";
 
 import {
-  aggregate,
+  fold,
   and,
   arrayAppend,
   arrayContains,
@@ -55,7 +55,7 @@ import {
   lead,
   left,
   like,
-  limit,
+  take,
   loop,
   lower,
   lt,
@@ -71,7 +71,7 @@ import {
   ntile,
   nullIf,
   octetLength,
-  orderBy,
+  sort,
   over,
   overlay,
   param,
@@ -89,7 +89,7 @@ import {
   round,
   rowNumber,
   rpad,
-  select,
+  map,
   shape,
   sqlRenderer,
   sqrt,
@@ -144,9 +144,9 @@ Use Remeda's `pipe(...)` to compose query stages.
 const q = pipe(
   users,
   filter((u) => gt(u.id, 0)),
-  select((u) => ({ id: u.id, name: upper(u.name) })),
-  orderBy((u) => asc(u.name)),
-  limit(10)
+  map((u) => ({ id: u.id, name: upper(u.name) })),
+  sort((u) => asc(u.name)),
+  take(10)
 );
 ```
 
@@ -154,16 +154,16 @@ const q = pipe(
 Every query helper can be used data-first or data-last.
 
 ```ts
-const q1 = select(users, (u) => ({ id: u.id }));
-const q2 = pipe(users, select((u) => ({ id: u.id })));
+const q1 = map(users, (u) => ({ id: u.id }));
+const q2 = pipe(users, map((u) => ({ id: u.id })));
 ```
 
 ### `loop(step)`
 Build a recursive CTE from a base query plus a recursive step.
 
 ```ts
-const base = select(table("seed", { n: t.int() }), (s) => ({ n: s.n }));
-const q = loop(base, (self) => select(self, (s) => ({ n: add(s.n, 1) })));
+const base = map(table("seed", { n: t.int() }), (s) => ({ n: s.n }));
+const q = loop(base, (self) => map(self, (s) => ({ n: add(s.n, 1) })));
 ```
 
 ### `join(right, on, options?)`
@@ -173,7 +173,7 @@ Join queries with `inner`, `left`, `right`, or `full` behavior.
 const usersWithOrders = pipe(
   users,
   join(orders, (u, o) => eq(u.id, o.user_id), { type: "left" }),
-  select((row) => ({
+  map((row) => ({
     user_id: row.id,
     user_name: row.name,
     order_total: row.total,
@@ -181,13 +181,13 @@ const usersWithOrders = pipe(
 );
 ```
 
-### `aggregate(selector)`
+### `fold(selector)`
 Use `group(expr)` inside the selector for grouping keys.
 
 ```ts
 const spend = pipe(
   orders,
-  aggregate((o) => ({
+  fold((o) => ({
     user_id: group(o.user_id),
     order_count: count(o.id),
     total_spend: sum(o.total),
@@ -204,17 +204,17 @@ const uniqueUsers = union(activeUsers, inactiveUsers);
 
 ## 2) Query helpers
 
-- `select(selector)`
-- `aggregate(selector)`
+- `map(selector)`
+- `fold(selector)`
 - `filter(predicate)`
-- `orderBy(selector)`
-- `limit(count)`
+- `sort(selector)`
+- `take(count)`
 - `join(rightOrBuilder, on, { type?, lateral?, merge? })`
 - `unionAll(right)`
 - `union(right)`
 - `loop(step)`
 
-`select(...)`, `aggregate(...)`, `filter(...)`, `orderBy(...)`, `limit(...)`, `join(...)`, `union(...)`, `unionAll(...)`, and `loop(...)`
+`map(...)`, `fold(...)`, `filter(...)`, `sort(...)`, `take(...)`, `join(...)`, `union(...)`, `unionAll(...)`, and `loop(...)`
 all return `QueryStep` functions when called without the left query.
 
 ## 3) Rendering and introspection
@@ -415,14 +415,14 @@ const info = explain(q, { dialect: "postgresql", renderStrategy: "readable" });
 ```ts
 import { merge, omit, pick, pipe } from "remeda";
 
-const compactUsers = select(users, pipe(
+const compactUsers = map(users, pipe(
   pick(["id", "name"] as const),
   (base) => merge(base, { name_upper: upper(base.name) })
 ));
 
-const publicUsers = select(users, omit(["created_at"] as const));
+const publicUsers = map(users, omit(["created_at"] as const));
 
-const groupedUsers = aggregate(users, (user) => ({
+const groupedUsers = fold(users, (user) => ({
   ...groupShape({ id: user.id }),
 }));
 ```
@@ -488,9 +488,9 @@ import {
   dateTrunc,
   eq,
   filter,
-  limit,
-  orderBy,
-  select,
+  take,
+  sort,
+  map,
   sqlRenderer,
   table,
   t,
@@ -509,14 +509,14 @@ const users = table("users", {
 const q = pipe(
   users,
   filter((u) => eq(u.active, true)),
-  select((u) => ({
+  map((u) => ({
     id: u.id,
     name: upper(trim(u.name)),
     created_day: dateTrunc(u.created_at, "day"),
     generated_at: currentTimestamp(),
   })),
-  orderBy((u) => [desc(u.created_day), asc(u.id)]),
-  limit(100)
+  sort((u) => [desc(u.created_day), asc(u.id)]),
+  take(100)
 );
 
 console.log(toSql(q, sqlRenderer({ dialect: "postgresql", format: "pretty" })));

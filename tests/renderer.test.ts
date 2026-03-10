@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { add, duckdbRenderer, param, sqlRenderer, table, t, eq, filter, toSql, toSqlResult, select, and } from "../mod.ts";
+import { add, duckdbRenderer, param, sqlRenderer, table, t, eq, filter, toSql, toSqlResult, map, and } from "../mod.ts";
 import { DIALECT_MATRIX_SQL, EXPLICIT_PARAM_EXPR_POSTGRES_COMPACT, EXPLICIT_PARAM_USERS_FILTER_POSTGRES_COMPACT, PARAMETERIZED_EXPR_POSTGRES_COMPACT, PARAMETERIZED_USERS_FILTER_POSTGRES_COMPACT, USER_PIPELINE_POSTGRES_COMPACT, } from "./helpers/expected-sql.ts";
 import { buildDialectMatrixQuery, buildUserPipelineQuery, } from "./helpers/fixtures.ts";
 describe("renderer API", () => {
@@ -27,7 +27,7 @@ describe("renderer API", () => {
             id: t.int(),
             name: t.string(),
         });
-        const query = select(filter(users, (user) => and(eq(user.id, 42), eq(user.name, "Ada"))), (user) => ({ id: user.id }));
+        const query = map(filter(users, (user) => and(eq(user.id, 42), eq(user.name, "Ada"))), (user) => ({ id: user.id }));
         expect(toSqlResult(query, sqlRenderer({
             dialect: "postgresql",
             format: "compact",
@@ -46,7 +46,7 @@ describe("renderer API", () => {
             name: t.string(),
         });
         const name = "SQL injection string ;)";
-        const query = select(filter(users, (user) => eq(user.name, param(name))), (user) => ({ id: user.id }));
+        const query = map(filter(users, (user) => eq(user.name, param(name))), (user) => ({ id: user.id }));
         expect(toSqlResult(query, sqlRenderer({
             dialect: "postgresql",
             format: "compact",
@@ -100,7 +100,7 @@ describe("renderer API", () => {
         const sessions = table("sessions", {
             session_id: t.bigint(),
         });
-        const query = select(filter(sessions, (session) => eq(session.session_id, 42n)), (session) => ({ session_id: session.session_id }));
+        const query = map(filter(sessions, (session) => eq(session.session_id, 42n)), (session) => ({ session_id: session.session_id }));
         expect(toSql(query, sqlRenderer({
             dialect: "postgresql",
             format: "compact",

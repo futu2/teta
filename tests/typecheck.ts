@@ -1,6 +1,6 @@
 import { omit, pick, pipe } from "remeda";
 import type { ExprRef, SqlBigInt, SqlBytes, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlUuid, } from "../mod.ts";
-import { filter, join, limit, orderBy, param, select, table, t, aggregate, asc, desc, eq, gt, upper, add, coalesce, count, group, loop, sum, and, sub, caseWhen, when, mapShape, groupShape, lt } from "../mod.ts";
+import { filter, join, take, sort, param, map, table, t, fold, asc, desc, eq, gt, upper, add, coalesce, count, group, loop, sum, and, sub, caseWhen, when, mapShape, groupShape, lt } from "../mod.ts";
 type Equal<A, B> = ((<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false);
 type Expect<T extends true> = T;
 type ExprType<TExpr> = TExpr extends ExprRef<infer TValue> ? TValue : never;
@@ -30,51 +30,51 @@ const rightJoined = join(users, orders, (user, order) => eq(user.id, order.user_
 const fullJoined = join(users, orders, (user, order) => eq(user.id, order.user_id), { type: "full" });
 const leftViaJoin = join(users, orders, (user, order) => eq(user.id, order.user_id), { type: "left" });
 const filteredUsers = filter(users, (user: typeof users.columns) => gt(user.id, 0));
-const projectedUsers = select(filteredUsers, (user: typeof filteredUsers.columns) => ({
+const projectedUsers = map(filteredUsers, (user: typeof filteredUsers.columns) => ({
     id: user.id,
     name: upper(user.name),
 }));
-const curriedPipeline = pipe(users, filter((user: typeof users.columns) => gt(user.id, 0)), select((user) => ({
+const curriedPipeline = pipe(users, filter((user: typeof users.columns) => gt(user.id, 0)), map((user) => ({
     id: user.id,
     name: upper(user.name),
-})), orderBy((row) => [asc(row.name), desc(row.id)]), limit(5));
+})), sort((row) => [asc(row.name), desc(row.id)]), take(5));
 const curriedJoin = pipe(users, join(orders, (user: typeof users.columns, order: typeof orders.columns) => eq(user.id, order.user_id), { type: "left" }));
-const remedaPickedSelection = select(users, pick(["id"]));
-const remedaOmittedSelection = select(users, (user) => ({
+const remedaPickedSelection = map(users, pick(["id"]));
+const remedaOmittedSelection = map(users, (user) => ({
     ...omit(user, ["name"]),
     upper_name: upper(user.name),
 }));
-const remedaOmittedAggregate = aggregate(orders, (order) => omit({
+const remedaOmittedAggregate = fold(orders, (order) => omit({
     user_id: group(order.user_id),
     order_count: count(order.order_id),
     total_spend: sum(order.total),
 }, ["order_count"]));
-const leftSelected = select(leftJoined, (row) => ({
+const leftSelected = map(leftJoined, (row) => ({
     total: coalesce(row.total, 0),
     filtered: gt(row.total, 0),
     name: upper(row.name),
 }));
-const rightSelected = select(rightJoined, (row) => ({
+const rightSelected = map(rightJoined, (row) => ({
     user_id: coalesce(row.id, 0),
     total: row.total,
 }));
-const fullSelected = select(fullJoined, (row) => ({
+const fullSelected = map(fullJoined, (row) => ({
     id: coalesce(row.id, 0),
     total: coalesce(row.total, 0),
 }));
-const leftViaJoinSelected = select(leftViaJoin, (row) => ({
+const leftViaJoinSelected = map(leftViaJoin, (row) => ({
     total: coalesce(row.total, 0),
 }));
 const leftJoinTotal = coalesce(leftJoined.columns.total, 0);
 const leftJoinTotalRemaining = sub(leftJoinTotal, 1);
-const projectedWithQuotedKey = select(users, (user) => ({ ["User Id"]: user.id }));
-const aggregatedWithQuotedKey = aggregate(orders, (order) => ({
+const projectedWithQuotedKey = map(users, (user) => ({ ["User Id"]: user.id }));
+const aggregatedWithQuotedKey = fold(orders, (order) => ({
     ["User Id"]: group(order.user_id),
     ["Total Spend"]: sum(order.total),
 }));
-const loopBase = select(users, (user) => ({ id: user.id }));
+const loopBase = map(users, (user) => ({ id: user.id }));
 const looped = loop(loopBase, (self) => filter(self, (row) => gt(row.id, 0)));
-const projectedWithCase = select(users, (user) => ({
+const projectedWithCase = map(users, (user) => ({
     id: user.id,
     age_bucket: caseWhen([
         when(lt(user.id, 10), "small"),
@@ -84,13 +84,13 @@ const projectedWithCase = select(users, (user) => ({
         bumped_id: user.id,
     }, (value) => add(value, 1)),
 }));
-const aggregatedWithGroupShape = aggregate(orders, (order) => ({
+const aggregatedWithGroupShape = fold(orders, (order) => ({
     ...groupShape({
         user_id: order.user_id,
     }),
     total_spend: sum(order.total),
 }));
-const projectedProfiles = select(profiles, (profile) => ({
+const projectedProfiles = map(profiles, (profile) => ({
     id: profile.id,
     external_id: add(profile.external_id, 1),
     credit_limit: coalesce(profile.credit_limit, 0),
@@ -149,6 +149,6 @@ void projectedProfiles;
 void uuidFilteredProfiles;
 void bigintFilteredProfiles;
 // @ts-expect-error legacy array selection syntax is removed
-select(users, (user) => [user.id]);
-// @ts-expect-error legacy array aggregate syntax is removed
-aggregate(orders, (order) => [group(order.user_id)]);
+map(users, (user) => [user.id]);
+// @ts-expect-error legacy array fold syntax is removed
+fold(orders, (order) => [group(order.user_id)]);

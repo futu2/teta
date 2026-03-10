@@ -1,12 +1,12 @@
 import { SQLITE_UNSUPPORTED, arrayTable } from "./live-language-spec-shared.ts";
 import type { LiveSpecCase } from "./live-language-spec-shared.ts";
-import { select, arrayAppend, arrayConcat, arrayContains, arrayDistinct, arrayJoin, arrayLength, arrayPosition, arrayPrepend, arraySlice } from "../../mod.ts";
+import { map, arrayAppend, arrayConcat, arrayContains, arrayDistinct, arrayJoin, arrayLength, arrayPosition, arrayPrepend, arraySlice } from "../../mod.ts";
 export const LIVE_LANGUAGE_ARRAY_CASES: LiveSpecCase[] = [
     {
         name: "array core functions",
         build: () => {
             const arrays = arrayTable();
-            return select(arrays, ({ num_arr, text_arr }) => ({
+            return map(arrays, ({ num_arr, text_arr }) => ({
                 length_v: arrayLength(text_arr),
                 contains_v: arrayContains(text_arr, "blue"),
                 join_v: arrayJoin(text_arr, "|"),
@@ -40,7 +40,7 @@ export const LIVE_LANGUAGE_ARRAY_CASES: LiveSpecCase[] = [
         name: "array position",
         build: () => {
             const arrays = arrayTable();
-            return select(arrays, ({ text_arr }) => ({ value: arrayPosition(text_arr, "blue") }));
+            return map(arrays, ({ text_arr }) => ({ value: arrayPosition(text_arr, "blue") }));
         },
         outcomes: {
             sqlite: { rows: [{ value: 8 }] },
@@ -51,7 +51,7 @@ export const LIVE_LANGUAGE_ARRAY_CASES: LiveSpecCase[] = [
         name: "array slice",
         build: () => {
             const arrays = arrayTable();
-            return select(arrays, ({ num_arr }) => ({ value: arraySlice(num_arr, 2, 2) }));
+            return map(arrays, ({ num_arr }) => ({ value: arraySlice(num_arr, 2, 2) }));
         },
         outcomes: {
             sqlite: { error: SQLITE_UNSUPPORTED },
@@ -62,7 +62,7 @@ export const LIVE_LANGUAGE_ARRAY_CASES: LiveSpecCase[] = [
         name: "array prepend",
         build: () => {
             const arrays = arrayTable();
-            return select(arrays, ({ num_arr }) => ({ value: arrayPrepend(num_arr, 0) }));
+            return map(arrays, ({ num_arr }) => ({ value: arrayPrepend(num_arr, 0) }));
         },
         outcomes: {
             sqlite: { error: SQLITE_UNSUPPORTED },
@@ -73,7 +73,7 @@ export const LIVE_LANGUAGE_ARRAY_CASES: LiveSpecCase[] = [
         name: "array concat",
         build: () => {
             const arrays = arrayTable();
-            return select(arrays, ({ more_num_arr, num_arr }) => ({
+            return map(arrays, ({ more_num_arr, num_arr }) => ({
                 value: arrayConcat(num_arr, more_num_arr),
             }));
         },
@@ -86,7 +86,7 @@ export const LIVE_LANGUAGE_ARRAY_CASES: LiveSpecCase[] = [
         name: "array distinct",
         build: () => {
             const arrays = arrayTable();
-            return select(arrays, ({ text_arr }) => ({ value: arrayDistinct(text_arr) }));
+            return map(arrays, ({ text_arr }) => ({ value: arrayDistinct(text_arr) }));
         },
         outcomes: {
             sqlite: { error: SQLITE_UNSUPPORTED },

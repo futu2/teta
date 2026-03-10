@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { aggregate, caseWhen, groupShape, lt, select, sqlRenderer, sum, table, t, toSql, when } from "../mod.ts";
+import { fold, caseWhen, groupShape, lt, map, sqlRenderer, sum, table, t, toSql, when } from "../mod.ts";
 
 describe("functional expression builders", () => {
   test("renders caseWhen from plain branch data", () => {
@@ -8,7 +8,7 @@ describe("functional expression builders", () => {
       age: t.int(),
     });
 
-    const query = select(users, (user) => ({
+    const query = map(users, (user) => ({
       age_group: caseWhen([
         when(lt(user.age, 18), "minor"),
         when(lt(user.age, 65), "adult"),
@@ -27,7 +27,7 @@ describe("functional expression builders", () => {
       total: t.float(),
     });
 
-    const query = aggregate(orders, (order) => ({
+    const query = fold(orders, (order) => ({
       ...groupShape({ user_id: order.user_id }),
       total_spend: sum(order.total),
     }));

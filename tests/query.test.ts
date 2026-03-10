@@ -1,22 +1,22 @@
 import { describe, expect, test } from "bun:test";
 import { Parser } from "node-sql-parser";
 import { omit, pick } from "remeda";
-import { lit, sqlRenderer, table, t, filter, join, select, toAst, toSql, asc, bitLength, characterLength, eq, gt, replace, rowNumber, upper, orderBy, over, and, limit, not, or, group } from "../mod.ts";
+import { lit, sqlRenderer, table, t, filter, join, map, toAst, toSql, asc, bitLength, characterLength, eq, gt, replace, rowNumber, upper, sort, over, and, take, not, or, group } from "../mod.ts";
 import { USER_PIPELINE_POSTGRES_COMPACT, USER_PIPELINE_POSTGRES_PRETTY, USERS_NAME_LENGTH_SQLITE_COMPACT, EMPLOYEES_SELF_JOIN_POSTGRES_COMPACT, USERS_ORDERS_LEFT_JOIN_SELECT_POSTGRES_COMPACT, USERS_SELECT_FILTER_POSTGRES_COMPACT, ANALYTICS_EVENTS_SELECT_POSTGRES_COMPACT, QUOTED_ANALYTICS_EVENTS_SELECT_POSTGRES_COMPACT, QUOTED_ANALYTICS_EVENTS_SELECT_BIGQUERY_COMPACT, QUOTED_USERS_ALIAS_SELECT_POSTGRES_COMPACT, QUOTED_USERS_PROJECTED_ALIAS_BIGQUERY_COMPACT, QUOTED_ROW_NUMBER_ALIAS_FILTER_POSTGRES_COMPACT, ORDERS_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT, ORDERS_ROW_NUMBER_FILTER_POSTGRES_COMPACT, ORDERS_ROW_NUMBER_FILTER_ORDER_LIMIT_POSTGRES_COMPACT, ORDERS_TOTAL_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT, ORDERS_TOTAL_ROW_NUMBER_FILTER_POSTGRES_COMPACT, ORDERS_TOTAL_SHARED_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT, ORDERS_TOTAL_SHARED_ROW_NUMBER_FILTER_POSTGRES_COMPACT, ORDERS_TOTAL_NOT_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT, ORDERS_TOTAL_NOT_ROW_NUMBER_FILTER_POSTGRES_COMPACT, ORDERS_SHARED_DISJUNCTION_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT, } from "./helpers/expected-sql.ts";
 import { buildUserPipelineQuery, createOrdersTable, createUsersTable } from "./helpers/fixtures.ts";
 describe("toSql(query, renderer)", () => {
-    test("renders a joined select without an intermediate CTE", () => {
+    test("renders a joined map without an intermediate CTE", () => {
         const users = createUsersTable();
         const orders = createOrdersTable();
-        const query = select(join(users, orders, (user, order) => eq(user.id, order.user_id), { type: "left" }), (row) => ({
+        const query = map(join(users, orders, (user, order) => eq(user.id, order.user_id), { type: "left" }), (row) => ({
             user_id: row.id,
             total: row.total,
         }));
         expect(toSql(query, sqlRenderer({ dialect: "postgresql", format: "compact" }))).toBe(USERS_ORDERS_LEFT_JOIN_SELECT_POSTGRES_COMPACT);
     });
-    test("pushes a post-select filter into WHERE", () => {
+    test("pushes a post-map filter into WHERE", () => {
         const users = createUsersTable();
-        const query = filter(select(users, (user) => ({
+        const query = filter(map(users, (user) => ({
             normalized_name: replace(user.name, " ", "_"),
         })), (row) => eq(row.normalized_name, "Ada_Lovelace"));
         expect(toSql(query, sqlRenderer({ dialect: "postgresql", format: "compact" }))).toBe(USERS_SELECT_FILTER_POSTGRES_COMPACT);
@@ -31,7 +31,7 @@ describe("toSql(query, renderer)", () => {
             user_id: t.int(),
             total: t.float(),
         });
-        const query = join(users, (user) => select(filter(orders, (order) => eq(order.user_id, user.id)), (order) => ({
+        const query = join(users, (user) => map(filter(orders, (order) => eq(order.user_id, user.id)), (order) => ({
             order_id: order.id,
             total: order.total,
         })), () => lit(true), { lateral: true });
@@ -42,7 +42,7 @@ describe("toSql(query, renderer)", () => {
     test("hoists a non-lateral subquery join into a CTE", () => {
         const users = createUsersTable();
         const orders = createOrdersTable();
-        const query = join(users, select(filter(orders, (order) => gt(order.total, 0)), (order) => ({
+        const query = join(users, map(filter(orders, (order) => gt(order.total, 0)), (order) => ({
             user_id: order.user_id,
             total: order.total,
         })), (user, order) => eq(user.id, order.user_id));
@@ -113,7 +113,7 @@ describe("toSql(query, renderer)", () => {
     });
     test("applies sqlite language rewrites", () => {
         const users = table("users", { name: t.string() });
-        const query = select(users, (user) => ({
+        const query = map(users, (user) => ({
             len: characterLength(user.name),
             bit_len: bitLength(user.name),
         }));
@@ -121,14 +121,14 @@ describe("toSql(query, renderer)", () => {
     });
     test("auto-quotes invalid projected aliases on bigquery", () => {
         const users = table("users", { id: t.int() });
-        const query = select(users, (user) => ({
+        const query = map(users, (user) => ({
             ["source id"]: user.id,
         }));
         expect(toSql(query, sqlRenderer({ dialect: "bigquery", format: "compact" }))).toBe(QUOTED_USERS_PROJECTED_ALIAS_BIGQUERY_COMPACT);
     });
     test("toAst preserves auto-quoted projected aliases on bigquery", () => {
         const users = table("users", { id: t.int() });
-        const query = select(users, (user) => ({
+        const query = map(users, (user) => ({
             ["source id"]: user.id,
         }));
         const ast = toAst(query, { dialect: "bigquery" }) as any;
@@ -140,19 +140,19 @@ describe("toSql(query, renderer)", () => {
     });
     test("preserves quoted projected column refs across derived-table barriers", () => {
         const orders = createOrdersTable();
-        const query = filter(select(orders, (order) => ({
+        const query = filter(map(orders, (order) => ({
             ["Row Number"]: over(rowNumber(order.order_id), { orderBy: asc(order.order_id) }),
         })), (row) => eq(row["Row Number"], 1));
         expect(toSql(query, sqlRenderer({ dialect: "postgresql", format: "compact" }))).toBe(QUOTED_ROW_NUMBER_ALIAS_FILTER_POSTGRES_COMPACT);
     });
-    test("supports remeda pick() as a select callback on postgresql", () => {
+    test("supports remeda pick() as a map callback on postgresql", () => {
         const users = createUsersTable();
-        const query = select(users, pick(["id"]));
+        const query = map(users, pick(["id"]));
         expect(toSql(query, sqlRenderer({ dialect: "postgresql", format: "compact" }))).toBe("SELECT users_0.id FROM users AS users_0");
     });
-    test("supports remeda omit() inside select shaping on postgresql", () => {
+    test("supports remeda omit() inside map shaping on postgresql", () => {
         const users = createUsersTable();
-        const query = select(users, (user) => ({
+        const query = map(users, (user) => ({
             ...omit(user, ["name"]),
             upper_name: upper(user.name),
         }));
@@ -160,7 +160,7 @@ describe("toSql(query, renderer)", () => {
     });
     test("renders a window filter via QUALIFY on bigquery", () => {
         const orders = createOrdersTable();
-        const query = filter(select(orders, (order) => ({
+        const query = filter(map(orders, (order) => ({
             order_id: order.order_id,
             row_num: over(rowNumber(order.order_id), { orderBy: asc(order.order_id) }),
         })), (row) => eq(row.row_num, 1));
@@ -171,7 +171,7 @@ describe("toSql(query, renderer)", () => {
     });
     test("inherits QUALIFY support from a custom BigQuery parser dialect", () => {
         const orders = createOrdersTable();
-        const query = filter(select(orders, (order) => ({
+        const query = filter(map(orders, (order) => ({
             order_id: order.order_id,
             row_num: over(rowNumber(order.order_id), { orderBy: asc(order.order_id) }),
         })), (row) => eq(row.row_num, 1));
@@ -182,7 +182,7 @@ describe("toSql(query, renderer)", () => {
     });
     test("uses a derived-table barrier for window filters on postgresql", () => {
         const orders = createOrdersTable();
-        const query = filter(select(orders, (order) => ({
+        const query = filter(map(orders, (order) => ({
             order_id: order.order_id,
             row_num: over(rowNumber(order.order_id), { orderBy: asc(order.order_id) }),
         })), (row) => eq(row.row_num, 1));
@@ -190,7 +190,7 @@ describe("toSql(query, renderer)", () => {
     });
     test("splits mixed predicates into WHERE and QUALIFY on bigquery", () => {
         const orders = createOrdersTable();
-        const query = filter(select(orders, (order) => ({
+        const query = filter(map(orders, (order) => ({
             order_id: order.order_id,
             total: order.total,
             row_num: over(rowNumber(order.order_id), { orderBy: asc(order.order_id) }),
@@ -199,7 +199,7 @@ describe("toSql(query, renderer)", () => {
     });
     test("splits mixed predicates around the derived-table window barrier", () => {
         const orders = createOrdersTable();
-        const query = filter(select(orders, (order) => ({
+        const query = filter(map(orders, (order) => ({
             order_id: order.order_id,
             total: order.total,
             row_num: over(rowNumber(order.order_id), { orderBy: asc(order.order_id) }),
@@ -208,7 +208,7 @@ describe("toSql(query, renderer)", () => {
     });
     test("factors shared predicates across grouped window disjunctions on bigquery", () => {
         const orders = createOrdersTable();
-        const query = filter(select(orders, (order) => ({
+        const query = filter(map(orders, (order) => ({
             order_id: order.order_id,
             total: order.total,
             row_num: over(rowNumber(order.order_id), { orderBy: asc(order.order_id) }),
@@ -217,7 +217,7 @@ describe("toSql(query, renderer)", () => {
     });
     test("factors shared predicates across grouped window disjunctions on postgresql", () => {
         const orders = createOrdersTable();
-        const query = filter(select(orders, (order) => ({
+        const query = filter(map(orders, (order) => ({
             order_id: order.order_id,
             total: order.total,
             row_num: over(rowNumber(order.order_id), { orderBy: asc(order.order_id) }),
@@ -226,7 +226,7 @@ describe("toSql(query, renderer)", () => {
     });
     test("normalizes negated window predicates into WHERE and QUALIFY on bigquery", () => {
         const orders = createOrdersTable();
-        const query = filter(select(orders, (order) => ({
+        const query = filter(map(orders, (order) => ({
             order_id: order.order_id,
             total: order.total,
             row_num: over(rowNumber(order.order_id), { orderBy: asc(order.order_id) }),
@@ -235,7 +235,7 @@ describe("toSql(query, renderer)", () => {
     });
     test("normalizes negated window predicates around the derived-table barrier", () => {
         const orders = createOrdersTable();
-        const query = filter(select(orders, (order) => ({
+        const query = filter(map(orders, (order) => ({
             order_id: order.order_id,
             total: order.total,
             row_num: over(rowNumber(order.order_id), { orderBy: asc(order.order_id) }),
@@ -244,16 +244,16 @@ describe("toSql(query, renderer)", () => {
     });
     test("canonicalizes commutative shared disjunctions before window pushdown", () => {
         const orders = createOrdersTable();
-        const query = filter(select(orders, (order) => ({
+        const query = filter(map(orders, (order) => ({
             order_id: order.order_id,
             total: order.total,
             row_num: over(rowNumber(order.order_id), { orderBy: asc(order.order_id) }),
         })), (row) => or(group(and(group(or(gt(row.total, 10), gt(row.order_id, 5))), eq(row.row_num, 1))), group(and(group(or(gt(row.order_id, 5), gt(row.total, 10))), eq(row.row_num, 2)))));
         expect(toSql(query, sqlRenderer({ dialect: "bigquery", format: "compact" }))).toBe(ORDERS_SHARED_DISJUNCTION_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT);
     });
-    test("keeps order and limit outside the derived-table window barrier", () => {
+    test("keeps sort and take outside the derived-table window barrier", () => {
         const orders = createOrdersTable();
-        const query = limit(orderBy(filter(select(orders, (order) => ({
+        const query = take(sort(filter(map(orders, (order) => ({
             order_id: order.order_id,
             row_num: over(rowNumber(order.order_id), { orderBy: asc(order.order_id) }),
         })), (row) => eq(row.row_num, 1)), (row) => asc(row.order_id)), 5);

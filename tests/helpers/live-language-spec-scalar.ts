@@ -1,12 +1,12 @@
 import { SQLITE_UNSUPPORTED, currentDate, currentTimestamp, scalarTable, } from "./live-language-spec-shared.ts";
 import type { LiveSpecCase } from "./live-language-spec-shared.ts";
-import { isNotNull, select, abs, add, cast, ceil, coalesce, dateAdd, dateDiff, dateFormat, dateParse, dateTrunc, day, div, eq, extract, floor, greatest, gt, gte, hour, isIn, isNull, least, lt, lte, minute, mod, month, mul, ne, nullIf, pow, round, second, sqrt, sub, toDate, toInt, trim, year, and, bitLength, charLength, characterLength, concat, fromUnixTime, left, like, lower, lpad, not, octetLength, or, overlay, position, regexExtract, regexLike, regexReplace, replace, reverse, right, rpad, substring, toFloat, upper, toUnixTime } from "../../mod.ts";
+import { isNotNull, map, abs, add, cast, ceil, coalesce, dateAdd, dateDiff, dateFormat, dateParse, dateTrunc, day, div, eq, extract, floor, greatest, gt, gte, hour, isIn, isNull, least, lt, lte, minute, mod, month, mul, ne, nullIf, pow, round, second, sqrt, sub, toDate, toInt, trim, year, and, bitLength, charLength, characterLength, concat, fromUnixTime, left, like, lower, lpad, not, octetLength, or, overlay, position, regexExtract, regexLike, regexReplace, replace, reverse, right, rpad, substring, toFloat, upper, toUnixTime } from "../../mod.ts";
 export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
     {
         name: "math functions",
         build: () => {
             const scalar = scalarTable();
-            return select(scalar, ({ ceil_src, floor_src, i, j, k, neg_i, pow_base, pow_exp, round_src, sqrt_src, x, y }) => ({
+            return map(scalar, ({ ceil_src, floor_src, i, j, k, neg_i, pow_base, pow_exp, round_src, sqrt_src, x, y }) => ({
                 add_v: add(i, j),
                 sub_v: sub(i, j),
                 mul_v: mul(i, j),
@@ -67,7 +67,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
         name: "core string functions",
         build: () => {
             const scalar = scalarTable();
-            return select(scalar, ({ txt, txt2 }) => {
+            return map(scalar, ({ txt, txt2 }) => {
                 const trimmed = trim(txt);
                 return {
                     concat_v: concat(trimmed, txt2),
@@ -119,7 +119,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
         name: "octet length",
         build: () => {
             const scalar = scalarTable();
-            return select(scalar, ({ txt }) => ({ value: octetLength(trim(txt)) }));
+            return map(scalar, ({ txt }) => ({ value: octetLength(trim(txt)) }));
         },
         outcomes: {
             sqlite: { rows: [{ value: 10 }] },
@@ -130,7 +130,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
         name: "position",
         build: () => {
             const scalar = scalarTable();
-            return select(scalar, ({ txt }) => ({ value: position(trim(txt), "World") }));
+            return map(scalar, ({ txt }) => ({ value: position(trim(txt), "World") }));
         },
         outcomes: {
             sqlite: { rows: [{ value: 6 }] },
@@ -141,7 +141,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
         name: "overlay",
         build: () => {
             const scalar = scalarTable();
-            return select(scalar, ({ txt }) => ({ value: overlay(trim(txt), "Duck", 6, 5) }));
+            return map(scalar, ({ txt }) => ({ value: overlay(trim(txt), "Duck", 6, 5) }));
         },
         outcomes: {
             sqlite: { error: SQLITE_UNSUPPORTED },
@@ -152,7 +152,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
         name: "reverse",
         build: () => {
             const scalar = scalarTable();
-            return select(scalar, ({ txt }) => ({ value: reverse(trim(txt)) }));
+            return map(scalar, ({ txt }) => ({ value: reverse(trim(txt)) }));
         },
         outcomes: {
             sqlite: { error: SQLITE_UNSUPPORTED },
@@ -163,7 +163,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
         name: "left",
         build: () => {
             const scalar = scalarTable();
-            return select(scalar, ({ txt }) => ({ value: left(trim(txt), 5) }));
+            return map(scalar, ({ txt }) => ({ value: left(trim(txt), 5) }));
         },
         outcomes: {
             sqlite: { error: SQLITE_UNSUPPORTED },
@@ -174,7 +174,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
         name: "right",
         build: () => {
             const scalar = scalarTable();
-            return select(scalar, ({ txt }) => ({ value: right(trim(txt), 5) }));
+            return map(scalar, ({ txt }) => ({ value: right(trim(txt), 5) }));
         },
         outcomes: {
             sqlite: { error: SQLITE_UNSUPPORTED },
@@ -185,7 +185,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
         name: "lpad",
         build: () => {
             const scalar = scalarTable();
-            return select(scalar, ({ txt }) => ({ value: lpad(trim(txt), 12, "_") }));
+            return map(scalar, ({ txt }) => ({ value: lpad(trim(txt), 12, "_") }));
         },
         outcomes: {
             sqlite: { error: SQLITE_UNSUPPORTED },
@@ -196,7 +196,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
         name: "rpad",
         build: () => {
             const scalar = scalarTable();
-            return select(scalar, ({ txt }) => ({ value: rpad(trim(txt), 12, "_") }));
+            return map(scalar, ({ txt }) => ({ value: rpad(trim(txt), 12, "_") }));
         },
         outcomes: {
             sqlite: { error: SQLITE_UNSUPPORTED },
@@ -207,7 +207,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
         name: "regex like",
         build: () => {
             const scalar = scalarTable();
-            return select(scalar, ({ txt }) => ({ value: regexLike(trim(txt), "^Hello") }));
+            return map(scalar, ({ txt }) => ({ value: regexLike(trim(txt), "^Hello") }));
         },
         outcomes: {
             sqlite: { error: SQLITE_UNSUPPORTED },
@@ -218,7 +218,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
         name: "regex replace",
         build: () => {
             const scalar = scalarTable();
-            return select(scalar, ({ txt }) => ({ value: regexReplace(trim(txt), "World", "Duck") }));
+            return map(scalar, ({ txt }) => ({ value: regexReplace(trim(txt), "World", "Duck") }));
         },
         outcomes: {
             sqlite: { error: SQLITE_UNSUPPORTED },
@@ -229,7 +229,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
         name: "regex extract",
         build: () => {
             const scalar = scalarTable();
-            return select(scalar, ({ txt }) => ({ value: regexExtract(trim(txt), "Hello(.*)", 1) }));
+            return map(scalar, ({ txt }) => ({ value: regexExtract(trim(txt), "Hello(.*)", 1) }));
         },
         outcomes: {
             sqlite: { error: SQLITE_UNSUPPORTED },
@@ -240,7 +240,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
         name: "logical operators",
         build: () => {
             const scalar = scalarTable();
-            return select(scalar, ({ i, j, txt, txt2 }) => ({
+            return map(scalar, ({ i, j, txt, txt2 }) => ({
                 eq_v: eq(i, 5),
                 ne_v: ne(i, 4),
                 lt_v: lt(j, i),
@@ -295,7 +295,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
         name: "date and time functions",
         build: () => {
             const scalar = scalarTable();
-            return select(scalar, ({ i, parse_txt, ts, ts_next }) => ({
+            return map(scalar, ({ i, parse_txt, ts, ts_next }) => ({
                 current_date_ok: isNotNull(currentDate()),
                 current_ts_ok: isNotNull(currentTimestamp()),
                 date_trunc_v: dateFormat(dateTrunc(ts, "day"), "%Y-%m-%d %H:%M:%S"),
@@ -344,7 +344,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
         name: "extract and date part helpers",
         build: () => {
             const scalar = scalarTable();
-            return select(scalar, ({ ts }) => ({
+            return map(scalar, ({ ts }) => ({
                 extract_year_v: extract(ts, "year"),
                 year_v: year(ts),
                 month_v: month(ts),
@@ -387,7 +387,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
         name: "type conversion and null handling",
         build: () => {
             const scalar = scalarTable();
-            return select(scalar, ({ nullable_txt, num_txt, ts, txt, txt2, x }) => ({
+            return map(scalar, ({ nullable_txt, num_txt, ts, txt, txt2, x }) => ({
                 cast_v: cast(num_txt, "INTEGER"),
                 to_int_v: toInt(x),
                 to_float_v: toFloat(toInt(x)),

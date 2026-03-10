@@ -21,7 +21,7 @@ Dialect columns in this file:
 Function-first policy:
 
 - Expression entry points are plain functions such as `add(left, right)` and `dateTrunc(value, unit)`
-- Query entry points are plain functions such as `select(query, selector)` or `pipe(query, select(selector))`
+- Query entry points are plain functions such as `map(query, selector)` or `pipe(query, map(selector))`
 - Runtime literals and constants stay as functions like `currentDate()`, `currentTimestamp()`, and `dateLiteral(...)`
 
 ## 1) Math (basic arithmetic)

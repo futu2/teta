@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { table, t, select, replace } from "../mod.ts";
+import { table, t, map, replace } from "../mod.ts";
 import { renderPipelineAst } from "../src/edsl/sql/render/pipeline.ts";
 describe("pipeline renderer", () => {
     test("prepends base CTEs before generated stage CTEs", () => {
@@ -10,7 +10,7 @@ describe("pipeline renderer", () => {
         const base = table("base_users", {
             id: t.int(),
         });
-        const filtered = select(select(users, (user) => ({
+        const filtered = map(map(users, (user) => ({
             id: user.id,
             normalized_name: replace(user.name, " ", "_"),
         })), (row) => ({

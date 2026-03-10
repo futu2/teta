@@ -1,5 +1,5 @@
 import { pipe } from "npm:remeda";
-import { eq, filter, select, sqlRenderer, table, t, toSql } from "../../mod.ts";
+import { eq, filter, map, sqlRenderer, table, t, toSql } from "../../mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -11,7 +11,7 @@ const users = table("users", {
 const query = pipe(
   users,
   filter((user) => eq(user.active, true)),
-  select((user) => ({
+  map((user) => ({
     id: user.id,
     email: user.email,
     tenant_id: user.tenant_id,

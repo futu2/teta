@@ -1,5 +1,5 @@
 import { pipe } from "remeda";
-import { dateTrunc, desc, duckdbRenderer, limit, orderBy, postgresqlRenderer, select, table, t, toSql } from "../../mod.ts";
+import { dateTrunc, desc, duckdbRenderer, take, sort, postgresqlRenderer, map, table, t, toSql } from "../../mod.ts";
 
 const events = table("events", {
   id: t.int(),
@@ -10,14 +10,14 @@ const events = table("events", {
 
 const report = pipe(
   events,
-  select((event) => ({
+  map((event) => ({
     id: event.id,
     account_id: event.account_id,
     created_day: dateTrunc(event.created_at, "day"),
     total_cents: event.total_cents,
   })),
-  orderBy((event) => [desc(event.created_day), desc(event.id)]),
-  limit(20)
+  sort((event) => [desc(event.created_day), desc(event.id)]),
+  take(20)
 );
 
 console.log("postgresql");

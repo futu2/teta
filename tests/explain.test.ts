@@ -1,12 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import { explain, table, t, filter, select, eq, loop, limit, isNotNull } from "../mod.ts";
+import { explain, table, t, filter, map, eq, loop, take, isNotNull } from "../mod.ts";
 describe("explain api", () => {
     test("returns IR, AST, SQL, params, and stage metadata", () => {
         const users = table("users", {
             id: t.int(),
             name: t.string(),
         });
-        const query = limit(select(filter(users, (user) => eq(user.id, 42)), (user) => ({ id: user.id })), 1);
+        const query = take(map(filter(users, (user) => eq(user.id, 42)), (user) => ({ id: user.id })), 1);
         const result = explain(query, {
             dialect: "postgresql",
             format: "compact",
@@ -19,8 +19,8 @@ describe("explain api", () => {
         expect(result.columnNames).toEqual(["id"]);
         expect(result.stages).toEqual([
             { index: 0, kind: "filter" },
-            { index: 1, kind: "select" },
-            { index: 2, kind: "limit" },
+            { index: 1, kind: "map" },
+            { index: 2, kind: "take" },
         ]);
         expect(result.ctes).toEqual([]);
         expect(result.dialect.name).toBe("postgresql");
@@ -35,7 +35,7 @@ describe("explain api", () => {
             id: t.int(),
             manager_id: t.nullable(t.int()),
         });
-        const query = loop(select(employees, (employee) => ({
+        const query = loop(map(employees, (employee) => ({
             id: employee.id,
             manager_id: employee.manager_id,
         })), (self) => filter(self, (row) => isNotNull(row.manager_id)));

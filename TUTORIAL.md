@@ -9,17 +9,17 @@ qualified column references.
 Keep EDSL queries dialect-neutral. Choose the dialect by creating a renderer at render time.
 
 Most multi-stage examples below use Remeda's `pipe(...)` with named imports. Query helpers are dual-mode,
-so `select(users, ...)` and `pipe(users, select(...))` are both valid, but `pipe(...)` usually reads best.
+so `map(users, ...)` and `pipe(users, map(...))` are both valid, but `pipe(...)` usually reads best.
 
 All rendering examples below assume `sqlRenderer` is imported alongside the EDSL helpers.
 
 ## Basics
 
-### 1) Filter + select + order + limit
+### 1) Filter + map + sort + take
 
 ```ts
 import { pipe } from "remeda";
-import { and, asc, desc, eq, filter, gte, limit, orderBy, select, sqlRenderer, table, t, toSql } from "./mod.ts";
+import { and, asc, desc, eq, filter, gte, take, sort, map, sqlRenderer, table, t, toSql } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -31,9 +31,9 @@ const users = table("users", {
 const q = pipe(
   users,
   filter((u) => and(eq(u.active, true), gte(u.age, 18))),
-  select((u) => ({ id: u.id, name: u.name, age: u.age })),
-  orderBy((u) => [desc(u.age), asc(u.id)]),
-  limit(5)
+  map((u) => ({ id: u.id, name: u.name, age: u.age })),
+  sort((u) => [desc(u.age), asc(u.id)]),
+  take(5)
 );
 
 console.log(toSql(q, sqlRenderer({ dialect: "postgresql", format: "pretty" })));
@@ -56,11 +56,11 @@ FROM cte_2 AS cte_2_0
 LIMIT 5
 ```
 
-### 2) Join + aggregate with group()
+### 2) Join + fold with group()
 
 ```ts
 import { pipe } from "remeda";
-import { aggregate, count, eq, group, join, sqlRenderer, sum, table, t, toSql } from "./mod.ts";
+import { fold, count, eq, group, join, sqlRenderer, sum, table, t, toSql } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -76,7 +76,7 @@ const orders = table("orders", {
 const q = pipe(
   users,
   join(orders, (u, o) => eq(u.id, o.user_id), { type: "left" }),
-  aggregate((row) => ({
+  fold((row) => ({
     user_id: group(row.id),
     order_count: count(row.order_id),
     total_spend: sum(row.total),
@@ -102,7 +102,7 @@ GROUP BY cte_0_0.id
 ### 3) String concat with template helper
 
 ```ts
-import { f, select, sqlRenderer, table, t, toSql } from "./mod.ts";
+import { f, map, sqlRenderer, table, t, toSql } from "./mod.ts";
 
 const names = table("names", {
   id: t.int(),
@@ -112,7 +112,7 @@ const names = table("names", {
   suffix: t.string(),
 });
 
-const q = select(names, (name) => ({
+const q = map(names, (name) => ({
   title: f`${name.prefix} ${name.first} ${name.last} ${name.suffix}`,
 }));
 
@@ -154,7 +154,7 @@ more literally with staged CTEs.
 
 ```ts
 import { pipe } from "remeda";
-import { add, filter, gt, select, sqlRenderer, table, t, toSql } from "./mod.ts";
+import { add, filter, gt, map, sqlRenderer, table, t, toSql } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -165,9 +165,9 @@ const users = table("users", {
 
 const q = pipe(
   users,
-  select((u) => ({ ...u, age_plus_one: add(u.age, 1) })),
+  map((u) => ({ ...u, age_plus_one: add(u.age, 1) })),
   filter((u) => gt(u.age_plus_one, 30)),
-  select((u) => ({ id: u.id, name: u.name, age_plus_one: u.age_plus_one }))
+  map((u) => ({ id: u.id, name: u.name, age_plus_one: u.age_plus_one }))
 );
 
 console.log(toSql(q, sqlRenderer({
@@ -204,11 +204,11 @@ Quick rule of thumb:
 
 ### Optional: Remeda for projection shaping
 
-If you already use `remeda` in your app, it pairs nicely with Teta's object-shaped `select(...)` and `aggregate(...)` callbacks.
+If you already use `remeda` in your app, it pairs nicely with Teta's object-shaped `map(...)` and `fold(...)` callbacks.
 
 ```ts
 import { mapKeys, merge, omit, pick, pipe } from "remeda";
-import { replace, select, table, t, upper } from "./mod.ts";
+import { replace, map, table, t, upper } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -217,16 +217,16 @@ const users = table("users", {
   active: t.boolean(),
 });
 
-const compact = select(users, pipe(
+const compact = map(users, pipe(
   pick(["id", "name", "age"] as const),
   (base) => merge(base, {
     normalized_name: upper(replace(base.name, " ", "_")),
   })
 ));
 
-const publicUsers = select(users, omit(["active"] as const));
+const publicUsers = map(users, omit(["active"] as const));
 
-const namespacedUsers = select(users, pipe(
+const namespacedUsers = map(users, pipe(
   pick(["id", "name"] as const),
   mapKeys((key) => "user_" + key)
 ));
@@ -244,7 +244,7 @@ Typical patterns:
 
 ```ts
 import { pipe } from "remeda";
-import { eq, join, select, sqlRenderer, table, t, toSql } from "./mod.ts";
+import { eq, join, map, sqlRenderer, table, t, toSql } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -260,7 +260,7 @@ const orders = table("orders", {
 const q = pipe(
   users,
   join(orders, (u, o) => eq(u.id, o.user_id), { type: "left" }),
-  select((row) => ({
+  map((row) => ({
     user_id: row.id,
     user_name: row.name,
     order_id: row.order_id,
@@ -279,7 +279,7 @@ Use `join(..., { lateral: true })` when the right-hand query needs to reference 
 
 ```ts
 import { pipe } from "remeda";
-import { eq, filter, join, lit, select, sqlRenderer, table, t, toSql } from "./mod.ts";
+import { eq, filter, join, lit, map, sqlRenderer, table, t, toSql } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -298,7 +298,7 @@ const q = pipe(
     (u) => pipe(
       orders,
       filter((o) => eq(o.user_id, u.id)),
-      select((o) => ({
+      map((o) => ({
         order_id: o.id,
         total: o.total,
       }))
@@ -319,14 +319,14 @@ For `sqlite`, the keyword is omitted during SQL rendering because correlated sub
 Use a custom dialect config when runtime dialect and parser dialect differ:
 
 ```ts
-import { select, sqlRenderer, table, t, toSql } from "./mod.ts";
+import { map, sqlRenderer, table, t, toSql } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
   name: t.string(),
 });
 
-console.log(toSql(select(users, (u) => ({ id: u.id })), sqlRenderer({
+console.log(toSql(map(users, (u) => ({ id: u.id })), sqlRenderer({
   dialect: {
     name: "presto",
     parserDialect: "Trino",
@@ -378,7 +378,7 @@ import {
   dateTrunc,
   regexLike,
   regexReplace,
-  select,
+  map,
   sqlRenderer,
   table,
   t,
@@ -393,7 +393,7 @@ const sessions = table("sessions", {
   tags: t.string(),
 });
 
-const q = select(sessions, (s) => ({
+const q = map(sessions, (s) => ({
   id: s.id,
   started_day: dateTrunc(s.started_at, "day"),
   started_fmt: dateFormat(s.started_at, "%Y-%m-%d"),
@@ -413,7 +413,7 @@ console.log(toSql(q, sqlRenderer({ dialect: "postgresql", format: "pretty" })));
 You can customize a dialect so unsupported direct functions map to equivalents or fallbacks:
 
 ```ts
-import { bitLength, dateFormat, select, sqlRenderer, table, t, toSql } from "./mod.ts";
+import { bitLength, dateFormat, map, sqlRenderer, table, t, toSql } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -421,7 +421,7 @@ const users = table("users", {
   created_at: t.timestamp(),
 });
 
-const q = select(users, (u) => ({
+const q = map(users, (u) => ({
   id: u.id,
   created_fmt: dateFormat(u.created_at, "%Y-%m-%d"),
   bits: bitLength(u.name),
@@ -448,12 +448,12 @@ console.log(toSql(q, sqlRenderer({
 
 ### Aggregate with group()
 
-Grouping is expressed with `group(expr)` inside `aggregate(...)`.
+Grouping is expressed with `group(expr)` inside `fold(...)`.
 There is no separate `groupBy` stage.
 
 ```ts
 import { pipe } from "remeda";
-import { aggregate, count, filter, group, gt, sqlRenderer, sum, table, t, toSql } from "./mod.ts";
+import { fold, count, filter, group, gt, sqlRenderer, sum, table, t, toSql } from "./mod.ts";
 
 const orders = table("orders", {
   id: t.int(),
@@ -464,7 +464,7 @@ const orders = table("orders", {
 const q = pipe(
   orders,
   filter((o) => gt(o.total, 0)),
-  aggregate((o) => ({
+  fold((o) => ({
     user_id: group(o.user_id),
     order_count: count(o.id),
     total_spend: sum(o.total),
@@ -477,7 +477,7 @@ console.log(toSql(q, sqlRenderer()));
 ### Window function
 
 ```ts
-import { asc, desc, lag, lead, ntile, over, rank, rowNumber, select, sqlRenderer, sumOver, table, t, toSql } from "./mod.ts";
+import { asc, desc, lag, lead, ntile, over, rank, rowNumber, map, sqlRenderer, sumOver, table, t, toSql } from "./mod.ts";
 
 const orders = table("orders", {
   id: t.int(),
@@ -486,7 +486,7 @@ const orders = table("orders", {
   created_at: t.timestamp(),
 });
 
-const q = select(orders, (o) => ({
+const q = map(orders, (o) => ({
   id: o.id,
   user_id: o.user_id,
   running_total: sumOver(o.total, { orderBy: asc(o.created_at) }),
@@ -509,14 +509,14 @@ console.log(toSql(q, sqlRenderer({ dialect: "postgresql", format: "pretty" })));
 ### Custom SQL functions (UDF)
 
 ```ts
-import { desc, fn, over, select, sqlRenderer, table, t, toSql, windowFn } from "./mod.ts";
+import { desc, fn, over, map, sqlRenderer, table, t, toSql, windowFn } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
   name: t.string(),
 });
 
-const q = select(users, (u) => ({
+const q = map(users, (u) => ({
   id: u.id,
   name_hash: fn<string>("my_hash_udf", u.name),
   score_rank: over(windowFn<number>("percent_rank"), { orderBy: desc(u.id) }),
@@ -535,7 +535,7 @@ import {
   regexExtract,
   regexLike,
   regexReplace,
-  select,
+  map,
   sqlRenderer,
   substring,
   table,
@@ -550,7 +550,7 @@ const users = table("users", {
   name: t.string(),
 });
 
-const q = select(users, (u) => ({
+const q = map(users, (u) => ({
   id: u.id,
   name_lower: lower(u.name),
   name_upper: upper(u.name),
@@ -569,14 +569,14 @@ console.log(toSql(q, sqlRenderer({ dialect: "postgresql", format: "pretty" })));
 ### Array helpers
 
 ```ts
-import { arrayAppend, arrayContains, arrayJoin, arrayLength, arrayPosition, arraySlice, select, sqlRenderer, table, t, toSql } from "./mod.ts";
+import { arrayAppend, arrayContains, arrayJoin, arrayLength, arrayPosition, arraySlice, map, sqlRenderer, table, t, toSql } from "./mod.ts";
 
 const sessions = table("sessions", {
   id: t.int(),
   tags: t.string(),
 });
 
-const q = select(sessions, (s) => ({
+const q = map(sessions, (s) => ({
   id: s.id,
   tag_count: arrayLength(s.tags),
   has_prod: arrayContains(s.tags, "prod"),
@@ -593,7 +593,7 @@ console.log(toSql(q, sqlRenderer({ dialect: "postgresql", format: "pretty" })));
 
 ```ts
 import { pipe } from "remeda";
-import { filter, isIn, select, table, t } from "./mod.ts";
+import { filter, isIn, map, table, t } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -603,7 +603,7 @@ const users = table("users", {
 const q = pipe(
   users,
   filter((u) => isIn(u.status, ["active", "trial", "paused"])),
-  select((u) => ({ id: u.id, status: u.status }))
+  map((u) => ({ id: u.id, status: u.status }))
 );
 ```
 
@@ -620,7 +620,7 @@ import {
   dateParse,
   dateTrunc,
   month,
-  select,
+  map,
   table,
   t,
   timestampLiteral,
@@ -635,7 +635,7 @@ const posts = table("posts", {
   event_text: t.string(),
 });
 
-const q = select(posts, (p) => ({
+const q = map(posts, (p) => ({
   today: currentDate(),
   now: currentTimestamp(),
   go_live: dateLiteral("2024-02-03"),
@@ -657,7 +657,7 @@ Use `cast(expr, type)` to emit `CAST(expr AS type)`.
 Use `toDate(expr)` as a convenience when you want `CAST(expr AS DATE)`.
 
 ```ts
-import { cast, select, table, t, toDate } from "./mod.ts";
+import { cast, map, table, t, toDate } from "./mod.ts";
 
 const orders = table("orders", {
   id: t.int(),
@@ -665,7 +665,7 @@ const orders = table("orders", {
   created_at: t.timestamp(),
 });
 
-const q = select(orders, (o) => ({
+const q = map(orders, (o) => ({
   total_text: cast<string>(o.total, "TEXT"),
   created_date: toDate(o.created_at),
 }));
@@ -673,7 +673,7 @@ const q = select(orders, (o) => ({
 
 ```ts
 import { pipe } from "remeda";
-import { cast, filter, gt, select, table, t } from "./mod.ts";
+import { cast, filter, gt, map, table, t } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -684,7 +684,7 @@ const users = table("users", {
 const q = pipe(
   users,
   filter((u) => gt(cast<number>(u.age_text, "INTEGER"), 18)),
-  select((u) => ({
+  map((u) => ({
     id: u.id,
     age_int: cast<number>(u.age_text, "INTEGER"),
     created_day: cast<string>(u.created_at, "DATE"),
@@ -695,14 +695,14 @@ const q = pipe(
 ### CASE WHEN
 
 ```ts
-import { caseWhen, lt, select, table, t, when } from "./mod.ts";
+import { caseWhen, lt, map, table, t, when } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
   age: t.int(),
 });
 
-const q = select(users, (u) => ({
+const q = map(users, (u) => ({
   id: u.id,
   age_group: caseWhen([
     when(lt(u.age, 18), "minor"),
@@ -715,7 +715,7 @@ const q = select(users, (u) => ({
 
 ```ts
 import { pipe } from "remeda";
-import { eq, filter, select, table, t, unionAll } from "./mod.ts";
+import { eq, filter, map, table, t, unionAll } from "./mod.ts";
 
 const activeUsers = pipe(
   table("users", {
@@ -724,7 +724,7 @@ const activeUsers = pipe(
     active: t.boolean(),
   }),
   filter((u) => eq(u.active, true)),
-  select((u) => ({ id: u.id, name: u.name }))
+  map((u) => ({ id: u.id, name: u.name }))
 );
 
 const inactiveUsers = pipe(
@@ -734,7 +734,7 @@ const inactiveUsers = pipe(
     active: t.boolean(),
   }),
   filter((u) => eq(u.active, false)),
-  select((u) => ({ id: u.id, name: u.name }))
+  map((u) => ({ id: u.id, name: u.name }))
 );
 
 const allUsers = unionAll(activeUsers, inactiveUsers);
@@ -744,7 +744,7 @@ const allUsers = unionAll(activeUsers, inactiveUsers);
 
 ```ts
 import { pick, pipe } from "remeda";
-import { eq, filter, isNull, join, loop, select, table, t } from "./mod.ts";
+import { eq, filter, isNull, join, loop, map, table, t } from "./mod.ts";
 
 const treeCols = ["id", "name", "manager_id"] as const;
 
@@ -757,7 +757,7 @@ const employees = table("employees", {
 const base = pipe(
   employees,
   filter((e) => isNull(e.manager_id)),
-  select(pick(treeCols))
+  map(pick(treeCols))
 );
 
 const orgTree = pipe(
@@ -765,9 +765,9 @@ const orgTree = pipe(
   loop((self) => pipe(
     employees,
     join(self, (e, s) => eq(e.manager_id, s.id)),
-    select(pick(treeCols))
+    map(pick(treeCols))
   ))
 );
 
-const q = select(orgTree, pick(["id", "name"] as const));
+const q = map(orgTree, pick(["id", "name"] as const));
 ```

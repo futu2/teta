@@ -1,4 +1,4 @@
-import { bitLength, characterLength, dateFormat, select, sqlRenderer, table, t, toSql } from "../../mod.ts";
+import { bitLength, characterLength, dateFormat, map, sqlRenderer, table, t, toSql } from "../../mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -24,7 +24,7 @@ const customSqliteRenderer = sqlRenderer({
   format: "pretty",
 });
 
-const report = select(users, (user) => ({
+const report = map(users, (user) => ({
   id: user.id,
   name_chars: characterLength(user.name),
   name_bits: bitLength(user.name),

@@ -25,7 +25,7 @@ type ResolvedAggregateProjection = ResolvedProjection & {
   groupBy: ExprNode<any>[];
 };
 
-const LEGACY_SELECTION_ARRAY_ERROR = "select() and aggregate() now expect an object shape";
+const LEGACY_SELECTION_ARRAY_ERROR = "map() and fold() now expect an object shape";
 
 export function freshScopeId(): ScopeId {
   return `${INTERNAL_SCOPE_PREFIX}${freshInternalToken()}` as ScopeId;
@@ -42,7 +42,7 @@ export function resolveSelectProjection(selection: SelectShape): ResolvedProject
     items: entries.map((item) => {
       const resolved = resolveProjectionExpr(item.key, item.value);
       if (containsGroup(resolved.expr)) {
-        userError("GROUP_OUTSIDE_AGGREGATE", "group() is only valid inside aggregate()");
+        userError("GROUP_OUTSIDE_AGGREGATE", "group() is only valid inside fold()");
       }
       return resolved;
     }),
@@ -62,7 +62,7 @@ export function resolveAggregateProjection(
       return {
         expr: unwrapped,
         as: shouldAlias(unwrapped, item.key)
-          ? normalizeIdentifier(item.key, "select alias")
+          ? normalizeIdentifier(item.key, "map alias")
           : null,
       };
     }),
@@ -89,7 +89,7 @@ function resolveProjectionExpr(key: string, value: SelectValue): {
   return {
     expr,
     as: shouldAlias(expr, key)
-      ? normalizeIdentifier(key, "select alias")
+      ? normalizeIdentifier(key, "map alias")
       : null,
   };
 }

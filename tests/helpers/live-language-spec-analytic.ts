@@ -1,12 +1,12 @@
 import { employeeTable, metricsTable, rankTable } from "./live-language-spec-shared.ts";
 import type { LiveSpecCase } from "./live-language-spec-shared.ts";
-import { aggregate, filter, join, select, asc, avg, count, denseRank, desc, eq, group, isNull, lag, lead, max, min, ntile, orderBy, percentRank, rank, rowNumber, sum, sumOver, loop, over } from "../../mod.ts";
+import { fold, filter, join, map, asc, avg, count, denseRank, desc, eq, group, isNull, lag, lead, max, min, ntile, sort, percentRank, rank, rowNumber, sum, sumOver, loop, over } from "../../mod.ts";
 export const LIVE_LANGUAGE_ANALYTIC_CASES: LiveSpecCase[] = [
     {
         name: "aggregates",
         build: () => {
             const metrics = metricsTable();
-            return orderBy(aggregate(metrics, ({ amount, grp }) => ({
+            return sort(fold(metrics, ({ amount, grp }) => ({
                 grp: group(grp),
                 count_v: count(amount),
                 sum_v: sum(amount),
@@ -34,7 +34,7 @@ export const LIVE_LANGUAGE_ANALYTIC_CASES: LiveSpecCase[] = [
         name: "window functions",
         build: () => {
             const ranks = rankTable();
-            return orderBy(select(ranks, ({ amount, seq }) => ({
+            return sort(map(ranks, ({ amount, seq }) => ({
                 seq,
                 amount,
                 rank_v: over(rank(amount), { orderBy: desc(amount) }),
@@ -158,7 +158,7 @@ export const LIVE_LANGUAGE_ANALYTIC_CASES: LiveSpecCase[] = [
         name: "recursive cte",
         build: () => {
             const employees = employeeTable();
-            const orgTree = loop(select(filter(employees, (employee) => isNull(employee.manager_id)), (employee) => ({
+            const orgTree = loop(map(filter(employees, (employee) => isNull(employee.manager_id)), (employee) => ({
                 id: employee.id,
                 name: employee.name,
                 manager_id: employee.manager_id,
@@ -167,7 +167,7 @@ export const LIVE_LANGUAGE_ANALYTIC_CASES: LiveSpecCase[] = [
                     name: employee.name,
                     manager_id: employee.manager_id,
                 }) }));
-            return orderBy(select(orgTree, (employee) => ({ id: employee.id, name: employee.name })), (employee) => asc(employee.id));
+            return sort(map(orgTree, (employee) => ({ id: employee.id, name: employee.name })), (employee) => asc(employee.id));
         },
         outcomes: {
             sqlite: {

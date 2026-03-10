@@ -1,15 +1,15 @@
 import { describe, expect, test } from "bun:test";
-import { sqlRenderer, filter, join, eq, isNull, select, loop, toSql } from "../mod.ts";
+import { sqlRenderer, filter, join, eq, isNull, map, loop, toSql } from "../mod.ts";
 import { buildOrgTreeQuery, createEmployeesTable } from "./helpers/fixtures.ts";
 describe("recursive loop queries", () => {
     test("renders stable recursive CTE names across separate query instances", () => {
         const renderer = sqlRenderer({ dialect: "postgresql", format: "compact" });
-        const sqlA = toSql(select(buildOrgTreeQuery(), (employee) => ({ id: employee.id, name: employee.name })), renderer);
-        const sqlB = toSql(select(buildOrgTreeQuery(), (employee) => ({ id: employee.id, name: employee.name })), renderer);
+        const sqlA = toSql(map(buildOrgTreeQuery(), (employee) => ({ id: employee.id, name: employee.name })), renderer);
+        const sqlB = toSql(map(buildOrgTreeQuery(), (employee) => ({ id: employee.id, name: employee.name })), renderer);
         expect(sqlA).toBe(sqlB);
     });
     test("renders a recursive employee tree CTE", () => {
-        const sql = toSql(select(buildOrgTreeQuery(), (employee) => ({ id: employee.id, name: employee.name })), sqlRenderer({ dialect: "postgresql", format: "compact" }));
+        const sql = toSql(map(buildOrgTreeQuery(), (employee) => ({ id: employee.id, name: employee.name })), sqlRenderer({ dialect: "postgresql", format: "compact" }));
         const match = sql.match(/^WITH RECURSIVE (loop_\d+)\(id, name, manager_id\) AS \(/);
         expect(match).not.toBeNull();
         const loopName = match?.[1];
@@ -20,12 +20,12 @@ describe("recursive loop queries", () => {
     });
     test("supports `base.loop(step)` as the recursive builder method", () => {
         const employees = createEmployeesTable();
-        const base = select(filter(employees, (employee) => isNull(employee.manager_id)), (employee) => ({
+        const base = map(filter(employees, (employee) => isNull(employee.manager_id)), (employee) => ({
             id: employee.id,
             name: employee.name,
             manager_id: employee.manager_id,
         }));
-        const sql = toSql(select(loop(base, (self) => join(employees, self, (employee, current) => eq(employee.manager_id, current.id), { merge: (employee) => ({
+        const sql = toSql(map(loop(base, (self) => join(employees, self, (employee, current) => eq(employee.manager_id, current.id), { merge: (employee) => ({
                 id: employee.id,
                 name: employee.name,
                 manager_id: employee.manager_id,

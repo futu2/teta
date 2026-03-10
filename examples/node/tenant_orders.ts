@@ -1,5 +1,5 @@
 import { pipe } from "remeda";
-import { desc, eq, filter, limit, orderBy, param, postgresqlRenderer, select, t, table, toSqlResult } from "../../mod.ts";
+import { desc, eq, filter, take, sort, param, postgresqlRenderer, map, t, table, toSqlResult } from "../../mod.ts";
 
 const orders = table("orders", {
   id: t.bigint(),
@@ -22,13 +22,13 @@ export function buildTenantOrdersQuery(tenantId: string, email: string) {
       filter((order) => eq(order.tenant_id, param(tenantId))),
       filter((order) => eq(order.customer_email, param(email))),
       filter((order) => eq(order.status, "paid")),
-      select((order) => ({
+      map((order) => ({
         id: order.id,
         customer_email: order.customer_email,
         total_cents: order.total_cents,
       })),
-      orderBy((order) => desc(order.id)),
-      limit(50)
+      sort((order) => desc(order.id)),
+      take(50)
     ),
     renderer
   );
