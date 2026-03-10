@@ -2,27 +2,31 @@ import type { Option } from "node-sql-parser";
 
 declare const __sqlInt: unique symbol;
 declare const __sqlFloat: unique symbol;
+declare const __sqlBigInt: unique symbol;
+declare const __sqlDecimal: unique symbol;
 declare const __sqlDate: unique symbol;
 declare const __sqlTimestamp: unique symbol;
+declare const __sqlUuid: unique symbol;
+declare const __sqlBytes: unique symbol;
+declare const __sqlJson: unique symbol;
 
 export type SqlInt = number & { readonly [__sqlInt]: true };
 export type SqlFloat = number & { readonly [__sqlFloat]: true };
-export type SqlNumber = SqlInt | SqlFloat;
+export type SqlBigInt = bigint & { readonly [__sqlBigInt]: true };
+export type SqlDecimal = number & { readonly [__sqlDecimal]: true };
+export type SqlNumber = SqlInt | SqlFloat | SqlBigInt | SqlDecimal;
 export type SqlDate = string & { readonly [__sqlDate]: true };
 export type SqlTimestamp = string & { readonly [__sqlTimestamp]: true };
+export type SqlUuid = string & { readonly [__sqlUuid]: true };
+export type SqlBytes = Uint8Array & { readonly [__sqlBytes]: true };
+export type SqlJson<T = unknown> = T & { readonly [__sqlJson]: true };
 
 type ContextSqlNumber<TContext> = Extract<Exclude<TContext, null>, SqlNumber>;
 
-export type NormalizeNumericLiteral<TContext, TValue> = TValue extends number
+export type NormalizeNumericLiteral<TContext, TValue> = TValue extends number | bigint
   ? [ContextSqlNumber<TContext>] extends [never]
     ? TValue
-    : [Extract<ContextSqlNumber<TContext>, SqlInt>] extends [never]
-      ? [Extract<ContextSqlNumber<TContext>, SqlFloat>] extends [never]
-        ? TValue
-        : SqlFloat
-      : [Extract<ContextSqlNumber<TContext>, SqlFloat>] extends [never]
-        ? SqlInt
-        : SqlNumber
+    : ContextSqlNumber<TContext>
   : TValue;
 
 export type NormalizeNumericLiteralTuple<
@@ -117,11 +121,13 @@ export type QueryDialect = {
 };
 
 export type SqlFormat = "compact" | "pretty";
+export type SqlRenderStrategy = "optimized" | "readable";
 export type SqlParameterMode = "inline" | "named" | "positional";
 export type SqlParameterPrefix = ":" | "$" | "@";
 
 export type SqlOptions = Option & {
   format?: SqlFormat;
+  renderStrategy?: SqlRenderStrategy;
   dialect?: Dialect;
   parameterMode?: SqlParameterMode;
   parameterPrefix?: SqlParameterPrefix;

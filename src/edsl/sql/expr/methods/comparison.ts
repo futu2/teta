@@ -1,5 +1,5 @@
-import { and, asc, desc, eq, gt, gte, isIn, isNotNull, isNull, like, lt, lte, ne, not, or } from "../ops/comparison";
-import { defineExprMethods } from "./shared";
+import { and, asc, desc, eq, gt, gte, isIn, isNotNull, isNull, like, lt, lte, ne, not, or } from "../ops/comparison.ts";
+import { defineExprMethods } from "./shared.ts";
 
 defineExprMethods([
   ["eq", eq],

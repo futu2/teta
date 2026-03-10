@@ -1,6 +1,6 @@
-import type { ExprNode } from "../../core/types";
-import type { DialectLanguageFallback } from "../types";
-import { arrayExpr, binaryExpr, func, literal } from "./fallback_ast";
+import type { ExprNode } from "../../core/types.ts";
+import type { DialectLanguageFallback } from "../types.ts";
+import { arrayExpr, binaryExpr, func, literal } from "./fallback_ast.ts";
 
 export function rewriteArrayFallback(
   functionName: string,

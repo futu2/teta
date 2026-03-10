@@ -1,21 +1,21 @@
-import type { BuiltinDialect } from "../../types";
-import { ATHENA_DIALECT } from "./athena";
-import { BIGQUERY_DIALECT } from "./bigquery";
-import { DB2_DIALECT } from "./db2";
-import { DUCKDB_DIALECT } from "./duckdb";
-import { FLINKSQL_DIALECT } from "./flinksql";
-import { HETU_DIALECT } from "./hetu";
-import { HIVE_DIALECT } from "./hive";
-import { MARIADB_DIALECT } from "./mariadb";
-import { MYSQL_DIALECT } from "./mysql";
-import { NOQL_DIALECT } from "./noql";
-import { POSTGRESQL_DIALECT } from "./postgresql";
-import { REDSHIFT_DIALECT } from "./redshift";
-import { SNOWFLAKE_DIALECT } from "./snowflake";
-import { SQLITE_DIALECT } from "./sqlite";
-import { TRANSACTSQL_DIALECT } from "./transactsql";
-import { TRINO_DIALECT } from "./trino";
-import type { BuiltinDialectDefinition } from "./types";
+import type { BuiltinDialect } from "../../types.ts";
+import { ATHENA_DIALECT } from "./athena.ts";
+import { BIGQUERY_DIALECT } from "./bigquery.ts";
+import { DB2_DIALECT } from "./db2.ts";
+import { DUCKDB_DIALECT } from "./duckdb.ts";
+import { FLINKSQL_DIALECT } from "./flinksql.ts";
+import { HETU_DIALECT } from "./hetu.ts";
+import { HIVE_DIALECT } from "./hive.ts";
+import { MARIADB_DIALECT } from "./mariadb.ts";
+import { MYSQL_DIALECT } from "./mysql.ts";
+import { NOQL_DIALECT } from "./noql.ts";
+import { POSTGRESQL_DIALECT } from "./postgresql.ts";
+import { REDSHIFT_DIALECT } from "./redshift.ts";
+import { SNOWFLAKE_DIALECT } from "./snowflake.ts";
+import { SQLITE_DIALECT } from "./sqlite.ts";
+import { TRANSACTSQL_DIALECT } from "./transactsql.ts";
+import { TRINO_DIALECT } from "./trino.ts";
+import type { BuiltinDialectDefinition } from "./types.ts";
 
 export const BUILTIN_DIALECTS: Record<BuiltinDialect, BuiltinDialectDefinition> = {
   mysql: MYSQL_DIALECT,

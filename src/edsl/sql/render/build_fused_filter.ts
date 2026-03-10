@@ -1,14 +1,14 @@
-import type { QueryDialect } from "../types";
-import type { ExprNode, Stage } from "../../core/types";
-import type { ScopeBindings } from "./types";
-import type { CompiledSegment } from "./segment";
+import type { QueryDialect } from "../types.ts";
+import type { ExprNode, Stage } from "../../core/types.ts";
+import type { ScopeBindings } from "./types.ts";
+import type { CompiledSegment } from "./segment.ts";
 import {
   isAggregateProjection,
   mergePredicates,
   partitionAggregatePredicate,
   partitionWindowPredicate,
-} from "./predicate";
-import { bindFusedExpr, type ScopeExprLookup } from "./fused";
+} from "./predicate.ts";
+import { bindFusedExpr, type ScopeExprLookup } from "./fused.ts";
 
 type PostProjectionFilterOutcome =
   | {

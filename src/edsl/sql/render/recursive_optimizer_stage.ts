@@ -1,7 +1,8 @@
-import type { SelectItem, Stage } from "../../core/types";
-import { selectItemOutputName } from "../../query/utils";
-import { stageOutputNames } from "./planner";
-import { collectExprColumns } from "./recursive_optimizer_expr";
+import type { SelectItem, Stage } from "../../core/types.ts";
+import { selectItemOutputName } from "../../query/utils.ts";
+import { internalError, userError } from "../../errors.ts";
+import { stageOutputNames } from "./planner.ts";
+import { collectExprColumns } from "./recursive_optimizer_expr.ts";
 
 export type LoopPartLabel = "base" | "step";
 
@@ -81,7 +82,7 @@ export function optimizeLoopStage(
     case "orderBy":
     case "limit":
     case "union":
-      throw new Error(`loop ${label} does not allow ${stage.kind} stages`);
+      userError("LOOP_UNSUPPORTED_STAGE", `loop ${label} does not allow ${stage.kind} stages`);
     default:
       return assertNever(stage);
   }
@@ -99,7 +100,7 @@ function validateLoopStage(stage: Stage, label: LoopPartLabel): void {
     case "orderBy":
     case "limit":
     case "union":
-      throw new Error(`loop ${label} does not allow ${stage.kind} stages`);
+      userError("LOOP_UNSUPPORTED_STAGE", `loop ${label} does not allow ${stage.kind} stages`);
     default:
       break;
   }
@@ -178,5 +179,5 @@ function isNoOpLoopSelect(
 }
 
 function assertNever(value: never): never {
-  throw new Error(`Unexpected value: ${String(value)}`);
+  internalError("INTERNAL_UNEXPECTED_VALUE", `Unexpected value: ${String(value)}`);
 }

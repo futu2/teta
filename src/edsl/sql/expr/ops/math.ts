@@ -1,5 +1,6 @@
-import type { SqlFloat, SqlInt, SqlNumber } from "../../types";
-import { ExprRef, fn, toExprNode, type ExprInput, type PropagateNull } from "../core";
+import type { SqlFloat, SqlInt, SqlNumber } from "../../types.ts";
+import { ExprRef, fn, toExprNode, type ExprInput, type PropagateNull } from "../core.ts";
+import { userError } from "../../../errors.ts";
 
 type NullableSqlNumber = SqlNumber | null;
 
@@ -75,7 +76,7 @@ export function greatest<TValue extends NullableSqlNumber>(
   ...values: ExprInput<TValue>[]
 ): ExprRef<TValue> {
   if (values.length === 0) {
-    throw new Error("greatest requires at least one value");
+    userError("INVALID_FUNCTION_NAME", "greatest requires at least one value");
   }
   return fn<TValue>("GREATEST", value, ...values);
 }
@@ -85,7 +86,7 @@ export function least<TValue extends NullableSqlNumber>(
   ...values: ExprInput<TValue>[]
 ): ExprRef<TValue> {
   if (values.length === 0) {
-    throw new Error("least requires at least one value");
+    userError("INVALID_FUNCTION_NAME", "least requires at least one value");
   }
   return fn<TValue>("LEAST", value, ...values);
 }
@@ -95,7 +96,7 @@ export function cast<TTarget = unknown>(
   target: string
 ): ExprRef<TTarget> {
   if (!target.trim()) {
-    throw new Error("cast requires a target type");
+    userError("INVALID_FUNCTION_NAME", "cast requires a target type");
   }
   return new ExprRef<TTarget>({
     kind: "cast",

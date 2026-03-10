@@ -1,4 +1,5 @@
-import type { ExprNode } from "../../core/types";
+import type { ExprNode } from "../../core/types.ts";
+import { internalError } from "../../errors.ts";
 
 export type CollectExprColumnOptions = {
   excludeTable?: string | null;
@@ -65,5 +66,5 @@ export function collectExprColumns(
 }
 
 function assertNever(value: never): never {
-  throw new Error(`Unexpected value: ${String(value)}`);
+  internalError("INTERNAL_UNEXPECTED_VALUE", `Unexpected value: ${String(value)}`);
 }

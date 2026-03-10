@@ -1,27 +1,29 @@
 import type { With } from "node-sql-parser";
-import type { QueryDialect } from "../types";
-import { generatedCteName, type GeneratedCteName, type ScopeId, type Source, type Stage } from "../../core/types";
-import { columnNamesToIdentifierMap } from "../../query/utils";
-import type { ScopeBindings, SelectAst } from "./types";
-import { toParserSelect } from "./ast";
-import { getDefaultDialect } from "../dialect";
-import { hoistJoinSubquery, type CompileSourceRef } from "./source";
+import type { QueryDialect, SqlRenderStrategy } from "../types.ts";
+import { generatedCteName, type GeneratedCteName, type ScopeId, type Source, type Stage } from "../../core/types.ts";
+import { columnNamesToIdentifierMap } from "../../query/utils.ts";
+import type { ScopeBindings, SelectAst } from "./types.ts";
+import { toParserSelect } from "./ast.ts";
+import { getDefaultDialect } from "../dialect.ts";
+import { hoistJoinSubquery, type CompileSourceRef } from "./source.ts";
 import {
   advanceStagePlanningState,
   nextStageColumnIdentifiers,
   type StagePlanningState,
-} from "./planner";
-import { buildBaseSelectAst } from "./segment";
+} from "./planner.ts";
+import { buildBaseSelectAst } from "./segment.ts";
+import { internalError } from "../../errors.ts";
 import {
   compileSingleStageAst,
   tryBuildFusedSegmentAst,
   type FusedBuildOptions,
-} from "./build_fused";
+} from "./build_fused.ts";
 
 export type BuildPipelineOptions = {
   ctePrefix?: string;
   scopeBindings?: ScopeBindings;
   dialect?: QueryDialect;
+  renderStrategy?: SqlRenderStrategy;
 };
 
 export function buildPipelineAst(
@@ -34,6 +36,7 @@ export function buildPipelineAst(
   const ctePrefix = options?.ctePrefix ?? "";
   const scopeBindings = options?.scopeBindings;
   const dialect = options?.dialect ?? getDefaultDialect();
+  const renderStrategy = options?.renderStrategy ?? "optimized";
 
   if (stages.length === 0) {
     return {
@@ -65,6 +68,22 @@ export function buildPipelineAst(
   };
 
   for (let index = 0; index < stages.length; ) {
+    if (renderStrategy === "readable") {
+      const stage = hoistJoinSubquery(stages[index]!, ctes, ctePrefix, dialect);
+      const stageAst = compileSingleStageAst(stage, current, currentPlan.scopeId, fusedOptions);
+      index += 1;
+      if (index >= stages.length) {
+        return { ast: stageAst, ctes };
+      }
+      current = {
+        kind: "cte",
+        name: appendIntermediateCte(ctes, ctePrefix, index - 1, stageAst),
+        columnIdentifiers: nextStageColumnIdentifiers(stage, currentPlan.columnIdentifiers),
+      };
+      currentPlan = advanceStagePlanningState(stage, currentPlan);
+      continue;
+    }
+
     const fused = tryBuildFusedSegmentAst(
       current,
       currentPlan.scopeId,
@@ -102,7 +121,7 @@ export function buildPipelineAst(
     currentPlan = advanceStagePlanningState(stage, currentPlan);
   }
 
-  throw new Error("Internal error: buildPipelineAst did not produce a final AST");
+  internalError("INTERNAL_BUILD_PIPELINE_FAILED", "Internal error: buildPipelineAst did not produce a final AST");
 }
 
 function appendIntermediateCte(

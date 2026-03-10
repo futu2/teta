@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { userError } from "../errors.ts";
 
 export type ClipboardTool =
   | "auto"
@@ -37,7 +38,8 @@ export function copyTextToClipboard(
       return candidate;
     }
   }
-  throw new Error(
+  userError(
+    "CLIPBOARD_TOOL_UNAVAILABLE",
     "Unable to copy SQL to clipboard. Install one of: wl-copy, xclip, xsel, pbcopy, or clip."
   );
 }

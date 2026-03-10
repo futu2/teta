@@ -8,8 +8,8 @@ import {
   arrayPosition,
   arrayPrepend,
   arraySlice,
-} from "../ops/array";
-import { defineExprMethods } from "./shared";
+} from "../ops/array.ts";
+import { defineExprMethods } from "./shared.ts";
 
 defineExprMethods([
   ["arrayLength", arrayLength],

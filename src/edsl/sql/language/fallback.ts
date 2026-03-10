@@ -1,9 +1,9 @@
-import type { ExprNode } from "../../core/types";
-import type { DialectLanguageConfig, DialectLanguageFallback } from "../types";
-import { rewriteArrayFallback } from "./fallback_array";
-import { func } from "./fallback_ast";
-import { rewriteDateFallback } from "./fallback_date";
-import { rewriteMiscFallback } from "./fallback_misc";
+import type { ExprNode } from "../../core/types.ts";
+import type { DialectLanguageConfig, DialectLanguageFallback } from "../types.ts";
+import { rewriteArrayFallback } from "./fallback_array.ts";
+import { func } from "./fallback_ast.ts";
+import { rewriteDateFallback } from "./fallback_date.ts";
+import { rewriteMiscFallback } from "./fallback_misc.ts";
 
 type ResolvedLanguage = Required<DialectLanguageConfig>;
 

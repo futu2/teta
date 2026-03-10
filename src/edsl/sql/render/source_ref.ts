@@ -1,15 +1,15 @@
-import type { SourceRef, SqlIdentifier } from "../../core/types";
-import { identifierName } from "../../query/utils";
-import type { QueryDialect } from "../types";
-import type { BaseFromRef, FromAst, SelectAst, SubqueryFromRef } from "./types";
-import { getDefaultDialect } from "../dialect";
-import { getSqlRenderContext } from "./render";
+import type { SourceRef, SqlIdentifier } from "../../core/types.ts";
+import { identifierName } from "../../query/utils.ts";
+import type { QueryDialect } from "../types.ts";
+import type { BaseFromRef, FromAst, SelectAst, SubqueryFromRef } from "./types.ts";
+import { getDefaultDialect } from "../dialect.ts";
+import { getSqlRenderContext } from "./render.ts";
 import {
   registerIdentifierBinding,
   renderIdentifier,
   renderSourceSql,
   resolveIdentifierName,
-} from "./identifiers";
+} from "./identifiers.ts";
 
 export type CompileSourceRef =
   | SourceRef

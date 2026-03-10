@@ -1,4 +1,4 @@
-import { ExprRef } from "../../../core/expr";
+import { ExprRef } from "../../../core/expr.ts";
 
 export function defineExprMethod(name: string, operation: (...args: any[]) => any) {
   Object.defineProperty(ExprRef.prototype, name, {

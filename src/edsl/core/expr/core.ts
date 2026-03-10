@@ -1,2 +1,2 @@
-export * from "./runtime";
-export * from "./select";
+export * from "./runtime.ts";
+export * from "./select.ts";

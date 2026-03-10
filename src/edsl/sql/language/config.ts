@@ -1,1 +1,1 @@
-export { resolveDialectLanguage } from "../dialect";
+export { resolveDialectLanguage } from "../dialect.ts";

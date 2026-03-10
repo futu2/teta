@@ -222,7 +222,7 @@ The final return value is:
 }
 ```
 
-Note: built-in renderers currently return an empty `params` array through `toSqlResult(...)`.
+Built-in renderers populate `params` when the query contains `param(...)` placeholders.
 
 Rule of thumb:
 
@@ -288,8 +288,9 @@ Useful checkpoints:
   - `{ source, stages }`
 - `toAst()` calls `renderPipelineAst(...)`
   - this gives the parser AST before final SQL stringification
+- `query.explain(...)` bundles IR, AST, SQL, params, stage metadata, and CTE metadata in one snapshot
 
-These are the best places to inspect internal state while debugging.
+In practice, `query.explain(...)` is usually the fastest debugging entrypoint, with `toIR()` and `toAst()` as lower-level follow-ups.
 
 ### 4) `Query.toSql(renderer)` and `Query.toSqlResult(renderer)`
 
@@ -320,11 +321,31 @@ Behavior:
 
 - **No stages**
   - render a direct `SELECT` from the base table
-- **With stages**
-  - every non-final stage becomes a named CTE like `cte_0`, `cte_1`, ...
+- **With stages in `readable` mode**
+  - non-final stages are preserved as named CTEs like `cte_0`, `cte_1`, ...
   - the final stage becomes the outer query
+- **With stages in `optimized` mode**
+  - compatible stages may be fused into a smaller SQL shape, sometimes a single `SELECT`
 
-This is why the generated SQL often looks like a pipeline of CTEs.
+This is why generated SQL may look like a flat `SELECT`, a staged `WITH` pipeline, or a mix with derived-table barriers.
+
+### 6a) Common lowering patterns
+
+A few patterns show up repeatedly when you inspect `query.explain(...)`, `toIR()`, or `toAst()`:
+
+- **optimized render strategy**
+  - adjacent stages are fused when they can share one `SELECT`
+  - a `filter -> select -> limit` chain may render with no `WITH` at all
+- **readable render strategy**
+  - non-final stages are preserved as `cte_0`, `cte_1`, ...
+  - use this when you want SQL to track the builder pipeline more literally
+- **derived-table barriers**
+  - some operations must be wrapped in a nested query boundary to preserve scope
+  - common examples are window filters on dialects without `QUALIFY`, or order/limit that must remain outside a barrier
+- **recursive lowering**
+  - `loop(...)` materializes through recursive CTE compilation rather than a plain stage chain
+
+This is why the same logical query may render as a flat `SELECT`, a staged `WITH` pipeline, or a nested derived table depending on dialect features and render strategy.
 
 ### 7) Lowering each stage
 
@@ -427,6 +448,20 @@ When something looks wrong, inspect from top to bottom:
    - is a function being renamed or expanded unexpectedly?
 6. final `SqlResult.sql`
    - if AST is correct but text is odd, the issue is likely in parser output cleanup/formatting
+
+### Compare dialect rewrites with `explain()`
+
+A fast way to isolate dialect issues is to render the same query twice:
+
+- `query.explain({ dialect: "postgresql" })`
+- `query.explain({ dialect: "sqlite" })`
+
+Interpret the differences like this:
+
+- if `ir` and `stages` match but `sql` differs, the change is usually dialect language mapping, fallback rewrite, or final formatting
+- if `ast` shape changes, dialect feature support likely changed the lowering path itself
+- if `ctes` differ, check whether recursive CTEs, hoisted joins, or readable-stage preservation were introduced
+- if `ir` already differs, the bug is earlier in query construction rather than in SQL rendering
 
 ## If you want to extend the system
 

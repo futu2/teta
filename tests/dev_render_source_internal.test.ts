@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 
+import { TetaUserError } from "../mod.ts";
 import {
   parseIsolatedRenderPayload,
   renderSqlFromSourceIsolated,
@@ -32,17 +33,35 @@ describe("render source internal helpers", () => {
     ).toEqual({ ok: true, sql: "SELECT 1" });
   });
 
-  test("serializeRendererOptions rejects non-serializable options", () => {
+  test("serializeRendererOptions rejects non-serializable options with a user error", () => {
     const circular: { self?: unknown } = {};
     circular.self = circular;
 
-    expect(() => serializeRendererOptions(circular as never)).toThrow(
-      "requires JSON-serializable rendererOptions"
-    );
+    try {
+      serializeRendererOptions(circular as never);
+      throw new Error("Expected serializeRendererOptions() to throw");
+    } catch (error) {
+      expect(error).toBeInstanceOf(TetaUserError);
+      expect((error as TetaUserError).code).toBe("INVALID_RENDERER_OPTIONS");
+      expect((error as TetaUserError).message).toContain("requires JSON-serializable rendererOptions");
+    }
   });
 
   test("renderSqlFromSourceIsolated returns direct SQL string exports", async () => {
     const file = await writeTempModule('export const query = "SELECT 42";');
     expect(renderSqlFromSourceIsolated(file)).toBe("SELECT 42");
+  });
+
+  test("renderSqlFromSourceIsolated preserves user-facing missing export errors", async () => {
+    const file = await writeTempModule("export const notQuery = 1;");
+
+    try {
+      renderSqlFromSourceIsolated(file);
+      throw new Error("Expected renderSqlFromSourceIsolated() to throw");
+    } catch (error) {
+      expect(error).toBeInstanceOf(TetaUserError);
+      expect((error as TetaUserError).code).toBe("INVALID_TABLE_SOURCE");
+      expect((error as TetaUserError).message).toBe(`Export 'query' not found in ${file}`);
+    }
   });
 });

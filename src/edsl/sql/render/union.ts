@@ -1,13 +1,13 @@
 import type { With } from "node-sql-parser";
-import type { ScopeId, Stage } from "../../core/types";
-import type { QueryDialect } from "../types";
-import type { ScopeBindings, SelectAst } from "./types";
-import { ensureAlias, toParserSelect } from "./ast";
-import { buildPipelineAst } from "./build";
-import { getDefaultDialect } from "../dialect";
-import { bindExprScopes, exprToAst, getSqlRenderContext } from "./render";
-import { registerColumnIdentifierBindings, renderIdentifier } from "./identifiers";
-import { buildSelectAst, sourceToFrom, type CompileSourceRef } from "./source";
+import type { ScopeId, Stage } from "../../core/types.ts";
+import type { QueryDialect } from "../types.ts";
+import type { ScopeBindings, SelectAst } from "./types.ts";
+import { ensureAlias, toParserSelect } from "./ast.ts";
+import { buildPipelineAst } from "./build.ts";
+import { getDefaultDialect } from "../dialect.ts";
+import { bindExprScopes, exprToAst, getSqlRenderContext } from "./render.ts";
+import { registerColumnIdentifierBindings, renderIdentifier } from "./identifiers.ts";
+import { buildSelectAst, sourceToFrom, type CompileSourceRef } from "./source.ts";
 
 export function compileUnionStage(
   stage: Extract<Stage, { kind: "union" }>,

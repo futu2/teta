@@ -4,42 +4,50 @@ import type {
   JoinTypeInput,
   OrderItem,
   SqlIdentifier,
-} from "../core/types";
+} from "../core/types.ts";
 import type {
   Dialect,
+  QueryDialect,
+  SqlFormat,
+  SqlOptions,
+  SqlParameterMode,
+  SqlParameterPrefix,
+  SqlRenderStrategy,
   SqlRenderer,
   SqlResult,
-} from "../sql/types";
-import { ExprRef } from "../expr";
-import { createColumnRefs } from "../expr";
+} from "../sql/types.ts";
+import { ExprRef } from "../expr.ts";
+import { createColumnRefs } from "../expr.ts";
 import type {
   ColumnRefs,
   SelectResult,
   SelectShape,
-} from "../expr";
+} from "../expr.ts";
 import {
+  buildSqlOptions,
   createDeferredRecursiveCte,
   renderPipelineAst,
   resolveDialect,
-} from "../sql";
-import { freshInternalCteName, freshScopeId } from "./planner";
-import { toQuerySpec } from "./state";
-import { assertLoopColumns, normalizeIdentifier, qualifyOuterColumns } from "./utils";
+  sqlRenderer,
+} from "../sql.ts";
+import { freshInternalCteName, freshScopeId } from "./planner.ts";
+import { toQuerySpec } from "./state.ts";
+import { assertLoopColumns, normalizeIdentifier, qualifyOuterColumns } from "./utils.ts";
 import type {
   CanonicalJoinType,
   JoinColumnMerger,
   JoinColumnsForType,
   JoinOptions,
-} from "./join";
+} from "./join.ts";
 import type {
   QueryDeriveInit,
   QueryInit,
   QueryState,
-} from "./state";
+} from "./state.ts";
 import {
   resolveDerivedQueryInit,
   resolveQueryInitDefaults,
-} from "./state";
+} from "./state.ts";
 import {
   resolveAggregateQuery,
   resolveFilterQuery,
@@ -48,7 +56,8 @@ import {
   resolveOrderQuery,
   resolveSelectQuery,
   resolveUnionQuery,
-} from "./mutations";
+} from "./mutations.ts";
+import { userError } from "../errors.ts";
 
 type QueryColumns = Record<string, any>;
 
@@ -61,6 +70,31 @@ export type QueryIR<TColumns extends QueryColumns> = {
   source: Query<TColumns>["source"];
   stages: Query<TColumns>["stages"];
   scopeId: Query<TColumns>["sourceScopeId"];
+};
+
+export type QueryExplainStage<TColumns extends QueryColumns> = {
+  index: number;
+  kind: Query<TColumns>["stages"][number]["kind"];
+};
+
+export type QueryExplainCte = {
+  name: string;
+  kind: CteSpec["kind"];
+};
+
+export type QueryExplainResult<TColumns extends QueryColumns> = {
+  ir: QueryIR<TColumns>;
+  ast: AST;
+  sql: string;
+  params: SqlResult["params"];
+  columnNames: readonly string[];
+  stages: QueryExplainStage<TColumns>[];
+  ctes: QueryExplainCte[];
+  dialect: QueryDialect;
+  format: SqlFormat;
+  renderStrategy: SqlRenderStrategy;
+  parameterMode: SqlParameterMode;
+  parameterPrefix: SqlParameterPrefix;
 };
 
 /** Composable query builder with typed columns and SQL rendering. */
@@ -138,7 +172,7 @@ export class Query<TColumns extends QueryColumns> implements QueryState<TColumns
     return toIR(this);
   }
 
-  toAst(options?: { dialect?: Dialect }): AST {
+  toAst(options?: { dialect?: Dialect; renderStrategy?: SqlRenderStrategy }): AST {
     return toAst(this, options);
   }
 
@@ -148,6 +182,10 @@ export class Query<TColumns extends QueryColumns> implements QueryState<TColumns
 
   toSqlResult<TReturn extends SqlResult>(renderer: SqlRenderer<any, TReturn>): TReturn {
     return toSqlResult(this, renderer);
+  }
+
+  explain(options: SqlOptions = {}): QueryExplainResult<TColumns> {
+    return explain(this, options);
   }
 }
 
@@ -283,7 +321,7 @@ function buildLoop<TColumns extends QueryColumns>(
   const stepQuery = step(self);
   assertLoopColumns(base.columnNames, stepQuery.columnNames);
   if (base.withs.length || stepQuery.withs.length) {
-    throw new Error("loop does not allow nested CTEs in base or step queries");
+    userError("LOOP_NESTED_CTES", "loop does not allow nested CTEs in base or step queries");
   }
 
   const recursiveCte = createDeferredRecursiveCte(
@@ -378,7 +416,7 @@ export function toIR<TColumns extends QueryColumns>(query: Query<TColumns>): Que
 
 export function toAst<TColumns extends QueryColumns>(
   query: Query<TColumns>,
-  options?: { dialect?: Dialect }
+  options?: { dialect?: Dialect; renderStrategy?: SqlRenderStrategy }
 ): AST {
   return renderPipelineAst(
     query.source,
@@ -388,6 +426,7 @@ export function toAst<TColumns extends QueryColumns>(
     {
       baseCtes: query.withs,
       dialect: options?.dialect ? resolveDialect(options.dialect) : undefined,
+      renderStrategy: options?.renderStrategy,
     }
   );
 }
@@ -404,4 +443,43 @@ export function toSqlResult<TColumns extends QueryColumns, TReturn extends SqlRe
   renderer: SqlRenderer<any, TReturn>
 ): TReturn {
   return renderer.toSqlResult(query);
+}
+
+export function explain<TColumns extends QueryColumns>(
+  query: Query<TColumns>,
+  options: SqlOptions = {}
+): QueryExplainResult<TColumns> {
+  const resolved = buildSqlOptions(options);
+  const renderer = sqlRenderer(options);
+  const sqlResult = renderer.toSqlResult(query);
+
+  return {
+    ir: toIR(query),
+    ast: renderPipelineAst(
+      query.source,
+      query.stages,
+      query.columnNames,
+      query.sourceScopeId,
+      {
+        baseCtes: query.withs,
+        dialect: resolved.dialect,
+      }
+    ),
+    sql: sqlResult.sql,
+    params: sqlResult.params,
+    columnNames: query.columnNames,
+    stages: query.stages.map((stage, index) => ({
+      index,
+      kind: stage.kind,
+    })),
+    ctes: query.withs.map((cte) => ({
+      name: cte.name,
+      kind: cte.kind,
+    })),
+    dialect: resolved.dialect,
+    format: resolved.sqlFormat,
+    renderStrategy: resolved.renderStrategy,
+    parameterMode: resolved.parameterMode,
+    parameterPrefix: resolved.parameterPrefix,
+  };
 }

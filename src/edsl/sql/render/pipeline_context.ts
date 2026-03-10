@@ -3,7 +3,7 @@ import {
   createAstRenderContext,
   getSqlRenderContext,
   withSqlRenderContext,
-} from "./render";
+} from "./render.ts";
 
 export function withPipelineAstRenderContext(render: () => AST): AST {
   if (getSqlRenderContext()) {

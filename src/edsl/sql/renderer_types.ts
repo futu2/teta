@@ -1,12 +1,13 @@
 import { Parser, type Option } from "node-sql-parser";
-import type { CteSpec, ExprNode, ScopeId, Source, Stage } from "../core/types";
+import type { CteSpec, ExprNode, ScopeId, Source, Stage } from "../core/types.ts";
 import type {
   QueryDialect,
   SqlFormat,
   SqlOptions,
   SqlParameterMode,
   SqlParameterPrefix,
-} from "./types";
+  SqlRenderStrategy,
+} from "./types.ts";
 
 export type QuerySqlTarget = {
   source: Source;
@@ -29,6 +30,7 @@ export type RendererState = {
   dialect: QueryDialect;
   options?: Option;
   sqlFormat: SqlFormat;
+  renderStrategy: SqlRenderStrategy;
   parameterMode: SqlParameterMode;
   parameterPrefix: SqlParameterPrefix;
 };

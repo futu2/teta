@@ -13,8 +13,8 @@ import {
   rowNumber,
   sum,
   sumOver,
-} from "../ops/aggregate";
-import { defineExprMethods } from "./shared";
+} from "../ops/aggregate.ts";
+import { defineExprMethods } from "./shared.ts";
 
 defineExprMethods([
   ["group", group],

@@ -1,12 +1,12 @@
 import { watch as watchFs } from "node:fs";
 import { writeFile } from "node:fs/promises";
-import { copyTextToClipboard } from "./clipboard";
+import { copyTextToClipboard } from "./clipboard.ts";
 import {
   renderSqlFromSource,
   renderSqlFromSourceIsolated,
-} from "./render_source";
-import type { WatchQueryController, WatchQuerySourceOptions } from "./watch_shared";
-import { resolveWatchQuerySourceOptions } from "./watch_shared";
+} from "./render_source.ts";
+import type { WatchQueryController, WatchQuerySourceOptions } from "./watch_shared.ts";
+import { resolveWatchQuerySourceOptions } from "./watch_shared.ts";
 
 export async function watchQuerySourceToClipboard(
   options: WatchQuerySourceOptions

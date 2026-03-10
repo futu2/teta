@@ -1,6 +1,6 @@
-import type { BuiltinDialect } from "../../types";
-import { BUILTIN_DIALECTS } from "./builtin";
-import type { BuiltinDialectDefinition } from "./types";
+import type { BuiltinDialect } from "../../types.ts";
+import { BUILTIN_DIALECTS } from "./builtin.ts";
+import type { BuiltinDialectDefinition } from "./types.ts";
 
 const COMPACT_ALIASES: Record<string, BuiltinDialect> = {
   hetu: "hetu",

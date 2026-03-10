@@ -1,11 +1,11 @@
-import type { Stage } from "../../core/types";
+import type { Stage } from "../../core/types.ts";
 import {
   compactLoopStages,
   optimizeLoopStage,
   type LoopPartLabel,
-} from "./recursive_optimizer_stage";
+} from "./recursive_optimizer_stage.ts";
 
-export type { LoopPartLabel } from "./recursive_optimizer_stage";
+export type { LoopPartLabel } from "./recursive_optimizer_stage.ts";
 
 export function optimizeLoopStages(
   stages: Stage[],

@@ -1,4 +1,4 @@
-import type { CteSpec, InternalCteName, QuerySpec } from "../../core/types";
+import type { CteSpec, InternalCteName, QuerySpec } from "../../core/types.ts";
 
 export type RecursivePart = QuerySpec;
 

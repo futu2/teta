@@ -1,5 +1,6 @@
-import type { ExprNode } from "../../core/types";
-import type { DialectLanguageConfig } from "../types";
+import type { ExprNode } from "../../core/types.ts";
+import type { DialectLanguageConfig } from "../types.ts";
+import { userError } from "../../errors.ts";
 
 type ResolvedLanguage = Required<DialectLanguageConfig>;
 
@@ -7,8 +8,8 @@ import {
   applyFallback,
   resolveFunctionName,
   rewriteFallback,
-} from "./fallback";
-import { literal } from "./fallback_ast";
+} from "./fallback.ts";
+import { literal } from "./fallback_ast.ts";
 
 export function rewriteDialectExpr(
   expr: ExprNode<any>,
@@ -140,7 +141,7 @@ export function validateDialectExpr(
     case "func": {
       const normalized = expr.name.toUpperCase();
       if (language.unsupported.includes(normalized)) {
-        throw new Error(`Function ${expr.name} is not supported by this dialect`);
+        userError("UNSUPPORTED_DIALECT_FUNCTION", `Function ${expr.name} is not supported by this dialect`);
       }
       expr.args.forEach((item) => validateDialectExpr(item, language));
       return;
@@ -149,4 +150,3 @@ export function validateDialectExpr(
       return;
   }
 }
-

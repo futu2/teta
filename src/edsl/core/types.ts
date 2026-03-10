@@ -1,3 +1,3 @@
-export * from "./types_internal";
-export * from "./types_expr";
-export * from "./types_query";
+export * from "./types_internal.ts";
+export * from "./types_expr.ts";
+export * from "./types_query.ts";

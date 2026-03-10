@@ -1,6 +1,6 @@
-import type { JoinType, JoinTypeInput } from "../core/types";
-import { mergeColumnNames } from "../expr";
-import type { ColumnRefs, ExprRefs } from "../expr";
+import type { JoinType, JoinTypeInput } from "../core/types.ts";
+import { mergeColumnNames } from "../expr.ts";
+import type { ColumnRefs, ExprRefs } from "../expr.ts";
 
 export type JoinColumnMerger<
   TLeft extends Record<string, any>,

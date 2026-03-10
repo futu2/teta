@@ -1,6 +1,6 @@
-import type { Dialect, QueryDialect } from "../../types";
-import { getDefaultDialect, resolveNamedDialect } from "./resolve_common";
-import { isDialectSpec, resolveDialectSpec } from "./resolve_spec";
+import type { Dialect, QueryDialect } from "../../types.ts";
+import { getDefaultDialect, resolveNamedDialect } from "./resolve_common.ts";
+import { isDialectSpec, resolveDialectSpec } from "./resolve_spec.ts";
 
 export function resolveDialect(dialect?: Dialect): QueryDialect {
   if (!dialect) return getDefaultDialect();

@@ -1,5 +1,5 @@
-import type { ExprNode } from "../../core/types";
-import { splitPredicateConjuncts } from "./predicate_boolean";
+import type { ExprNode } from "../../core/types.ts";
+import { splitPredicateConjuncts } from "./predicate_boolean.ts";
 
 export type PredicateFactorization = {
   shared: ExprNode<unknown> | null;

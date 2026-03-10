@@ -1,4 +1,4 @@
-import type { BuiltinDialect, DialectFeatures, DialectLanguageConfig } from "../../types";
+import type { BuiltinDialect, DialectFeatures, DialectLanguageConfig } from "../../types.ts";
 
 export type BuiltinDialectDefinition = {
   name: BuiltinDialect;

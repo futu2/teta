@@ -1,4 +1,4 @@
-import type { SqlFloat, SqlInt, SqlNumber } from "../../types";
+import type { SqlFloat, SqlInt, SqlNumber } from "../../types.ts";
 import {
   ExprRef,
   aggregateExpr,
@@ -8,7 +8,7 @@ import {
   type PropagateNull,
   type WindowBuilder,
   type WindowSpecInput,
-} from "../core";
+} from "../core.ts";
 
 type NullableSqlNumber = SqlNumber | null;
 

@@ -1,27 +1,28 @@
-import { Parser } from "node-sql-parser";
-import { buildSqlOptions } from "./dialect";
+import nodeSqlParser from "node-sql-parser";
+const { Parser } = nodeSqlParser;
+import { buildSqlOptions } from "./dialect.ts";
 import type {
   QueryDialect,
   SqlRenderer,
   SqlResult,
-} from "./types";
+} from "./types.ts";
 import {
   isExprSqlTarget,
   renderExprTarget,
   renderQueryTarget,
-} from "./renderer_target";
+} from "./renderer_target.ts";
 import type {
   BuiltinSqlRendererOptions,
   RendererState,
   SqlCompilable,
-} from "./renderer_types";
+} from "./renderer_types.ts";
 
 export type {
   BuiltinSqlRendererOptions,
   ExprSqlTarget,
   QuerySqlTarget,
   SqlCompilable,
-} from "./renderer_types";
+} from "./renderer_types.ts";
 
 export function sqlRenderer(
   options = {}
@@ -73,6 +74,7 @@ function createRendererState(options: Parameters<typeof buildSqlOptions>[0]): Re
     dialect: resolved.dialect,
     options: resolved.options,
     sqlFormat: resolved.sqlFormat,
+    renderStrategy: resolved.renderStrategy,
     parameterMode: resolved.parameterMode,
     parameterPrefix: resolved.parameterPrefix,
   };

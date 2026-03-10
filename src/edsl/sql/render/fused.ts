@@ -1,10 +1,11 @@
-import type { QueryDialect } from "../types";
-import { isInternalScopeName, type ExprNode, type ScopeId, type SelectItem } from "../../core/types";
-import { shouldAlias } from "../../core/expr";
-import { selectItemOutputName } from "../../query/utils";
-import type { ScopeBindings } from "./types";
-import { renderIdentifier } from "./identifiers";
-import { bindExprScopes, exprToAst, getSqlRenderContext } from "./render";
+import type { QueryDialect } from "../types.ts";
+import { isInternalScopeName, type ExprNode, type ScopeId, type SelectItem } from "../../core/types.ts";
+import { shouldAlias } from "../../core/expr.ts";
+import { selectItemOutputName } from "../../query/utils.ts";
+import type { ScopeBindings } from "./types.ts";
+import { renderIdentifier } from "./identifiers.ts";
+import { internalError } from "../../errors.ts";
+import { bindExprScopes, exprToAst, getSqlRenderContext } from "./render.ts";
 
 export type ScopeExprLookup = Partial<Record<ScopeId, Record<string, ExprNode<unknown>>>>;
 
@@ -23,7 +24,7 @@ export function selectExpandedColumns(
   scopeExprs: ScopeExprLookup,
   bindings: ScopeBindings,
   dialect: QueryDialect
-): import("./types").SelectColumnAst[] {
+): import("./types.ts").SelectColumnAst[] {
   return columnNames.map((name) => {
     const expr = bindFusedExpr({ kind: "column", table: scopeId, name }, scopeExprs, bindings, dialect);
     return {
@@ -40,7 +41,7 @@ export function selectItemsToScopeMap(items: SelectItem[]): Record<string, ExprN
   for (const item of items) {
     const name = selectItemOutputName(item);
     if (!name) {
-      throw new Error("Cannot fuse a stage with unnamed select items");
+      internalError("INTERNAL_UNNAMED_SELECT_ITEM", "Cannot fuse a stage with unnamed select items");
     }
     mapping[name] = item.expr;
   }
@@ -58,7 +59,7 @@ function expandScopeExprs(
       if (!mapping) return expr;
       const expanded = mapping[expr.name];
       if (!expanded) {
-        throw new Error(`Missing fused scope mapping for ${expr.table}.${expr.name}`);
+        internalError("INTERNAL_MISSING_FUSED_SCOPE_MAPPING", `Missing fused scope mapping for ${expr.table}.${expr.name}`);
       }
       return expandScopeExprs(expanded, scopeExprs);
     }

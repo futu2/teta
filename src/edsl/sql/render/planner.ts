@@ -1,5 +1,6 @@
-import type { ScopeId, SelectItem, SqlIdentifier, Stage } from "../../core/types";
-import { selectItemOutputName, selectItemsToIdentifierMap } from "../../query/utils";
+import type { ScopeId, SelectItem, SqlIdentifier, Stage } from "../../core/types.ts";
+import { selectItemOutputName, selectItemsToIdentifierMap } from "../../query/utils.ts";
+import { internalError } from "../../errors.ts";
 
 export type StagePlanningState = {
   scopeId: ScopeId;
@@ -77,12 +78,12 @@ function selectItemNames(items: SelectItem[]): string[] {
   return items.map((item) => {
     const name = selectItemOutputName(item);
     if (!name) {
-      throw new Error("Internal error: stage select item is missing an output name");
+      internalError("INTERNAL_STAGE_SELECT_ITEM_OUTPUT_NAME_MISSING", "Internal error: stage select item is missing an output name");
     }
     return name;
   });
 }
 
 function assertNever(value: never): never {
-  throw new Error(`Unexpected value: ${String(value)}`);
+  internalError("INTERNAL_UNEXPECTED_VALUE", `Unexpected value: ${String(value)}`);
 }

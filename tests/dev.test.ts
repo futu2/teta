@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { renderSqlFromSource } from "../mod.ts";
+import { renderSqlFromSource } from "../dev.ts";
 import { missingQueryExportError } from "./helpers/expected-errors.ts";
 
 const createdDirs: string[] = [];

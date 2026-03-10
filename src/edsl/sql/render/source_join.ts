@@ -1,10 +1,10 @@
 import type { With } from "node-sql-parser";
-import { generatedCteName, type GeneratedCteName, type JoinSource, type Stage } from "../../core/types";
-import type { QueryDialect } from "../types";
-import type { SelectAst } from "./types";
-import { toParserSelect } from "./ast";
-import { buildPipelineAst } from "./build";
-import { getDefaultDialect } from "../dialect";
+import { generatedCteName, type GeneratedCteName, type JoinSource, type Stage } from "../../core/types.ts";
+import type { QueryDialect } from "../types.ts";
+import type { SelectAst } from "./types.ts";
+import { toParserSelect } from "./ast.ts";
+import { buildPipelineAst } from "./build.ts";
+import { getDefaultDialect } from "../dialect.ts";
 
 export function hoistJoinSubquery(
   stage: Stage,

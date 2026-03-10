@@ -13,8 +13,8 @@ import {
   second,
   toUnixTime,
   year,
-} from "../ops/date";
-import { defineExprMethods } from "./shared";
+} from "../ops/date.ts";
+import { defineExprMethods } from "./shared.ts";
 
 defineExprMethods([
   ["extract", extract],

@@ -1,4 +1,5 @@
-import type { ExprNode } from "../../core/types";
+import type { ExprNode } from "../../core/types.ts";
+import { internalError } from "../../errors.ts";
 
 export function splitPredicateConjuncts(
   predicate: ExprNode<unknown>
@@ -103,7 +104,7 @@ export function mergeNormalizedBooleanTerms(
   const terms = dedupePredicateBranch(predicates);
   const merged = mergeBooleanPredicateList(terms, op);
   if (!merged) {
-    throw new Error("Cannot merge an empty predicate list");
+    internalError("INTERNAL_EMPTY_PREDICATE_MERGE", "Cannot merge an empty predicate list");
   }
   return merged;
 }

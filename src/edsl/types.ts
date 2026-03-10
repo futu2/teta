@@ -1,2 +1,2 @@
-export * from "./core/types";
-export * from "./sql/types";
+export * from "./core/types.ts";
+export * from "./sql/types.ts";

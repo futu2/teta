@@ -1,17 +1,18 @@
-import type { Stage } from "../../core/types";
-import type { FromAst, ScopeBindings, SelectAst, SubqueryFromRef, TableFromAst } from "./types";
-import { ensureSelectAst, replaceOuterAlias, toParserSelect } from "./ast";
-import { getSqlRenderContext, bindExprScopes, exprToAst, lateralJoinPrefix } from "./render";
-import { registerColumnIdentifierBindings } from "./identifiers";
+import type { Stage } from "../../core/types.ts";
+import type { FromAst, ScopeBindings, SelectAst, SubqueryFromRef, TableFromAst } from "./types.ts";
+import { ensureSelectAst, replaceOuterAlias, toParserSelect } from "./ast.ts";
+import { getSqlRenderContext, bindExprScopes, exprToAst, lateralJoinPrefix } from "./render.ts";
+import { registerColumnIdentifierBindings } from "./identifiers.ts";
 import {
   buildSelectAst,
   buildTableFromRef,
   compileJoinSource,
-} from "./source";
+} from "./source.ts";
 import {
   renderBoundSelectItems,
   type StageSelectContext,
-} from "./select_stage";
+} from "./select_stage.ts";
+import { internalError } from "../../errors.ts";
 
 export function buildJoinStageAst(
   stage: Extract<Stage, { kind: "join" }>,
@@ -104,5 +105,5 @@ function buildJoinFromRef(
 }
 
 function fail(message: string): never {
-  throw new Error(message);
+  internalError("INTERNAL_JOIN_ALIAS_REQUIRED", message);
 }

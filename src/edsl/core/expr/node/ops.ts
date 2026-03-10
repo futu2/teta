@@ -1,4 +1,5 @@
-import { OUTER_TABLE_ALIAS, isInternalScopeName, type ExprNode } from "../../types";
+import { OUTER_TABLE_ALIAS, isInternalScopeName, type ExprNode } from "../../types.ts";
+import { userError } from "../../../errors.ts";
 
 export function containsGroup(expr: ExprNode<unknown>, inAgg = false): boolean {
   switch (expr.kind) {
@@ -52,7 +53,7 @@ export function unwrapGroupExpr(
   switch (expr.kind) {
     case "group":
       if (inAgg) {
-        throw new Error("group() cannot be used inside aggregate functions");
+        userError("GROUP_INSIDE_AGGREGATE_FUNCTION", "group() cannot be used inside aggregate functions");
       }
       groupBy.push(expr.expr);
       return unwrapGroupExpr(expr.expr, groupBy, false);

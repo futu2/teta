@@ -1,11 +1,12 @@
 import type {
   DialectFeatures,
   QueryDialect,
-} from "../../types";
-import { DEFAULT_DIALECT } from "./default";
-import { resolveDialectLanguage } from "./language";
-import type { BuiltinDialectDefinition } from "./types";
-import { lookupBuiltinDialect, suggestCanonicalBuiltin } from "./lookup";
+} from "../../types.ts";
+import { DEFAULT_DIALECT } from "./default.ts";
+import { resolveDialectLanguage } from "./language.ts";
+import type { BuiltinDialectDefinition } from "./types.ts";
+import { lookupBuiltinDialect, suggestCanonicalBuiltin } from "./lookup.ts";
+import { userError } from "../../errors.ts";
 
 export function getDefaultDialect(): QueryDialect {
   return cloneDialect(DEFAULT_DIALECT);
@@ -83,7 +84,8 @@ export function resolveFeatureFlags(
 export function assertCanonicalBuiltinName(rawName: string): void {
   const canonicalBuiltin = suggestCanonicalBuiltin(rawName);
   if (canonicalBuiltin && rawName !== canonicalBuiltin) {
-    throw new Error(
+    userError(
+      "INVALID_BUILTIN_DIALECT_NAME",
       `Invalid built-in dialect '${rawName}'. Use canonical lowercase '${canonicalBuiltin}'.`
     );
   }

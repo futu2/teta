@@ -1,10 +1,11 @@
 import type { AST, Select } from "node-sql-parser";
-import { OUTER_TABLE_ALIAS } from "../../core/types";
-import type { FromAst, GroupByAst, LimitAst, OrderByAst, ParserExprAst, SelectAst, SelectColumnAst } from "./types";
+import { internalError } from "../../errors.ts";
+import { OUTER_TABLE_ALIAS } from "../../core/types.ts";
+import type { FromAst, GroupByAst, LimitAst, OrderByAst, ParserExprAst, SelectAst, SelectColumnAst } from "./types.ts";
 
 export function toParserSelect(ast: SelectAst): Select {
   if (!isParserSelect(ast)) {
-    throw new Error("Internal error: generated AST is not a parser-compatible SELECT");
+    internalError("INTERNAL_PARSER_SELECT_EXPECTED", "Internal error: generated AST is not a parser-compatible SELECT");
   }
   return ast;
 }
@@ -34,7 +35,7 @@ export function isSelectAst(ast: AST): ast is Select {
 
 export function ensureSelectAst(ast: AST, context: string): SelectAst {
   if (!isSelectAst(ast)) {
-    throw new Error(`${context} expected a select AST but got ${ast.type}`);
+    internalError("INTERNAL_PARSER_SELECT_EXPECTED", `${context} expected a select AST but got ${ast.type}`);
   }
   return fromParserSelect(ast);
 }

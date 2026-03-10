@@ -1,4 +1,4 @@
-import type { BuiltinDialectDefinition } from "./types";
+import type { BuiltinDialectDefinition } from "./types.ts";
 
 export const SNOWFLAKE_DIALECT: BuiltinDialectDefinition = {
   name: "snowflake",

@@ -148,4 +148,24 @@ describe("renderer API", () => {
       ],
     });
   });
+
+  test("Query.toSql supports bigint literals on bigint columns", () => {
+    const sessions = table("sessions", {
+      session_id: t.bigint(),
+    });
+    const query = sessions
+      .filter((session) => session.session_id.eq(42n))
+      .select((session) => ({ session_id: session.session_id }));
+
+    expect(
+      query.toSql(
+        sqlRenderer({
+          dialect: "postgresql",
+          format: "compact",
+        })
+      )
+    ).toBe(
+      "SELECT sessions_0.session_id FROM sessions AS sessions_0 WHERE sessions_0.session_id = 42"
+    );
+  });
 });

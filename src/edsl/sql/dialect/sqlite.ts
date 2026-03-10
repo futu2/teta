@@ -1,4 +1,4 @@
-import type { BuiltinDialectDefinition } from "./types";
+import type { BuiltinDialectDefinition } from "./types.ts";
 
 export const SQLITE_DIALECT: BuiltinDialectDefinition = {
   name: "sqlite",

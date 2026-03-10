@@ -4,39 +4,39 @@ import type {
   JoinTypeInput,
   OrderItem,
   Stage,
-} from "../core/types";
+} from "../core/types.ts";
 import {
   createColumnRefs,
   dedupeExprs,
   selectAllItems,
-} from "../expr";
+} from "../expr.ts";
 import type {
   ColumnRefs,
   ExprRef,
   SelectResult,
   SelectShape,
-} from "../expr";
+} from "../expr.ts";
 import {
   autoAlias,
   assertUnionCompatible,
   mergeWiths,
   normalizeJoinType,
   selectItemsToIdentifierMap,
-} from "./utils";
+} from "./utils.ts";
 import {
   freshScopeId,
   resolveAggregateProjection,
   resolveSelectProjection,
-} from "./planner";
+} from "./planner.ts";
 import {
   resolveJoinColumns,
   type JoinColumnMerger,
-} from "./join";
+} from "./join.ts";
 import type {
   QueryDeriveInit,
   QueryState,
-} from "./state";
-import { toQuerySpec } from "./state";
+} from "./state.ts";
+import { toQuerySpec } from "./state.ts";
 
 export function resolveSelectQuery<
   TColumns extends Record<string, any>,

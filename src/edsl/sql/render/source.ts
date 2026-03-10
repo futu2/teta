@@ -5,11 +5,11 @@ import type {
   OrderByAst,
   SelectAst,
   SelectColumnAst,
-} from "./types";
+} from "./types.ts";
 
-export type { CompileSourceRef } from "./source_ref";
-export { buildTableFromRef, sourceToFrom } from "./source_ref";
-export { compileJoinSource, hoistJoinSubquery } from "./source_join";
+export type { CompileSourceRef } from "./source_ref.ts";
+export { buildTableFromRef, sourceToFrom } from "./source_ref.ts";
+export { compileJoinSource, hoistJoinSubquery } from "./source_join.ts";
 
 export function buildSelectAst(params: {
   from: FromAst[];

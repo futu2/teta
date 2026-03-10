@@ -1,5 +1,5 @@
-import type { BuiltinDialect, DialectLanguageConfig } from "../../types";
-import { BUILTIN_DIALECTS } from "./builtin";
+import type { BuiltinDialect, DialectLanguageConfig } from "../../types.ts";
+import { BUILTIN_DIALECTS } from "./builtin.ts";
 
 export const IDENTITY_LANGUAGE: Required<DialectLanguageConfig> = {
   functions: {},

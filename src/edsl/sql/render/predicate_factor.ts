@@ -1,4 +1,4 @@
-import type { ExprNode } from "../../core/types";
+import type { ExprNode } from "../../core/types.ts";
 import {
   dedupePredicateBranch,
   mergeBooleanPredicates,
@@ -9,19 +9,19 @@ import {
   predicateKey,
   splitPredicateConjuncts,
   splitPredicateDisjuncts,
-} from "./predicate_boolean";
-import { predicateConjunctiveBranches } from "./predicate_factor_branches";
+} from "./predicate_boolean.ts";
+import { predicateConjunctiveBranches } from "./predicate_factor_branches.ts";
 import {
   compareFactorizations,
   type PredicateFactorization,
-} from "./predicate_factor_score";
+} from "./predicate_factor_score.ts";
 
 export {
   mergeBooleanPredicates,
   mergePredicateList,
   splitPredicateConjuncts,
-} from "./predicate_boolean";
-export type { PredicateFactorization } from "./predicate_factor_score";
+} from "./predicate_boolean.ts";
+export type { PredicateFactorization } from "./predicate_factor_score.ts";
 
 export function factorSharedPredicateConjuncts(
   predicate: ExprNode<unknown>

@@ -1,10 +1,10 @@
-import type { ExprNode } from "../../core/types";
+import type { ExprNode } from "../../core/types.ts";
 import {
   dedupePredicateBranch,
   splitPredicateConjuncts,
   splitPredicateDisjuncts,
   unwrapPredicateGroups,
-} from "./predicate_boolean";
+} from "./predicate_boolean.ts";
 
 const MAX_NORMALIZED_PREDICATE_BRANCHES = 32;
 

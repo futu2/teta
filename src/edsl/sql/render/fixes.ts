@@ -1,10 +1,11 @@
 import type { AST } from "node-sql-parser";
-import type { QueryDialect } from "../types";
-import { cloneAst, isSelectAst } from "./ast";
+import { userError } from "../../errors.ts";
+import type { QueryDialect } from "../types.ts";
+import { cloneAst, isSelectAst } from "./ast.ts";
 
 export function applyDialectFixes(ast: AST, dialect: QueryDialect): AST {
   if (!dialect.features.recursiveCte && containsRecursiveCte(ast)) {
-    throw new Error(`Dialect ${dialect.name} does not support recursive CTE`);
+    userError("UNSUPPORTED_RECURSIVE_CTE", `Dialect ${dialect.name} does not support recursive CTE`);
   }
   if (dialect.features.lateralJoinKeyword) return ast;
   const copy = cloneAst(ast);

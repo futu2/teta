@@ -2,26 +2,40 @@ import type {
   ColumnType,
   InferSchema,
   TableSourceInput,
-} from "../core/types";
-import { createColumnRefs } from "../expr";
+} from "../core/types.ts";
+import { createColumnRefs } from "../expr.ts";
 import type {
+  SqlBigInt,
+  SqlBytes,
   SqlDate,
+  SqlDecimal,
   SqlFloat,
   SqlInt,
+  SqlJson,
   SqlTimestamp,
-} from "../sql/types";
-import type { Query } from "./builder";
-import { createQuery } from "./builder";
-import { freshScopeId } from "./planner";
-import { normalizeTableSource } from "./utils";
+  SqlUuid,
+} from "../sql/types.ts";
+import type { Query } from "./builder.ts";
+import { createQuery } from "./builder.ts";
+import { freshScopeId } from "./planner.ts";
+import { normalizeTableSource } from "./utils.ts";
 
 export const t = {
   string: () => ({ kind: "column_type" } as ColumnType<string>),
   int: () => ({ kind: "column_type" } as ColumnType<SqlInt>),
   float: () => ({ kind: "column_type" } as ColumnType<SqlFloat>),
+  bigint: () => ({ kind: "column_type" } as ColumnType<SqlBigInt>),
+  decimal: () => ({ kind: "column_type" } as ColumnType<SqlDecimal>),
   boolean: () => ({ kind: "column_type" } as ColumnType<boolean>),
   date: () => ({ kind: "column_type" } as ColumnType<SqlDate>),
   timestamp: () => ({ kind: "column_type" } as ColumnType<SqlTimestamp>),
+  uuid: () => ({ kind: "column_type" } as ColumnType<SqlUuid>),
+  json: <T = unknown>() => ({ kind: "column_type" } as ColumnType<SqlJson<T>>),
+  bytes: () => ({ kind: "column_type" } as ColumnType<SqlBytes>),
+  nullable: <T>(column: ColumnType<T>): ColumnType<T | null> => {
+    void column;
+    return { kind: "column_type" } as ColumnType<T | null>;
+  },
 };
 
 /** Define a table with a schema and return a typed query builder. */

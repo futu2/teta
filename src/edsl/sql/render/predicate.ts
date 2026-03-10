@@ -3,4 +3,4 @@ export {
   mergePredicates,
   partitionAggregatePredicate,
   partitionWindowPredicate,
-} from "./predicate_partition";
+} from "./predicate_partition.ts";

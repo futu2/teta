@@ -1,5 +1,6 @@
 export {
   Query,
+  explain,
   aggregate,
   filter,
   join,
@@ -12,7 +13,7 @@ export {
   toSqlResult,
   union,
   unionAll,
-} from "./query/builder";
-export type { QueryIR, QueryStep } from "./query/builder";
-export { loop } from "./query/loop";
-export { t, table } from "./query/schema";
+} from "./query/builder.ts";
+export type { QueryExplainResult, QueryIR, QueryStep } from "./query/builder.ts";
+export { loop } from "./query/loop.ts";
+export { t, table } from "./query/schema.ts";

@@ -1,6 +1,7 @@
-import type { OrderItem } from "../../../core/types";
-import type { SqlDate, SqlNumber, SqlTimestamp } from "../../types";
-import { ExprRef, binaryExpr, toExprNode, type ExprInput } from "../core";
+import type { OrderItem } from "../../../core/types.ts";
+import type { SqlDate, SqlNumber, SqlTimestamp } from "../../types.ts";
+import { ExprRef, binaryExpr, toExprNode, type ExprInput } from "../core.ts";
+import { userError } from "../../../errors.ts";
 
 type ComparableInput = SqlNumber | SqlDate | SqlTimestamp | null;
 
@@ -49,7 +50,7 @@ export function isIn<T>(
   values: readonly ExprInput<T>[]
 ): ExprRef<boolean> {
   if (values.length === 0) {
-    throw new Error("in requires at least one value");
+    userError("INVALID_FUNCTION_NAME", "in requires at least one value");
   }
   return binaryExpr("IN", toExprNode(value), {
     kind: "list",

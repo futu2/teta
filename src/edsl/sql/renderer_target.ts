@@ -1,16 +1,16 @@
-import { applyDialectLanguage } from "./language";
-import { applyDialectFixes } from "./render/fixes";
-import { renderPipelineAst } from "./render/pipeline";
-import { withSqlRenderContext } from "./render/render";
-import type { SqlRenderContext } from "./render/types";
-import { createRenderContext, renderAst, renderExprNode } from "./renderer_output";
+import { applyDialectLanguage } from "./language.ts";
+import { applyDialectFixes } from "./render/fixes.ts";
+import { renderPipelineAst } from "./render/pipeline.ts";
+import { withSqlRenderContext } from "./render/render.ts";
+import type { SqlRenderContext } from "./render/types.ts";
+import { createRenderContext, renderAst, renderExprNode } from "./renderer_output.ts";
 import type {
   ExprSqlTarget,
   QuerySqlTarget,
   RendererState,
   SqlCompilable,
-} from "./renderer_types";
-import type { SqlResult } from "./types";
+} from "./renderer_types.ts";
+import type { SqlResult } from "./types.ts";
 
 export function renderQueryTarget(
   target: QuerySqlTarget,
@@ -22,6 +22,7 @@ export function renderQueryTarget(
       renderPipelineAst(target.source, target.stages, target.columnNames, target.sourceScopeId, {
         baseCtes: target.withs ?? [],
         dialect: state.dialect,
+        renderStrategy: state.renderStrategy,
       }),
       state.dialect
     )

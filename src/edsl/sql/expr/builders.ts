@@ -1,6 +1,6 @@
-import type { CaseWhenNode, ExprNode } from "../../core/types";
-import { ExprRef, fn, lit, toExprNode, type CaseBuilder, type ExprInput } from "./core";
-import { group } from "./ops/aggregate";
+import type { CaseWhenNode, ExprNode } from "../../core/types.ts";
+import { ExprRef, fn, lit, toExprNode, type CaseBuilder, type ExprInput } from "./core.ts";
+import { group } from "./ops/aggregate.ts";
 
 export type ExprShape<T extends Record<string, ExprRef<unknown>>> = {
   map: (mapper: (value: T[keyof T]) => ExprRef<unknown>) => {

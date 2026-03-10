@@ -1,15 +1,15 @@
-import type { ExprNode } from "../../core/types";
-import type { QueryDialect } from "../types";
-import type { ParserExprAst, SqlRenderContext } from "./types";
-import { exprNodeToAst } from "./expr_ast";
-import { getSqlRenderContext } from "./render_context";
+import type { ExprNode } from "../../core/types.ts";
+import type { QueryDialect } from "../types.ts";
+import type { ParserExprAst, SqlRenderContext } from "./types.ts";
+import { exprNodeToAst } from "./expr_ast.ts";
+import { getSqlRenderContext } from "./render_context.ts";
 
 export {
   createAstRenderContext,
   getSqlRenderContext,
   withSqlRenderContext,
-} from "./render_context";
-export { bindExprScopes } from "./render_scope";
+} from "./render_context.ts";
+export { bindExprScopes } from "./render_scope.ts";
 
 export function exprToAst(
   expr: ExprNode<unknown>,

@@ -1,21 +1,21 @@
-import type { ScopeId, SelectItem, Stage } from "../../core/types";
-import type { QueryDialect } from "../types";
-import type { FromAst, GroupByAst, ScopeBindings, SelectAst, SelectColumnAst } from "./types";
-import { ensureAlias } from "./ast";
+import type { ScopeId, SelectItem, Stage } from "../../core/types.ts";
+import type { QueryDialect } from "../types.ts";
+import type { FromAst, GroupByAst, ScopeBindings, SelectAst, SelectColumnAst } from "./types.ts";
+import { ensureAlias } from "./ast.ts";
 import {
   getSqlRenderContext,
   bindExprScopes,
   exprToAst,
-} from "./render";
+} from "./render.ts";
 import {
   registerColumnIdentifierBindings,
   renderIdentifier,
-} from "./identifiers";
+} from "./identifiers.ts";
 import {
   buildSelectAst,
   sourceToFrom,
   type CompileSourceRef,
-} from "./source";
+} from "./source.ts";
 
 export type StageSelectContext = {
   baseFrom: FromAst;

@@ -1,14 +1,14 @@
-import type { QueryDialect } from "../types";
-import type { ExprNode, ScopeId, Source, SqlIdentifier, Stage } from "../../core/types";
-import { createColumnRefs, selectAllItems } from "../../core/expr";
-import { columnNamesToIdentifierMap, selectItemsToIdentifierMap } from "../../query/utils";
-import type { FromAst, GroupByAst, LimitAst, OrderByAst, ScopeBindings, SelectAst, SelectColumnAst } from "./types";
-import { ensureAlias } from "./ast";
-import { bindExprScopes, exprToAst, getSqlRenderContext } from "./render";
-import { sourceToFrom, type CompileSourceRef, buildSelectAst } from "./source";
-import { registerColumnIdentifierBindings, renderIdentifier } from "./identifiers";
-import { bindFusedExpr, selectExpandedColumns, type ScopeExprLookup } from "./fused";
-import type { StagePlanningState } from "./planner";
+import type { QueryDialect } from "../types.ts";
+import type { ExprNode, ScopeId, Source, SqlIdentifier, Stage } from "../../core/types.ts";
+import { createColumnRefs, selectAllItems } from "../../core/expr.ts";
+import { columnNamesToIdentifierMap, selectItemsToIdentifierMap } from "../../query/utils.ts";
+import type { FromAst, GroupByAst, LimitAst, OrderByAst, ScopeBindings, SelectAst, SelectColumnAst } from "./types.ts";
+import { ensureAlias } from "./ast.ts";
+import { bindExprScopes, exprToAst, getSqlRenderContext } from "./render.ts";
+import { sourceToFrom, type CompileSourceRef, buildSelectAst } from "./source.ts";
+import { registerColumnIdentifierBindings, renderIdentifier } from "./identifiers.ts";
+import { bindFusedExpr, selectExpandedColumns, type ScopeExprLookup } from "./fused.ts";
+import type { StagePlanningState } from "./planner.ts";
 
 export type CompiledSegment = {
   ast: SelectAst;

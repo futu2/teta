@@ -19,8 +19,8 @@ import {
   substring,
   trim,
   upper,
-} from "../ops/string";
-import { defineExprMethods } from "./shared";
+} from "../ops/string.ts";
+import { defineExprMethods } from "./shared.ts";
 
 defineExprMethods([
   ["replace", replace],

@@ -1,11 +1,12 @@
-import type { QuerySpec } from "../../core/types";
-import type { QueryDialect } from "../types";
-import type { SelectAst } from "./types";
-import { stageToSelect } from "./select";
-import type { CompileSourceRef } from "./source";
-import { buildBaseSelectAst } from "./segment";
-import { optimizeLoopStages, type LoopPartLabel } from "./recursive_optimizer";
-import { advanceStagePlanningState, type StagePlanningState } from "./planner";
+import type { QuerySpec } from "../../core/types.ts";
+import type { QueryDialect } from "../types.ts";
+import type { SelectAst } from "./types.ts";
+import { stageToSelect } from "./select.ts";
+import type { CompileSourceRef } from "./source.ts";
+import { buildBaseSelectAst } from "./segment.ts";
+import { optimizeLoopStages, type LoopPartLabel } from "./recursive_optimizer.ts";
+import { advanceStagePlanningState, type StagePlanningState } from "./planner.ts";
+import { internalError } from "../../errors.ts";
 
 export function compileLoopPart(
   input: QuerySpec,
@@ -60,7 +61,7 @@ export function compileLoopPart(
   }
 
   if (!compiled) {
-    throw new Error(`Internal error: loop ${label} did not compile`);
+    internalError("INTERNAL_LOOP_COMPILE_FAILED", `Internal error: loop ${label} did not compile`);
   }
   return compiled;
 }

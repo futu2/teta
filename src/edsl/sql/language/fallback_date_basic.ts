@@ -1,17 +1,17 @@
-import type { ExprNode } from "../../core/types";
-import type { DialectLanguageFallback } from "../types";
+import type { ExprNode } from "../../core/types.ts";
+import type { DialectLanguageFallback } from "../types.ts";
 import {
   castExpr,
   extractFieldExpr,
   func,
   literal,
   literalString,
-} from "./fallback_ast";
+} from "./fallback_ast.ts";
 import {
   DATE_TRUNC_FORMATS,
   SQLITE_EXTRACT_FORMATS,
   normalizeUnit,
-} from "./fallback_date_units";
+} from "./fallback_date_units.ts";
 
 export function rewriteBasicDateFallback(
   functionName: string,

@@ -6,7 +6,7 @@ import type {
   ListNode,
   OrderItem,
   WindowNode,
-} from "../../core/types";
+} from "../../core/types.ts";
 import type {
   ArrayAst,
   AstIdentifierExpr,
@@ -19,7 +19,7 @@ import type {
   SqlRenderContext,
   WindowOverAst,
   WindowPartitionItemAst,
-} from "./types";
+} from "./types.ts";
 
 const keywordFunctions = new Set(["CURRENT_DATE", "CURRENT_TIMESTAMP"]);
 

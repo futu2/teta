@@ -1,4 +1,4 @@
-import type { ExprNode } from "../../core/types";
+import type { ExprNode } from "../../core/types.ts";
 import type {
   AggrFuncAst,
   BinaryExprAst,
@@ -8,15 +8,16 @@ import type {
   ParserExprAst,
   SqlRenderContext,
   UnaryExprAst,
-} from "./types";
-import { literalToAst, paramToAst } from "./expr_ast_literal";
+} from "./types.ts";
+import { literalToAst, paramToAst } from "./expr_ast_literal.ts";
+import { internalError } from "../../errors.ts";
 import {
   arrayExprToAst,
   caseExprToAst,
   funcExprToAst,
   listExprToAst,
   windowExprToAst,
-} from "./expr_ast_compound";
+} from "./expr_ast_compound.ts";
 
 export function exprNodeToAst(
   expr: ExprNode<unknown>,
@@ -116,5 +117,5 @@ export function exprNodeToAst(
 }
 
 function assertNever(value: never): never {
-  throw new Error(`Unexpected expression node: ${JSON.stringify(value)}`);
+  internalError("INTERNAL_UNEXPECTED_EXPRESSION_NODE", `Unexpected expression node: ${JSON.stringify(value)}`);
 }

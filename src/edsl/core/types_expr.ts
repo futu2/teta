@@ -1,6 +1,6 @@
 export type DateLiteral = { kind: "date_literal"; value: string };
 export type TimestampLiteral = { kind: "timestamp_literal"; value: string };
-export type Value = string | number | boolean | null | DateLiteral | TimestampLiteral;
+export type Value = string | number | bigint | boolean | null | DateLiteral | TimestampLiteral;
 
 export type BinaryOp =
   | "="

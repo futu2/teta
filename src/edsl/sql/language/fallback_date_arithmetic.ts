@@ -1,5 +1,5 @@
-import type { ExprNode } from "../../core/types";
-import type { DialectLanguageFallback } from "../types";
+import type { ExprNode } from "../../core/types.ts";
+import type { DialectLanguageFallback } from "../types.ts";
 import {
   binaryExpr,
   castExpr,
@@ -8,13 +8,13 @@ import {
   func,
   literal,
   literalString,
-} from "./fallback_ast";
+} from "./fallback_ast.ts";
 import {
   DATE_ADD_EPOCH_FACTORS,
   DATE_ADD_TEMPLATES,
   DATE_DIFF_EPOCH_FACTORS,
   normalizeUnit,
-} from "./fallback_date_units";
+} from "./fallback_date_units.ts";
 
 export function rewriteArithmeticDateFallback(
   functionName: string,

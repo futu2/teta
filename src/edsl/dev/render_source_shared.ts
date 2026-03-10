@@ -1,6 +1,7 @@
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { sqlRenderer, type SqlOptions, type SqlRenderer, type SqlResult } from "../sql";
+import { sqlRenderer, type SqlOptions, type SqlRenderer, type SqlResult } from "../sql.ts";
+import { userError } from "../errors.ts";
 
 export type QueryLike = {
   toSql: (renderer: SqlRenderer<any, SqlResult>) => string;
@@ -9,13 +10,23 @@ export type QueryLike = {
 export function normalizeRenderSourcePath(source: string): string {
   const sourcePath = source.toString().trim();
   if (!sourcePath) {
-    throw new Error("renderSqlFromSource requires a source path");
+    userError("INVALID_TABLE_SOURCE", "renderSqlFromSource requires a source path");
   }
   return sourcePath;
 }
 
 export function renderSourceModuleUrl(sourcePath: string): string {
   return `${pathToFileURL(resolve(sourcePath)).href}?t=${Date.now()}`;
+}
+
+export function importSourceModule(
+  moduleUrl: string
+): Promise<Record<string, unknown>> {
+  const importer = new Function(
+    "specifier",
+    "return import(specifier);"
+  ) as (specifier: string) => Promise<Record<string, unknown>>;
+  return importer(moduleUrl);
 }
 
 export async function resolveRenderedSqlFromModule(
@@ -25,7 +36,7 @@ export async function resolveRenderedSqlFromModule(
   rendererOptions: SqlOptions = {}
 ): Promise<string> {
   if (!(exportName in importedModule)) {
-    throw new Error(`Export '${exportName}' not found in ${sourcePath}`);
+    userError("INVALID_TABLE_SOURCE", `Export '${exportName}' not found in ${sourcePath}`);
   }
 
   let target = importedModule[exportName];
@@ -37,7 +48,8 @@ export async function resolveRenderedSqlFromModule(
     return target;
   }
   if (!isQueryLike(target)) {
-    throw new Error(
+    userError(
+      "INVALID_TABLE_SOURCE",
       `Export '${exportName}' must be a SQL string, Query-like object, or a function returning one`
     );
   }

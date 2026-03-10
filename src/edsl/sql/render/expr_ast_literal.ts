@@ -1,5 +1,6 @@
-import type { Value } from "../../core/types";
-import type { LiteralAst, ParamAst, SqlRenderContext } from "./types";
+import type { Value } from "../../core/types.ts";
+import type { LiteralAst, ParamAst, SqlRenderContext } from "./types.ts";
+import { internalError } from "../../errors.ts";
 
 export function literalToAst(
   value: Value,
@@ -32,6 +33,8 @@ export function literalToAst(
       return { type: "string", value };
     case "number":
       return { type: "number", value };
+    case "bigint":
+      return { type: "number", value: value.toString() };
     case "boolean":
       return { type: "bool", value };
     default:
@@ -112,5 +115,5 @@ function resolveExplicitParameterRender(
 }
 
 function assertNever(value: never): never {
-  throw new Error(`Unexpected literal value: ${JSON.stringify(value)}`);
+  internalError("INTERNAL_UNEXPECTED_LITERAL_VALUE", `Unexpected literal value: ${JSON.stringify(value)}`);
 }

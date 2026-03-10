@@ -1,4 +1,4 @@
-export { normalizePredicateExpr } from "./predicate_boolean_normalize";
+export { normalizePredicateExpr } from "./predicate_boolean_normalize.ts";
 export {
   collectBooleanTerms,
   dedupePredicateBranch,
@@ -11,4 +11,4 @@ export {
   splitPredicateConjuncts,
   splitPredicateDisjuncts,
   unwrapPredicateGroups,
-} from "./predicate_boolean_core";
+} from "./predicate_boolean_core.ts";

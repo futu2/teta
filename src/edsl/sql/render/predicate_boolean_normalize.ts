@@ -1,9 +1,9 @@
-import type { ExprNode } from "../../core/types";
+import type { ExprNode } from "../../core/types.ts";
 import {
   collectBooleanTerms,
   mergeNormalizedBooleanTerms,
   unwrapPredicateGroups,
-} from "./predicate_boolean_core";
+} from "./predicate_boolean_core.ts";
 
 export function normalizePredicateExpr(
   predicate: ExprNode<unknown>

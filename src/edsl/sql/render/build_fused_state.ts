@@ -1,27 +1,27 @@
-import type { QueryDialect } from "../types";
+import type { QueryDialect } from "../types.ts";
 import type {
   ExprNode,
   ScopeId,
   SqlIdentifier,
   Stage,
-} from "../../core/types";
-import { selectItemsToIdentifierMap } from "../../query/utils";
-import type { FromAst, ScopeBindings } from "./types";
-import { ensureAlias } from "./ast";
-import { getSqlRenderContext } from "./render";
-import type { CompileSourceRef } from "./source";
-import { registerColumnIdentifierBindings } from "./identifiers";
-import { nextStageColumnIdentifiers, nextStageColumnNames } from "./planner";
+} from "../../core/types.ts";
+import { selectItemsToIdentifierMap } from "../../query/utils.ts";
+import type { FromAst, ScopeBindings } from "./types.ts";
+import { ensureAlias } from "./ast.ts";
+import { getSqlRenderContext } from "./render.ts";
+import type { CompileSourceRef } from "./source.ts";
+import { registerColumnIdentifierBindings } from "./identifiers.ts";
+import { nextStageColumnIdentifiers, nextStageColumnNames } from "./planner.ts";
 import {
   selectItemsToScopeMap,
   type ScopeExprLookup,
-} from "./fused";
-import type { FusedJoinFrom } from "./build_fused_join";
+} from "./fused.ts";
+import type { FusedJoinFrom } from "./build_fused_join.ts";
 import {
   buildBaseFrom,
   buildCompiledSegment,
   type CompiledSegment,
-} from "./segment";
+} from "./segment.ts";
 
 export type FusedBuildPhase =
   | "preprojection"

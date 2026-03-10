@@ -1,15 +1,16 @@
 import type { With } from "node-sql-parser";
-import type { CteSpec, InternalCteName } from "../../core/types";
-import type { QueryDialect } from "../types";
-import type { ColumnRefAst } from "./types";
-import { toParserSelect } from "./ast";
-import { buildPipelineAst } from "./build";
-import { getDefaultDialect } from "../dialect";
-import { getSqlRenderContext } from "./render";
-import { resolveIdentifierName } from "./identifiers";
-import { attachUnion } from "./union";
-import { compileLoopPart } from "./recursive_compile";
-import type { RecursivePart } from "./recursive_deferred";
+import type { CteSpec, InternalCteName } from "../../core/types.ts";
+import { internalError, userError } from "../../errors.ts";
+import type { QueryDialect } from "../types.ts";
+import type { ColumnRefAst } from "./types.ts";
+import { toParserSelect } from "./ast.ts";
+import { buildPipelineAst } from "./build.ts";
+import { getDefaultDialect } from "../dialect.ts";
+import { getSqlRenderContext } from "./render.ts";
+import { resolveIdentifierName } from "./identifiers.ts";
+import { attachUnion } from "./union.ts";
+import { compileLoopPart } from "./recursive_compile.ts";
+import type { RecursivePart } from "./recursive_deferred.ts";
 
 export function buildRecursiveCte(
   name: InternalCteName,
@@ -19,7 +20,7 @@ export function buildRecursiveCte(
   dialect: QueryDialect = getDefaultDialect()
 ): With {
   if (!dialect.features.recursiveCte) {
-    throw new Error(`Dialect ${dialect.name} does not support recursive CTE`);
+    userError("UNSUPPORTED_RECURSIVE_CTE", `Dialect ${dialect.name} does not support recursive CTE`);
   }
 
   const renderedName = resolveIdentifierName(name, getSqlRenderContext());
@@ -85,5 +86,5 @@ function toCteColumnRef(name: string): ColumnRefAst {
 }
 
 function assertNever(value: never): never {
-  throw new Error(`Unexpected value: ${String(value)}`);
+  internalError("INTERNAL_UNEXPECTED_VALUE", `Unexpected value: ${String(value)}`);
 }

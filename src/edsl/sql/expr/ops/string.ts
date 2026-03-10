@@ -1,5 +1,5 @@
-import type { SqlInt } from "../../types";
-import { fn, wrapExpr, type ExprInput, type ExprRef, type PropagateNull } from "../core";
+import type { SqlInt } from "../../types.ts";
+import { fn, wrapExpr, type ExprInput, type ExprRef, type PropagateNull } from "../core.ts";
 
 type NullableString = string | null;
 

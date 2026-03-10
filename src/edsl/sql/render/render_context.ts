@@ -1,4 +1,4 @@
-import type { SqlRenderContext } from "./types";
+import type { SqlRenderContext } from "./types.ts";
 
 let activeRenderContext: SqlRenderContext | null = null;
 

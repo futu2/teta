@@ -5,15 +5,17 @@ import type {
   SqlOptions,
   SqlParameterMode,
   SqlParameterPrefix,
-} from "../../types";
-import { getDefaultDialect } from "./resolve_common";
-import { resolveDialect } from "./resolve_dialect";
-import { isDialectSpec } from "./resolve_spec";
+  SqlRenderStrategy,
+} from "../../types.ts";
+import { getDefaultDialect } from "./resolve_common.ts";
+import { resolveDialect } from "./resolve_dialect.ts";
+import { isDialectSpec } from "./resolve_spec.ts";
 
 export type ResolvedSqlOptions = {
   dialect: ReturnType<typeof resolveDialect>;
   options?: Option;
   sqlFormat: SqlFormat;
+  renderStrategy: SqlRenderStrategy;
   parameterMode: SqlParameterMode;
   parameterPrefix: SqlParameterPrefix;
 };
@@ -26,6 +28,7 @@ export function buildSqlOptions(
   let dialect = getDefaultDialect();
   let options: Option = {};
   let sqlFormat: SqlFormat = "compact";
+  let renderStrategy: SqlRenderStrategy = "optimized";
   let parameterMode: SqlParameterMode = "inline";
   let parameterPrefix: SqlParameterPrefix = ":";
 
@@ -36,12 +39,14 @@ export function buildSqlOptions(
         dialect,
         options,
         sqlFormat,
+        renderStrategy,
         parameterMode,
         parameterPrefix,
       } = applySqlOptions(optOrFormat, {
         dialect,
         options,
         sqlFormat,
+        renderStrategy,
         parameterMode,
         parameterPrefix,
       }));
@@ -54,12 +59,14 @@ export function buildSqlOptions(
         dialect,
         options,
         sqlFormat,
+        renderStrategy,
         parameterMode,
         parameterPrefix,
       } = applySqlOptions(dialectOrOpt, {
         dialect,
         options,
         sqlFormat,
+        renderStrategy,
         parameterMode,
         parameterPrefix,
       }));
@@ -71,12 +78,14 @@ export function buildSqlOptions(
       dialect,
       options,
       sqlFormat,
+      renderStrategy,
       parameterMode,
       parameterPrefix,
     } = applySqlOptions(optOrFormat, {
       dialect,
       options,
       sqlFormat,
+      renderStrategy,
       parameterMode,
       parameterPrefix,
       mergeOptions: true,
@@ -94,6 +103,7 @@ export function buildSqlOptions(
     dialect,
     options: Object.keys(options).length > 0 ? options : undefined,
     sqlFormat,
+    renderStrategy,
     parameterMode,
     parameterPrefix,
   };
@@ -103,6 +113,7 @@ type SqlOptionState = {
   dialect: ReturnType<typeof resolveDialect>;
   options: Option;
   sqlFormat: SqlFormat;
+  renderStrategy: SqlRenderStrategy;
   parameterMode: SqlParameterMode;
   parameterPrefix: SqlParameterPrefix;
   mergeOptions?: boolean;
@@ -111,6 +122,7 @@ type SqlOptionState = {
 function applySqlOptions(input: SqlOptions, state: SqlOptionState): SqlOptionState {
   const {
     format,
+    renderStrategy,
     dialect: inlineDialect,
     database: explicitDatabase,
     parameterMode: inlineParameterMode,
@@ -127,6 +139,7 @@ function applySqlOptions(input: SqlOptions, state: SqlOptionState): SqlOptionSta
     dialect: inlineDialect !== undefined ? resolveDialect(inlineDialect) : state.dialect,
     options: nextOptions,
     sqlFormat: format ?? state.sqlFormat,
+    renderStrategy: renderStrategy ?? state.renderStrategy,
     parameterMode: inlineParameterMode ?? state.parameterMode,
     parameterPrefix: inlineParameterPrefix ?? state.parameterPrefix,
   };

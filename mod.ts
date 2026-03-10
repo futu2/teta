@@ -1,6 +1,7 @@
 /** Main query builder type returned by `table(...)`. */
 export {
   Query,
+  explain,
   aggregate,
   filter,
   join,
@@ -16,8 +17,8 @@ export {
   toSqlResult,
   union,
   unionAll,
-} from "./src/edsl/query";
-export type { QueryIR, QueryStep } from "./src/edsl/query";
+} from "./src/edsl/query.ts";
+export type { QueryExplainResult, QueryIR, QueryStep } from "./src/edsl/query.ts";
 
 /** Expression builder and helpers for composing SQL expressions. */
 export {
@@ -125,37 +126,24 @@ export {
   currentTimestamp,
   dateLiteral,
   timestampLiteral,
-} from "./src/edsl/expr";
+} from "./src/edsl/expr.ts";
 
 /** Language specification and dialect mapping helpers. */
-export { LANGUAGE_SPEC, getLanguageSpec } from "./src/edsl/sql/language";
-export type { LanguageCategory } from "./src/edsl/sql/language";
+export { LANGUAGE_SPEC, getLanguageSpec } from "./src/edsl/sql/language.ts";
+export type { LanguageCategory } from "./src/edsl/sql/language.ts";
 export {
   duckdbRenderer,
   hetuRenderer,
   postgresqlRenderer,
   sqlRenderer,
   sqliteRenderer,
-} from "./src/edsl/sql";
+} from "./src/edsl/sql.ts";
 export type {
   BuiltinSqlRendererOptions,
   ExprSqlTarget,
   QuerySqlTarget,
   SqlCompilable,
-} from "./src/edsl/sql";
-
-/** Dev utilities for source-watch SQL generation and clipboard copy. */
-export {
-  copyTextToClipboard,
-  renderSqlFromSource,
-  watchQuerySourceToClipboard,
-} from "./src/edsl/dev";
-export type {
-  ClipboardTool,
-  QueryLike,
-  WatchQueryController,
-  WatchQuerySourceOptions,
-} from "./src/edsl/dev";
+} from "./src/edsl/sql.ts";
 
 /** Common SQL type aliases and SQL rendering options. */
 export type {
@@ -167,12 +155,18 @@ export type {
   QueryDialect,
   SqlInt,
   SqlFloat,
+  SqlBigInt,
+  SqlDecimal,
   SqlNumber,
   SqlDate,
   SqlTimestamp,
+  SqlUuid,
+  SqlBytes,
+  SqlJson,
   Dialect,
   SqlRenderer,
   SqlFormat,
+  SqlRenderStrategy,
   SqlOptions,
   SqlParam,
   SqlParameterMode,
@@ -180,4 +174,13 @@ export type {
   SqlResult,
   IdentifierInput,
   SqlIdentifier,
-} from "./src/edsl/types";
+} from "./src/edsl/types.ts";
+
+/** Public error types for distinguishing user errors from internal compiler failures. */
+export {
+  TetaError,
+  TetaInternalError,
+  TetaUserError,
+  isTetaError,
+} from "./src/edsl/errors.ts";
+export type { TetaErrorCode, TetaErrorKind } from "./src/edsl/errors.ts";

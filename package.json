@@ -1,13 +1,21 @@
 {
   "name": "teta",
   "module": "./mod.ts",
-  "exports": "./mod.ts",
+  "exports": {
+    ".": "./mod.ts",
+    "./dev": "./dev.ts"
+  },
   "types": "./mod.ts",
   "type": "module",
   "private": true,
   "scripts": {
     "test": "bun test tests",
     "test:all": "bun test",
+    "test:runtime:bun": "bun run tests/runtime_smoke.ts",
+    "test:runtime:node": "node --experimental-transform-types tests/runtime_smoke.ts",
+    "test:runtime:deno": "deno run --node-modules-dir=auto tests/runtime_smoke.ts",
+    "bench:render": "bun run benchmarks/render.ts",
+    "bench:render:check": "bun run benchmarks/render_regression.ts",
     "typecheck": "tsc --noEmit",
     "check": "bun run test && bun run typecheck"
   },

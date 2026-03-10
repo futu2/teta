@@ -135,9 +135,13 @@ const orders = table("sales.orders", {
 
 ## More examples
 
-Each chained step is compiled into a CTE, so changing the order of operations is safe and predictable.
+Teta keeps the logical stage order stable, but the rendered SQL shape depends on
+`renderStrategy` and dialect features.
 
-### Pipeline steps (CTE per stage)
+### Pipeline shape in `readable` mode
+
+Use `renderStrategy: "readable"` when you want SQL that tracks the query chain
+more literally with staged CTEs.
 
 ```ts
 import { table, t } from "./mod.ts";
@@ -154,8 +158,35 @@ const q = users
   .filter((u) => u.age_plus_one.gt(30))
   .select((u) => ({ id: u.id, name: u.name, age_plus_one: u.age_plus_one }));
 
-console.log(q.toSql(sqlRenderer()));
+console.log(q.toSql(sqlRenderer({
+  dialect: "postgresql",
+  format: "pretty",
+  renderStrategy: "readable",
+})));
 ```
+
+### Inspect lowering with `explain()`
+
+Use `query.explain(...)` when you want to inspect logical stages without guessing
+from the final SQL string alone.
+
+```ts
+const info = q.explain({
+  dialect: "postgresql",
+  format: "compact",
+  renderStrategy: "readable",
+});
+
+console.log(info.stages);
+console.log(info.ctes);
+console.log(info.sql);
+```
+
+Quick rule of thumb:
+
+- `optimized` may fuse simple pipelines into one `SELECT`
+- `readable` preserves stage boundaries as `cte_0`, `cte_1`, ...
+- nested subqueries usually mean the compiler introduced a deliberate scope barrier
 
 ### Optional: Remeda for projection shaping
 

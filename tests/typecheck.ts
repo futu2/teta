@@ -1,6 +1,15 @@
 import * as R from "remeda";
-import type { ExprRef, SqlFloat, SqlInt } from "../mod.ts";
-import { filter, join, limit, orderBy, select, table, t } from "../mod.ts";
+import type {
+  ExprRef,
+  SqlBigInt,
+  SqlBytes,
+  SqlDecimal,
+  SqlFloat,
+  SqlInt,
+  SqlJson,
+  SqlUuid,
+} from "../mod.ts";
+import { filter, join, limit, orderBy, param, select, table, t } from "../mod.ts";
 
 type Equal<A, B> = (
   (<T>() => T extends A ? 1 : 2) extends
@@ -18,6 +27,20 @@ const orders = table("orders", {
   order_id: t.int(),
   user_id: t.int(),
   total: t.float(),
+});
+
+type ProfileMeta = {
+  theme: string;
+  flags: string[];
+};
+
+const profiles = table("profiles", {
+  id: t.uuid(),
+  external_id: t.bigint(),
+  credit_limit: t.nullable(t.decimal()),
+  metadata: t.json<ProfileMeta>(),
+  avatar: t.nullable(t.bytes()),
+  nickname: t.nullable(t.string()),
 });
 
 const leftJoined = users.join(orders, (user, order) => user.id.eq(order.user_id), { type: "left" });
@@ -80,6 +103,20 @@ const aggregatedWithQuotedKey = orders.aggregate((order) => ({
 }));
 const loopBase = users.select((user) => ({ id: user.id }));
 const looped = loopBase.loop((self) => self.filter((row) => row.id.gt(0)));
+const projectedProfiles = profiles.select((profile) => ({
+  id: profile.id,
+  external_id: profile.external_id.add(1),
+  credit_limit: profile.credit_limit.coalesce(0),
+  metadata: profile.metadata,
+  avatar: profile.avatar,
+  nickname: profile.nickname.coalesce("anonymous"),
+}));
+const uuidFilteredProfiles = profiles.filter((profile) =>
+  profile.id.eq(param("00000000-0000-0000-0000-000000000000"))
+);
+const bigintFilteredProfiles = profiles.filter((profile) =>
+  profile.external_id.gt(0).and(profile.external_id.eq(42n))
+);
 
 type _LeftJoinTotal = Expect<Equal<ExprType<typeof leftJoined.columns.total>, SqlFloat | null>>;
 type _RightJoinId = Expect<Equal<ExprType<typeof rightJoined.columns.id>, SqlInt | null>>;
@@ -98,6 +135,17 @@ type _LeftJoinCoalescedSub = Expect<Equal<ExprType<typeof leftJoinTotalRemaining
 type _ProjectedWithQuotedKey = Expect<Equal<ExprType<typeof projectedWithQuotedKey.columns["User Id"]>, SqlInt>>;
 type _AggregatedWithQuotedKey = Expect<Equal<ExprType<typeof aggregatedWithQuotedKey.columns["Total Spend"]>, SqlFloat>>;
 type _LoopedId = Expect<Equal<ExprType<typeof looped.columns.id>, SqlInt>>;
+type _ProfileId = Expect<Equal<ExprType<typeof profiles.columns.id>, SqlUuid>>;
+type _ProfileExternalId = Expect<Equal<ExprType<typeof profiles.columns.external_id>, SqlBigInt>>;
+type _ProfileCreditLimit = Expect<Equal<ExprType<typeof profiles.columns.credit_limit>, SqlDecimal | null>>;
+type _ProfileMetadata = Expect<Equal<ExprType<typeof profiles.columns.metadata>, SqlJson<ProfileMeta>>>;
+type _ProfileAvatar = Expect<Equal<ExprType<typeof profiles.columns.avatar>, SqlBytes | null>>;
+type _ProfileNickname = Expect<Equal<ExprType<typeof profiles.columns.nickname>, string | null>>;
+type _ProjectedProfileExternalId = Expect<Equal<ExprType<typeof projectedProfiles.columns.external_id>, SqlBigInt>>;
+type _ProjectedProfileCreditLimit = Expect<Equal<ExprType<typeof projectedProfiles.columns.credit_limit>, SqlDecimal>>;
+type _ProjectedProfileMetadata = Expect<Equal<ExprType<typeof projectedProfiles.columns.metadata>, SqlJson<ProfileMeta>>>;
+type _ProjectedProfileAvatar = Expect<Equal<ExprType<typeof projectedProfiles.columns.avatar>, SqlBytes | null>>;
+type _ProjectedProfileNickname = Expect<Equal<ExprType<typeof projectedProfiles.columns.nickname>, string>>;
 
 void leftSelected;
 void rightSelected;
@@ -111,6 +159,9 @@ void leftViaJoinSelected;
 void projectedWithQuotedKey;
 void aggregatedWithQuotedKey;
 void looped;
+void projectedProfiles;
+void uuidFilteredProfiles;
+void bigintFilteredProfiles;
 
 // @ts-expect-error legacy array selection syntax is removed
 users.select((user) => [user.id]);

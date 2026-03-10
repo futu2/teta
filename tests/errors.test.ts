@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { sqlRenderer } from "../mod.ts";
+import { TetaUserError, sqlRenderer } from "../mod.ts";
 import {
   GROUP_INSIDE_AGGREGATE_FUNCTION_ERROR,
   GROUP_OUTSIDE_AGGREGATE_ERROR,
@@ -70,5 +70,20 @@ describe("error paths", () => {
         .select((user) => ({ id: user.id }))
         .toSql(sqlRenderer({ dialect: "PostgreSQL" }))
     ).toThrow(NON_CANONICAL_POSTGRES_DIALECT_ERROR);
+  });
+
+  test("user-facing errors expose stable error codes", () => {
+    const users = createUsersTable();
+
+    try {
+      users.select((user) => ({
+        bad: user.id.group(),
+      }));
+      throw new Error("Expected select() to throw");
+    } catch (error) {
+      expect(error).toBeInstanceOf(TetaUserError);
+      expect((error as TetaUserError).code).toBe("GROUP_OUTSIDE_AGGREGATE");
+      expect((error as TetaUserError).kind).toBe("user");
+    }
   });
 });

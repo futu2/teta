@@ -5,9 +5,9 @@ import type {
   Source,
   SqlIdentifier,
   Stage,
-} from "../core/types";
-import type { ColumnRefs } from "../expr";
-import { columnNamesToIdentifierMap } from "./utils";
+} from "../core/types.ts";
+import type { ColumnRefs } from "../expr.ts";
+import { columnNamesToIdentifierMap } from "./utils.ts";
 
 export type QueryState<TColumns extends Record<string, any>> = {
   source: Source;

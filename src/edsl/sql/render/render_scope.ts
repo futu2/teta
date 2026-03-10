@@ -2,11 +2,12 @@ import {
   OUTER_TABLE_ALIAS,
   isInternalScopeName,
   type ExprNode,
-} from "../../core/types";
-import type { QueryDialect } from "../types";
-import { applyDialectLanguage } from "../language";
-import { getDefaultDialect } from "../dialect";
-import type { ScopeBindings } from "./types";
+} from "../../core/types.ts";
+import type { QueryDialect } from "../types.ts";
+import { applyDialectLanguage } from "../language.ts";
+import { internalError } from "../../errors.ts";
+import { getDefaultDialect } from "../dialect.ts";
+import type { ScopeBindings } from "./types.ts";
 
 export function bindExprScopes(
   expr: ExprNode<unknown>,
@@ -108,7 +109,7 @@ function resolveColumnScope(
   if (!isInternalScopeName(expr.table)) return expr;
   const boundTable = scopeBindings[expr.table];
   if (boundTable === undefined) {
-    throw new Error(`Missing SQL scope binding for ${expr.table}.${expr.name}`);
+    internalError("INTERNAL_MISSING_SQL_SCOPE_BINDING", `Missing SQL scope binding for ${expr.table}.${expr.name}`);
   }
   return {
     ...expr,

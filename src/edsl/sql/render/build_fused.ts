@@ -1,15 +1,16 @@
 import type { With } from "node-sql-parser";
-import type { QueryDialect } from "../types";
-import type { ExprNode, ScopeId, SqlIdentifier, Stage } from "../../core/types";
-import type { ScopeBindings, SelectAst } from "./types";
-import { hoistJoinSubquery, type CompileSourceRef } from "./source";
-import { compileUnionStage } from "./union";
-import { mergePredicates } from "./predicate";
-import { nextStageColumnIdentifiers, stageOutputNames } from "./planner";
-import { bindFusedExpr, type ScopeExprLookup } from "./fused";
-import { buildFusedJoinFrom } from "./build_fused_join";
-import { handlePostProjectionFilterStage } from "./build_fused_filter";
-import type { CompiledSegment } from "./segment";
+import type { QueryDialect } from "../types.ts";
+import type { ExprNode, ScopeId, SqlIdentifier, Stage } from "../../core/types.ts";
+import type { ScopeBindings, SelectAst } from "./types.ts";
+import { hoistJoinSubquery, type CompileSourceRef } from "./source.ts";
+import { compileUnionStage } from "./union.ts";
+import { mergePredicates } from "./predicate.ts";
+import { nextStageColumnIdentifiers, stageOutputNames } from "./planner.ts";
+import { bindFusedExpr, type ScopeExprLookup } from "./fused.ts";
+import { buildFusedJoinFrom } from "./build_fused_join.ts";
+import { handlePostProjectionFilterStage } from "./build_fused_filter.ts";
+import { internalError } from "../../errors.ts";
+import type { CompiledSegment } from "./segment.ts";
 import {
   applyFusedJoinStage,
   applyFusedLimitStage,
@@ -19,7 +20,7 @@ import {
   createFusedBuildState,
   finishFusedSegment,
   finishFusedSegmentWithPredicates,
-} from "./build_fused_state";
+} from "./build_fused_state.ts";
 
 export type FusedBuildOptions = {
   ctes: With[];
@@ -201,7 +202,7 @@ export function compileSingleStageAst(
     options
   );
   if (!compiled) {
-    throw new Error(`Internal error: failed to compile stage ${stage.kind}`);
+    internalError("INTERNAL_STAGE_COMPILE_FAILED", `Internal error: failed to compile stage ${stage.kind}`);
   }
   return compiled.ast;
 }
@@ -220,5 +221,5 @@ function handlePreprojectionFilter(
 }
 
 function assertNever(value: never): never {
-  throw new Error(`Unexpected value: ${String(value)}`);
+  internalError("INTERNAL_UNEXPECTED_VALUE", `Unexpected value: ${String(value)}`);
 }

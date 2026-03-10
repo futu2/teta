@@ -1,16 +1,17 @@
-import type { ScopeId, Stage } from "../../core/types";
-import type { QueryDialect } from "../types";
-import type { ScopeBindings, SelectAst } from "./types";
-import { getDefaultDialect } from "../dialect";
-import type { CompileSourceRef } from "./source";
+import type { ScopeId, Stage } from "../../core/types.ts";
+import type { QueryDialect } from "../types.ts";
+import type { ScopeBindings, SelectAst } from "./types.ts";
+import { getDefaultDialect } from "../dialect.ts";
+import type { CompileSourceRef } from "./source.ts";
 import {
   buildFilterStageAst,
   buildLimitStageAst,
   buildOrderByStageAst,
   buildSelectStageAst,
   createStageSelectContext,
-} from "./select_stage";
-import { buildJoinStageAst } from "./select_join";
+} from "./select_stage.ts";
+import { buildJoinStageAst } from "./select_join.ts";
+import { internalError } from "../../errors.ts";
 
 export function stageToSelect(
   stage: Stage,
@@ -39,12 +40,12 @@ export function stageToSelect(
     case "join":
       return buildJoinStageAst(stage, context, ctePrefix);
     case "union":
-      throw new Error("union stages must be compiled by buildPipelineAst");
+      internalError("INTERNAL_UNION_STAGE_ROUTING", "union stages must be compiled by buildPipelineAst");
     default:
       return assertNever(stage);
   }
 }
 
 function assertNever(value: never): never {
-  throw new Error(`Unexpected value: ${String(value)}`);
+  internalError("INTERNAL_UNEXPECTED_VALUE", `Unexpected value: ${String(value)}`);
 }

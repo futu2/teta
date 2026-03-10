@@ -1,20 +1,21 @@
 import type { AST } from "node-sql-parser";
-import type { CteSpec, ScopeId, Source, Stage } from "../../core/types";
-import type { QueryDialect } from "../types";
-import type { ScopeBindings } from "./types";
-import { buildPipelineAst } from "./build";
-import { getDefaultDialect } from "../dialect";
-import { withPipelineAstRenderContext } from "./pipeline_context";
-import { buildPipelineParserAst, materializeBaseCtes } from "./pipeline_cte";
-import { buildRecursiveCte, createDeferredRecursiveCte } from "./recursive";
+import type { CteSpec, ScopeId, Source, Stage } from "../../core/types.ts";
+import type { QueryDialect, SqlRenderStrategy } from "../types.ts";
+import type { ScopeBindings } from "./types.ts";
+import { buildPipelineAst } from "./build.ts";
+import { getDefaultDialect } from "../dialect.ts";
+import { withPipelineAstRenderContext } from "./pipeline_context.ts";
+import { buildPipelineParserAst, materializeBaseCtes } from "./pipeline_cte.ts";
+import { buildRecursiveCte, createDeferredRecursiveCte } from "./recursive.ts";
 
-export { buildRecursiveCte, createDeferredRecursiveCte } from "./recursive";
+export { buildRecursiveCte, createDeferredRecursiveCte } from "./recursive.ts";
 
 export type RenderPipelineOptions = {
   ctePrefix?: string;
   baseCtes?: CteSpec[];
   scopeBindings?: ScopeBindings;
   dialect?: QueryDialect;
+  renderStrategy?: SqlRenderStrategy;
 };
 
 export function renderPipelineAst(

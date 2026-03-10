@@ -15,9 +15,9 @@ import {
   sub,
   toFloat,
   toInt,
-} from "../ops/math";
-import { toDate } from "../ops/date";
-import { defineExprMethods } from "./shared";
+} from "../ops/math.ts";
+import { toDate } from "../ops/date.ts";
+import { defineExprMethods } from "./shared.ts";
 
 defineExprMethods([
   ["add", add],

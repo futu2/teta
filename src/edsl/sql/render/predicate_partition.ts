@@ -1,11 +1,11 @@
-import type { ExprNode, Stage } from "../../core/types";
+import type { ExprNode, Stage } from "../../core/types.ts";
 import {
   factorSharedPredicateConjuncts,
   mergeBooleanPredicates,
   mergePredicateList,
   splitPredicateConjuncts,
-} from "./predicate_factor";
-import { containsAggregate, containsWindow } from "./predicate_contains";
+} from "./predicate_factor.ts";
+import { containsAggregate, containsWindow } from "./predicate_contains.ts";
 
 export function isAggregateProjection(stage: Extract<Stage, { kind: "select" }>): boolean {
   if (stage.groupBy && stage.groupBy.length > 0) return true;

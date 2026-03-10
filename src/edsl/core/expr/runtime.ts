@@ -8,7 +8,7 @@ import {
   type ScopeId,
   type TimestampLiteral,
   type Value,
-} from "../types";
+} from "../types.ts";
 import type {
   NormalizeNumericLiteral,
   NormalizeNumericLiteralTuple,
@@ -19,17 +19,23 @@ import type {
   SqlRenderer,
   SqlResult,
   SqlTimestamp,
-} from "../../sql/types";
+  SqlUuid,
+} from "../../sql/types.ts";
 import {
   containsGroup,
   dedupeExprs,
   shouldAlias,
   unwrapGroupExpr,
-} from "./node/ops";
+} from "./node/ops.ts";
+import { userError } from "../../errors.ts";
+
+type StringLiteralCompatible = string | SqlDate | SqlTimestamp | SqlUuid;
 
 type LiteralInput<T> = T extends number
   ? number
-  : T extends SqlDate | SqlTimestamp
+  : T extends bigint
+    ? number | bigint
+  : T extends StringLiteralCompatible
     ? string
     : T;
 export type ExprInput<T> = ExprRef<T> | LiteralInput<T>;
@@ -243,10 +249,10 @@ export function lit<T extends Value>(value: T): ExprRef<T> {
 
 export function param<T>(value: T, name: string | null = null): ExprRef<T> {
   if (value === undefined) {
-    throw new Error("Unsupported parameter value: undefined");
+    userError("INVALID_PARAM_VALUE", "Unsupported parameter value: undefined");
   }
   if (name !== null && !name.trim()) {
-    throw new Error("param name cannot be empty");
+    userError("INVALID_PARAM_NAME", "param name cannot be empty");
   }
   return new ExprRef<T>({ kind: "param", value, name });
 }
@@ -263,7 +269,7 @@ export function fn<T = unknown>(
   ...args: ExprInput<unknown>[]
 ): ExprRef<T> {
   if (!name.trim()) {
-    throw new Error("fn requires a function name");
+    userError("INVALID_FUNCTION_NAME", "fn requires a function name");
   }
   return funcExpr(name, args.map((arg) => toExprNode(arg)));
 }
@@ -273,7 +279,7 @@ export function windowFn<T = unknown>(
   ...args: ExprInput<unknown>[]
 ): WindowBuilder<T> {
   if (!name.trim()) {
-    throw new Error("windowFn requires a function name");
+    userError("INVALID_WINDOW_FUNCTION_NAME", "windowFn requires a function name");
   }
   return new WindowBuilder<T>(name, args.map((arg) => toExprNode(arg)));
 }
@@ -299,17 +305,17 @@ export function windowExpr<T>(name: string, ...args: ExprInput<unknown>[]): Wind
 export function toExprNode<T>(value: ExprInput<T>): ExprNode<unknown> {
   if (value instanceof ExprRef) return value.node;
   if (value === undefined) {
-    throw new Error("Unsupported literal value: undefined");
+    userError("INVALID_LITERAL_VALUE", "Unsupported literal value: undefined");
   }
   if (value === null) return { kind: "literal", value: null };
   const type = typeof value;
-  if (type === "string" || type === "number" || type === "boolean") {
+  if (type === "string" || type === "number" || type === "boolean" || type === "bigint") {
     return { kind: "literal", value: value as Value };
   }
   if (isTemporalLiteral(value)) {
     return { kind: "literal", value };
   }
-  throw new Error(`Unsupported literal value: ${String(value)}`);
+  userError("INVALID_LITERAL_VALUE", `Unsupported literal value: ${String(value)}`);
 }
 
 function isTemporalLiteral(value: unknown): value is DateLiteral | TimestampLiteral {

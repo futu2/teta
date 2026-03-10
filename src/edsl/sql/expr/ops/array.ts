@@ -1,5 +1,5 @@
-import type { SqlInt } from "../../types";
-import { ExprRef, fn, wrapExpr, type ExprInput } from "../core";
+import type { SqlInt } from "../../types.ts";
+import { ExprRef, fn, wrapExpr, type ExprInput } from "../core.ts";
 
 export function arrayLength(value: ExprInput<unknown>): ExprRef<SqlInt> {
   return fn<SqlInt>("ARRAY_LENGTH", value);

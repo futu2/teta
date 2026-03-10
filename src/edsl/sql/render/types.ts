@@ -1,6 +1,6 @@
 import type { Select, SortDirection, ValueExpr } from "node-sql-parser";
-import type { InternalCteName, ScopeId } from "../../core/types";
-import type { SqlParam, SqlParameterMode, SqlParameterPrefix } from "../types";
+import type { InternalCteName, ScopeId } from "../../core/types.ts";
+import type { SqlParam, SqlParameterMode, SqlParameterPrefix } from "../types.ts";
 
 export type AstValueExpr<T = string | number | boolean> = ValueExpr<T>;
 
@@ -17,7 +17,7 @@ export type AstKeywordExpr = AstValueExpr<string> & {
 export type LiteralAst =
   | { type: "null"; value: null }
   | { type: "string"; value: string }
-  | { type: "number"; value: number }
+  | { type: "number"; value: number | string }
   | { type: "bool"; value: boolean }
   | { type: "date"; value: string }
   | { type: "timestamp"; value: string };

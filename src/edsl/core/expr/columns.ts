@@ -1,4 +1,4 @@
-import type { ScopeId, SelectItem, SqlIdentifier } from "../types";
+import type { ScopeId, SelectItem, SqlIdentifier } from "../types.ts";
 import {
   ColumnRef,
   ExprRef,
@@ -6,7 +6,8 @@ import {
   toExprNode,
   type ColumnRefs,
   type ExprRefs,
-} from "./core";
+} from "./core.ts";
+import { internalError } from "../../errors.ts";
 
 export function createColumnRefs<TColumns extends Record<string, unknown>>(
   tableName: ScopeId | null,
@@ -126,7 +127,7 @@ export function selectAllItems<TColumns extends Record<string, unknown>>(
   return columnNames.map((name) => {
     const value = Reflect.get(columns, name);
     if (!(value instanceof ExprRef)) {
-      throw new Error(`Unknown column ref: ${name}`);
+      internalError("INTERNAL_UNKNOWN_COLUMN_REF", `Unknown column ref: ${name}`);
     }
     const ref = value;
     const expr = toExprNode(ref);

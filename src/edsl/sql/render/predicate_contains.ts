@@ -1,4 +1,4 @@
-import type { ExprNode } from "../../core/types";
+import type { ExprNode } from "../../core/types.ts";
 
 export function containsWindow(expr: ExprNode<unknown>): boolean {
   switch (expr.kind) {

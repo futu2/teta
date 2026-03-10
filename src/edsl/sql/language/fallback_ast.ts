@@ -1,4 +1,4 @@
-import type { ExprNode } from "../../core/types";
+import type { ExprNode } from "../../core/types.ts";
 
 export function func(name: string, args: ExprNode<any>[]): ExprNode<any> {
   return {

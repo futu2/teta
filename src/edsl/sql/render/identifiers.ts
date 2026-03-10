@@ -1,6 +1,6 @@
-import { internalCteLabel, isInternalCteName, type SqlIdentifier } from "../../core/types";
-import type { QueryDialect } from "../types";
-import type { AstIdentifierExpr, SqlRenderContext } from "./types";
+import { internalCteLabel, isInternalCteName, type SqlIdentifier } from "../../core/types.ts";
+import type { QueryDialect } from "../types.ts";
+import type { AstIdentifierExpr, SqlRenderContext } from "./types.ts";
 
 const QUOTED_IDENTIFIER_PREFIX = "__TETA_QI_";
 

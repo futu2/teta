@@ -1,2 +1,2 @@
-export { formatSqlPretty } from "./format_pretty";
-export { stripRedundantQuotes } from "./format_quotes";
+export { formatSqlPretty } from "./format_pretty.ts";
+export { stripRedundantQuotes } from "./format_quotes.ts";

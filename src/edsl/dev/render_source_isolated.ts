@@ -1,34 +1,55 @@
 import { spawnSync } from "node:child_process";
-import type { SqlOptions } from "../sql";
-import { normalizeRenderSourcePath } from "./render_source_shared";
+import {
+  TetaInternalError,
+  TetaUserError,
+  internalError,
+  type TetaErrorCode,
+  type TetaErrorKind,
+  userError,
+} from "../errors.ts";
+import type { SqlOptions } from "../sql.ts";
+import { normalizeRenderSourcePath } from "./render_source_shared.ts";
+
+export type SerializedIsolatedRenderError = {
+  kind: TetaErrorKind;
+  code: TetaErrorCode;
+  message: string;
+  stack?: string;
+};
 
 export type IsolatedRenderResult =
   | { ok: true; sql: string }
-  | { ok: false; error: string };
+  | { ok: false; error: SerializedIsolatedRenderError };
 
 export const RENDER_RESULT_PREFIX = "__teta_render_sql__";
 
 export const RENDER_SQL_EVAL_SCRIPT = String.raw`(async () => {
   const PREFIX = "__teta_render_sql__";
-  const respond = (payload) => process.stdout.write(PREFIX + JSON.stringify(payload) + "\n");  try {
+  const respond = (payload) => process.stdout.write(PREFIX + JSON.stringify(payload) + "\n");
+  const fail = (kind, code, message, stack) => {
+    respond({ ok: false, error: { kind, code, message, stack } });
+    process.exitCode = 1;
+  };
+  let TetaError;
+  try {
     const { resolve } = await import("node:path");
     const { pathToFileURL } = await import("node:url");
+    const errorsModule = await import(process.env.TETA_ERRORS_MODULE);
+    TetaError = errorsModule.TetaError;
+    const { userError } = errorsModule;
+    const { sqlRenderer } = await import(process.env.TETA_SQL_RENDERER_MODULE);
+
     const source = (process.env.TETA_SOURCE ?? "").trim();
     if (!source) {
-      throw new Error("renderSqlFromSource requires a source path");
+      userError("INVALID_TABLE_SOURCE", "renderSqlFromSource requires a source path");
     }
 
     const exportName = (process.env.TETA_EXPORT_NAME ?? "query").trim() || "query";
     const rendererOptions = JSON.parse(process.env.TETA_RENDERER_OPTIONS ?? "{}");
-    const rendererModuleUrl = (process.env.TETA_SQL_RENDERER_MODULE ?? "").trim();
-    if (!rendererModuleUrl) {
-      throw new Error("renderSqlFromSource requires a renderer module path");
-    }
-    const { sqlRenderer } = await import(rendererModuleUrl);
     const importedModule = await import(pathToFileURL(resolve(source)).href);
 
     if (!(exportName in importedModule)) {
-      throw new Error("Export '" + exportName + "' not found in " + source);
+      userError("INVALID_TABLE_SOURCE", "Export '" + exportName + "' not found in " + source);
     }
 
     let target = importedModule[exportName];
@@ -41,16 +62,25 @@ export const RENDER_SQL_EVAL_SCRIPT = String.raw`(async () => {
       return;
     }
     if (!target || typeof target !== "object" || typeof target.toSql !== "function") {
-      throw new Error(
+      userError(
+        "INVALID_TABLE_SOURCE",
         "Export '" + exportName + "' must be a SQL string, Query-like object, or a function returning one"
       );
     }
 
     respond({ ok: true, sql: target.toSql(sqlRenderer(rendererOptions)) });
   } catch (error) {
-    const message = error instanceof Error ? (error.stack ?? error.message) : String(error);
-    respond({ ok: false, error: message });
-    process.exitCode = 1;
+    if (error instanceof Error && error.name === "SyntaxError") {
+      fail("user", "INVALID_RENDERER_OPTIONS", error.message, error.stack);
+      return;
+    }
+    if (typeof TetaError === "function" && error instanceof TetaError) {
+      fail(error.kind, error.code, error.message, error.stack);
+      return;
+    }
+    const message = error instanceof Error ? error.message : String(error);
+    const stack = error instanceof Error ? error.stack : undefined;
+    fail("internal", "INTERNAL_DEV_RENDER_FAILED", message, stack);
   }
 })();`;
 
@@ -68,6 +98,7 @@ export function renderSqlFromSourceIsolated(
       TETA_SOURCE: sourcePath,
       TETA_EXPORT_NAME: exportName,
       TETA_RENDERER_OPTIONS: serializedRendererOptions,
+      TETA_ERRORS_MODULE: new URL("../errors.ts", import.meta.url).href,
       TETA_SQL_RENDERER_MODULE: new URL("../sql.ts", import.meta.url).href,
     },
     encoding: "utf8",
@@ -75,26 +106,39 @@ export function renderSqlFromSourceIsolated(
   });
 
   if (result.error) {
-    throw result.error;
+    internalError(
+      "INTERNAL_DEV_RENDER_FAILED",
+      result.error.message || "Failed to spawn isolated SQL render process"
+    );
   }
 
   const payload = parseIsolatedRenderPayload(result.stdout ?? "");
   if (result.status === 0 && payload?.ok) {
     return payload.sql;
   }
+  if (payload?.ok === false) {
+    rethrowIsolatedRenderError(payload.error);
+  }
 
-  const workerError = payload?.ok === false ? payload.error : "";
   const stderr = result.stderr?.trim() ?? "";
-  const details = workerError || stderr
+  const details = stderr
     || `Failed to render SQL in isolated process (exit ${result.status ?? "unknown"})`;
-  throw new Error(details);
+  internalError("INTERNAL_DEV_RENDER_FAILED", details);
 }
 
 export function serializeRendererOptions(rendererOptions: SqlOptions): string {
   try {
-    return JSON.stringify(rendererOptions);
+    const serialized = JSON.stringify(rendererOptions);
+    if (serialized === undefined) {
+      userError(
+        "INVALID_RENDERER_OPTIONS",
+        "watchQuerySourceToClipboard isolateModules mode requires JSON-serializable rendererOptions"
+      );
+    }
+    return serialized;
   } catch {
-    throw new Error(
+    userError(
+      "INVALID_RENDERER_OPTIONS",
       "watchQuerySourceToClipboard isolateModules mode requires JSON-serializable rendererOptions"
     );
   }
@@ -125,4 +169,11 @@ export function parseIsolatedRenderPayload(stdout: string): IsolatedRenderResult
   } catch {
     return null;
   }
+}
+
+export function rethrowIsolatedRenderError(error: SerializedIsolatedRenderError): never {
+  if (error.kind === "user") {
+    throw new TetaUserError(error.code, error.message);
+  }
+  throw new TetaInternalError(error.code, error.message);
 }

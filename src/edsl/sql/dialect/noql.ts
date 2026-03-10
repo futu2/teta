@@ -1,4 +1,4 @@
-import type { BuiltinDialectDefinition } from "./types";
+import type { BuiltinDialectDefinition } from "./types.ts";
 
 export const NOQL_DIALECT: BuiltinDialectDefinition = {
   name: "noql",

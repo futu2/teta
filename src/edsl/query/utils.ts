@@ -8,9 +8,10 @@ import type {
   SqlIdentifier,
   Stage,
   TableSourceInput,
-} from "../core/types";
-import { OUTER_TABLE_ALIAS, internalCteLabel, isInternalCteName } from "../core/types";
-import { ColumnRef, type ColumnRefs } from "../core/expr";
+} from "../core/types.ts";
+import { OUTER_TABLE_ALIAS, internalCteLabel, isInternalCteName } from "../core/types.ts";
+import { ColumnRef, type ColumnRefs } from "../core/expr.ts";
+import { internalError, userError } from "../errors.ts";
 
 const BARE_IDENTIFIER_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
@@ -59,7 +60,7 @@ export function selectItemsToIdentifierMap(
   for (const item of items) {
     const identifier = selectItemOutputIdentifier(item);
     if (!identifier) {
-      throw new Error("Internal error: select item is missing an output identifier");
+      internalError("INTERNAL_SELECT_ITEM_OUTPUT_IDENTIFIER_MISSING", "Internal error: select item is missing an output identifier");
     }
     mapping[identifierName(identifier)] = identifier;
   }
@@ -121,7 +122,7 @@ export function normalizeJoinType(type: JoinTypeInput): JoinType {
     case "FULL":
       return normalized;
     default:
-      throw new Error(`Unsupported join type: ${type}`);
+      userError("INVALID_JOIN_TYPE", `Unsupported join type: ${type}`);
   }
 }
 
@@ -130,11 +131,11 @@ export function assertUnionCompatible(
   right: readonly string[]
 ): void {
   if (left.length !== right.length) {
-    throw new Error("union requires both queries to have the same columns");
+    userError("UNION_COLUMN_COUNT_MISMATCH", "union requires both queries to have the same columns");
   }
   for (let i = 0; i < left.length; i += 1) {
     if (left[i] !== right[i]) {
-      throw new Error("union requires both queries to have matching column names");
+      userError("UNION_COLUMN_NAME_MISMATCH", "union requires both queries to have matching column names");
     }
   }
 }
@@ -167,7 +168,7 @@ export function mergeWiths(left: CteSpec[], right: CteSpec[]): CteSpec[] {
   }
   for (const item of right) {
     if (seen.has(item.name)) {
-      throw new Error(`CTE name conflict: ${item.name}`);
+      internalError("INTERNAL_CTE_NAME_CONFLICT", `CTE name conflict: ${item.name}`);
     }
     seen.add(item.name);
     merged.push(item);
@@ -217,7 +218,7 @@ function normalizeOptionalIdentifier(
 function normalizeSourcePart<const Name extends string>(value: Name, label: string): Name {
   const normalized = value.toString().trim();
   if (!normalized) {
-    throw new Error(`table source ${label} must be non-empty`);
+    userError("INVALID_TABLE_SOURCE", `table source ${label} must be non-empty`);
   }
   return normalized as Name;
 }

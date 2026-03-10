@@ -1,13 +1,14 @@
-import type { DateLiteral, TimestampLiteral } from "../../../core/types";
+import type { DateLiteral, TimestampLiteral } from "../../../core/types.ts";
 import type {
   SqlDate,
   SqlFloat,
   SqlInt,
   SqlNumber,
   SqlTimestamp,
-} from "../../types";
-import { ExprRef, fn, funcExpr, toExprNode, type ExprInput, type PropagateNull } from "../core";
-import { cast } from "./math";
+} from "../../types.ts";
+import { ExprRef, fn, funcExpr, toExprNode, type ExprInput, type PropagateNull } from "../core.ts";
+import { userError } from "../../../errors.ts";
+import { cast } from "./math.ts";
 
 type NullableDateLike = SqlDate | SqlTimestamp | string | null;
 type NullableTimestamp = SqlTimestamp | null;
@@ -37,7 +38,7 @@ export function timestampLiteral(value: string): ExprRef<SqlTimestamp> {
 
 export function extract<TValue>(value: ExprInput<TValue>, field: string): ExprRef<PropagateNull<TValue, SqlFloat>> {
   if (!field.trim()) {
-    throw new Error("extract requires a field");
+    userError("INVALID_FUNCTION_NAME", "extract requires a field");
   }
   return new ExprRef<PropagateNull<TValue, SqlFloat>>({
     kind: "extract",

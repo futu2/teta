@@ -1,5 +1,5 @@
-import type { Value } from "../types";
-import type { ExprRef } from "./runtime";
+import type { Value } from "../types.ts";
+import type { ExprRef } from "./runtime.ts";
 
 export type SelectValue = ExprRef<unknown> | Value;
 

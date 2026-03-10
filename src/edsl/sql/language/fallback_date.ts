@@ -1,7 +1,7 @@
-import type { ExprNode } from "../../core/types";
-import type { DialectLanguageFallback } from "../types";
-import { rewriteArithmeticDateFallback } from "./fallback_date_arithmetic";
-import { rewriteBasicDateFallback } from "./fallback_date_basic";
+import type { ExprNode } from "../../core/types.ts";
+import type { DialectLanguageFallback } from "../types.ts";
+import { rewriteArithmeticDateFallback } from "./fallback_date_arithmetic.ts";
+import { rewriteBasicDateFallback } from "./fallback_date_basic.ts";
 
 export function rewriteDateFallback(
   functionName: string,

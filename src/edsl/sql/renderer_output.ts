@@ -1,11 +1,11 @@
 import type { AST } from "node-sql-parser";
-import type { ExprNode } from "../core/types";
-import type { SqlFormat } from "./types";
-import { formatSqlPretty, stripRedundantQuotes } from "./render/format";
-import { restoreQuotedIdentifiers } from "./render/identifiers";
-import { exprToAst } from "./render/render";
-import type { SqlRenderContext } from "./render/types";
-import type { RendererState } from "./renderer_types";
+import type { ExprNode } from "../core/types.ts";
+import type { SqlFormat } from "./types.ts";
+import { formatSqlPretty, stripRedundantQuotes } from "./render/format.ts";
+import { restoreQuotedIdentifiers } from "./render/identifiers.ts";
+import { exprToAst } from "./render/render.ts";
+import type { SqlRenderContext } from "./render/types.ts";
+import type { RendererState } from "./renderer_types.ts";
 
 export function createRenderContext(
   state: Pick<RendererState, "parameterMode" | "parameterPrefix">

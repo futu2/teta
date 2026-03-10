@@ -23,10 +23,13 @@ import {
   timestampLiteral,
   LANGUAGE_SPEC,
   getLanguageSpec,
+} from "@teta/teta";
+
+import {
   copyTextToClipboard,
   renderSqlFromSource,
   watchQuerySourceToClipboard,
-} from "@teta/teta";
+} from "@teta/teta/dev";
 ```
 
 ## 1) Query Builders
@@ -64,9 +67,15 @@ const q = recursive(base);
 - `t.string()`
 - `t.int()`
 - `t.float()`
+- `t.bigint()`
+- `t.decimal()`
 - `t.boolean()`
 - `t.date()`
 - `t.timestamp()`
+- `t.uuid()`
+- `t.json<T>()`
+- `t.bytes()`
+- `t.nullable(inner)`
 
 ## 2) `Query` Methods
 
@@ -97,6 +106,7 @@ All `Query` methods are immutable and return a new `Query`.
 ### Output and introspection
 - `toIR()`
 - `toAst()`
+- `explain(options?)`
 - `toSql(renderer)`
 - `toSqlResult(renderer)`
 
@@ -106,8 +116,20 @@ All `Query` methods are immutable and return a new `Query`.
 q.toSql(sqlRenderer({ dialect: "postgresql" }));
 q.toSql(sqlRenderer({ dialect: "postgresql", format: "pretty" }));
 q.toSql(sqlRenderer({ dialect: "duckdb", format: "compact" }));
+q.toSql(sqlRenderer({ dialect: "postgresql", renderStrategy: "readable" }));
 q.toSql(duckdbRenderer({ format: "compact" }));
 ```
+
+### Lowering tips
+- `query.explain(...)` is the fastest way to inspect `stages`, `ctes`, `sql`, and `params`
+- `optimized` may fuse stages into one `SELECT`; `readable` preserves `cte_0`, `cte_1`, ...
+- a nested derived table usually means the compiler needed a scope barrier, not that SQL generation went off track
+
+### Error handling
+- `TetaUserError` -> invalid query usage or invalid render/dev-tooling config
+- `TetaInternalError` -> unexpected compiler/runtime failure
+- `isTetaError(error)` -> narrows either error class
+- Common codes: `GROUP_OUTSIDE_AGGREGATE`, `LEGACY_SELECTION_ARRAY`, `INVALID_JOIN_TYPE`, `INVALID_BUILTIN_DIALECT_NAME`, `INVALID_TABLE_SOURCE`, `INVALID_RENDERER_OPTIONS`
 
 ## 3) `ExprRef` Methods
 
@@ -327,12 +349,18 @@ Returns a controller:
 - `DialectLanguageConfig`
 - `DialectLanguageFallback`
 - `SqlFormat`
+- `SqlRenderStrategy`
 - `SqlOptions`
 - `SqlInt`
 - `SqlFloat`
+- `SqlBigInt`
+- `SqlDecimal`
 - `SqlNumber`
 - `SqlDate`
 - `SqlTimestamp`
+- `SqlUuid`
+- `SqlBytes`
+- `SqlJson<T>`
 - `LanguageCategory`
 - `ClipboardTool`
 - `QueryLike`

@@ -5,8 +5,8 @@ import type {
   OrderItem,
   SelectItem,
   SqlIdentifier,
-} from "./types_expr";
-import type { GeneratedCteName, InternalCteName, ScopeId } from "./types_internal";
+} from "./types_expr.ts";
+import type { GeneratedCteName, InternalCteName, ScopeId } from "./types_internal.ts";
 
 export type StructuredTableSource = {
   db: SqlIdentifier | null;

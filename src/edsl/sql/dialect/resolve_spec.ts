@@ -1,13 +1,13 @@
 import type {
   DialectSpec,
   QueryDialect,
-} from "../../types";
-import { resolveDialectLanguage } from "./language";
-import { lookupBuiltinDialect, lookupBuiltinDialectByParser } from "./lookup";
+} from "../../types.ts";
+import { resolveDialectLanguage } from "./language.ts";
+import { lookupBuiltinDialect, lookupBuiltinDialectByParser } from "./lookup.ts";
 import {
   assertCanonicalBuiltinName,
   resolveFeatureFlags,
-} from "./resolve_common";
+} from "./resolve_common.ts";
 
 export function isDialectSpec(value: unknown): value is DialectSpec {
   return typeof value === "object" && value !== null && "name" in value;

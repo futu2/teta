@@ -1,11 +1,12 @@
-import type { QueryDialect } from "../types";
-import type { Stage } from "../../core/types";
-import type { FromAst, ScopeBindings, SubqueryFromRef } from "./types";
-import { ensureSelectAst, replaceOuterAlias, toParserSelect } from "./ast";
-import { exprToAst, getSqlRenderContext, lateralJoinPrefix } from "./render";
-import { buildTableFromRef, compileJoinSource } from "./source";
-import { registerColumnIdentifierBindings } from "./identifiers";
-import { bindFusedExpr, type ScopeExprLookup } from "./fused";
+import type { QueryDialect } from "../types.ts";
+import type { Stage } from "../../core/types.ts";
+import type { FromAst, ScopeBindings, SubqueryFromRef } from "./types.ts";
+import { ensureSelectAst, replaceOuterAlias, toParserSelect } from "./ast.ts";
+import { exprToAst, getSqlRenderContext, lateralJoinPrefix } from "./render.ts";
+import { buildTableFromRef, compileJoinSource } from "./source.ts";
+import { registerColumnIdentifierBindings } from "./identifiers.ts";
+import { bindFusedExpr, type ScopeExprLookup } from "./fused.ts";
+import { internalError } from "../../errors.ts";
 
 export type FusedJoinFrom = {
   from: FromAst;
@@ -83,5 +84,5 @@ export function buildFusedJoinFrom(
 }
 
 function fail(message: string): never {
-  throw new Error(message);
+  internalError("INTERNAL_JOIN_ALIAS_REQUIRED", message);
 }

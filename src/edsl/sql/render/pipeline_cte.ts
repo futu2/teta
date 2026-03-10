@@ -1,9 +1,9 @@
 import type { AST, With } from "node-sql-parser";
-import type { CteSpec } from "../../core/types";
-import type { QueryDialect } from "../types";
-import { toParserAst } from "./ast";
-import { materializeCte } from "./recursive";
-import type { SelectAst } from "./types";
+import type { CteSpec } from "../../core/types.ts";
+import type { QueryDialect } from "../types.ts";
+import { toParserAst } from "./ast.ts";
+import { materializeCte } from "./recursive.ts";
+import type { SelectAst } from "./types.ts";
 
 export function materializeBaseCtes(
   ctes: readonly CteSpec[],

@@ -5,15 +5,16 @@ import {
   type InternalCteName,
   type ScopeId,
   type SqlIdentifier,
-} from "../core/types";
+} from "../core/types.ts";
 import {
   containsGroup,
   shouldAlias,
   toExprNode,
   unwrapGroupExpr,
-} from "../expr";
-import type { SelectShape, SelectValue } from "../expr";
-import { normalizeIdentifier } from "./utils";
+} from "../expr.ts";
+import { userError } from "../errors.ts";
+import type { SelectShape, SelectValue } from "../expr.ts";
+import { normalizeIdentifier } from "./utils.ts";
 
 type ResolvedProjection = {
   keys: string[];
@@ -41,7 +42,7 @@ export function resolveSelectProjection(selection: SelectShape): ResolvedProject
     items: entries.map((item) => {
       const resolved = resolveProjectionExpr(item.key, item.value);
       if (containsGroup(resolved.expr)) {
-        throw new Error("group() is only valid inside aggregate()");
+        userError("GROUP_OUTSIDE_AGGREGATE", "group() is only valid inside aggregate()");
       }
       return resolved;
     }),
@@ -95,7 +96,7 @@ function resolveProjectionExpr(key: string, value: SelectValue): {
 
 function projectionEntries(selection: SelectShape): Array<{ key: string; value: SelectValue }> {
   if (Array.isArray(selection)) {
-    throw new Error(LEGACY_SELECTION_ARRAY_ERROR);
+    userError("LEGACY_SELECTION_ARRAY", LEGACY_SELECTION_ARRAY_ERROR);
   }
 
   return Object.keys(selection).map((key) => ({

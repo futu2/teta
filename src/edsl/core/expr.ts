@@ -31,5 +31,5 @@ export {
   type SelectShape,
   type SelectValue,
   type WindowSpecInput,
-} from "./expr/core";
-export { createColumnRefs, mergeColumnRefs, mergeColumnNames, selectAllItems } from "./expr/columns";
+} from "./expr/core.ts";
+export { createColumnRefs, mergeColumnRefs, mergeColumnNames, selectAllItems } from "./expr/columns.ts";
