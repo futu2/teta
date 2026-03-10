@@ -1,7 +1,7 @@
 import type { QuerySpec } from "../../core/types.ts";
 import type { QueryDialect } from "../types.ts";
 import type { SelectAst } from "./types.ts";
-import { stageToSelect } from "./select.ts";
+import { compileStageAst } from "./stage.ts";
 import type { CompileSourceRef } from "./source.ts";
 import { buildBaseSelectAst } from "./segment.ts";
 import { optimizeLoopStages, type LoopPartLabel } from "./recursive_optimizer.ts";
@@ -40,7 +40,7 @@ export function compileLoopPart(
 
   for (let index = 0; index < optimizedStages.length; index += 1) {
     const stage = optimizedStages[index]!;
-    compiled = stageToSelect(
+    compiled = compileStageAst(
       stage,
       current,
       currentPlan.scopeId,

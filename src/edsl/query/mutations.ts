@@ -8,25 +8,25 @@ import type {
 import {
   createColumnRefs,
   dedupeExprs,
-  selectAllItems,
+  projectAllItems,
 } from "../expr.ts";
 import type {
   ColumnRefs,
   ExprRef,
-  SelectResult,
-  SelectShape,
+  ProjectionResult,
+  ProjectionShape,
 } from "../expr.ts";
 import {
   autoAlias,
   assertUnionCompatible,
   mergeWiths,
   normalizeJoinType,
-  selectItemsToIdentifierMap,
+  projectionItemsToIdentifierMap,
 } from "./utils.ts";
 import {
   freshScopeId,
-  resolveAggregateProjection,
-  resolveSelectProjection,
+  resolveFoldProjection,
+  resolveProjection,
 } from "./planner.ts";
 import {
   resolveJoinColumns,
@@ -38,16 +38,16 @@ import type {
 } from "./state.ts";
 import { toQuerySpec } from "./state.ts";
 
-export function resolveSelectQuery<
+export function resolveMapQuery<
   TColumns extends Record<string, any>,
-  TSelection extends SelectShape,
+  TSelection extends ProjectionShape,
 >(
   query: QueryState<TColumns>,
   selection: TSelection
-): QueryDeriveInit<SelectResult<TSelection>> {
-  const { keys, items } = resolveSelectProjection(selection);
-  return resolveProjectedQuery<SelectResult<TSelection>>(query, {
-    kind: "select",
+): QueryDeriveInit<ProjectionResult<TSelection>> {
+  const { keys, items } = resolveProjection(selection);
+  return resolveProjectedQuery<ProjectionResult<TSelection>>(query, {
+    kind: "map",
     items,
     keys,
     groupBy: null,
@@ -55,17 +55,17 @@ export function resolveSelectQuery<
   });
 }
 
-export function resolveAggregateQuery<
+export function resolveFoldQuery<
   TColumns extends Record<string, any>,
-  TSelection extends SelectShape,
+  TSelection extends ProjectionShape,
 >(
   query: QueryState<TColumns>,
   selection: TSelection
-): QueryDeriveInit<SelectResult<TSelection>> {
-  const resolved = resolveAggregateProjection(selection);
+): QueryDeriveInit<ProjectionResult<TSelection>> {
+  const resolved = resolveFoldProjection(selection);
   const finalGroupBy = dedupeExprs(resolved.groupBy);
-  return resolveProjectedQuery<SelectResult<TSelection>>(query, {
-    kind: "select",
+  return resolveProjectedQuery<ProjectionResult<TSelection>>(query, {
+    kind: "fold",
     items: resolved.items,
     keys: resolved.keys,
     groupBy: finalGroupBy.length ? finalGroupBy : null,
@@ -87,7 +87,7 @@ export function resolveFilterQuery<TColumns extends Record<string, any>>(
         left: lastStage.predicate,
         right: predicate,
       },
-      selectAll: lastStage.selectAll,
+      projectAll: lastStage.projectAll,
     };
     return {
       stages: [...query.stages.slice(0, -1), merged],
@@ -99,29 +99,29 @@ export function resolveFilterQuery<TColumns extends Record<string, any>>(
   return appendPassthroughStage(query, {
     kind: "filter",
     predicate,
-    selectAll: selectAllItems(query.columns, query.columnNames, query.columnIdentifiers),
+    projectAll: projectAllItems(query.columns, query.columnNames, query.columnIdentifiers),
   });
 }
 
-export function resolveOrderQuery<TColumns extends Record<string, any>>(
+export function resolveSortQuery<TColumns extends Record<string, any>>(
   query: QueryState<TColumns>,
   items: OrderItem[]
 ): QueryDeriveInit<TColumns> {
   return appendPassthroughStage(query, {
-    kind: "orderBy",
+    kind: "sort",
     items,
-    selectAll: selectAllItems(query.columns, query.columnNames, query.columnIdentifiers),
+    projectAll: projectAllItems(query.columns, query.columnNames, query.columnIdentifiers),
   });
 }
 
-export function resolveLimitQuery<TColumns extends Record<string, any>>(
+export function resolveTakeQuery<TColumns extends Record<string, any>>(
   query: QueryState<TColumns>,
   count: number
 ): QueryDeriveInit<TColumns> {
   return appendPassthroughStage(query, {
-    kind: "limit",
+    kind: "take",
     count,
-    selectAll: selectAllItems(query.columns, query.columnNames, query.columnIdentifiers),
+    projectAll: projectAllItems(query.columns, query.columnNames, query.columnIdentifiers),
   });
 }
 
@@ -173,7 +173,7 @@ export function resolveJoinQuery<
     source: joinSource,
     as: alias,
     on: predicate,
-    selectAll: selectAllItems(mergedColumns, nextNames),
+    projectAll: projectAllItems(mergedColumns, nextNames),
     rightScopeId: rightQuery.scopeId,
     outputScopeId,
   };
@@ -183,7 +183,7 @@ export function resolveJoinQuery<
     columnNames: nextNames,
     scopeId: outputScopeId,
     withs: mergeWiths(leftQuery.withs, rightQuery.withs),
-    columnIdentifiers: selectItemsToIdentifierMap(stage.selectAll),
+    columnIdentifiers: projectionItemsToIdentifierMap(stage.projectAll),
   };
 }
 
@@ -198,7 +198,7 @@ export function resolveUnionQuery<TColumns extends Record<string, any>>(
     kind: "union",
     op,
     right: toQuerySpec(rightQuery),
-    selectAll: selectAllItems(leftQuery.columns, leftQuery.columnNames, leftQuery.columnIdentifiers),
+    projectAll: projectAllItems(leftQuery.columns, leftQuery.columnNames, leftQuery.columnIdentifiers),
     outputScopeId,
   };
   return {
@@ -207,26 +207,26 @@ export function resolveUnionQuery<TColumns extends Record<string, any>>(
     columnNames: leftQuery.columnNames,
     scopeId: outputScopeId,
     withs: mergeWiths(leftQuery.withs, rightQuery.withs),
-    columnIdentifiers: selectItemsToIdentifierMap(stage.selectAll),
+    columnIdentifiers: projectionItemsToIdentifierMap(stage.projectAll),
   };
 }
 
 function resolveProjectedQuery<TSelectedColumns extends Record<string, any>>(
   query: QueryState<Record<string, any>>,
-  stage: Extract<Stage, { kind: "select" }>
+  stage: Extract<Stage, { kind: "map" | "fold" }>
 ): QueryDeriveInit<TSelectedColumns> {
   return {
     stages: [...query.stages, stage],
     columns: createColumnRefs<TSelectedColumns>(stage.outputScopeId, stage.keys),
     columnNames: stage.keys,
     scopeId: stage.outputScopeId,
-    columnIdentifiers: selectItemsToIdentifierMap(stage.items),
+    columnIdentifiers: projectionItemsToIdentifierMap(stage.items),
   };
 }
 
 function appendPassthroughStage<TColumns extends Record<string, any>>(
   query: QueryState<TColumns>,
-  stage: Extract<Stage, { kind: "filter" | "orderBy" | "limit" }>
+  stage: Extract<Stage, { kind: "filter" | "sort" | "take" }>
 ): QueryDeriveInit<TColumns> {
   return {
     stages: [...query.stages, stage],

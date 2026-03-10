@@ -2,13 +2,13 @@
 export {
   Query,
   explain,
-  aggregate,
+  fold,
   filter,
   join,
-  limit,
+  take,
   loop,
-  orderBy,
-  select,
+  sort,
+  map,
   t,
   table,
   toAst,
@@ -18,7 +18,7 @@ export {
   union,
   unionAll,
 } from "./src/edsl/query.ts";
-export type { QueryExplainResult, QueryIR, QueryStep } from "./src/edsl/query.ts";
+export type { QueryExplainResult, QueryIR, QueryStageKind, QueryStep } from "./src/edsl/query.ts";
 
 /** Expression builder and helpers for composing SQL expressions. */
 export {
@@ -117,8 +117,11 @@ export {
   array,
   fn,
   windowFn,
+  over,
+  caseWhen,
   when,
-  shape,
+  mapShape,
+  groupShape,
   f,
   lit,
   param,

@@ -5,15 +5,15 @@ import { getDefaultDialect } from "../dialect.ts";
 import type { CompileSourceRef } from "./source.ts";
 import {
   buildFilterStageAst,
-  buildLimitStageAst,
-  buildOrderByStageAst,
-  buildSelectStageAst,
-  createStageSelectContext,
-} from "./select_stage.ts";
-import { buildJoinStageAst } from "./select_join.ts";
+  buildProjectionStageAst,
+  buildSortStageAst,
+  buildTakeStageAst,
+  createStageRenderContext,
+} from "./stage_ast.ts";
+import { buildJoinStageAst } from "./stage_join.ts";
 import { internalError } from "../../errors.ts";
 
-export function stageToSelect(
+export function compileStageAst(
   stage: Stage,
   source: CompileSourceRef,
   sourceScopeId: ScopeId,
@@ -21,7 +21,7 @@ export function stageToSelect(
   dialect: QueryDialect = getDefaultDialect(),
   ctePrefix = ""
 ): SelectAst {
-  const context = createStageSelectContext(
+  const context = createStageRenderContext(
     source,
     sourceScopeId,
     inheritedBindings,
@@ -29,14 +29,15 @@ export function stageToSelect(
   );
 
   switch (stage.kind) {
-    case "select":
-      return buildSelectStageAst(stage, context);
+    case "map":
+    case "fold":
+      return buildProjectionStageAst(stage, context);
     case "filter":
       return buildFilterStageAst(stage, context);
-    case "orderBy":
-      return buildOrderByStageAst(stage, context);
-    case "limit":
-      return buildLimitStageAst(stage, context);
+    case "sort":
+      return buildSortStageAst(stage, context);
+    case "take":
+      return buildTakeStageAst(stage, context);
     case "join":
       return buildJoinStageAst(stage, context, ctePrefix);
     case "union":

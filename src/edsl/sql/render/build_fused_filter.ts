@@ -22,7 +22,7 @@ type PostProjectionFilterOutcome =
 
 export function handlePostProjectionFilterStage(
   stage: Extract<Stage, { kind: "filter" }>,
-  projection: Extract<Stage, { kind: "select" }> | null,
+  projection: Extract<Stage, { kind: "map" | "fold" }> | null,
   scopeExprs: ScopeExprLookup,
   currentBindings: ScopeBindings,
   dialect: QueryDialect,

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { sqlRenderer, type SqlRenderer, type SqlResult } from "../mod.ts";
+import { sqlRenderer, toSql, type SqlCompilable } from "../mod.ts";
 import {
   createDuckDbAdapter,
   createSqliteAdapter,
@@ -31,11 +31,11 @@ async function runCase(
   adapterFactory: () => Promise<LiveDialectAdapter>,
   dialect: LiveDialect,
   outcome: LiveOutcome,
-  build: () => { toSql: (renderer: SqlRenderer<any, SqlResult>) => string }
+  build: () => SqlCompilable
 ): Promise<void> {
   const adapter = await adapterFactory();
   try {
-    const sql = build().toSql(sqlRenderer({ dialect, format: "compact" }));
+    const sql = toSql(build(), sqlRenderer({ dialect, format: "compact" }));
     if (isErrorOutcome(outcome)) {
       await expect(adapter.run(sql)).rejects.toThrow(outcome.error);
       return;

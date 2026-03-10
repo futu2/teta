@@ -3,7 +3,7 @@ import type {
   IdentifierInput,
   JoinType,
   OrderItem,
-  SelectItem,
+  ProjectionItem,
   SqlIdentifier,
 } from "./types_expr.ts";
 import type { GeneratedCteName, InternalCteName, ScopeId } from "./types_internal.ts";
@@ -69,17 +69,41 @@ export type JoinSource =
       inheritedBindings: Readonly<Partial<Record<ScopeId, string | null>>> | null;
     };
 
+export type MapStage = {
+  kind: "map";
+  items: ProjectionItem[];
+  keys: string[];
+  groupBy: null;
+  outputScopeId: ScopeId;
+};
+
+export type FoldStage = {
+  kind: "fold";
+  items: ProjectionItem[];
+  keys: string[];
+  groupBy: ExprNode<any>[] | null;
+  outputScopeId: ScopeId;
+};
+
+export type ProjectionStage = MapStage | FoldStage;
+
+export type SortStage = {
+  kind: "sort";
+  items: OrderItem[];
+  projectAll: ProjectionItem[];
+};
+
+export type TakeStage = {
+  kind: "take";
+  count: number;
+  projectAll: ProjectionItem[];
+};
+
 export type Stage =
-  | {
-      kind: "select";
-      items: SelectItem[];
-      keys: string[];
-      groupBy: ExprNode<any>[] | null;
-      outputScopeId: ScopeId;
-    }
-  | { kind: "filter"; predicate: ExprNode<boolean>; selectAll: SelectItem[] }
-  | { kind: "orderBy"; items: OrderItem[]; selectAll: SelectItem[] }
-  | { kind: "limit"; count: number; selectAll: SelectItem[] }
+  | ProjectionStage
+  | { kind: "filter"; predicate: ExprNode<boolean>; projectAll: ProjectionItem[] }
+  | SortStage
+  | TakeStage
   | {
       kind: "join";
       joinType: JoinType;
@@ -87,15 +111,15 @@ export type Stage =
       source: JoinSource;
       as: string | null;
       on: ExprNode<boolean>;
-      selectAll: SelectItem[];
+      projectAll: ProjectionItem[];
       rightScopeId: ScopeId;
       outputScopeId: ScopeId;
     }
   | {
       kind: "union";
       op: "union" | "union all";
+      projectAll: ProjectionItem[];
       right: QuerySpec;
-      selectAll: SelectItem[];
       outputScopeId: ScopeId;
     };
 

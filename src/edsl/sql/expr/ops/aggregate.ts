@@ -2,6 +2,7 @@ import type { SqlFloat, SqlInt, SqlNumber } from "../../types.ts";
 import {
   ExprRef,
   aggregateExpr,
+  over,
   toExprNode,
   windowExpr,
   type ExprInput,
@@ -91,5 +92,5 @@ export function sumOver<TValue extends NullableSqlNumber>(
   value: ExprInput<TValue>,
   spec: WindowSpecInput = {}
 ): ExprRef<TValue> {
-  return windowExpr<TValue>("SUM", value).over(spec);
+  return over(windowExpr<TValue>("SUM", value), spec);
 }

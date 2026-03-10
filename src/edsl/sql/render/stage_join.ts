@@ -4,19 +4,19 @@ import { ensureSelectAst, replaceOuterAlias, toParserSelect } from "./ast.ts";
 import { getSqlRenderContext, bindExprScopes, exprToAst, lateralJoinPrefix } from "./render.ts";
 import { registerColumnIdentifierBindings } from "./identifiers.ts";
 import {
-  buildSelectAst,
+  buildSqlSelectAst,
   buildTableFromRef,
   compileJoinSource,
 } from "./source.ts";
 import {
-  renderBoundSelectItems,
-  type StageSelectContext,
-} from "./select_stage.ts";
+  renderBoundProjectionItems,
+  type StageRenderContext,
+} from "./stage_ast.ts";
 import { internalError } from "../../errors.ts";
 
 export function buildJoinStageAst(
   stage: Extract<Stage, { kind: "join" }>,
-  context: StageSelectContext,
+  context: StageRenderContext,
   ctePrefix: string
 ): SelectAst {
   const join = `${stage.joinType} JOIN`;
@@ -35,12 +35,12 @@ export function buildJoinStageAst(
     getSqlRenderContext()
   );
 
-  return buildSelectAst({
+  return buildSqlSelectAst({
     from: [
       context.baseFrom,
       buildJoinFromRef(stage, context, joinBindings, ctePrefix, join),
     ],
-    columns: renderBoundSelectItems(stage.selectAll, joinBindings, context.dialect),
+    columns: renderBoundProjectionItems(stage.projectAll, joinBindings, context.dialect),
     where: null,
     groupby: null,
     having: null,
@@ -52,7 +52,7 @@ export function buildJoinStageAst(
 
 function buildJoinFromRef(
   stage: Extract<Stage, { kind: "join" }>,
-  context: StageSelectContext,
+  context: StageRenderContext,
   joinBindings: ScopeBindings,
   ctePrefix: string,
   join: string

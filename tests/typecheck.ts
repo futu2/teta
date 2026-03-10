@@ -1,123 +1,105 @@
-import * as R from "remeda";
-import type {
-  ExprRef,
-  SqlBigInt,
-  SqlBytes,
-  SqlDecimal,
-  SqlFloat,
-  SqlInt,
-  SqlJson,
-  SqlUuid,
-} from "../mod.ts";
-import { filter, join, limit, orderBy, param, select, table, t } from "../mod.ts";
-
-type Equal<A, B> = (
-  (<T>() => T extends A ? 1 : 2) extends
-  (<T>() => T extends B ? 1 : 2) ? true : false
-);
+import { omit, pick, pipe } from "remeda";
+import type { ExprRef, SqlBigInt, SqlBytes, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlUuid, } from "../mod.ts";
+import { filter, join, take, sort, param, map, table, t, fold, asc, desc, eq, gt, upper, add, coalesce, count, group, loop, sum, and, sub, caseWhen, when, mapShape, groupShape, lt } from "../mod.ts";
+type Equal<A, B> = ((<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false);
 type Expect<T extends true> = T;
 type ExprType<TExpr> = TExpr extends ExprRef<infer TValue> ? TValue : never;
-
 const users = table("users", {
-  id: t.int(),
-  name: t.string(),
+    id: t.int(),
+    name: t.string(),
 });
-
 const orders = table("orders", {
-  order_id: t.int(),
-  user_id: t.int(),
-  total: t.float(),
+    order_id: t.int(),
+    user_id: t.int(),
+    total: t.float(),
 });
-
 type ProfileMeta = {
-  theme: string;
-  flags: string[];
+    theme: string;
+    flags: string[];
 };
-
 const profiles = table("profiles", {
-  id: t.uuid(),
-  external_id: t.bigint(),
-  credit_limit: t.nullable(t.decimal()),
-  metadata: t.json<ProfileMeta>(),
-  avatar: t.nullable(t.bytes()),
-  nickname: t.nullable(t.string()),
+    id: t.uuid(),
+    external_id: t.bigint(),
+    credit_limit: t.nullable(t.decimal()),
+    metadata: t.json<ProfileMeta>(),
+    avatar: t.nullable(t.bytes()),
+    nickname: t.nullable(t.string()),
 });
-
-const leftJoined = users.join(orders, (user, order) => user.id.eq(order.user_id), { type: "left" });
-const rightJoined = users.join(orders, (user, order) => user.id.eq(order.user_id), { type: "right" });
-const fullJoined = users.join(orders, (user, order) => user.id.eq(order.user_id), { type: "full" });
-const leftViaJoin = users.join(orders, (user, order) => user.id.eq(order.user_id), { type: "left" });
-const filteredUsers = filter((user: typeof users.columns) => user.id.gt(0))(users);
-const projectedUsers = select((user: typeof filteredUsers.columns) => ({
-  id: user.id,
-  name: user.name.upper(),
-}))(filteredUsers);
-const curriedPipeline = limit(5)(
-  orderBy((row: typeof projectedUsers.columns) => [row.name.asc(), row.id.desc()])(projectedUsers)
-);
-const curriedJoin = join(
-  orders,
-  (user: typeof users.columns, order: typeof orders.columns) => user.id.eq(order.user_id),
-  { type: "left" }
-)(users);
-const remedaPickedSelection = users.select(R.pick(["id"]));
-const remedaOmittedSelection = users.select((user) => ({
-  ...R.omit(user, ["name"]),
-  upper_name: user.name.upper(),
+const leftJoined = join(users, orders, (user, order) => eq(user.id, order.user_id), { type: "left" });
+const rightJoined = join(users, orders, (user, order) => eq(user.id, order.user_id), { type: "right" });
+const fullJoined = join(users, orders, (user, order) => eq(user.id, order.user_id), { type: "full" });
+const leftViaJoin = join(users, orders, (user, order) => eq(user.id, order.user_id), { type: "left" });
+const filteredUsers = filter(users, (user: typeof users.columns) => gt(user.id, 0));
+const projectedUsers = map(filteredUsers, (user: typeof filteredUsers.columns) => ({
+    id: user.id,
+    name: upper(user.name),
 }));
-const remedaOmittedAggregate = orders.aggregate((order) =>
-  R.omit({
-    user_id: order.user_id.group(),
-    order_count: order.order_id.count(),
-    total_spend: order.total.sum(),
-  }, ["order_count"])
-);
-
-const leftSelected = leftJoined.select((row) => ({
-  total: row.total.coalesce(0),
-  filtered: row.total.gt(0),
-  name: row.name.upper(),
+const curriedPipeline = pipe(users, filter((user: typeof users.columns) => gt(user.id, 0)), map((user) => ({
+    id: user.id,
+    name: upper(user.name),
+})), sort((row) => [asc(row.name), desc(row.id)]), take(5));
+const curriedJoin = pipe(users, join(orders, (user: typeof users.columns, order: typeof orders.columns) => eq(user.id, order.user_id), { type: "left" }));
+const remedaPickedSelection = map(users, pick(["id"]));
+const remedaOmittedSelection = map(users, (user) => ({
+    ...omit(user, ["name"]),
+    upper_name: upper(user.name),
 }));
-
-const rightSelected = rightJoined.select((row) => ({
-  user_id: row.id.coalesce(0),
-  total: row.total,
+const remedaOmittedAggregate = fold(orders, (order) => omit({
+    user_id: group(order.user_id),
+    order_count: count(order.order_id),
+    total_spend: sum(order.total),
+}, ["order_count"]));
+const leftSelected = map(leftJoined, (row) => ({
+    total: coalesce(row.total, 0),
+    filtered: gt(row.total, 0),
+    name: upper(row.name),
 }));
-
-const fullSelected = fullJoined.select((row) => ({
-  id: row.id.coalesce(0),
-  total: row.total.coalesce(0),
+const rightSelected = map(rightJoined, (row) => ({
+    user_id: coalesce(row.id, 0),
+    total: row.total,
 }));
-
-const leftViaJoinSelected = leftViaJoin.select((row) => ({
-  total: row.total.coalesce(0),
+const fullSelected = map(fullJoined, (row) => ({
+    id: coalesce(row.id, 0),
+    total: coalesce(row.total, 0),
 }));
-
-const leftJoinTotal = leftJoined.columns.total.coalesce(0);
-const leftJoinTotalRemaining = leftJoinTotal.sub(1);
-
-const projectedWithQuotedKey = users.select((user) => ({ ["User Id"]: user.id }));
-const aggregatedWithQuotedKey = orders.aggregate((order) => ({
-  ["User Id"]: order.user_id.group(),
-  ["Total Spend"]: order.total.sum(),
+const leftViaJoinSelected = map(leftViaJoin, (row) => ({
+    total: coalesce(row.total, 0),
 }));
-const loopBase = users.select((user) => ({ id: user.id }));
-const looped = loopBase.loop((self) => self.filter((row) => row.id.gt(0)));
-const projectedProfiles = profiles.select((profile) => ({
-  id: profile.id,
-  external_id: profile.external_id.add(1),
-  credit_limit: profile.credit_limit.coalesce(0),
-  metadata: profile.metadata,
-  avatar: profile.avatar,
-  nickname: profile.nickname.coalesce("anonymous"),
+const leftJoinTotal = coalesce(leftJoined.columns.total, 0);
+const leftJoinTotalRemaining = sub(leftJoinTotal, 1);
+const projectedWithQuotedKey = map(users, (user) => ({ ["User Id"]: user.id }));
+const aggregatedWithQuotedKey = fold(orders, (order) => ({
+    ["User Id"]: group(order.user_id),
+    ["Total Spend"]: sum(order.total),
 }));
-const uuidFilteredProfiles = profiles.filter((profile) =>
-  profile.id.eq(param("00000000-0000-0000-0000-000000000000"))
-);
-const bigintFilteredProfiles = profiles.filter((profile) =>
-  profile.external_id.gt(0).and(profile.external_id.eq(42n))
-);
-
+const loopBase = map(users, (user) => ({ id: user.id }));
+const looped = loop(loopBase, (self) => filter(self, (row) => gt(row.id, 0)));
+const projectedWithCase = map(users, (user) => ({
+    id: user.id,
+    age_bucket: caseWhen([
+        when(lt(user.id, 10), "small"),
+        when(lt(user.id, 100), "medium"),
+    ], "large"),
+    ...mapShape({
+        bumped_id: user.id,
+    }, (value) => add(value, 1)),
+}));
+const aggregatedWithGroupShape = fold(orders, (order) => ({
+    ...groupShape({
+        user_id: order.user_id,
+    }),
+    total_spend: sum(order.total),
+}));
+const projectedProfiles = map(profiles, (profile) => ({
+    id: profile.id,
+    external_id: add(profile.external_id, 1),
+    credit_limit: coalesce(profile.credit_limit, 0),
+    metadata: profile.metadata,
+    avatar: profile.avatar,
+    nickname: coalesce(profile.nickname, "anonymous"),
+}));
+const uuidFilteredProfiles = filter(profiles, (profile) => eq(profile.id, param("00000000-0000-0000-0000-000000000000")));
+const bigintFilteredProfiles = filter(profiles, (profile) => and(gt(profile.external_id, 0), eq(profile.external_id, 42n)));
 type _LeftJoinTotal = Expect<Equal<ExprType<typeof leftJoined.columns.total>, SqlFloat | null>>;
 type _RightJoinId = Expect<Equal<ExprType<typeof rightJoined.columns.id>, SqlInt | null>>;
 type _FullJoinTotal = Expect<Equal<ExprType<typeof fullJoined.columns.total>, SqlFloat | null>>;
@@ -135,6 +117,9 @@ type _LeftJoinCoalescedSub = Expect<Equal<ExprType<typeof leftJoinTotalRemaining
 type _ProjectedWithQuotedKey = Expect<Equal<ExprType<typeof projectedWithQuotedKey.columns["User Id"]>, SqlInt>>;
 type _AggregatedWithQuotedKey = Expect<Equal<ExprType<typeof aggregatedWithQuotedKey.columns["Total Spend"]>, SqlFloat>>;
 type _LoopedId = Expect<Equal<ExprType<typeof looped.columns.id>, SqlInt>>;
+type _ProjectedWithCaseAgeBucket = Expect<Equal<ExprType<typeof projectedWithCase.columns.age_bucket>, string>>;
+type _ProjectedWithCaseBumpedId = Expect<Equal<ExprType<typeof projectedWithCase.columns.bumped_id>, SqlInt>>;
+type _AggregatedWithGroupShapeUserId = Expect<Equal<ExprType<typeof aggregatedWithGroupShape.columns.user_id>, SqlInt>>;
 type _ProfileId = Expect<Equal<ExprType<typeof profiles.columns.id>, SqlUuid>>;
 type _ProfileExternalId = Expect<Equal<ExprType<typeof profiles.columns.external_id>, SqlBigInt>>;
 type _ProfileCreditLimit = Expect<Equal<ExprType<typeof profiles.columns.credit_limit>, SqlDecimal | null>>;
@@ -146,7 +131,6 @@ type _ProjectedProfileCreditLimit = Expect<Equal<ExprType<typeof projectedProfil
 type _ProjectedProfileMetadata = Expect<Equal<ExprType<typeof projectedProfiles.columns.metadata>, SqlJson<ProfileMeta>>>;
 type _ProjectedProfileAvatar = Expect<Equal<ExprType<typeof projectedProfiles.columns.avatar>, SqlBytes | null>>;
 type _ProjectedProfileNickname = Expect<Equal<ExprType<typeof projectedProfiles.columns.nickname>, string>>;
-
 void leftSelected;
 void rightSelected;
 void fullSelected;
@@ -159,12 +143,12 @@ void leftViaJoinSelected;
 void projectedWithQuotedKey;
 void aggregatedWithQuotedKey;
 void looped;
+void projectedWithCase;
+void aggregatedWithGroupShape;
 void projectedProfiles;
 void uuidFilteredProfiles;
 void bigintFilteredProfiles;
-
 // @ts-expect-error legacy array selection syntax is removed
-users.select((user) => [user.id]);
-
-// @ts-expect-error legacy array aggregate syntax is removed
-orders.aggregate((order) => [order.user_id.group()]);
+map(users, (user) => [user.id]);
+// @ts-expect-error legacy array fold syntax is removed
+fold(orders, (order) => [group(order.user_id)]);

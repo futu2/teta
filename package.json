@@ -1,6 +1,7 @@
 {
   "name": "teta",
   "module": "./mod.ts",
+  "version": "0.3.0",
   "exports": {
     ".": "./mod.ts",
     "./dev": "./dev.ts"
@@ -22,10 +23,10 @@
   "devDependencies": {
     "@duckdb/node-api": "^1.4.4-r.3",
     "@types/bun": "latest",
-    "remeda": "^2.33.6",
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "remeda": "^2.33.6",
     "node-sql-parser": "^5.4.0"
   }
 }

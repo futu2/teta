@@ -1,7 +1,7 @@
 import type { QueryDialect } from "../types.ts";
-import { isInternalScopeName, type ExprNode, type ScopeId, type SelectItem } from "../../core/types.ts";
+import { isInternalScopeName, type ExprNode, type ScopeId, type ProjectionItem } from "../../core/types.ts";
 import { shouldAlias } from "../../core/expr.ts";
-import { selectItemOutputName } from "../../query/utils.ts";
+import { projectionItemOutputName } from "../../query/utils.ts";
 import type { ScopeBindings } from "./types.ts";
 import { renderIdentifier } from "./identifiers.ts";
 import { internalError } from "../../errors.ts";
@@ -18,7 +18,7 @@ export function bindFusedExpr(
   return bindExprScopes(expandScopeExprs(expr, scopeExprs), bindings, dialect);
 }
 
-export function selectExpandedColumns(
+export function expandProjectedColumns(
   scopeId: ScopeId,
   columnNames: readonly string[],
   scopeExprs: ScopeExprLookup,
@@ -36,12 +36,12 @@ export function selectExpandedColumns(
   });
 }
 
-export function selectItemsToScopeMap(items: SelectItem[]): Record<string, ExprNode<unknown>> {
+export function projectionItemsToScopeMap(items: ProjectionItem[]): Record<string, ExprNode<unknown>> {
   const mapping: Record<string, ExprNode<unknown>> = {};
   for (const item of items) {
-    const name = selectItemOutputName(item);
+    const name = projectionItemOutputName(item);
     if (!name) {
-      internalError("INTERNAL_UNNAMED_SELECT_ITEM", "Cannot fuse a stage with unnamed select items");
+      internalError("INTERNAL_UNNAMED_PROJECTION_ITEM", "Cannot fuse a stage with unnamed projection items");
     }
     mapping[name] = item.expr;
   }

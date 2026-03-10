@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import type { ExprNode, ScopeId, SelectItem, Stage } from "../src/edsl/core/types.ts";
+import type { ExprNode, ScopeId, ProjectionItem, Stage } from "../src/edsl/core/types.ts";
 import { optimizeLoopStages } from "../src/edsl/sql/render/recursive_optimizer.ts";
 
 const column = (name: string, table: string | null = null): ExprNode<unknown> => ({
@@ -24,7 +24,7 @@ const equals = (
   right,
 });
 
-const select = (name: string): SelectItem => ({
+const select = (name: string): ProjectionItem => ({
   expr: column(name),
   as: null,
 });
@@ -37,12 +37,12 @@ describe("recursive optimizer", () => {
       {
         kind: "filter",
         predicate: left,
-        selectAll: [select("id"), select("name")],
+        projectAll: [select("id"), select("name")],
       },
       {
         kind: "filter",
         predicate: right,
-        selectAll: [select("id")],
+        projectAll: [select("id")],
       },
     ];
 
@@ -57,18 +57,18 @@ describe("recursive optimizer", () => {
         left,
         right,
       },
-      selectAll: [select("id")],
+      projectAll: [select("id")],
     });
   });
 
-  test("removes no-op loop selects", () => {
+  test("removes no-op loop maps", () => {
     const filter: Stage = {
       kind: "filter",
       predicate: equals(column("active"), literal(true)),
-      selectAll: [select("id")],
+      projectAll: [select("id")],
     };
     const selectStage: Stage = {
-      kind: "select",
+      kind: "map",
       items: [select("id")],
       keys: ["id"],
       groupBy: null,

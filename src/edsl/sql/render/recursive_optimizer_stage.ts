@@ -1,5 +1,5 @@
-import type { SelectItem, Stage } from "../../core/types.ts";
-import { selectItemOutputName } from "../../query/utils.ts";
+import type { ProjectionItem, Stage } from "../../core/types.ts";
+import { projectionItemOutputName } from "../../query/utils.ts";
 import { internalError, userError } from "../../errors.ts";
 import { stageOutputNames } from "./planner.ts";
 import { collectExprColumns } from "./recursive_optimizer_expr.ts";
@@ -19,7 +19,8 @@ export function optimizeLoopStage(
   validateLoopStage(stage, label);
 
   switch (stage.kind) {
-    case "select": {
+    case "map":
+    case "fold": {
       const keptIndexes = stage.keys
         .map((key, itemIndex) => ({ key, itemIndex }))
         .filter(({ key }) => needed.has(key))
@@ -47,40 +48,40 @@ export function optimizeLoopStage(
       };
     }
     case "filter": {
-      const selectAll = pruneSelectItems(stage.selectAll, needed);
+      const projectAll = pruneProjectionItems(stage.projectAll, needed);
       const before = new Set<string>(needed);
       collectExprColumns(stage.predicate, before);
       return {
         stage:
-          selectAll === stage.selectAll
+          projectAll === stage.projectAll
             ? stage
             : {
                 ...stage,
-                selectAll,
+                projectAll,
               },
         needed: before,
       };
     }
     case "join": {
-      const selectAll = pruneSelectItems(stage.selectAll, needed);
+      const projectAll = pruneProjectionItems(stage.projectAll, needed);
       const before = new Set<string>();
-      selectAll.forEach((item) =>
+      projectAll.forEach((item) =>
         collectExprColumns(item.expr, before, { excludeTable: stage.as })
       );
       collectExprColumns(stage.on, before, { excludeTable: stage.as });
       return {
         stage:
-          selectAll === stage.selectAll
+          projectAll === stage.projectAll
             ? stage
             : {
                 ...stage,
-                selectAll,
+                projectAll,
               },
         needed: before.size ? before : new Set<string>(needed),
       };
     }
-    case "orderBy":
-    case "limit":
+    case "sort":
+    case "take":
     case "union":
       userError("LOOP_UNSUPPORTED_STAGE", `loop ${label} does not allow ${stage.kind} stages`);
     default:
@@ -92,13 +93,13 @@ export function compactLoopStages(
   stages: Stage[],
   inputNames: readonly string[]
 ): Stage[] {
-  return mergeAdjacentLoopFilters(removeNoOpLoopSelects(stages, inputNames));
+  return mergeAdjacentLoopFilters(removeNoOpLoopMaps(stages, inputNames));
 }
 
 function validateLoopStage(stage: Stage, label: LoopPartLabel): void {
   switch (stage.kind) {
-    case "orderBy":
-    case "limit":
+    case "sort":
+    case "take":
     case "union":
       userError("LOOP_UNSUPPORTED_STAGE", `loop ${label} does not allow ${stage.kind} stages`);
     default:
@@ -120,7 +121,7 @@ function mergeAdjacentLoopFilters(stages: Stage[]): Stage[] {
           left: previous.predicate,
           right: stage.predicate,
         },
-        selectAll: stage.selectAll,
+        projectAll: stage.projectAll,
       };
       continue;
     }
@@ -129,12 +130,12 @@ function mergeAdjacentLoopFilters(stages: Stage[]): Stage[] {
   return merged;
 }
 
-function pruneSelectItems(
-  items: SelectItem[],
+function pruneProjectionItems(
+  items: ProjectionItem[],
   needed: ReadonlySet<string>
-): SelectItem[] {
+): ProjectionItem[] {
   const pruned = items.filter((item) => {
-    const name = selectItemOutputName(item);
+    const name = projectionItemOutputName(item);
     if (!name) return true;
     return needed.has(name);
   });
@@ -142,14 +143,14 @@ function pruneSelectItems(
   return pruned;
 }
 
-function removeNoOpLoopSelects(
+function removeNoOpLoopMaps(
   stages: Stage[],
   initialInputNames: readonly string[]
 ): Stage[] {
   const compact: Stage[] = [];
   let inputNames = initialInputNames;
   for (const stage of stages) {
-    if (stage.kind === "select" && isNoOpLoopSelect(stage, inputNames)) {
+    if (stage.kind === "map" && isNoOpLoopMap(stage, inputNames)) {
       continue;
     }
     compact.push(stage);
@@ -158,11 +159,10 @@ function removeNoOpLoopSelects(
   return compact;
 }
 
-function isNoOpLoopSelect(
-  stage: Extract<Stage, { kind: "select" }>,
+function isNoOpLoopMap(
+  stage: Extract<Stage, { kind: "map" }>,
   inputNames: readonly string[]
 ): boolean {
-  if (stage.groupBy && stage.groupBy.length > 0) return false;
   if (inputNames.length !== stage.keys.length) return false;
   for (let index = 0; index < stage.keys.length; index += 1) {
     const key = stage.keys[index]!;
@@ -170,7 +170,7 @@ function isNoOpLoopSelect(
     const item = stage.items[index];
     if (!item) return false;
     if (key !== input) return false;
-    if (item.as && selectItemOutputName(item) !== key) return false;
+    if (item.as && projectionItemOutputName(item) !== key) return false;
     if (item.expr.kind !== "column") return false;
     if (item.expr.table !== null) return false;
     if (item.expr.name !== key) return false;

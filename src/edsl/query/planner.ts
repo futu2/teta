@@ -13,7 +13,7 @@ import {
   unwrapGroupExpr,
 } from "../expr.ts";
 import { userError } from "../errors.ts";
-import type { SelectShape, SelectValue } from "../expr.ts";
+import type { ProjectionShape, ProjectionValue } from "../expr.ts";
 import { normalizeIdentifier } from "./utils.ts";
 
 type ResolvedProjection = {
@@ -25,7 +25,7 @@ type ResolvedAggregateProjection = ResolvedProjection & {
   groupBy: ExprNode<any>[];
 };
 
-const LEGACY_SELECTION_ARRAY_ERROR = "select() and aggregate() now expect an object shape";
+const LEGACY_SELECTION_ARRAY_ERROR = "map() and fold() now expect an object shape";
 
 export function freshScopeId(): ScopeId {
   return `${INTERNAL_SCOPE_PREFIX}${freshInternalToken()}` as ScopeId;
@@ -35,22 +35,22 @@ export function freshInternalCteName(label: string): InternalCteName {
   return `${INTERNAL_CTE_PREFIX}${label}_${freshInternalToken()}` as InternalCteName;
 }
 
-export function resolveSelectProjection(selection: SelectShape): ResolvedProjection {
+export function resolveProjection(selection: ProjectionShape): ResolvedProjection {
   const entries = projectionEntries(selection);
   return {
     keys: entries.map((item) => item.key),
     items: entries.map((item) => {
       const resolved = resolveProjectionExpr(item.key, item.value);
       if (containsGroup(resolved.expr)) {
-        userError("GROUP_OUTSIDE_AGGREGATE", "group() is only valid inside aggregate()");
+        userError("GROUP_OUTSIDE_AGGREGATE", "group() is only valid inside fold()");
       }
       return resolved;
     }),
   };
 }
 
-export function resolveAggregateProjection(
-  selection: SelectShape
+export function resolveFoldProjection(
+  selection: ProjectionShape
 ): ResolvedAggregateProjection {
   const entries = projectionEntries(selection);
   const groupBy: ExprNode<any>[] = [];
@@ -62,7 +62,7 @@ export function resolveAggregateProjection(
       return {
         expr: unwrapped,
         as: shouldAlias(unwrapped, item.key)
-          ? normalizeIdentifier(item.key, "select alias")
+          ? normalizeIdentifier(item.key, "map alias")
           : null,
       };
     }),
@@ -81,7 +81,7 @@ function freshInternalToken(): string {
   return `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
 }
 
-function resolveProjectionExpr(key: string, value: SelectValue): {
+function resolveProjectionExpr(key: string, value: ProjectionValue): {
   expr: ExprNode<any>;
   as: SqlIdentifier | null;
 } {
@@ -89,12 +89,12 @@ function resolveProjectionExpr(key: string, value: SelectValue): {
   return {
     expr,
     as: shouldAlias(expr, key)
-      ? normalizeIdentifier(key, "select alias")
+      ? normalizeIdentifier(key, "map alias")
       : null,
   };
 }
 
-function projectionEntries(selection: SelectShape): Array<{ key: string; value: SelectValue }> {
+function projectionEntries(selection: ProjectionShape): Array<{ key: string; value: ProjectionValue }> {
   if (Array.isArray(selection)) {
     userError("LEGACY_SELECTION_ARRAY", LEGACY_SELECTION_ARRAY_ERROR);
   }

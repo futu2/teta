@@ -1,12 +1,12 @@
 export {
   Query,
   explain,
-  aggregate,
+  fold,
   filter,
   join,
-  limit,
-  orderBy,
-  select,
+  take,
+  sort,
+  map,
   toAst,
   toIR,
   toSql,
@@ -14,6 +14,6 @@ export {
   union,
   unionAll,
 } from "./query/builder.ts";
-export type { QueryExplainResult, QueryIR, QueryStep } from "./query/builder.ts";
+export type { QueryExplainResult, QueryIR, QueryStageKind, QueryStep } from "./query/builder.ts";
 export { loop } from "./query/loop.ts";
 export { t, table } from "./query/schema.ts";

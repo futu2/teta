@@ -1,5 +1,5 @@
-import type { ScopeId, SelectItem, SqlIdentifier, Stage } from "../../core/types.ts";
-import { selectItemOutputName, selectItemsToIdentifierMap } from "../../query/utils.ts";
+import type { ScopeId, ProjectionItem, SqlIdentifier, Stage } from "../../core/types.ts";
+import { projectionItemOutputName, projectionItemsToIdentifierMap } from "../../query/utils.ts";
 import { internalError } from "../../errors.ts";
 
 export type StagePlanningState = {
@@ -21,13 +21,14 @@ export function advanceStagePlanningState(
 
 export function nextStageScopeId(stage: Stage, currentScopeId: ScopeId): ScopeId {
   switch (stage.kind) {
-    case "select":
+    case "map":
+    case "fold":
     case "join":
     case "union":
       return stage.outputScopeId;
     case "filter":
-    case "orderBy":
-    case "limit":
+    case "sort":
+    case "take":
       return currentScopeId;
     default:
       return assertNever(stage);
@@ -46,14 +47,15 @@ export function nextStageColumnIdentifiers(
   _currentColumnIdentifiers: Readonly<Record<string, SqlIdentifier>>
 ): Readonly<Record<string, SqlIdentifier>> {
   switch (stage.kind) {
-    case "select":
-      return selectItemsToIdentifierMap(stage.items);
+    case "map":
+    case "fold":
+      return projectionItemsToIdentifierMap(stage.items);
     case "filter":
     case "join":
-    case "orderBy":
-    case "limit":
+    case "sort":
+    case "take":
     case "union":
-      return selectItemsToIdentifierMap(stage.selectAll);
+      return projectionItemsToIdentifierMap(stage.projectAll);
     default:
       return assertNever(stage);
   }
@@ -61,24 +63,25 @@ export function nextStageColumnIdentifiers(
 
 export function stageOutputNames(stage: Stage): readonly string[] {
   switch (stage.kind) {
-    case "select":
+    case "map":
+    case "fold":
       return stage.keys;
     case "filter":
     case "join":
-    case "orderBy":
-    case "limit":
+    case "sort":
+    case "take":
     case "union":
-      return selectItemNames(stage.selectAll);
+      return projectionItemNames(stage.projectAll);
     default:
       return assertNever(stage);
   }
 }
 
-function selectItemNames(items: SelectItem[]): string[] {
+function projectionItemNames(items: ProjectionItem[]): string[] {
   return items.map((item) => {
-    const name = selectItemOutputName(item);
+    const name = projectionItemOutputName(item);
     if (!name) {
-      internalError("INTERNAL_STAGE_SELECT_ITEM_OUTPUT_NAME_MISSING", "Internal error: stage select item is missing an output name");
+      internalError("INTERNAL_STAGE_PROJECTION_ITEM_OUTPUT_NAME_MISSING", "Internal error: stage projection item is missing an output name");
     }
     return name;
   });

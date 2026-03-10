@@ -27,20 +27,23 @@ export type {
 export function sqlRenderer(
   options = {}
 ): SqlRenderer<SqlCompilable, SqlResult> {
-  const state = createRendererState(options);
+  return createRendererState(options);
+}
 
-  const toSqlResult = (target: SqlCompilable): SqlResult => {
-    return isExprSqlTarget(target)
-      ? renderExprTarget(target, state)
-      : renderQueryTarget(target, state);
-  };
+export function renderSqlResult<TTarget extends SqlCompilable, TResult extends SqlResult = SqlResult>(
+  target: TTarget,
+  renderer: SqlRenderer<TTarget, TResult>
+): TResult {
+  return (isExprSqlTarget(target)
+    ? renderExprTarget(target, renderer)
+    : renderQueryTarget(target, renderer)) as TResult;
+}
 
-  return {
-    toSql(target: SqlCompilable): string {
-      return toSqlResult(target).sql;
-    },
-    toSqlResult,
-  };
+export function renderSql<TTarget extends SqlCompilable>(
+  target: TTarget,
+  renderer: SqlRenderer<TTarget, SqlResult>
+): string {
+  return renderSqlResult(target, renderer).sql;
 }
 
 export function duckdbRenderer(

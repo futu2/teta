@@ -11,7 +11,7 @@ export type { CompileSourceRef } from "./source_ref.ts";
 export { buildTableFromRef, sourceToFrom } from "./source_ref.ts";
 export { compileJoinSource, hoistJoinSubquery } from "./source_join.ts";
 
-export function buildSelectAst(params: {
+export function buildSqlSelectAst(params: {
   from: FromAst[];
   columns: SelectColumnAst[];
   where: SelectAst["where"];
