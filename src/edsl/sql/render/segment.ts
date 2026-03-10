@@ -46,7 +46,7 @@ export function buildBaseSelectAst(
   const columns = createColumnRefs<Record<string, unknown>>(sourceScopeId, columnNames);
   return buildSelectAst({
     from: [from],
-    columns: selectAllItems(columns, columnNames).map((item) => ({
+    columns: selectAllItems(columns, columnNames, baseFrom.columnIdentifiers).map((item) => ({
       expr: exprToAst(bindExprScopes(item.expr, baseBindings, dialect)),
       as: renderIdentifier(item.as, dialect, getSqlRenderContext()),
     })),

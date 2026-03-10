@@ -62,7 +62,8 @@ export function ensureAlias(from: { as?: unknown | null; table?: string | null }
   const rawAlias = Reflect.get(from, "rawAlias") as string | null | undefined;
   if (rawAlias) return rawAlias;
   const base = (Reflect.get(from, "rawTable") as string | null | undefined) ?? from.table ?? "t";
-  const alias = `${base}_0`;
+  const sanitizedBase = base.replace(/[^A-Za-z0-9_]+/g, "_").replace(/^_+|_+$/g, "");
+  const alias = `${sanitizedBase || "t"}_0`;
   from.as = alias;
   return alias;
 }

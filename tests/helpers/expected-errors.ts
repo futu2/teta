@@ -12,18 +12,13 @@ export const LOOP_COLUMN_MISMATCH_ERROR =
 export const NON_CANONICAL_POSTGRES_DIALECT_ERROR =
   "Invalid built-in dialect 'PostgreSQL'. Use canonical lowercase 'postgresql'.";
 
+export const LEGACY_SELECTION_ARRAY_ERROR =
+  "select() and aggregate() now expect an object shape";
+
 export function missingQueryExportError(path: string): string {
   return `Export 'query' not found in ${path}`;
 }
 
 export function duplicateProjectionNameError(name: string): string {
   return `Duplicate projected column name: ${name}`;
-}
-
-export function unknownProjectionKeyError(name: string): string {
-  return `Unknown projection key: ${name}`;
-}
-
-export function unknownProjectionRemapKeyError(name: string): string {
-  return `Unknown projection remap key: ${name}`;
 }

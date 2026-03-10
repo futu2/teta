@@ -35,15 +35,6 @@ export const USERS_ORDERS_LEFT_JOIN_SELECT_POSTGRES_COMPACT =
 export const USERS_SELECT_FILTER_POSTGRES_COMPACT =
   "SELECT replace(users_0.name, ' ', '_') AS normalized_name FROM users AS users_0 WHERE replace(users_0.name, ' ', '_') = 'Ada_Lovelace'";
 
-export const USERS_SPREAD_RENAME_SELECT_POSTGRES_COMPACT =
-  "SELECT users_0.id, users_0.name, upper(users_0.name) AS \"Upper Name\" FROM users AS users_0";
-
-export const USERS_PICK_RENAME_SELECT_POSTGRES_COMPACT =
-  "SELECT users_0.id, upper(users_0.name) AS \"Upper Name\" FROM users AS users_0";
-
-export const USERS_PREFIX_SELECT_POSTGRES_COMPACT =
-  "SELECT users_0.id AS user_id, users_0.name AS user_name FROM users AS users_0";
-
 export const ANALYTICS_EVENTS_SELECT_POSTGRES_COMPACT =
   "SELECT events_0.id FROM analytics.events AS events_0";
 
@@ -100,40 +91,22 @@ export const ORDERS_GROUPED_TOTALS_WHERE_HAVING_OR_POSTGRES_COMPACT =
   "SELECT orders_0.user_id, SUM(orders_0.total) AS total_spend FROM orders AS orders_0 WHERE orders_0.user_id > 10 GROUP BY orders_0.user_id HAVING SUM(orders_0.total) > 100 OR SUM(orders_0.total) > 200";
 
 export const QUOTED_ANALYTICS_EVENTS_SELECT_POSTGRES_COMPACT =
-  "SELECT events_0.id FROM \"analytics\".\"events\" AS events_0";
+  "SELECT events_alias.id FROM \"analytics data\".\"events log\" AS events_alias";
 
 export const QUOTED_ANALYTICS_EVENTS_SELECT_BIGQUERY_COMPACT =
-  "SELECT events_0.id FROM `analytics`.`events` AS events_0";
+  "SELECT events_alias.id FROM `analytics data`.`events log` AS events_alias";
 
 export const QUOTED_USERS_ALIAS_SELECT_POSTGRES_COMPACT =
-  "SELECT \"source\".id FROM \"users\" AS \"source\"";
+  "SELECT \"user source\".id FROM users AS \"user source\"";
 
 export const QUOTED_USERS_PROJECTED_ALIAS_BIGQUERY_COMPACT =
-  "SELECT users_0.id AS `source` FROM users AS users_0";
+  "SELECT users_0.id AS `source id` FROM users AS users_0";
 
 export const QUOTED_ROW_NUMBER_ALIAS_FILTER_POSTGRES_COMPACT =
   "SELECT t_0.\"Row Number\" AS \"Row Number\" FROM (SELECT row_number() OVER (ORDER BY orders_0.order_id ASC) AS \"Row Number\" FROM orders AS orders_0) AS t_0 WHERE t_0.\"Row Number\" = 1";
 
 export const QUOTED_TOTAL_SPEND_AGG_LIST_POSTGRES_COMPACT =
   "SELECT orders_0.user_id AS \"User Id\", SUM(orders_0.total) AS \"Total Spend\" FROM orders AS orders_0 GROUP BY orders_0.user_id HAVING SUM(orders_0.total) > 100";
-
-export const ORDERS_SPREAD_RENAME_AGG_POSTGRES_COMPACT =
-  "SELECT orders_0.user_id, SUM(orders_0.total) AS \"Total Spend\" FROM orders AS orders_0 GROUP BY orders_0.user_id HAVING SUM(orders_0.total) > 100";
-
-export const ORDERS_OMIT_RENAME_AGG_POSTGRES_COMPACT =
-  "SELECT orders_0.user_id, SUM(orders_0.total) AS \"Total Spend\" FROM orders AS orders_0 GROUP BY orders_0.user_id HAVING SUM(orders_0.total) > 100";
-
-export const ORDERS_NAMESPACE_AGG_POSTGRES_COMPACT =
-  "SELECT orders_0.user_id AS order_user_id, SUM(orders_0.total) AS order_total FROM orders AS orders_0 GROUP BY orders_0.user_id HAVING SUM(orders_0.total) > 100";
-
-export const USERS_PREFIX_SEPARATOR_SELECT_POSTGRES_COMPACT =
-  "SELECT users_0.id AS user__id, users_0.name AS user__name FROM users AS users_0";
-
-export const USERS_REMAP_SELECT_POSTGRES_COMPACT =
-  "SELECT users_0.id AS \"userId\", users_0.name AS \"User Name\" FROM users AS users_0";
-
-export const ORDERS_NAMESPACE_SEPARATOR_AGG_POSTGRES_COMPACT =
-  "SELECT orders_0.user_id AS order__user_id, SUM(orders_0.total) AS order__total FROM orders AS orders_0 GROUP BY orders_0.user_id HAVING SUM(orders_0.total) > 100";
 
 export const ORDERS_REMAP_AGG_POSTGRES_COMPACT =
   "SELECT orders_0.user_id AS \"User Id\", SUM(orders_0.total) AS \"Total Spend\" FROM orders AS orders_0 GROUP BY orders_0.user_id HAVING SUM(orders_0.total) > 100";

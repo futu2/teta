@@ -1,4 +1,4 @@
-import type { ScopeId, SelectItem } from "../types";
+import type { ScopeId, SelectItem, SqlIdentifier } from "../types";
 import {
   ColumnRef,
   ExprRef,
@@ -31,6 +31,9 @@ export function createColumnRefs<TColumns extends Record<string, unknown>>(
       },
       ownKeys() {
         return columns;
+      },
+      has(_target, prop) {
+        return typeof prop === "string" && columns.includes(prop);
       },
       getOwnPropertyDescriptor(_target, prop) {
         if (typeof prop !== "string") return undefined;
@@ -77,6 +80,9 @@ export function mergeColumnRefs<
       ownKeys() {
         return mergedKeys;
       },
+      has(_target, prop) {
+        return typeof prop === "string" && mergedKeys.includes(prop);
+      },
       getOwnPropertyDescriptor(_target, prop) {
         if (typeof prop !== "string") return undefined;
         if (!mergedKeys.includes(prop)) return undefined;
@@ -114,7 +120,8 @@ export function mergeColumnNames(
 
 export function selectAllItems<TColumns extends Record<string, unknown>>(
   columns: ExprRefs<TColumns>,
-  columnNames: readonly string[]
+  columnNames: readonly string[],
+  columnIdentifiers?: Readonly<Record<string, SqlIdentifier>>
 ): SelectItem[] {
   return columnNames.map((name) => {
     const value = Reflect.get(columns, name);
@@ -123,10 +130,11 @@ export function selectAllItems<TColumns extends Record<string, unknown>>(
     }
     const ref = value;
     const expr = toExprNode(ref);
+    const identifier = columnIdentifiers?.[name] ?? null;
     return {
       expr,
-      as: shouldAlias(expr, name)
-        ? { name, quoted: false }
+      as: shouldAlias(expr, name) || identifier?.quoted
+        ? (identifier ?? { name, quoted: false })
         : null,
     };
   });

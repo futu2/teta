@@ -3,7 +3,7 @@ import { describe, expect, test } from "bun:test";
 import {
   UNSUPPORTED_CROSS_JOIN_ERROR,
 } from "./helpers/expected-errors.ts";
-import { normalizeJoinType, normalizeTableSource } from "../src/edsl/query/utils.ts";
+import { normalizeIdentifier, normalizeJoinType, normalizeTableSource } from "../src/edsl/query/utils.ts";
 import { suggestCanonicalBuiltin } from "../src/edsl/sql/dialect/lookup.ts";
 
 describe("query helpers", () => {
@@ -25,6 +25,23 @@ describe("query helpers", () => {
       schema: { name: "analytics", quoted: false },
       table: { name: "events", quoted: false },
       as: null,
+    });
+  });
+
+  test("auto-quotes invalid identifiers", () => {
+    expect(normalizeIdentifier("events")).toEqual({
+      name: "events",
+      quoted: false,
+    });
+    expect(normalizeIdentifier("events log")).toEqual({
+      name: "events log",
+      quoted: true,
+    });
+    expect(normalizeTableSource({ table: "events log", schema: "analytics data", as: "event source" })).toEqual({
+      db: null,
+      schema: { name: "analytics data", quoted: true },
+      table: { name: "events log", quoted: true },
+      as: { name: "event source", quoted: true },
     });
   });
 

@@ -1,7 +1,6 @@
 import type {
   ColumnType,
   InferSchema,
-  SqlIdentifier,
   TableSourceInput,
 } from "../core/types";
 import { createColumnRefs } from "../expr";
@@ -14,15 +13,7 @@ import type {
 import type { Query } from "./builder";
 import { createQuery } from "./builder";
 import { freshScopeId } from "./planner";
-import {
-  normalizeIdentifier,
-  normalizeTableSource,
-} from "./utils";
-
-/** Column type helpers for table schemas. */
-export function ident<const Name extends string>(name: Name): SqlIdentifier<Name> {
-  return normalizeIdentifier({ name, quoted: true }, "identifier");
-}
+import { normalizeTableSource } from "./utils";
 
 export const t = {
   string: () => ({ kind: "column_type" } as ColumnType<string>),

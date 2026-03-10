@@ -8,14 +8,12 @@ import {
 } from "../core/types";
 import {
   containsGroup,
-  isAliasedSelectValue,
-  isProjectionItem,
   shouldAlias,
   toExprNode,
   unwrapGroupExpr,
 } from "../expr";
-import type { SelectSelection, SelectValue } from "../expr";
-import { identifierName, normalizeIdentifier } from "./utils";
+import type { SelectShape, SelectValue } from "../expr";
+import { normalizeIdentifier } from "./utils";
 
 type ResolvedProjection = {
   keys: string[];
@@ -26,6 +24,8 @@ type ResolvedAggregateProjection = ResolvedProjection & {
   groupBy: ExprNode<any>[];
 };
 
+const LEGACY_SELECTION_ARRAY_ERROR = "select() and aggregate() now expect an object shape";
+
 export function freshScopeId(): ScopeId {
   return `${INTERNAL_SCOPE_PREFIX}${freshInternalToken()}` as ScopeId;
 }
@@ -34,7 +34,7 @@ export function freshInternalCteName(label: string): InternalCteName {
   return `${INTERNAL_CTE_PREFIX}${label}_${freshInternalToken()}` as InternalCteName;
 }
 
-export function resolveSelectProjection(selection: SelectSelection): ResolvedProjection {
+export function resolveSelectProjection(selection: SelectShape): ResolvedProjection {
   const entries = projectionEntries(selection);
   return {
     keys: entries.map((item) => item.key),
@@ -49,30 +49,28 @@ export function resolveSelectProjection(selection: SelectSelection): ResolvedPro
 }
 
 export function resolveAggregateProjection(
-  selection: SelectSelection
+  selection: SelectShape
 ): ResolvedAggregateProjection {
   const entries = projectionEntries(selection);
   const groupBy: ExprNode<any>[] = [];
   return {
     keys: entries.map((item) => item.key),
     items: entries.map((item) => {
-      const explicitAlias = isAliasedSelectValue(item.value)
-        ? assertProjectionAliasMatchesKey(
-            item.key,
-            normalizeIdentifier(item.value.as, "select alias")
-          )
-        : null;
-      const expr = toExprNode(isAliasedSelectValue(item.value) ? item.value.value : item.value);
+      const expr = toExprNode(item.value);
       const unwrapped = unwrapGroupExpr(expr, groupBy, false);
       return {
         expr: unwrapped,
-        as: explicitAlias ?? (shouldAlias(unwrapped, item.key)
+        as: shouldAlias(unwrapped, item.key)
           ? normalizeIdentifier(item.key, "select alias")
-          : null),
+          : null,
       };
     }),
     groupBy,
   };
+}
+
+export function legacySelectionArrayError(): string {
+  return LEGACY_SELECTION_ARRAY_ERROR;
 }
 
 function freshInternalToken(): string {
@@ -82,52 +80,26 @@ function freshInternalToken(): string {
   return `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
 }
 
-function assertProjectionAliasMatchesKey(key: string, alias: SqlIdentifier): SqlIdentifier {
-  if (identifierName(alias) !== key) {
-    throw new Error(`Projected alias ${identifierName(alias)} must match object key ${key}`);
-  }
-  return alias;
-}
-
 function resolveProjectionExpr(key: string, value: SelectValue): {
   expr: ExprNode<any>;
   as: SqlIdentifier | null;
 } {
-  const explicitAlias = isAliasedSelectValue(value)
-    ? assertProjectionAliasMatchesKey(
-        key,
-        normalizeIdentifier(value.as, "select alias")
-      )
-    : null;
-  const expr = toExprNode(isAliasedSelectValue(value) ? value.value : value);
+  const expr = toExprNode(value);
   return {
     expr,
-    as: explicitAlias ?? (shouldAlias(expr, key) ? normalizeIdentifier(key, "select alias") : null),
+    as: shouldAlias(expr, key)
+      ? normalizeIdentifier(key, "select alias")
+      : null,
   };
 }
 
-function assertUniqueProjectionKeys(keys: readonly string[]): void {
-  const seen = new Set<string>();
-  for (const key of keys) {
-    if (seen.has(key)) {
-      throw new Error(`Duplicate projected column name: ${key}`);
-    }
-    seen.add(key);
-  }
-}
-
-function projectionEntries(selection: SelectSelection): Array<{ key: string; value: SelectValue }> {
-  if (!Array.isArray(selection)) {
-    const shape = selection as Record<string, SelectValue>;
-    return Object.keys(shape).map((key) => ({ key, value: shape[key]! }));
+function projectionEntries(selection: SelectShape): Array<{ key: string; value: SelectValue }> {
+  if (Array.isArray(selection)) {
+    throw new Error(LEGACY_SELECTION_ARRAY_ERROR);
   }
 
-  const entries = selection.map((item) => {
-    if (!isProjectionItem(item)) {
-      throw new Error("Projection lists must be built with project() or projects(); wrap preset()/selectAll()/prefix()/namespace()/remap() with projects()");
-    }
-    return { key: item.key, value: item.value };
-  });
-  assertUniqueProjectionKeys(entries.map((item) => item.key));
-  return entries;
+  return Object.keys(selection).map((key) => ({
+    key,
+    value: selection[key]!,
+  }));
 }

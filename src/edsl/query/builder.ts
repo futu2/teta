@@ -14,12 +14,8 @@ import { ExprRef } from "../expr";
 import { createColumnRefs } from "../expr";
 import type {
   ColumnRefs,
-  ProjectionList,
-  ProjectionListResult,
   SelectResult,
-  SelectSelection,
   SelectShape,
-  ValidatedProjectionList,
 } from "../expr";
 import {
   createDeferredRecursiveCte,
@@ -82,25 +78,13 @@ export class Query<TColumns extends QueryColumns> implements QueryState<TColumns
 
   select<const Sel extends SelectShape>(
     selector: (cols: ColumnRefs<TColumns>) => Sel
-  ): Query<SelectResult<Sel>>;
-  select<const Sel extends ProjectionList>(
-    selector: (cols: ColumnRefs<TColumns>) => ValidatedProjectionList<Sel>
-  ): Query<ProjectionListResult<Sel>>;
-  select(
-    selector: (cols: ColumnRefs<TColumns>) => SelectSelection
-  ): Query<QueryColumns> {
+  ): Query<SelectResult<Sel>> {
     return buildSelect(this, selector);
   }
 
   aggregate<const Sel extends SelectShape>(
     selector: (cols: ColumnRefs<TColumns>) => Sel
-  ): Query<SelectResult<Sel>>;
-  aggregate<const Sel extends ProjectionList>(
-    selector: (cols: ColumnRefs<TColumns>) => ValidatedProjectionList<Sel>
-  ): Query<ProjectionListResult<Sel>>;
-  aggregate(
-    selector: (cols: ColumnRefs<TColumns>) => SelectSelection
-  ): Query<QueryColumns> {
+  ): Query<SelectResult<Sel>> {
     return buildAggregate(this, selector);
   }
 
@@ -224,17 +208,23 @@ function buildJoin<
   );
 }
 
-function buildSelect<TColumns extends QueryColumns>(
+function buildSelect<
+  TColumns extends QueryColumns,
+  TSelection extends SelectShape,
+>(
   query: Query<TColumns>,
-  selector: (cols: ColumnRefs<TColumns>) => SelectSelection
-): Query<QueryColumns> {
+  selector: (cols: ColumnRefs<TColumns>) => TSelection
+): Query<SelectResult<TSelection>> {
   return deriveQuery(query, resolveSelectQuery(query, selector(query.columns)));
 }
 
-function buildAggregate<TColumns extends QueryColumns>(
+function buildAggregate<
+  TColumns extends QueryColumns,
+  TSelection extends SelectShape,
+>(
   query: Query<TColumns>,
-  selector: (cols: ColumnRefs<TColumns>) => SelectSelection
-): Query<QueryColumns> {
+  selector: (cols: ColumnRefs<TColumns>) => TSelection
+): Query<SelectResult<TSelection>> {
   return deriveQuery(query, resolveAggregateQuery(query, selector(query.columns)));
 }
 
@@ -317,25 +307,13 @@ function buildLoop<TColumns extends QueryColumns>(
 
 export function select<TColumns extends QueryColumns, const Sel extends SelectShape>(
   selector: (cols: ColumnRefs<TColumns>) => Sel
-): QueryStep<TColumns, SelectResult<Sel>>;
-export function select<TColumns extends QueryColumns, const Sel extends ProjectionList>(
-  selector: (cols: ColumnRefs<TColumns>) => ValidatedProjectionList<Sel>
-): QueryStep<TColumns, ProjectionListResult<Sel>>;
-export function select<TColumns extends QueryColumns>(
-  selector: (cols: ColumnRefs<TColumns>) => SelectSelection
-): QueryStep<TColumns, QueryColumns> {
+): QueryStep<TColumns, SelectResult<Sel>> {
   return (query) => buildSelect(query, selector);
 }
 
 export function aggregate<TColumns extends QueryColumns, const Sel extends SelectShape>(
   selector: (cols: ColumnRefs<TColumns>) => Sel
-): QueryStep<TColumns, SelectResult<Sel>>;
-export function aggregate<TColumns extends QueryColumns, const Sel extends ProjectionList>(
-  selector: (cols: ColumnRefs<TColumns>) => ValidatedProjectionList<Sel>
-): QueryStep<TColumns, ProjectionListResult<Sel>>;
-export function aggregate<TColumns extends QueryColumns>(
-  selector: (cols: ColumnRefs<TColumns>) => SelectSelection
-): QueryStep<TColumns, QueryColumns> {
+): QueryStep<TColumns, SelectResult<Sel>> {
   return (query) => buildAggregate(query, selector);
 }
 

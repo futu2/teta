@@ -14,6 +14,7 @@
   "devDependencies": {
     "@duckdb/node-api": "^1.4.4-r.3",
     "@types/bun": "latest",
+    "remeda": "^2.33.6",
     "typescript": "^5.9.3"
   },
   "dependencies": {

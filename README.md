@@ -230,6 +230,15 @@ const q = pipeQuery(
 console.log(toSql(q, sqlRenderer({ dialect: "postgresql", format: "pretty" })));
 ```
 
+For plain object reshaping inside `select(...)` / `aggregate(...)`, `remeda` fits nicely (optional, app-level dependency):
+
+```ts
+import * as R from "remeda";
+
+const ids = users.select(R.pick(["id"]));
+const compact = users.select((u) => ({ ...R.omit(u, ["name"]), upper_name: u.name.upper() }));
+```
+
 If you want a named placeholder for your own integration layer, pass a second
 argument such as `param(email, "customer_email")` and render with
 `parameterMode: "named"`:

@@ -1,15 +1,13 @@
 import { describe, expect, test } from "bun:test";
 
-import { omit, pick, project, projects, remap, rename, selectAll, spread, sqlRenderer } from "../mod.ts";
+import { sqlRenderer } from "../mod.ts";
 import {
   GROUP_INSIDE_AGGREGATE_FUNCTION_ERROR,
   GROUP_OUTSIDE_AGGREGATE_ERROR,
+  LEGACY_SELECTION_ARRAY_ERROR,
   LOOP_COLUMN_MISMATCH_ERROR,
   NON_CANONICAL_POSTGRES_DIALECT_ERROR,
   UNSUPPORTED_CROSS_JOIN_ERROR,
-  duplicateProjectionNameError,
-  unknownProjectionKeyError,
-  unknownProjectionRemapKeyError,
 } from "./helpers/expected-errors.ts";
 import { createOrdersTable, createUsersTable } from "./helpers/fixtures.ts";
 
@@ -56,42 +54,12 @@ describe("error paths", () => {
     expect(() => base.loop(invalidStep)).toThrow(LOOP_COLUMN_MISMATCH_ERROR);
   });
 
-  test("rejects duplicate projection names at runtime when type checks are bypassed", () => {
+  test("rejects legacy array selection syntax at runtime", () => {
     const users = createUsersTable();
 
     expect(() =>
-      users.select((user) => ([
-        project("dup", user.id),
-        project("dup", user.name),
-      ] as never))
-    ).toThrow(duplicateProjectionNameError("dup"));
-  });
-
-  test("rejects duplicate projection names from spread() composition at runtime", () => {
-    const users = createUsersTable();
-
-    expect(() =>
-      users.select((user) => ([
-        ...(projects(spread(user)) as any),
-        rename(user.name, "id"),
-      ] as never))
-    ).toThrow(duplicateProjectionNameError("id"));
-  });
-
-  test("rejects unknown pick() keys at runtime when type checks are bypassed", () => {
-    const users = createUsersTable();
-
-    expect(() =>
-      users.select((user) => projects(pick(user as any, "missing")))
-    ).toThrow(unknownProjectionKeyError("missing"));
-  });
-
-  test("rejects unknown remap() keys at runtime when type checks are bypassed", () => {
-    const users = createUsersTable();
-
-    expect(() =>
-      users.select((user) => projects(remap({ missing: "x" } as any, selectAll(user))))
-    ).toThrow(unknownProjectionRemapKeyError("missing"));
+      users.select((user) => ([user.id] as never))
+    ).toThrow(LEGACY_SELECTION_ARRAY_ERROR);
   });
 
   test("rejects non-canonical built-in dialect names", () => {

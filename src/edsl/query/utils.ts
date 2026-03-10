@@ -12,27 +12,28 @@ import type {
 import { OUTER_TABLE_ALIAS, internalCteLabel, isInternalCteName } from "../core/types";
 import { ColumnRef, type ColumnRefs } from "../core/expr";
 
+const BARE_IDENTIFIER_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+export function shouldQuoteIdentifierName(name: string): boolean {
+  return !BARE_IDENTIFIER_PATTERN.test(name);
+}
+
 export function normalizeIdentifier<const Name extends string>(
   input: IdentifierInput<Name>,
   label = "identifier"
 ): SqlIdentifier<Name> {
   if (typeof input === "string") {
+    const name = normalizeSourcePart(input, label);
     return {
-      name: normalizeSourcePart(input, label),
-      quoted: false,
+      name,
+      quoted: shouldQuoteIdentifierName(name),
     };
   }
 
+  const name = normalizeSourcePart(input.name, label);
   return {
-    name: normalizeSourcePart(input.name, label),
-    quoted: input.quoted ?? true,
-  };
-}
-
-export function unquotedIdentifier<const Name extends string>(name: Name): SqlIdentifier<Name> {
-  return {
-    name: normalizeSourcePart(name, "identifier"),
-    quoted: false,
+    name,
+    quoted: input.quoted ?? shouldQuoteIdentifierName(name),
   };
 }
 
@@ -42,7 +43,7 @@ export function identifierName<const Name extends string>(value: SqlIdentifier<N
 
 export function selectItemOutputIdentifier(item: SelectItem): SqlIdentifier | null {
   if (item.as) return item.as;
-  if (item.expr.kind === "column") return unquotedIdentifier(item.expr.name);
+  if (item.expr.kind === "column") return normalizeIdentifier(item.expr.name, "select column");
   return null;
 }
 
@@ -70,7 +71,7 @@ export function columnNamesToIdentifierMap(
 ): Readonly<Record<string, SqlIdentifier>> {
   const mapping: Record<string, SqlIdentifier> = {};
   for (const name of columnNames) {
-    mapping[name] = unquotedIdentifier(name);
+    mapping[name] = normalizeIdentifier(name, "column");
   }
   return mapping;
 }
