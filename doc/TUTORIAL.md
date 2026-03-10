@@ -9,7 +9,7 @@ qualified column references.
 Keep EDSL queries dialect-neutral. Choose the dialect by creating a renderer at render time.
 
 Most multi-stage examples below use Remeda's `pipe(...)` with named imports. Query helpers are dual-mode,
-so `map(users, ...)` and `pipe(users, map(...))` are both valid, but `pipe(...)` usually reads best.
+so `map(users, ...)` and `pipe(users, map(...))` are both valid, but `pipe(...)` usually reads best. This function-first style is intentional: it keeps query stages easy to compose, extract, reuse, and test as ordinary values.
 
 All rendering examples below assume `sqlRenderer` is imported alongside the EDSL helpers.
 

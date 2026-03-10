@@ -69,13 +69,15 @@ LIMIT 10
 
 - SQL-first: Teta produces SQL instead of hiding it behind ORM entities.
 - Typed query building: schemas, columns, and expressions stay strongly typed.
-- Functional composition: query helpers work data-first or data-last, so they fit naturally into Remeda `pipe(...)` pipelines.
+- Functional composition: query helpers are ordinary functions, so they fit naturally into Remeda `pipe(...)` pipelines and are easy to extract, reuse, and compose.
 - Dialect-neutral authoring: choose `postgresql`, `sqlite`, `duckdb`, or a custom dialect at render time.
 - Inspectable lowering: debug with `toIR(query)`, `toAst(query)`, `explain(query)`, and `toSqlResult(query, ...)`.
 - Predictable rendering: use `optimized` for compact SQL or `readable` for stage-shaped SQL.
 
 Teta is a good fit for reporting endpoints, analytics queries, internal tools,
 and libraries that need composable SQL without adopting a full ORM.
+
+The functional style is intentional: each query step is just a plain function from one query state to the next. That makes it easy to compose pipelines, reuse stage fragments, and refactor query logic without committing to fluent classes or hidden builder state.
 
 ## Install
 
