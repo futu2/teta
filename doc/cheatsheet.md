@@ -8,120 +8,9 @@ or `pipe(users, map(fn))`. In practice, the examples here prefer Remeda's `pipe(
 ```ts
 import { pick, pipe } from "remeda";
 
-import {
-  fold,
-  and,
-  arrayAppend,
-  arrayContains,
-  arrayJoin,
-  arrayLength,
-  arrayPosition,
-  arraySlice,
-  asc,
-  avg,
-  bitLength,
-  cast,
-  charLength,
-  characterLength,
-  coalesce,
-  concat,
-  count,
-  currentDate,
-  currentTimestamp,
-  dateAdd,
-  dateDiff,
-  dateFormat,
-  dateLiteral,
-  dateParse,
-  dateTrunc,
-  day,
-  desc,
-  eq,
-  explain,
-  ExprRef,
-  f,
-  filter,
-  fn,
-  fromUnixTime,
-  group,
-  gt,
-  gte,
-  hour,
-  isIn,
-  isNotNull,
-  isNull,
-  join,
-  lag,
-  lead,
-  left,
-  like,
-  take,
-  loop,
-  lower,
-  lt,
-  lte,
-  max,
-  min,
-  minute,
-  mod,
-  month,
-  mul,
-  ne,
-  not,
-  ntile,
-  nullIf,
-  octetLength,
-  sort,
-  over,
-  overlay,
-  param,
-  percentRank,
-  position,
-  pow,
-  Query,
-  rank,
-  regexExtract,
-  regexLike,
-  regexReplace,
-  replace,
-  reverse,
-  right,
-  round,
-  rowNumber,
-  rpad,
-  map,
-  shape,
-  sqlRenderer,
-  sqrt,
-  sub,
-  substring,
-  sum,
-  sumOver,
-  t,
-  table,
-  timestampLiteral,
-  toAst,
-  toDate,
-  toFloat,
-  toIR,
-  toInt,
-  toSql,
-  toSqlResult,
-  toUnixTime,
-  trim,
-  union,
-  unionAll,
-  upper,
-  when,
-  windowFn,
-  year,
-} from "@teta/teta";
+import { fold, and, arrayAppend, arrayContains, arrayJoin, arrayLength, arrayPosition, arraySlice, asc, avg, bitLength, cast, charLength, characterLength, coalesce, concat, count, currentDate, currentTimestamp, dateAdd, dateDiff, dateFormat, dateLiteral, dateParse, dateTrunc, day, desc, eq, explain, ExprRef, f, filter, fn, fromUnixTime, group, gt, gte, hour, isIn, isNotNull, isNull, join, lag, lead, left, like, take, loop, lower, lt, lte, max, min, minute, mod, month, mul, ne, not, ntile, nullIf, octetLength, sort, over, overlay, param, percentRank, position, pow, Query, rank, regexExtract, regexLike, regexReplace, replace, reverse, right, round, rowNumber, rpad, map, shape, sqrt, sub, substring, sum, sumOver, t, table, timestampLiteral, toAst, toDate, toFloat, toIR, toInt, toSql, toSqlResult, toUnixTime, trim, union, unionAll, upper, when, windowFn, year } from "@teta/teta";
 
-import {
-  copyTextToClipboard,
-  renderSqlFromSource,
-  watchQuerySourceToClipboard,
-} from "@teta/teta/dev";
+import { copyTextToClipboard, renderSqlFromSource, watchQuerySourceToClipboard } from "@teta/teta/dev";
 ```
 
 ## 1) Query roots and composition
@@ -222,19 +111,19 @@ all return `QueryStep` functions when called without the left query.
 ### SQL output
 
 ```ts
-toSql(q, sqlRenderer({ dialect: "postgresql" }));
-toSql(q, sqlRenderer({ dialect: "postgresql", format: "pretty" }));
-toSql(q, sqlRenderer({ dialect: "duckdb", format: "compact" }));
-toSql(q, sqlRenderer({ dialect: "postgresql", renderStrategy: "readable" }));
+toSql(q, { dialect: "postgresql" });
+toSql(q, { dialect: "postgresql", format: "pretty" });
+toSql(q, { dialect: "duckdb", format: "compact" });
+toSql(q, { dialect: "postgresql", renderStrategy: "readable" });
 ```
 
 ### Structured SQL output
 
 ```ts
-const result = toSqlResult(q, sqlRenderer({
+const result = toSqlResult(q, {
   dialect: "postgresql",
   parameterMode: "named",
-}));
+});
 
 result.sql;
 result.params;
@@ -481,23 +370,7 @@ Returns a controller with:
 
 ```ts
 import { pipe } from "remeda";
-import {
-  asc,
-  desc,
-  currentTimestamp,
-  dateTrunc,
-  eq,
-  filter,
-  take,
-  sort,
-  map,
-  sqlRenderer,
-  table,
-  t,
-  toSql,
-  trim,
-  upper,
-} from "@teta/teta";
+import { asc, desc, currentTimestamp, dateTrunc, eq, filter, take, sort, map, table, t, toSql, trim, upper } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -519,5 +392,5 @@ const q = pipe(
   take(100)
 );
 
-console.log(toSql(q, sqlRenderer({ dialect: "postgresql", format: "pretty" })));
+console.log(toSql(q, { dialect: "postgresql", format: "pretty" }));
 ```

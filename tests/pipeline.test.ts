@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { table, t, map, replace } from "../mod.ts";
 import { renderPipelineAst } from "../src/edsl/sql/render/pipeline.ts";
-describe("pipeline renderer", () => {
+describe("pipeline render pipeline", () => {
     test("prepends base CTEs before generated stage CTEs", () => {
         const users = table("users", {
             id: t.int(),

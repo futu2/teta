@@ -1,12 +1,5 @@
 import { spawnSync } from "node:child_process";
-import {
-  TetaInternalError,
-  TetaUserError,
-  internalError,
-  type TetaErrorCode,
-  type TetaErrorKind,
-  userError,
-} from "../errors.ts";
+import { TetaInternalError, TetaUserError, internalError, type TetaErrorCode, type TetaErrorKind, userError } from "../errors.ts";
 import type { SqlOptions } from "../sql.ts";
 import { normalizeRenderSourcePath } from "./render_source_shared.ts";
 
@@ -37,7 +30,7 @@ export const RENDER_SQL_EVAL_SCRIPT = String.raw`(async () => {
     const errorsModule = await import(process.env.TETA_ERRORS_MODULE);
     TetaError = errorsModule.TetaError;
     const { userError } = errorsModule;
-    const { renderSql, sqlRenderer } = await import(process.env.TETA_SQL_RENDERER_MODULE);
+    const { renderSql } = await import(process.env.TETA_SQL_RENDERER_MODULE);
 
     const source = (process.env.TETA_SOURCE ?? "").trim();
     if (!source) {
@@ -68,7 +61,7 @@ export const RENDER_SQL_EVAL_SCRIPT = String.raw`(async () => {
       );
     }
 
-    respond({ ok: true, sql: renderSql(target, sqlRenderer(rendererOptions)) });
+    respond({ ok: true, sql: renderSql(target, rendererOptions) });
   } catch (error) {
     if (error instanceof Error && error.name === "SyntaxError") {
       fail("user", "INVALID_RENDERER_OPTIONS", error.message, error.stack);

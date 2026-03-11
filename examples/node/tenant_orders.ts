@@ -1,5 +1,5 @@
 import { pipe } from "remeda";
-import { desc, eq, filter, take, sort, param, postgresqlRenderer, map, t, table, toSqlResult } from "../../mod.ts";
+import { desc, eq, filter, take, sort, param, map, t, table, toSqlResult } from "../../mod.ts";
 
 const orders = table("orders", {
   id: t.bigint(),
@@ -9,11 +9,12 @@ const orders = table("orders", {
   total_cents: t.decimal(),
 });
 
-const renderer = postgresqlRenderer({
+const sqlOptions = {
+  dialect: "postgresql",
   format: "compact",
   parameterMode: "positional",
   parameterPrefix: "$",
-});
+} as const;
 
 export function buildTenantOrdersQuery(tenantId: string, email: string) {
   const result = toSqlResult(
@@ -30,7 +31,7 @@ export function buildTenantOrdersQuery(tenantId: string, email: string) {
       sort((order) => desc(order.id)),
       take(50)
     ),
-    renderer
+    sqlOptions
   );
 
   return {
@@ -38,5 +39,3 @@ export function buildTenantOrdersQuery(tenantId: string, email: string) {
     values: result.params.map((param) => param.value),
   };
 }
-
-console.log(buildTenantOrdersQuery("00000000-0000-0000-0000-000000000001", "ada@example.com"));

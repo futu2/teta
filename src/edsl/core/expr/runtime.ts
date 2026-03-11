@@ -16,8 +16,6 @@ import type {
   SqlFloat,
   SqlInt,
   SqlNumber,
-  SqlRenderer,
-  SqlResult,
   SqlTimestamp,
   SqlUuid,
 } from "../../sql/types.ts";

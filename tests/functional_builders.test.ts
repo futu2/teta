@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { fold, caseWhen, groupShape, lt, map, sqlRenderer, sum, table, t, toSql, when } from "../mod.ts";
+import { fold, caseWhen, groupShape, lt, map, sum, table, t, toSql, when } from "../mod.ts";
 
 describe("functional expression builders", () => {
   test("renders caseWhen from plain branch data", () => {
@@ -15,7 +15,7 @@ describe("functional expression builders", () => {
       ], "senior"),
     }));
 
-    const sql = toSql(query, sqlRenderer({ dialect: "postgresql", format: "compact" }));
+    const sql = toSql(query, { dialect: "postgresql", format: "compact" });
 
     expect(sql).toContain("CASE WHEN users_0.age < 18 THEN 'minor' WHEN users_0.age < 65 THEN 'adult' ELSE 'senior' END AS age_group");
   });
@@ -32,7 +32,7 @@ describe("functional expression builders", () => {
       total_spend: sum(order.total),
     }));
 
-    const sql = toSql(query, sqlRenderer({ dialect: "postgresql", format: "compact" }));
+    const sql = toSql(query, { dialect: "postgresql", format: "compact" });
 
     expect(sql).toContain("GROUP BY orders_0.user_id");
     expect(sql).toContain("SUM(orders_0.total) AS total_spend");

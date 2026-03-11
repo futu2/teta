@@ -5,26 +5,23 @@ import {
   coalesce,
   dateTrunc,
   desc,
-  duckdbRenderer,
   eq,
   filter,
   join,
   lower,
   map,
-  postgresqlRenderer,
   sort,
-  sqlRenderer,
   table,
   t,
   take,
   toSql,
   trim,
 } from "../mod.ts";
-import type { SqlRenderer, SqlResult } from "../mod.ts";
+import type { SqlOptions } from "../mod.ts";
 
 export type RenderBenchmarkCase = {
   label: string;
-  renderer: SqlRenderer<any, SqlResult>;
+  options: SqlOptions;
 };
 
 export type RunRenderBenchmarkOptions = {
@@ -76,23 +73,19 @@ export const renderBenchmarkQuery = pipe(
 export const renderBenchmarkCases: RenderBenchmarkCase[] = [
   {
     label: "postgresql/optimized",
-    renderer: postgresqlRenderer({ format: "compact", renderStrategy: "optimized" }),
+    options: { dialect: "postgresql", format: "compact", renderStrategy: "optimized" },
   },
   {
     label: "postgresql/readable",
-    renderer: postgresqlRenderer({ format: "compact", renderStrategy: "readable" }),
+    options: { dialect: "postgresql", format: "compact", renderStrategy: "readable" },
   },
   {
     label: "duckdb/optimized",
-    renderer: duckdbRenderer({ format: "compact", renderStrategy: "optimized" }),
+    options: { dialect: "duckdb", format: "compact", renderStrategy: "optimized" },
   },
   {
     label: "sqlite/optimized",
-    renderer: sqlRenderer({
-      dialect: "sqlite",
-      format: "compact",
-      renderStrategy: "optimized",
-    }),
+    options: { dialect: "sqlite", format: "compact", renderStrategy: "optimized" },
   },
 ];
 
@@ -105,7 +98,7 @@ export function runRenderBenchmark(
 
   return renderBenchmarkCases.map((benchmarkCase) => {
     for (let warmupIndex = 0; warmupIndex < warmupRuns; warmupIndex += 1) {
-      toSql(renderBenchmarkQuery, benchmarkCase.renderer);
+      toSql(renderBenchmarkQuery, benchmarkCase.options);
     }
 
     const sampleDurations: number[] = [];
@@ -113,7 +106,7 @@ export function runRenderBenchmark(
     for (let sampleIndex = 0; sampleIndex < samples; sampleIndex += 1) {
       const start = performance.now();
       for (let runIndex = 0; runIndex < runs; runIndex += 1) {
-        lastSql = toSql(renderBenchmarkQuery, benchmarkCase.renderer);
+        lastSql = toSql(renderBenchmarkQuery, benchmarkCase.options);
       }
       const elapsed = performance.now() - start;
       sampleDurations.push(elapsed / runs);

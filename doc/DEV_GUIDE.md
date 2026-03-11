@@ -15,7 +15,7 @@ Teta is split into a few clean layers:
    - Queries are stored as `source + stages + withs`.
 
 3. **Rendering**
-   - A `SqlRenderer` resolves dialect + formatting.
+   - `SqlOptions` are resolved into internal render state.
    - Expressions are rewritten for dialect language differences.
    - Query stages are lowered into a parser-compatible SQL AST.
 
@@ -64,7 +64,7 @@ ExprRef / Query
 
 - `src/edsl/sql/renderer.ts`
   - Main render entrypoint.
-  - Exposes `sqlRenderer(...)` and dialect-specific helpers like `duckdbRenderer(...)`.
+  - Exposes `renderSql(...)` and `renderSqlResult(...)`, both driven by plain `SqlOptions`.
 - `src/edsl/sql/render/pipeline.ts`
   - Turns a query pipeline into a parser AST.
 - `src/edsl/sql/render/build.ts`
@@ -81,7 +81,7 @@ ExprRef / Query
 ### Dialect handling
 
 - `src/edsl/sql/dialect/resolve.ts`
-  - Resolves renderer options into a concrete `QueryDialect`.
+  - Resolves SQL options into a concrete `QueryDialect`.
 - `src/edsl/sql/language.ts`
   - Applies dialect language rewrites + validation.
 - `src/edsl/sql/language/rewrite.ts`
@@ -134,7 +134,7 @@ A query pipeline is a list of `Stage` values:
 - `join`
 - `union`
 
-This stage list is the main query IR that the renderer lowers later.
+This stage list is the main query IR that the render pipeline lowers later.
 
 ## Flow: from `ExprRef` to final SQL
 
@@ -142,7 +142,7 @@ Take something like:
 
 ```ts
 const expr = characterLength(replace(user.name, " ", "_"))
-const result = toSql(expr, sqlRenderer({ dialect: "sqlite" }))
+const result = toSql(expr, { dialect: "sqlite" })
 ```
 
 ### 1) Expression construction
@@ -157,23 +157,23 @@ For example:
 
 Eventually everything becomes an `ExprRef` containing an `ExprNode` tree.
 
-### 2) `toSql(expr, renderer)` and `toSqlResult(expr, renderer)`
+### 2) `toSql(expr, options)` and `toSqlResult(expr, options)`
 
 Rendering stays function-first:
 
 ```text
-expr -> toSql(expr, renderer) -> renderSql(expr, renderer)
-expr -> toSqlResult(expr, renderer) -> renderSqlResult(expr, renderer)
+expr -> toSql(expr, options) -> renderSql(expr, options)
+expr -> toSqlResult(expr, options) -> renderSqlResult(expr, options)
 ```
 
 The expression object itself does not render anything.
 
-### 3) Renderer setup
+### 3) Render state setup
 
-`sqlRenderer(...)` in `src/edsl/sql/renderer.ts`:
+`renderSql(...)` and `renderSqlResult(...)` in `src/edsl/sql/renderer.ts`:
 
-- resolves dialect options through `buildSqlOptions(...)`
-- stores:
+- resolve dialect options through `buildSqlOptions(...)`
+- build internal state with:
   - parser instance
   - resolved dialect
   - parser options
@@ -181,7 +181,7 @@ The expression object itself does not render anything.
 
 ### 4) Dialect language rewrite
 
-For expressions, the renderer calls `applyDialectLanguage(...)` from `src/edsl/sql/language.ts`.
+For expressions, the render path calls `applyDialectLanguage(...)` from `src/edsl/sql/language.ts`.
 
 That step:
 
@@ -208,7 +208,7 @@ Examples:
 
 ### 6) Final SQL string
 
-The renderer then:
+The render path then:
 
 - calls `parser.exprToSQL(...)`
 - runs `stripRedundantQuotes(...)`
@@ -242,7 +242,7 @@ const q = pipe(
   sort((u) => asc(u.name))
 )
 
-const result = toSql(q, sqlRenderer({ dialect: "postgresql", format: "pretty" }))
+const result = toSql(q, { dialect: "postgresql", format: "pretty" })
 ```
 
 ### 1) `table(...)` creates the base query
@@ -295,13 +295,13 @@ Useful checkpoints:
 
 In practice, `explain(query, ...)` is usually the fastest debugging entrypoint, with `toIR(query)` and `toAst(query)` as lower-level follow-ups.
 
-### 4) `toSql(query, renderer)` and `toSqlResult(query, renderer)`
+### 4) `toSql(query, options)` and `toSqlResult(query, options)`
 
 Like expressions, query rendering stays function-first:
 
 ```text
-query -> toSql(query, renderer) -> renderSql(query, renderer)
-query -> toSqlResult(query, renderer) -> renderSqlResult(query, renderer)
+query -> toSql(query, options) -> renderSql(query, options)
+query -> toSqlResult(query, options) -> renderSqlResult(query, options)
 ```
 
 The real lowering happens in `src/edsl/sql/renderer.ts`.
@@ -403,7 +403,7 @@ Later, `materializeCte(...)` and `buildRecursiveCte(...)` in `src/edsl/sql/rende
 
 ### 10) Final AST fixes and stringification
 
-After `renderPipelineAst(...)`, the renderer:
+After `renderPipelineAst(...)`, the render path:
 
 1. runs `applyDialectFixes(...)`
 2. calls `parser.sqlify(...)`
@@ -414,11 +414,11 @@ That becomes the final `SqlResult`.
 
 ## Dialect information flow
 
-Dialect data is resolved once per renderer.
+Dialect data is resolved once per render call.
 
 ### Resolution
 
-`buildSqlOptions(...)` in `src/edsl/sql/dialect/resolve.ts` turns renderer options into:
+`buildSqlOptions(...)` in `src/edsl/sql/dialect/resolve.ts` turns SQL options into:
 
 - `QueryDialect`
 - parser options
@@ -506,7 +506,7 @@ So the main flow is:
 ```text
 ExprRef / Query
   -> ExprNode / Stage[] / CteSpec[]
-  -> sqlRenderer(...)
+  -> buildSqlOptions(...) + internal render state
   -> dialect rewrite + qualification
   -> parser AST
   -> sqlify / exprToSQL

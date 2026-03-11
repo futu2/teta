@@ -27,7 +27,7 @@ Build typed queries, inspect how they lower, and render SQL for PostgreSQL, SQLi
 
 ```ts
 import { pipe } from "remeda";
-import { and, asc, eq, filter, gte, take, sort, map, sqlRenderer, table, t, toSql } from "@teta/teta";
+import { and, asc, eq, filter, gte, take, sort, map, table, t, toSql } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -47,10 +47,10 @@ const query = pipe(
   take(10)
 );
 
-const sql = toSql(query, sqlRenderer({
+const sql = toSql(query, {
   dialect: "postgresql",
   format: "pretty",
-}));
+});
 
 console.log(sql);
 ```
@@ -127,13 +127,13 @@ deno add npm:remeda
 Published package import:
 
 ```ts
-import { sqlRenderer, table, t } from "@teta/teta";
+import { table, t } from "@teta/teta";
 ```
 
 Deno import:
 
 ```ts
-import { sqlRenderer, table, t } from "jsr:@teta/teta";
+import { table, t } from "jsr:@teta/teta";
 ```
 
 ## Core ideas
@@ -143,8 +143,8 @@ import { sqlRenderer, table, t } from "jsr:@teta/teta";
 Using the `query` from the quick start, render for the target backend:
 
 ```ts
-toSql(query, sqlRenderer({ dialect: "postgresql" }));
-toSql(query, sqlRenderer({ dialect: "sqlite" }));
+toSql(query, { dialect: "postgresql" });
+toSql(query, { dialect: "sqlite" });
 ```
 
 ### Safe runtime parameters
@@ -153,7 +153,7 @@ Using the same `users` table, use `param(...)` and `toSqlResult(...)` when you n
 
 ```ts
 import { pipe } from "remeda";
-import { eq, filter, param, map, sqlRenderer, toSqlResult } from "@teta/teta";
+import { eq, filter, param, map, toSqlResult } from "@teta/teta";
 
 const result = toSqlResult(
   pipe(
@@ -165,7 +165,7 @@ const result = toSqlResult(
       email: user.email,
     }))
   ),
-  sqlRenderer({
+  {
     dialect: "postgresql",
     parameterMode: "named",
   })

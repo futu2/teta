@@ -1,16 +1,10 @@
 export * from "./sql/types.ts";
 export * from "./sql/dialect.ts";
 export {
-  duckdbRenderer,
-  hetuRenderer,
-  postgresqlRenderer,
   renderSql,
   renderSqlResult,
-  sqlRenderer,
-  sqliteRenderer,
 } from "./sql/renderer.ts";
 export type {
-  BuiltinSqlRendererOptions,
   ExprSqlTarget,
   QuerySqlTarget,
   SqlCompilable,

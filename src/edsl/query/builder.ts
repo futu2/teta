@@ -14,7 +14,6 @@ import type {
   SqlParameterMode,
   SqlParameterPrefix,
   SqlRenderStrategy,
-  SqlRenderer,
   SqlResult,
 } from "../sql/types.ts";
 import { ExprRef } from "../expr.ts";
@@ -31,7 +30,6 @@ import {
   renderSql,
   renderSqlResult,
   resolveDialect,
-  sqlRenderer,
 } from "../sql.ts";
 import type { SqlCompilable } from "../sql.ts";
 import { freshInternalCteName, freshScopeId } from "./planner.ts";
@@ -522,26 +520,24 @@ export function toAst<TColumns extends QueryColumns>(
 
 export function toSql<TTarget extends SqlCompilable>(
   query: TTarget,
-  renderer: SqlRenderer<TTarget, SqlResult>
+  options: SqlOptions = {}
 ): string {
-  return renderSql(query, renderer);
+  return renderSql(query, options);
 }
 
-export function toSqlResult<TTarget extends SqlCompilable, TReturn extends SqlResult>(
+export function toSqlResult<TTarget extends SqlCompilable>(
   query: TTarget,
-  renderer: SqlRenderer<TTarget, TReturn>
-): TReturn {
-  return renderSqlResult(query, renderer);
+  options: SqlOptions = {}
+): SqlResult {
+  return renderSqlResult(query, options);
 }
-
 
 export function explain<TColumns extends QueryColumns>(
   query: Query<TColumns>,
   options: SqlOptions = {}
 ): QueryExplainResult<TColumns> {
   const resolved = buildSqlOptions(options);
-  const renderer = sqlRenderer(options);
-  const sqlResult = renderSqlResult(query, renderer);
+  const sqlResult = renderSqlResult(query, options);
 
   return {
     ir: toIR(query),

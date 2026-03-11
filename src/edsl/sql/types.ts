@@ -147,14 +147,3 @@ export type SqlResult = {
   params: SqlParam[];
 };
 
-export type SqlRenderer<TInput = unknown, TResult extends SqlResult = SqlResult> = {
-  parser: Parser;
-  dialect: QueryDialect;
-  options?: Option;
-  sqlFormat: SqlFormat;
-  renderStrategy: SqlRenderStrategy;
-  parameterMode: SqlParameterMode;
-  parameterPrefix: SqlParameterPrefix;
-  readonly __inputType?: TInput;
-  readonly __resultType?: TResult;
-};

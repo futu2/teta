@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { duckdbRenderer, toSql } from "../mod.ts";
+import { toSql } from "../mod.ts";
 import { buildLiveDialectQuery } from "./helpers/fixtures.ts";
 let DuckDBConnection: (typeof import("@duckdb/node-api"))["DuckDBConnection"] | null = null;
 try {
@@ -30,7 +30,7 @@ describe("live duckdb dialect", () => {
       INSERT INTO users (name, created_at)
       VALUES ('duck', TIMESTAMP '2024-01-02 03:04:05');
     `);
-        const sql = toSql(buildLiveDialectQuery(), duckdbRenderer({ format: "compact" }));
+        const sql = toSql(buildLiveDialectQuery(), { dialect: "duckdb", format: "compact" });
         const rows = await (await connection.run(sql)).getRowObjectsJS();
         const [row] = rows as Array<{
             len: number | bigint;

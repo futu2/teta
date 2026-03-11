@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { Database } from "bun:sqlite";
-import { sqliteRenderer, toSql } from "../mod.ts";
+import { toSql } from "../mod.ts";
 import { buildLiveDialectQuery } from "./helpers/fixtures.ts";
 let database: Database | null = null;
 afterEach(() => {
@@ -20,7 +20,7 @@ describe("live sqlite dialect", () => {
       INSERT INTO users (name, created_at)
       VALUES ('duck', '2024-01-02 03:04:05');
     `);
-        const sql = toSql(buildLiveDialectQuery(), sqliteRenderer({ format: "compact" }));
+        const sql = toSql(buildLiveDialectQuery(), { dialect: "sqlite", format: "compact" });
         const row = database
             .query(sql)
             .get() as {

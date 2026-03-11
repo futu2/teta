@@ -1,4 +1,4 @@
-import { param, sqlRenderer, table, t, filter, eq, map, and, take, trim, lower, toSqlResult } from "../mod.ts";
+import { param, table, t, filter, eq, map, and, take, trim, lower, toSqlResult } from "../mod.ts";
 const users = table("users", {
     id: t.int(),
     name: t.string(),
@@ -7,10 +7,10 @@ const users = table("users", {
 const result = toSqlResult(take(map(filter(users, (user) => and(eq(user.id, param(42)), eq(user.active, true))), (user) => ({
     id: user.id,
     normalized_name: lower(trim(user.name)),
-})), 1), sqlRenderer({
+})), 1), {
     dialect: "postgresql",
     format: "compact",
-}));
+});
 if (!result.sql.startsWith("SELECT ")) {
     throw new Error(`Expected SQL to start with SELECT, received: ${result.sql}`);
 }

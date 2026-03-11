@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { TetaUserError, sqlRenderer, fold, join, map, eq, group, loop, toSql, count } from "../mod.ts";
-import { GROUP_INSIDE_AGGREGATE_FUNCTION_ERROR, GROUP_OUTSIDE_AGGREGATE_ERROR, LEGACY_SELECTION_ARRAY_ERROR, LOOP_COLUMN_MISMATCH_ERROR, NON_CANONICAL_POSTGRES_DIALECT_ERROR, UNSUPPORTED_CROSS_JOIN_ERROR, } from "./helpers/expected-errors.ts";
+import { TetaUserError, fold, join, map, eq, group, loop, toSql, count } from "../mod.ts";
+import { GROUP_INSIDE_AGGREGATE_FUNCTION_ERROR, GROUP_OUTSIDE_AGGREGATE_ERROR, LEGACY_SELECTION_ARRAY_ERROR, LOOP_COLUMN_MISMATCH_ERROR, NON_CANONICAL_POSTGRES_DIALECT_ERROR, UNSUPPORTED_CROSS_JOIN_ERROR } from "./helpers/expected-errors.ts";
 import { createOrdersTable, createUsersTable } from "./helpers/fixtures.ts";
 describe("error paths", () => {
     test("rejects group() outside fold", () => {
@@ -35,7 +35,7 @@ describe("error paths", () => {
     });
     test("rejects non-canonical built-in dialect names", () => {
         const users = createUsersTable();
-        expect(() => toSql(map(users, (user) => ({ id: user.id })), sqlRenderer({ dialect: "PostgreSQL" }))).toThrow(NON_CANONICAL_POSTGRES_DIALECT_ERROR);
+        expect(() => toSql(map(users, (user) => ({ id: user.id })), { dialect: "PostgreSQL" })).toThrow(NON_CANONICAL_POSTGRES_DIALECT_ERROR);
     });
     test("user-facing errors expose stable error codes", () => {
         const users = createUsersTable();

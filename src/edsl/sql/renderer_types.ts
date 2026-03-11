@@ -23,7 +23,6 @@ export type ExprSqlTarget = {
 
 export type SqlCompilable = QuerySqlTarget | ExprSqlTarget;
 
-export type BuiltinSqlRendererOptions = Omit<SqlOptions, "dialect">;
 
 export type RendererState = {
   parser: Parser;

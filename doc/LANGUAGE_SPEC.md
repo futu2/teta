@@ -170,17 +170,17 @@ Current defaults:
 
 ## Dialect customization hooks
 
-You can override any item through the renderer's `dialect.language` config:
+You can override any item through `SqlOptions.dialect.language`:
 
 ```ts
-import { sqlRenderer, table, t, toSql } from "@teta/teta";
+import { table, t, toSql } from "@teta/teta";
 
 const users = table("users", {
   name: t.string(),
   created_at: t.timestamp(),
 });
 
-const renderer = sqlRenderer({
+const sqlOptions = {
   dialect: {
     name: "my_dialect",
     parserDialect: "Trino",
@@ -204,7 +204,7 @@ const renderer = sqlRenderer({
   },
 });
 
-console.log(toSql(users, renderer));
+console.log(toSql(users, sqlOptions));
 ```
 
 Available fallback identifiers:

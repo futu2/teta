@@ -1,17 +1,8 @@
 import { describe, expect, test } from "bun:test";
 
-import { sqlRenderer, toSql, type SqlCompilable } from "../mod.ts";
-import {
-  createDuckDbAdapter,
-  createSqliteAdapter,
-  normalizeLiveRows,
-  type LiveDialect,
-  type LiveDialectAdapter,
-} from "./helpers/live-db.ts";
-import {
-  LIVE_LANGUAGE_SPEC_CASES,
-  type LiveOutcome,
-} from "./helpers/live-language-spec.ts";
+import { toSql, type SqlCompilable } from "../mod.ts";
+import { createDuckDbAdapter, createSqliteAdapter, normalizeLiveRows, type LiveDialect, type LiveDialectAdapter } from "./helpers/live-db.ts";
+import { LIVE_LANGUAGE_SPEC_CASES, type LiveOutcome } from "./helpers/live-language-spec.ts";
 
 let DuckDBConnection:
   | (typeof import("@duckdb/node-api"))["DuckDBConnection"]
@@ -35,7 +26,7 @@ async function runCase(
 ): Promise<void> {
   const adapter = await adapterFactory();
   try {
-    const sql = toSql(build(), sqlRenderer({ dialect, format: "compact" }));
+    const sql = toSql(build(), { dialect, format: "compact" });
     if (isErrorOutcome(outcome)) {
       await expect(adapter.run(sql)).rejects.toThrow(outcome.error);
       return;

@@ -1,4 +1,4 @@
-import { bitLength, characterLength, dateFormat, map, sqlRenderer, table, t, toSql } from "../../mod.ts";
+import { bitLength, characterLength, dateFormat, map, table, t, toSql } from "../../mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -6,7 +6,7 @@ const users = table("users", {
   created_at: t.timestamp(),
 });
 
-const customSqliteRenderer = sqlRenderer({
+const customSqliteRenderer = {
   dialect: {
     name: "sqlite_custom",
     parserDialect: "SQLite",

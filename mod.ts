@@ -134,15 +134,7 @@ export {
 /** Language specification and dialect mapping helpers. */
 export { LANGUAGE_SPEC, getLanguageSpec } from "./src/edsl/sql/language.ts";
 export type { LanguageCategory } from "./src/edsl/sql/language.ts";
-export {
-  duckdbRenderer,
-  hetuRenderer,
-  postgresqlRenderer,
-  sqlRenderer,
-  sqliteRenderer,
-} from "./src/edsl/sql.ts";
 export type {
-  BuiltinSqlRendererOptions,
   ExprSqlTarget,
   QuerySqlTarget,
   SqlCompilable,
@@ -167,7 +159,6 @@ export type {
   SqlBytes,
   SqlJson,
   Dialect,
-  SqlRenderer,
   SqlFormat,
   SqlRenderStrategy,
   SqlOptions,

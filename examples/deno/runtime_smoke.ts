@@ -1,5 +1,5 @@
 import { pipe } from "npm:remeda";
-import { eq, filter, map, sqlRenderer, table, t, toSql } from "../../mod.ts";
+import { eq, filter, map, table, t, toSql } from "../../mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -18,9 +18,9 @@ const query = pipe(
   }))
 );
 
-const sql = toSql(query, sqlRenderer({
+const sql = toSql(query, {
   dialect: "postgresql",
   format: "compact",
-}));
+});
 
 console.log(sql);

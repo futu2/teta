@@ -1,5 +1,5 @@
 import { pipe } from "remeda";
-import { dateTrunc, desc, duckdbRenderer, take, sort, postgresqlRenderer, map, table, t, toSql } from "../../mod.ts";
+import { dateTrunc, desc, take, sort, map, table, t, toSql } from "../../mod.ts";
 
 const events = table("events", {
   id: t.int(),
@@ -21,7 +21,7 @@ const report = pipe(
 );
 
 console.log("postgresql");
-console.log(toSql(report, postgresqlRenderer({ format: "pretty" })));
+console.log(toSql(report, { dialect: "postgresql", format: "pretty" }));
 console.log();
 console.log("duckdb");
-console.log(toSql(report, duckdbRenderer({ format: "pretty" })));
+console.log(toSql(report, { dialect: "duckdb", format: "pretty" }));

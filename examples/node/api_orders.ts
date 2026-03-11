@@ -1,5 +1,5 @@
 import { pipe } from "remeda";
-import { desc, eq, filter, take, sort, param, postgresqlRenderer, map, t, table, toSqlResult } from "../../mod.ts";
+import { desc, eq, filter, take, sort, param, map, t, table, toSqlResult } from "../../mod.ts";
 
 type Session = {
   tenantId: string;
@@ -18,11 +18,12 @@ const orders = table("orders", {
   created_at: t.timestamp(),
 });
 
-const renderer = postgresqlRenderer({
+const sqlOptions = {
+  dialect: "postgresql",
   format: "compact",
   parameterMode: "positional",
   parameterPrefix: "$",
-});
+} as const;
 
 export function handleListPaidOrders(request: RequestLike, session: Session) {
   const url = new URL(request.url, "https://app.example");
@@ -50,7 +51,7 @@ export function handleListPaidOrders(request: RequestLike, session: Session) {
       sort((order) => desc(order.created_at)),
       take(25)
     ),
-    renderer
+    sqlOptions
   );
 
   return {

@@ -6,12 +6,12 @@ Note: `table(...)` requires a schema to avoid `SELECT *` and keep column names e
 Generated SQL always uses auto-generated aliases (for example `users_0`, `orders_1`) and fully
 qualified column references.
 
-Keep EDSL queries dialect-neutral. Choose the dialect by creating a renderer at render time.
+Keep EDSL queries dialect-neutral. Choose the dialect by passing SQL options at render time.
 
 Most multi-stage examples below use Remeda's `pipe(...)` with named imports. Query helpers are dual-mode,
 so `map(users, ...)` and `pipe(users, map(...))` are both valid, but `pipe(...)` usually reads best. This function-first style is intentional: it keeps query stages easy to compose, extract, reuse, and test as ordinary values.
 
-All rendering examples below assume `sqlRenderer` is imported alongside the EDSL helpers.
+All rendering examples below pass plain `SqlOptions` objects into `toSql(...)` or `toSqlResult(...)`.
 
 ## Basics
 
@@ -19,7 +19,7 @@ All rendering examples below assume `sqlRenderer` is imported alongside the EDSL
 
 ```ts
 import { pipe } from "remeda";
-import { and, asc, desc, eq, filter, gte, take, sort, map, sqlRenderer, table, t, toSql } from "./mod.ts";
+import { and, asc, desc, eq, filter, gte, take, sort, map, table, t, toSql } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -36,7 +36,7 @@ const q = pipe(
   take(5)
 );
 
-console.log(toSql(q, sqlRenderer({ dialect: "postgresql", format: "pretty" })));
+console.log(toSql(q, { dialect: "postgresql", format: "pretty" }));
 ```
 
 Generated SQL:
@@ -60,7 +60,7 @@ LIMIT 5
 
 ```ts
 import { pipe } from "remeda";
-import { fold, count, eq, group, join, sqlRenderer, sum, table, t, toSql } from "./mod.ts";
+import { fold, count, eq, group, join, sum, table, t, toSql } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -83,7 +83,7 @@ const q = pipe(
   }))
 );
 
-console.log(toSql(q, sqlRenderer({ dialect: "postgresql", format: "pretty" })));
+console.log(toSql(q, { dialect: "postgresql", format: "pretty" }));
 ```
 
 Generated SQL:
@@ -102,7 +102,7 @@ GROUP BY cte_0_0.id
 ### 3) String concat with template helper
 
 ```ts
-import { f, map, sqlRenderer, table, t, toSql } from "./mod.ts";
+import { f, map, table, t, toSql } from "./mod.ts";
 
 const names = table("names", {
   id: t.int(),
@@ -116,7 +116,7 @@ const q = map(names, (name) => ({
   title: f`${name.prefix} ${name.first} ${name.last} ${name.suffix}`,
 }));
 
-console.log(toSql(q, sqlRenderer({ dialect: "postgresql", format: "pretty" })));
+console.log(toSql(q, { dialect: "postgresql", format: "pretty" }));
 ```
 
 Generated SQL:
@@ -154,7 +154,7 @@ more literally with staged CTEs.
 
 ```ts
 import { pipe } from "remeda";
-import { add, filter, gt, map, sqlRenderer, table, t, toSql } from "./mod.ts";
+import { add, filter, gt, map, table, t, toSql } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -170,11 +170,11 @@ const q = pipe(
   map((u) => ({ id: u.id, name: u.name, age_plus_one: u.age_plus_one }))
 );
 
-console.log(toSql(q, sqlRenderer({
+console.log(toSql(q, {
   dialect: "postgresql",
   format: "pretty",
   renderStrategy: "readable",
-})));
+}));
 ```
 
 ### Inspect lowering with `explain()`
@@ -244,7 +244,7 @@ Typical patterns:
 
 ```ts
 import { pipe } from "remeda";
-import { eq, join, map, sqlRenderer, table, t, toSql } from "./mod.ts";
+import { eq, join, map, table, t, toSql } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -268,7 +268,7 @@ const q = pipe(
   }))
 );
 
-console.log(toSql(q, sqlRenderer()));
+console.log(toSql(q, {});
 ```
 
 Use the `options` object to control join behavior, for example `{ type: "left" }` or `{ type: "right" }`.
@@ -279,7 +279,7 @@ Use `join(..., { lateral: true })` when the right-hand query needs to reference 
 
 ```ts
 import { pipe } from "remeda";
-import { eq, filter, join, lit, map, sqlRenderer, table, t, toSql } from "./mod.ts";
+import { eq, filter, join, lit, map, table, t, toSql } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -308,7 +308,7 @@ const q = pipe(
   )
 );
 
-console.log(toSql(q, sqlRenderer()));
+console.log(toSql(q, {});
 ```
 
 Note: `JOIN LATERAL` is emitted for dialects with `lateralJoinKeyword = true`.
@@ -319,24 +319,24 @@ For `sqlite`, the keyword is omitted during SQL rendering because correlated sub
 Use a custom dialect config when runtime dialect and parser dialect differ:
 
 ```ts
-import { map, sqlRenderer, table, t, toSql } from "./mod.ts";
+import { map, table, t, toSql } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
   name: t.string(),
 });
 
-console.log(toSql(map(users, (u) => ({ id: u.id })), sqlRenderer({
+console.log(toSql(map(users, (u) => ({ id: u.id })), {
   dialect: {
     name: "presto",
     parserDialect: "Trino",
     features: { lateralJoinKeyword: true },
   },
   format: "pretty",
-})));
+}));
 
-console.log(toSql(users, sqlRenderer({ dialect: "sqlite" })));
-console.log(toSql(users, sqlRenderer({ dialect: "hetu" })));
+console.log(toSql(users, { dialect: "sqlite" }));
+console.log(toSql(users, { dialect: "hetu" }));
 ```
 
 ### Built-in HetuEngine DQL dialect
@@ -350,7 +350,7 @@ This profile uses `Trino` as parser fallback for SQL stringification and applies
 
 ### Language specification
 
-Teta keeps expressions dialect-neutral in EDSL, then applies dialect behavior through the renderer's `dialect.language` config.
+Teta keeps expressions dialect-neutral in EDSL, then applies dialect behavior through the custom `dialect.language` config passed through `SqlOptions`.
 
 Teta language spec categories:
 
@@ -367,24 +367,7 @@ Teta language spec categories:
 The expression API is function-first, so query code stays friendly to pipelines and ordinary function composition.
 
 ```ts
-import {
-  arrayContains,
-  arrayJoin,
-  arrayLength,
-  cast,
-  dateDiff,
-  dateFormat,
-  dateParse,
-  dateTrunc,
-  regexLike,
-  regexReplace,
-  map,
-  sqlRenderer,
-  table,
-  t,
-  toSql,
-  toUnixTime,
-} from "./mod.ts";
+import { arrayContains, arrayJoin, arrayLength, cast, dateDiff, dateFormat, dateParse, dateTrunc, regexLike, regexReplace, map, table, t, toSql, toUnixTime } from "./mod.ts";
 
 const sessions = table("sessions", {
   id: t.int(),
@@ -407,13 +390,13 @@ const q = map(sessions, (s) => ({
   has_uuid: regexLike(s.tags, "^[0-9a-fA-F-]{36}$"),
 }));
 
-console.log(toSql(q, sqlRenderer({ dialect: "postgresql", format: "pretty" })));
+console.log(toSql(q, { dialect: "postgresql", format: "pretty" }));
 ```
 
 You can customize a dialect so unsupported direct functions map to equivalents or fallbacks:
 
 ```ts
-import { bitLength, dateFormat, map, sqlRenderer, table, t, toSql } from "./mod.ts";
+import { bitLength, dateFormat, map, table, t, toSql } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -427,7 +410,7 @@ const q = map(users, (u) => ({
   bits: bitLength(u.name),
 }));
 
-console.log(toSql(q, sqlRenderer({
+console.log(toSql(q, {
   dialect: {
     name: "sqlite_custom",
     parserDialect: "SQLite",
@@ -443,7 +426,7 @@ console.log(toSql(q, sqlRenderer({
       unsupported: ["OVERLAY"],
     },
   },
-})));
+}));
 ```
 
 ### Aggregate with group()
@@ -453,7 +436,7 @@ There is no separate `groupBy` stage.
 
 ```ts
 import { pipe } from "remeda";
-import { fold, count, filter, group, gt, sqlRenderer, sum, table, t, toSql } from "./mod.ts";
+import { fold, count, filter, group, gt, sum, table, t, toSql } from "./mod.ts";
 
 const orders = table("orders", {
   id: t.int(),
@@ -471,13 +454,13 @@ const q = pipe(
   }))
 );
 
-console.log(toSql(q, sqlRenderer()));
+console.log(toSql(q, {});
 ```
 
 ### Window function
 
 ```ts
-import { asc, desc, lag, lead, ntile, over, rank, rowNumber, map, sqlRenderer, sumOver, table, t, toSql } from "./mod.ts";
+import { asc, desc, lag, lead, ntile, over, rank, rowNumber, map, sumOver, table, t, toSql } from "./mod.ts";
 
 const orders = table("orders", {
   id: t.int(),
@@ -503,13 +486,13 @@ const q = map(orders, (o) => ({
   bucket: over(ntile(4), { orderBy: desc(o.total) }),
 }));
 
-console.log(toSql(q, sqlRenderer({ dialect: "postgresql", format: "pretty" })));
+console.log(toSql(q, { dialect: "postgresql", format: "pretty" }));
 ```
 
 ### Custom SQL functions (UDF)
 
 ```ts
-import { desc, fn, over, map, sqlRenderer, table, t, toSql, windowFn } from "./mod.ts";
+import { desc, fn, over, map, table, t, toSql, windowFn } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -522,28 +505,13 @@ const q = map(users, (u) => ({
   score_rank: over(windowFn<number>("percent_rank"), { orderBy: desc(u.id) }),
 }));
 
-console.log(toSql(q, sqlRenderer({ dialect: "postgresql", format: "pretty" })));
+console.log(toSql(q, { dialect: "postgresql", format: "pretty" }));
 ```
 
 ### SQL92 string helpers
 
 ```ts
-import {
-  charLength,
-  lower,
-  position,
-  regexExtract,
-  regexLike,
-  regexReplace,
-  map,
-  sqlRenderer,
-  substring,
-  table,
-  t,
-  toSql,
-  trim,
-  upper,
-} from "./mod.ts";
+import { charLength, lower, position, regexExtract, regexLike, regexReplace, map, substring, table, t, toSql, trim, upper } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -563,13 +531,13 @@ const q = map(users, (u) => ({
   first_digits: regexExtract(u.name, "(\\d+)", 1),
 }));
 
-console.log(toSql(q, sqlRenderer({ dialect: "postgresql", format: "pretty" })));
+console.log(toSql(q, { dialect: "postgresql", format: "pretty" }));
 ```
 
 ### Array helpers
 
 ```ts
-import { arrayAppend, arrayContains, arrayJoin, arrayLength, arrayPosition, arraySlice, map, sqlRenderer, table, t, toSql } from "./mod.ts";
+import { arrayAppend, arrayContains, arrayJoin, arrayLength, arrayPosition, arraySlice, map, table, t, toSql } from "./mod.ts";
 
 const sessions = table("sessions", {
   id: t.int(),
@@ -586,7 +554,7 @@ const q = map(sessions, (s) => ({
   with_debug: arrayAppend(s.tags, "debug"),
 }));
 
-console.log(toSql(q, sqlRenderer({ dialect: "postgresql", format: "pretty" })));
+console.log(toSql(q, { dialect: "postgresql", format: "pretty" }));
 ```
 
 ### IN operator
@@ -610,23 +578,7 @@ const q = pipe(
 ### SQL standard date/time helpers
 
 ```ts
-import {
-  currentDate,
-  currentTimestamp,
-  dateAdd,
-  dateDiff,
-  dateFormat,
-  dateLiteral,
-  dateParse,
-  dateTrunc,
-  month,
-  map,
-  table,
-  t,
-  timestampLiteral,
-  toUnixTime,
-  year,
-} from "./mod.ts";
+import { currentDate, currentTimestamp, dateAdd, dateDiff, dateFormat, dateLiteral, dateParse, dateTrunc, month, map, table, t, timestampLiteral, toUnixTime, year } from "./mod.ts";
 
 const posts = table("posts", {
   id: t.int(),
