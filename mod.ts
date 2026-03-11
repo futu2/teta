@@ -178,3 +178,16 @@ export {
   isTetaError,
 } from "./src/edsl/errors.ts";
 export type { TetaErrorCode, TetaErrorKind } from "./src/edsl/errors.ts";
+
+/** Dev utilities for rendering SQL from source files and watching changes. */
+export {
+  copyTextToClipboard,
+  renderSqlFromSource,
+  watchQuerySourceToClipboard,
+} from "./src/edsl/dev.ts";
+export type {
+  ClipboardTool,
+  QueryLike,
+  WatchQueryController,
+  WatchQuerySourceOptions,
+} from "./src/edsl/dev.ts";

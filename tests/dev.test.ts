@@ -4,7 +4,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { renderSqlFromSource } from "../dev.ts";
+import {
+  copyTextToClipboard,
+  renderSqlFromSource,
+  watchQuerySourceToClipboard,
+} from "../mod.ts";
 import { missingQueryExportError } from "./helpers/expected-errors.ts";
 
 const createdDirs: string[] = [];
@@ -28,6 +32,12 @@ afterEach(async () => {
 });
 
 describe("renderSqlFromSource", () => {
+  test("is exported from mod.ts with the other dev helpers", () => {
+    expect(typeof renderSqlFromSource).toBe("function");
+    expect(typeof watchQuerySourceToClipboard).toBe("function");
+    expect(typeof copyTextToClipboard).toBe("function");
+  });
+
   test("renders SQL from an exported query object", async () => {
     const file = await writeTempModule(`
 import { map, table, t } from ${JSON.stringify(modPath)};

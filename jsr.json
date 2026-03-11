@@ -1,10 +1,9 @@
 {
   "name": "@teta/teta",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Type-safe SQL EDSL for building composable queries.",
   "exports": {
-    ".": "./mod.ts",
-    "./dev": "./dev.ts"
+    ".": "./mod.ts"
   },
   "compatibility": {
     "deno": true,

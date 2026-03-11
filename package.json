@@ -3,8 +3,7 @@
   "module": "./mod.ts",
   "version": "0.4.0",
   "exports": {
-    ".": "./mod.ts",
-    "./dev": "./dev.ts"
+    ".": "./mod.ts"
   },
   "types": "./mod.ts",
   "type": "module",
