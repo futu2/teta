@@ -11,56 +11,56 @@ import * as errors from "./src/edsl/errors.ts";
 import * as dev from "./src/edsl/dev.ts";
 
 /** Query builder class returned by `table(...)` and query stage helpers. */
-export const Query = query.Query;
+export const Query: typeof import("./src/edsl/query.ts").Query = query.Query;
 export type Query<TColumns extends Record<string, any>> = import("./src/edsl/query.ts").Query<TColumns>;
 
 /** Explains a query's lowered stages, CTEs, and rendered SQL. */
-export const explain = query.explain;
+export const explain: typeof import("./src/edsl/query.ts").explain = query.explain;
 
 /** Builds an aggregate projection over the current query. */
-export const fold = query.fold;
+export const fold: typeof import("./src/edsl/query.ts").fold = query.fold;
 
 /** Filters rows with a predicate expression. */
-export const filter = query.filter;
+export const filter: typeof import("./src/edsl/query.ts").filter = query.filter;
 
 /** Joins two query inputs with an explicit join condition. */
-export const join = query.join;
+export const join: typeof import("./src/edsl/query.ts").join = query.join;
 
 /** Limits the number of rows returned by a query. */
-export const take = query.take;
+export const take: typeof import("./src/edsl/query.ts").take = query.take;
 
 /** Builds a recursive query from a base query and recursive step. */
-export const loop = query.loop;
+export const loop: typeof import("./src/edsl/query.ts").loop = query.loop;
 
 /** Adds an `ORDER BY` clause using sort expressions. */
-export const sort = query.sort;
+export const sort: typeof import("./src/edsl/query.ts").sort = query.sort;
 
 /** Projects each row into a new selected shape. */
-export const map = query.map;
+export const map: typeof import("./src/edsl/query.ts").map = query.map;
 
 /** Schema type helpers used when declaring tables. */
-export const t = query.t;
+export const t: typeof import("./src/edsl/query.ts").t = query.t;
 
 /** Creates a typed query root from a table schema. */
-export const table = query.table;
+export const table: typeof import("./src/edsl/query.ts").table = query.table;
 
 /** Lowers a query into the SQL AST used by the renderer. */
-export const toAst = query.toAst;
+export const toAst: typeof import("./src/edsl/query.ts").toAst = query.toAst;
 
 /** Lowers a query into Teta's intermediate representation. */
-export const toIR = query.toIR;
+export const toIR: typeof import("./src/edsl/query.ts").toIR = query.toIR;
 
 /** Renders a query to a SQL string. */
-export const toSql = query.toSql;
+export const toSql: typeof import("./src/edsl/query.ts").toSql = query.toSql;
 
 /** Renders a query to SQL plus bound parameter metadata. */
-export const toSqlResult = query.toSqlResult;
+export const toSqlResult: typeof import("./src/edsl/query.ts").toSqlResult = query.toSqlResult;
 
 /** Combines compatible queries with `UNION`. */
-export const union = query.union;
+export const union: typeof import("./src/edsl/query.ts").union = query.union;
 
 /** Combines compatible queries with `UNION ALL`. */
-export const unionAll = query.unionAll;
+export const unionAll: typeof import("./src/edsl/query.ts").unionAll = query.unionAll;
 
 /** Structured output returned by `explain(...)`. */
 export type QueryExplainResult<TColumns extends Record<string, any>> = import("./src/edsl/query.ts").QueryExplainResult<TColumns>;
@@ -75,332 +75,332 @@ export type QueryStageKind = import("./src/edsl/query.ts").QueryStageKind;
 export type QueryStep<TInputColumns extends Record<string, any>, TOutputColumns extends Record<string, any>> = import("./src/edsl/query.ts").QueryStep<TInputColumns, TOutputColumns>;
 
 /** Typed SQL expression reference used throughout the query DSL. */
-export const ExprRef = expr.ExprRef;
+export const ExprRef: typeof import("./src/edsl/expr.ts").ExprRef = expr.ExprRef;
 export type ExprRef<T> = import("./src/edsl/expr.ts").ExprRef<T>;
 
 /** Builds an equality predicate. */
-export const eq = expr.eq;
+export const eq: typeof import("./src/edsl/expr.ts").eq = expr.eq;
 
 /** Builds an inequality predicate. */
-export const ne = expr.ne;
+export const ne: typeof import("./src/edsl/expr.ts").ne = expr.ne;
 
 /** Builds a greater-than predicate. */
-export const gt = expr.gt;
+export const gt: typeof import("./src/edsl/expr.ts").gt = expr.gt;
 
 /** Builds a greater-than-or-equal predicate. */
-export const gte = expr.gte;
+export const gte: typeof import("./src/edsl/expr.ts").gte = expr.gte;
 
 /** Builds a less-than predicate. */
-export const lt = expr.lt;
+export const lt: typeof import("./src/edsl/expr.ts").lt = expr.lt;
 
 /** Builds a less-than-or-equal predicate. */
-export const lte = expr.lte;
+export const lte: typeof import("./src/edsl/expr.ts").lte = expr.lte;
 
 /** Builds a SQL `LIKE` predicate. */
-export const like = expr.like;
+export const like: typeof import("./src/edsl/expr.ts").like = expr.like;
 
 /** Builds an `IN` predicate. */
-export const isIn = expr.isIn;
+export const isIn: typeof import("./src/edsl/expr.ts").isIn = expr.isIn;
 
 /** Combines predicates with logical `AND`. */
-export const and = expr.and;
+export const and: typeof import("./src/edsl/expr.ts").and = expr.and;
 
 /** Combines predicates with logical `OR`. */
-export const or = expr.or;
+export const or: typeof import("./src/edsl/expr.ts").or = expr.or;
 
 /** Negates a predicate expression. */
-export const not = expr.not;
+export const not: typeof import("./src/edsl/expr.ts").not = expr.not;
 
 /** Builds an addition expression. */
-export const add = expr.add;
+export const add: typeof import("./src/edsl/expr.ts").add = expr.add;
 
 /** Builds a subtraction expression. */
-export const sub = expr.sub;
+export const sub: typeof import("./src/edsl/expr.ts").sub = expr.sub;
 
 /** Builds a multiplication expression. */
-export const mul = expr.mul;
+export const mul: typeof import("./src/edsl/expr.ts").mul = expr.mul;
 
 /** Builds a division expression. */
-export const div = expr.div;
+export const div: typeof import("./src/edsl/expr.ts").div = expr.div;
 
 /** Builds a modulo expression. */
-export const mod = expr.mod;
+export const mod: typeof import("./src/edsl/expr.ts").mod = expr.mod;
 
 /** Extracts a date or time field from a temporal expression. */
-export const extract = expr.extract;
+export const extract: typeof import("./src/edsl/expr.ts").extract = expr.extract;
 
 /** Builds a date truncation expression. */
-export const dateTrunc = expr.dateTrunc;
+export const dateTrunc: typeof import("./src/edsl/expr.ts").dateTrunc = expr.dateTrunc;
 
 /** Builds a date arithmetic addition expression. */
-export const dateAdd = expr.dateAdd;
+export const dateAdd: typeof import("./src/edsl/expr.ts").dateAdd = expr.dateAdd;
 
 /** Builds a date difference expression. */
-export const dateDiff = expr.dateDiff;
+export const dateDiff: typeof import("./src/edsl/expr.ts").dateDiff = expr.dateDiff;
 
 /** Formats a temporal expression as a string. */
-export const dateFormat = expr.dateFormat;
+export const dateFormat: typeof import("./src/edsl/expr.ts").dateFormat = expr.dateFormat;
 
 /** Parses a string expression into a temporal value. */
-export const dateParse = expr.dateParse;
+export const dateParse: typeof import("./src/edsl/expr.ts").dateParse = expr.dateParse;
 
 /** Converts a temporal expression to Unix time. */
-export const toUnixTime = expr.toUnixTime;
+export const toUnixTime: typeof import("./src/edsl/expr.ts").toUnixTime = expr.toUnixTime;
 
 /** Converts Unix time into a timestamp expression. */
-export const fromUnixTime = expr.fromUnixTime;
+export const fromUnixTime: typeof import("./src/edsl/expr.ts").fromUnixTime = expr.fromUnixTime;
 
 /** Extracts the year from a temporal expression. */
-export const year = expr.year;
+export const year: typeof import("./src/edsl/expr.ts").year = expr.year;
 
 /** Extracts the month from a temporal expression. */
-export const month = expr.month;
+export const month: typeof import("./src/edsl/expr.ts").month = expr.month;
 
 /** Extracts the day from a temporal expression. */
-export const day = expr.day;
+export const day: typeof import("./src/edsl/expr.ts").day = expr.day;
 
 /** Extracts the hour from a temporal expression. */
-export const hour = expr.hour;
+export const hour: typeof import("./src/edsl/expr.ts").hour = expr.hour;
 
 /** Extracts the minute from a temporal expression. */
-export const minute = expr.minute;
+export const minute: typeof import("./src/edsl/expr.ts").minute = expr.minute;
 
 /** Extracts the second from a temporal expression. */
-export const second = expr.second;
+export const second: typeof import("./src/edsl/expr.ts").second = expr.second;
 
 /** Marks an expression as grouped inside `fold(...)`. */
-export const group = expr.group;
+export const group: typeof import("./src/edsl/expr.ts").group = expr.group;
 
 /** Builds a `COUNT` aggregate expression. */
-export const count = expr.count;
+export const count: typeof import("./src/edsl/expr.ts").count = expr.count;
 
 /** Builds a `SUM` aggregate expression. */
-export const sum = expr.sum;
+export const sum: typeof import("./src/edsl/expr.ts").sum = expr.sum;
 
 /** Builds an `AVG` aggregate expression. */
-export const avg = expr.avg;
+export const avg: typeof import("./src/edsl/expr.ts").avg = expr.avg;
 
 /** Builds a `MIN` aggregate expression. */
-export const min = expr.min;
+export const min: typeof import("./src/edsl/expr.ts").min = expr.min;
 
 /** Builds a `MAX` aggregate expression. */
-export const max = expr.max;
+export const max: typeof import("./src/edsl/expr.ts").max = expr.max;
 
 /** Builds a `RANK` window function expression. */
-export const rank = expr.rank;
+export const rank: typeof import("./src/edsl/expr.ts").rank = expr.rank;
 
 /** Builds a `DENSE_RANK` window function expression. */
-export const denseRank = expr.denseRank;
+export const denseRank: typeof import("./src/edsl/expr.ts").denseRank = expr.denseRank;
 
 /** Builds a `ROW_NUMBER` window function expression. */
-export const rowNumber = expr.rowNumber;
+export const rowNumber: typeof import("./src/edsl/expr.ts").rowNumber = expr.rowNumber;
 
 /** Builds a `LAG` window function expression. */
-export const lag = expr.lag;
+export const lag: typeof import("./src/edsl/expr.ts").lag = expr.lag;
 
 /** Builds a `LEAD` window function expression. */
-export const lead = expr.lead;
+export const lead: typeof import("./src/edsl/expr.ts").lead = expr.lead;
 
 /** Builds a `PERCENT_RANK` window function expression. */
-export const percentRank = expr.percentRank;
+export const percentRank: typeof import("./src/edsl/expr.ts").percentRank = expr.percentRank;
 
 /** Builds a `NTILE` window function expression. */
-export const ntile = expr.ntile;
+export const ntile: typeof import("./src/edsl/expr.ts").ntile = expr.ntile;
 
 /** Builds a ceiling expression. */
-export const ceil = expr.ceil;
+export const ceil: typeof import("./src/edsl/expr.ts").ceil = expr.ceil;
 
 /** Builds a floor expression. */
-export const floor = expr.floor;
+export const floor: typeof import("./src/edsl/expr.ts").floor = expr.floor;
 
 /** Builds an absolute-value expression. */
-export const abs = expr.abs;
+export const abs: typeof import("./src/edsl/expr.ts").abs = expr.abs;
 
 /** Builds a square-root expression. */
-export const sqrt = expr.sqrt;
+export const sqrt: typeof import("./src/edsl/expr.ts").sqrt = expr.sqrt;
 
 /** Builds a power expression. */
-export const pow = expr.pow;
+export const pow: typeof import("./src/edsl/expr.ts").pow = expr.pow;
 
 /** Builds a `GREATEST` expression. */
-export const greatest = expr.greatest;
+export const greatest: typeof import("./src/edsl/expr.ts").greatest = expr.greatest;
 
 /** Builds a `LEAST` expression. */
-export const least = expr.least;
+export const least: typeof import("./src/edsl/expr.ts").least = expr.least;
 
 /** Builds a string replacement expression. */
-export const replace = expr.replace;
+export const replace: typeof import("./src/edsl/expr.ts").replace = expr.replace;
 
 /** Builds an uppercase string expression. */
-export const upper = expr.upper;
+export const upper: typeof import("./src/edsl/expr.ts").upper = expr.upper;
 
 /** Builds a lowercase string expression. */
-export const lower = expr.lower;
+export const lower: typeof import("./src/edsl/expr.ts").lower = expr.lower;
 
 /** Builds a string reversal expression. */
-export const reverse = expr.reverse;
+export const reverse: typeof import("./src/edsl/expr.ts").reverse = expr.reverse;
 
 /** Builds a trimmed string expression. */
-export const trim = expr.trim;
+export const trim: typeof import("./src/edsl/expr.ts").trim = expr.trim;
 
 /** Builds a regular-expression match predicate. */
-export const regexLike = expr.regexLike;
+export const regexLike: typeof import("./src/edsl/expr.ts").regexLike = expr.regexLike;
 
 /** Builds a regular-expression replacement expression. */
-export const regexReplace = expr.regexReplace;
+export const regexReplace: typeof import("./src/edsl/expr.ts").regexReplace = expr.regexReplace;
 
 /** Builds a regular-expression extraction expression. */
-export const regexExtract = expr.regexExtract;
+export const regexExtract: typeof import("./src/edsl/expr.ts").regexExtract = expr.regexExtract;
 
 /** Builds a substring expression. */
-export const substring = expr.substring;
+export const substring: typeof import("./src/edsl/expr.ts").substring = expr.substring;
 
 /** Builds a string position expression. */
-export const position = expr.position;
+export const position: typeof import("./src/edsl/expr.ts").position = expr.position;
 
 /** Builds a string overlay expression. */
-export const overlay = expr.overlay;
+export const overlay: typeof import("./src/edsl/expr.ts").overlay = expr.overlay;
 
 /** Builds a character-length expression. */
-export const charLength = expr.charLength;
+export const charLength: typeof import("./src/edsl/expr.ts").charLength = expr.charLength;
 
 /** Builds a `CHARACTER_LENGTH` expression. */
-export const characterLength = expr.characterLength;
+export const characterLength: typeof import("./src/edsl/expr.ts").characterLength = expr.characterLength;
 
 /** Builds an octet-length expression. */
-export const octetLength = expr.octetLength;
+export const octetLength: typeof import("./src/edsl/expr.ts").octetLength = expr.octetLength;
 
 /** Builds a bit-length expression. */
-export const bitLength = expr.bitLength;
+export const bitLength: typeof import("./src/edsl/expr.ts").bitLength = expr.bitLength;
 
 /** Builds a left-substring expression. */
-export const left = expr.left;
+export const left: typeof import("./src/edsl/expr.ts").left = expr.left;
 
 /** Builds a right-substring expression. */
-export const right = expr.right;
+export const right: typeof import("./src/edsl/expr.ts").right = expr.right;
 
 /** Builds a left-padding expression. */
-export const lpad = expr.lpad;
+export const lpad: typeof import("./src/edsl/expr.ts").lpad = expr.lpad;
 
 /** Builds a right-padding expression. */
-export const rpad = expr.rpad;
+export const rpad: typeof import("./src/edsl/expr.ts").rpad = expr.rpad;
 
 /** Builds a string concatenation expression. */
-export const concat = expr.concat;
+export const concat: typeof import("./src/edsl/expr.ts").concat = expr.concat;
 
 /** Builds an array-length expression. */
-export const arrayLength = expr.arrayLength;
+export const arrayLength: typeof import("./src/edsl/expr.ts").arrayLength = expr.arrayLength;
 
 /** Builds an array containment predicate. */
-export const arrayContains = expr.arrayContains;
+export const arrayContains: typeof import("./src/edsl/expr.ts").arrayContains = expr.arrayContains;
 
 /** Builds an array position lookup expression. */
-export const arrayPosition = expr.arrayPosition;
+export const arrayPosition: typeof import("./src/edsl/expr.ts").arrayPosition = expr.arrayPosition;
 
 /** Builds an array slice expression. */
-export const arraySlice = expr.arraySlice;
+export const arraySlice: typeof import("./src/edsl/expr.ts").arraySlice = expr.arraySlice;
 
 /** Builds an array join-to-string expression. */
-export const arrayJoin = expr.arrayJoin;
+export const arrayJoin: typeof import("./src/edsl/expr.ts").arrayJoin = expr.arrayJoin;
 
 /** Builds an array append expression. */
-export const arrayAppend = expr.arrayAppend;
+export const arrayAppend: typeof import("./src/edsl/expr.ts").arrayAppend = expr.arrayAppend;
 
 /** Builds an array prepend expression. */
-export const arrayPrepend = expr.arrayPrepend;
+export const arrayPrepend: typeof import("./src/edsl/expr.ts").arrayPrepend = expr.arrayPrepend;
 
 /** Builds an array concatenation expression. */
-export const arrayConcat = expr.arrayConcat;
+export const arrayConcat: typeof import("./src/edsl/expr.ts").arrayConcat = expr.arrayConcat;
 
 /** Builds an array de-duplication expression. */
-export const arrayDistinct = expr.arrayDistinct;
+export const arrayDistinct: typeof import("./src/edsl/expr.ts").arrayDistinct = expr.arrayDistinct;
 
 /** Builds a `COALESCE` expression. */
-export const coalesce = expr.coalesce;
+export const coalesce: typeof import("./src/edsl/expr.ts").coalesce = expr.coalesce;
 
 /** Builds a `NULLIF` expression. */
-export const nullIf = expr.nullIf;
+export const nullIf: typeof import("./src/edsl/expr.ts").nullIf = expr.nullIf;
 
 /** Builds an `IS NULL` predicate. */
-export const isNull = expr.isNull;
+export const isNull: typeof import("./src/edsl/expr.ts").isNull = expr.isNull;
 
 /** Builds an `IS NOT NULL` predicate. */
-export const isNotNull = expr.isNotNull;
+export const isNotNull: typeof import("./src/edsl/expr.ts").isNotNull = expr.isNotNull;
 
 /** Marks an expression for ascending sort order. */
-export const asc = expr.asc;
+export const asc: typeof import("./src/edsl/expr.ts").asc = expr.asc;
 
 /** Marks an expression for descending sort order. */
-export const desc = expr.desc;
+export const desc: typeof import("./src/edsl/expr.ts").desc = expr.desc;
 
 /** Builds a windowed `SUM` expression. */
-export const sumOver = expr.sumOver;
+export const sumOver: typeof import("./src/edsl/expr.ts").sumOver = expr.sumOver;
 
 /** Builds an explicit SQL cast expression. */
-export const cast = expr.cast;
+export const cast: typeof import("./src/edsl/expr.ts").cast = expr.cast;
 
 /** Builds a cast-to-integer expression. */
-export const toInt = expr.toInt;
+export const toInt: typeof import("./src/edsl/expr.ts").toInt = expr.toInt;
 
 /** Builds a cast-to-float expression. */
-export const toFloat = expr.toFloat;
+export const toFloat: typeof import("./src/edsl/expr.ts").toFloat = expr.toFloat;
 
 /** Builds a cast-to-date expression. */
-export const toDate = expr.toDate;
+export const toDate: typeof import("./src/edsl/expr.ts").toDate = expr.toDate;
 
 /** Builds a rounding expression. */
-export const round = expr.round;
+export const round: typeof import("./src/edsl/expr.ts").round = expr.round;
 
 /** Builds an array literal expression. */
-export const array = expr.array;
+export const array: typeof import("./src/edsl/expr.ts").array = expr.array;
 
 /** Builds a generic SQL function call expression. */
-export const fn = expr.fn;
+export const fn: typeof import("./src/edsl/expr.ts").fn = expr.fn;
 
 /** Builds a generic SQL window function before applying `over(...)`. */
-export const windowFn = expr.windowFn;
+export const windowFn: typeof import("./src/edsl/expr.ts").windowFn = expr.windowFn;
 
 /** Applies a window specification to a window function. */
-export const over = expr.over;
+export const over: typeof import("./src/edsl/expr.ts").over = expr.over;
 
 /** Builds a `CASE WHEN` expression. */
-export const caseWhen = expr.caseWhen;
+export const caseWhen: typeof import("./src/edsl/expr.ts").caseWhen = expr.caseWhen;
 
 /** Creates a single branch for `caseWhen(...)`. */
-export const when = expr.when;
+export const when: typeof import("./src/edsl/expr.ts").when = expr.when;
 
 /** Maps every expression in an object shape through a transform. */
-export const mapShape = expr.mapShape;
+export const mapShape: typeof import("./src/edsl/expr.ts").mapShape = expr.mapShape;
 
 /** Marks every expression in an object shape as grouped. */
-export const groupShape = expr.groupShape;
+export const groupShape: typeof import("./src/edsl/expr.ts").groupShape = expr.groupShape;
 
 /** Builds a concatenated SQL string expression from a template literal. */
-export const f = expr.f;
+export const f: typeof import("./src/edsl/expr.ts").f = expr.f;
 
 /** Wraps a literal value as an expression. */
-export const lit = expr.lit;
+export const lit: typeof import("./src/edsl/expr.ts").lit = expr.lit;
 
 /** Wraps a runtime parameter value for bound SQL rendering. */
-export const param = expr.param;
+export const param: typeof import("./src/edsl/expr.ts").param = expr.param;
 
 /** Builds a `CURRENT_DATE` expression. */
-export const currentDate = expr.currentDate;
+export const currentDate: typeof import("./src/edsl/expr.ts").currentDate = expr.currentDate;
 
 /** Builds a `CURRENT_TIMESTAMP` expression. */
-export const currentTimestamp = expr.currentTimestamp;
+export const currentTimestamp: typeof import("./src/edsl/expr.ts").currentTimestamp = expr.currentTimestamp;
 
 /** Creates a typed SQL date literal value. */
-export const dateLiteral = expr.dateLiteral;
+export const dateLiteral: typeof import("./src/edsl/expr.ts").dateLiteral = expr.dateLiteral;
 
 /** Creates a typed SQL timestamp literal value. */
-export const timestampLiteral = expr.timestampLiteral;
+export const timestampLiteral: typeof import("./src/edsl/expr.ts").timestampLiteral = expr.timestampLiteral;
 
 /** Canonical catalog of SQL operations and dialect support metadata. */
-export const LANGUAGE_SPEC = language.LANGUAGE_SPEC;
+export const LANGUAGE_SPEC: typeof import("./src/edsl/sql/language.ts").LANGUAGE_SPEC = language.LANGUAGE_SPEC;
 
 /** Looks up language-spec metadata for a named SQL operation. */
-export const getLanguageSpec = language.getLanguageSpec;
+export const getLanguageSpec: typeof import("./src/edsl/sql/language.ts").getLanguageSpec = language.getLanguageSpec;
 
 /** Top-level category name used in the language specification. */
 export type LanguageCategory = import("./src/edsl/sql/language.ts").LanguageCategory;
@@ -493,19 +493,19 @@ export type IdentifierInput = import("./src/edsl/types.ts").IdentifierInput;
 export type SqlIdentifier = import("./src/edsl/types.ts").SqlIdentifier;
 
 /** Base class for public Teta errors. */
-export const TetaError = errors.TetaError;
+export const TetaError: typeof import("./src/edsl/errors.ts").TetaError = errors.TetaError;
 export type TetaError = import("./src/edsl/errors.ts").TetaError;
 
 /** Error raised when Teta detects an internal compiler failure. */
-export const TetaInternalError = errors.TetaInternalError;
+export const TetaInternalError: typeof import("./src/edsl/errors.ts").TetaInternalError = errors.TetaInternalError;
 export type TetaInternalError = import("./src/edsl/errors.ts").TetaInternalError;
 
 /** Error raised for invalid user input or unsupported queries. */
-export const TetaUserError = errors.TetaUserError;
+export const TetaUserError: typeof import("./src/edsl/errors.ts").TetaUserError = errors.TetaUserError;
 export type TetaUserError = import("./src/edsl/errors.ts").TetaUserError;
 
 /** Checks whether a value is one of Teta's public error types. */
-export const isTetaError = errors.isTetaError;
+export const isTetaError: typeof import("./src/edsl/errors.ts").isTetaError = errors.isTetaError;
 
 /** String code identifying a specific Teta error condition. */
 export type TetaErrorCode = import("./src/edsl/errors.ts").TetaErrorCode;
@@ -517,13 +517,13 @@ export type TetaErrorKind = import("./src/edsl/errors.ts").TetaErrorKind;
 export type ClipboardTool = import("./src/edsl/dev.ts").ClipboardTool;
 
 /** Copies text to the system clipboard using the requested backend when available. */
-export const copyTextToClipboard = dev.copyTextToClipboard;
+export const copyTextToClipboard: typeof import("./src/edsl/dev.ts").copyTextToClipboard = dev.copyTextToClipboard;
 
 /** Module export shapes accepted by `renderSqlFromSource(...)`. */
 export type QueryLike = import("./src/edsl/dev.ts").QueryLike;
 
 /** Loads a source module and renders SQL from one of its exports. */
-export const renderSqlFromSource = dev.renderSqlFromSource;
+export const renderSqlFromSource: typeof import("./src/edsl/dev.ts").renderSqlFromSource = dev.renderSqlFromSource;
 
 /** Controller returned by `watchQuerySourceToClipboard(...)`. */
 export type WatchQueryController = import("./src/edsl/dev.ts").WatchQueryController;
@@ -532,5 +532,5 @@ export type WatchQueryController = import("./src/edsl/dev.ts").WatchQueryControl
 export type WatchQuerySourceOptions = import("./src/edsl/dev.ts").WatchQuerySourceOptions;
 
 /** Watches source files, re-renders SQL, and optionally copies or writes the result. */
-export const watchQuerySourceToClipboard = dev.watchQuerySourceToClipboard;
+export const watchQuerySourceToClipboard: typeof import("./src/edsl/dev.ts").watchQuerySourceToClipboard = dev.watchQuerySourceToClipboard;
 
