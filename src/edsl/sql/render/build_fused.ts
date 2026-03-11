@@ -8,6 +8,7 @@ import { mergePredicates } from "./predicate.ts";
 import { nextStageColumnIdentifiers, stageOutputNames } from "./planner.ts";
 import { bindFusedExpr, type ScopeExprLookup } from "./fused.ts";
 import { buildFusedJoinFrom } from "./build_fused_join.ts";
+import { buildFusedUnnestFrom } from "./build_fused_unnest.ts";
 import { handlePostProjectionFilterStage } from "./build_fused_filter.ts";
 import { internalError } from "../../errors.ts";
 import type { CompiledSegment } from "./segment.ts";
@@ -16,6 +17,7 @@ import {
   applyFusedLimitStage,
   applyFusedOrderStage,
   applyFusedProjectionStage,
+  applyFusedUnnestStage,
   consumeFusedStage,
   createFusedBuildState,
   finishFusedSegment,
@@ -81,6 +83,16 @@ export function tryBuildFusedSegmentAst(
               dialect
             );
             applyFusedJoinStage(state, stage, nextJoin);
+            continue;
+          }
+          case "unnest": {
+            const nextUnnest = buildFusedUnnestFrom(
+              stage,
+              state.scopeExprs,
+              state.currentBindings,
+              dialect
+            );
+            applyFusedUnnestStage(state, stage, nextUnnest);
             continue;
           }
           case "map":

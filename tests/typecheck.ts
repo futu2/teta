@@ -1,6 +1,6 @@
 import { omit, pick, pipe } from "remeda";
 import type { ExprRef, SqlBigInt, SqlBytes, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlUuid, } from "../mod.ts";
-import { filter, join, take, sort, param, map, table, t, fold, asc, desc, eq, gt, upper, add, coalesce, count, group, loop, sum, and, sub, caseWhen, when, mapShape, groupShape, lt } from "../mod.ts";
+import { filter, join, take, sort, param, map, table, t, fold, asc, desc, eq, gt, upper, add, coalesce, count, group, loop, sum, and, sub, caseWhen, when, mapShape, groupShape, lt, unnest } from "../mod.ts";
 type Equal<A, B> = ((<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false);
 type Expect<T extends true> = T;
 type ExprType<TExpr> = TExpr extends ExprRef<infer TValue> ? TValue : never;
@@ -12,6 +12,10 @@ const orders = table("orders", {
     order_id: t.int(),
     user_id: t.int(),
     total: t.float(),
+});
+const sessions = table("sessions", {
+    id: t.int(),
+    tags: t.array(t.string()),
 });
 type ProfileMeta = {
     theme: string;
@@ -65,6 +69,8 @@ const fullSelected = map(fullJoined, (row) => ({
 const leftViaJoinSelected = map(leftViaJoin, (row) => ({
     total: coalesce(row.total, 0),
 }));
+const explodedSessions = unnest(sessions, (session) => session.tags, { value: "tag", ordinality: "tag_index" });
+const outerExplodedSessions = unnest(sessions, (session) => session.tags, { value: "tag" }, { outer: true });
 const leftJoinTotal = coalesce(leftJoined.columns.total, 0);
 const leftJoinTotalRemaining = sub(leftJoinTotal, 1);
 const projectedWithQuotedKey = map(users, (user) => ({ ["User Id"]: user.id }));
@@ -101,6 +107,9 @@ const projectedProfiles = map(profiles, (profile) => ({
 const uuidFilteredProfiles = filter(profiles, (profile) => eq(profile.id, param("00000000-0000-0000-0000-000000000000")));
 const bigintFilteredProfiles = filter(profiles, (profile) => and(gt(profile.external_id, 0), eq(profile.external_id, 42n)));
 type _LeftJoinTotal = Expect<Equal<ExprType<typeof leftJoined.columns.total>, SqlFloat | null>>;
+type _ExplodedTag = Expect<Equal<ExprType<typeof explodedSessions.columns.tag>, string>>;
+type _ExplodedTagIndex = Expect<Equal<ExprType<typeof explodedSessions.columns.tag_index>, SqlInt>>;
+type _OuterExplodedTag = Expect<Equal<ExprType<typeof outerExplodedSessions.columns.tag>, string | null>>;
 type _RightJoinId = Expect<Equal<ExprType<typeof rightJoined.columns.id>, SqlInt | null>>;
 type _FullJoinTotal = Expect<Equal<ExprType<typeof fullJoined.columns.total>, SqlFloat | null>>;
 type _LeftViaJoinTotal = Expect<Equal<ExprType<typeof leftViaJoin.columns.total>, SqlFloat | null>>;

@@ -24,6 +24,7 @@ export function nextStageScopeId(stage: Stage, currentScopeId: ScopeId): ScopeId
     case "map":
     case "fold":
     case "join":
+    case "unnest":
     case "union":
       return stage.outputScopeId;
     case "filter":
@@ -52,6 +53,7 @@ export function nextStageColumnIdentifiers(
       return projectionItemsToIdentifierMap(stage.items);
     case "filter":
     case "join":
+    case "unnest":
     case "sort":
     case "take":
     case "union":
@@ -68,6 +70,7 @@ export function stageOutputNames(stage: Stage): readonly string[] {
       return stage.keys;
     case "filter":
     case "join":
+    case "unnest":
     case "sort":
     case "take":
     case "union":

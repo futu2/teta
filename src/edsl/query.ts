@@ -4,6 +4,7 @@ export {
   fold,
   filter,
   join,
+  unnest,
   take,
   sort,
   map,

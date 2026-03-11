@@ -19,6 +19,7 @@ import type {
 import {
   autoAlias,
   assertUnionCompatible,
+  columnNamesToIdentifierMap,
   mergeWiths,
   normalizeJoinType,
   projectionItemsToIdentifierMap,
@@ -28,6 +29,7 @@ import {
   resolveFoldProjection,
   resolveProjection,
 } from "./planner.ts";
+import { userError } from "../errors.ts";
 import {
   resolveJoinColumns,
   type JoinColumnMerger,
@@ -183,6 +185,59 @@ export function resolveJoinQuery<
     columnNames: nextNames,
     scopeId: outputScopeId,
     withs: mergeWiths(leftQuery.withs, rightQuery.withs),
+    columnIdentifiers: projectionItemsToIdentifierMap(stage.projectAll),
+  };
+}
+
+export function resolveUnnestQuery<
+  TLeft extends Record<string, any>,
+  TGenerated extends Record<string, any>,
+>(
+  leftQuery: QueryState<TLeft>,
+  collection: ExprRef<unknown>,
+  selection: { value: string; ordinality?: string },
+  options: { outer?: boolean } = {}
+): QueryDeriveInit<TLeft & TGenerated> {
+  const generatedKeys = selection.ordinality
+    ? [selection.value, selection.ordinality]
+    : [selection.value];
+
+  for (const key of generatedKeys) {
+    if (leftQuery.columnNames.includes(key)) {
+      userError("UNNEST_COLUMN_CONFLICT", `unnest column already exists: ${key}`);
+    }
+  }
+
+  const rightScopeId = freshScopeId();
+  const outputScopeId = freshScopeId();
+  const alias = autoAlias("unnest", leftQuery.stages);
+  const rightColumns = createColumnRefs<TGenerated>(rightScopeId, generatedKeys);
+  const mergedColumns = { ...leftQuery.columns, ...rightColumns };
+  const nextNames = [...leftQuery.columnNames, ...generatedKeys];
+  const generatedIdentifiers = columnNamesToIdentifierMap(generatedKeys);
+  const stage: Stage = {
+    kind: "unnest",
+    mode: options.outer ? "outer" : "inner",
+    expr: collection.node,
+    withOrdinality: selection.ordinality !== undefined,
+    as: alias,
+    columnNames: generatedKeys,
+    columnIdentifiers: generatedIdentifiers,
+    projectAll: projectAllItems(
+      mergedColumns,
+      nextNames,
+      { ...leftQuery.columnIdentifiers, ...generatedIdentifiers }
+    ),
+    rightScopeId,
+    outputScopeId,
+  };
+
+  return {
+    stages: [...leftQuery.stages, stage],
+    columns: createColumnRefs<TLeft & TGenerated>(outputScopeId, nextNames),
+    columnNames: nextNames,
+    scopeId: outputScopeId,
+    withs: leftQuery.withs,
     columnIdentifiers: projectionItemsToIdentifierMap(stage.projectAll),
   };
 }

@@ -32,6 +32,10 @@ export const t = {
   uuid: () => ({ kind: "column_type" } as ColumnType<SqlUuid>),
   json: <T = unknown>() => ({ kind: "column_type" } as ColumnType<SqlJson<T>>),
   bytes: () => ({ kind: "column_type" } as ColumnType<SqlBytes>),
+  array: <T>(column: ColumnType<T>) => {
+    void column;
+    return { kind: "column_type" } as ColumnType<T[]>;
+  },
   nullable: <T>(column: ColumnType<T>): ColumnType<T | null> => {
     void column;
     return { kind: "column_type" } as ColumnType<T | null>;

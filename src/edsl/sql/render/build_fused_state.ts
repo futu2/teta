@@ -17,6 +17,7 @@ import {
   type ScopeExprLookup,
 } from "./fused.ts";
 import type { FusedJoinFrom } from "./build_fused_join.ts";
+import type { FusedUnnestFrom } from "./build_fused_unnest.ts";
 import {
   buildBaseFrom,
   buildCompiledSegment,
@@ -103,6 +104,18 @@ export function applyFusedJoinStage(
 ): void {
   state.from.push(nextJoin.from);
   state.currentBindings = nextJoin.bindings;
+  state.scopeExprs[stage.outputScopeId] = projectionItemsToScopeMap(stage.projectAll);
+  state.currentScopeId = stage.outputScopeId;
+  consumeFusedStage(state, stage);
+}
+
+export function applyFusedUnnestStage(
+  state: FusedBuildState,
+  stage: Extract<Stage, { kind: "unnest" }>,
+  nextUnnest: FusedUnnestFrom
+): void {
+  state.from.push(nextUnnest.from);
+  state.currentBindings = nextUnnest.bindings;
   state.scopeExprs[stage.outputScopeId] = projectionItemsToScopeMap(stage.projectAll);
   state.currentScopeId = stage.outputScopeId;
   consumeFusedStage(state, stage);

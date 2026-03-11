@@ -105,7 +105,7 @@ export function autoAlias(table: string | SqlIdentifier, stages: Stage[]): strin
     ? (internalCteLabel(tableName) ?? "cte")
     : tableName;
   const joinCount = stages.reduce((count, stage) => {
-    if (stage.kind === "join") return count + 1;
+    if (stage.kind === "join" || stage.kind === "unnest") return count + 1;
     return count;
   }, 0);
   const base = aliasBase.replace(/[^A-Za-z0-9_]+/g, "_").replace(/^_+|_+$/g, "");

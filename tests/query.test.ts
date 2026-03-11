@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { Parser } from "node-sql-parser";
 import { omit, pick } from "remeda";
-import { lit, table, t, filter, join, map, toAst, toSql, asc, bitLength, characterLength, eq, gt, replace, rowNumber, upper, sort, over, and, take, not, or, group } from "../mod.ts";
+import { lit, table, t, filter, join, map, toAst, toSql, asc, bitLength, characterLength, eq, gt, replace, rowNumber, upper, sort, over, and, take, not, or, group, unnest } from "../mod.ts";
 import { USER_PIPELINE_POSTGRES_COMPACT, USER_PIPELINE_POSTGRES_PRETTY, USERS_NAME_LENGTH_SQLITE_COMPACT, EMPLOYEES_SELF_JOIN_POSTGRES_COMPACT, USERS_ORDERS_LEFT_JOIN_SELECT_POSTGRES_COMPACT, USERS_SELECT_FILTER_POSTGRES_COMPACT, ANALYTICS_EVENTS_SELECT_POSTGRES_COMPACT, QUOTED_ANALYTICS_EVENTS_SELECT_POSTGRES_COMPACT, QUOTED_ANALYTICS_EVENTS_SELECT_BIGQUERY_COMPACT, QUOTED_USERS_ALIAS_SELECT_POSTGRES_COMPACT, QUOTED_USERS_PROJECTED_ALIAS_BIGQUERY_COMPACT, QUOTED_ROW_NUMBER_ALIAS_FILTER_POSTGRES_COMPACT, ORDERS_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT, ORDERS_ROW_NUMBER_FILTER_POSTGRES_COMPACT, ORDERS_ROW_NUMBER_FILTER_ORDER_LIMIT_POSTGRES_COMPACT, ORDERS_TOTAL_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT, ORDERS_TOTAL_ROW_NUMBER_FILTER_POSTGRES_COMPACT, ORDERS_TOTAL_SHARED_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT, ORDERS_TOTAL_SHARED_ROW_NUMBER_FILTER_POSTGRES_COMPACT, ORDERS_TOTAL_NOT_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT, ORDERS_TOTAL_NOT_ROW_NUMBER_FILTER_POSTGRES_COMPACT, ORDERS_SHARED_DISJUNCTION_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT } from "./helpers/expected-sql.ts";
 import { buildUserPipelineQuery, createOrdersTable, createUsersTable } from "./helpers/fixtures.ts";
 describe("toSql(query, options)", () => {
@@ -38,6 +38,30 @@ describe("toSql(query, options)", () => {
         const sql = toSql(query, { dialect: "postgresql", format: "compact" });
         expect(sql).toContain("JOIN LATERAL (");
         expect(sql).toContain("WHERE orders_0.user_id = users_0.id");
+    });
+    test("renders postgres unnest as cross join lateral", () => {
+        const sessions = table("sessions", {
+            id: t.int(),
+            tags: t.array(t.string()),
+        });
+        const query = unnest(sessions, (session) => session.tags, { value: "tag" });
+        expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe("SELECT sessions_0.id AS id, sessions_0.tags AS tags, unnest_1.tag AS tag FROM sessions AS sessions_0 CROSS JOIN LATERAL UNNEST(sessions_0.tags) AS unnest_1(tag)");
+    });
+    test("renders duckdb unnest as cross join", () => {
+        const sessions = table("sessions", {
+            id: t.int(),
+            tags: t.array(t.string()),
+        });
+        const query = unnest(sessions, (session) => session.tags, { value: "tag" });
+        expect(toSql(query, { dialect: "duckdb", format: "compact" })).toBe("SELECT sessions_0.id AS id, sessions_0.tags AS tags, unnest_1.tag AS tag FROM sessions AS sessions_0 CROSS JOIN UNNEST(sessions_0.tags) AS unnest_1(tag)");
+    });
+    test("renders hetu unnest as lateral view outer posexplode", () => {
+        const sessions = table("sessions", {
+            id: t.int(),
+            tags: t.array(t.string()),
+        });
+        const query = unnest(sessions, (session) => session.tags, { value: "tag", ordinality: "idx" }, { outer: true });
+        expect(toSql(query, { dialect: "hetu", format: "compact" })).toBe("SELECT sessions_0.id AS id, sessions_0.tags AS tags, unnest_1.tag AS tag, unnest_1.idx AS idx FROM sessions AS sessions_0 LATERAL VIEW OUTER POSEXPLODE(sessions_0.tags) unnest_1 AS idx, tag");
     });
     test("hoists a non-lateral subquery join into a CTE", () => {
         const users = createUsersTable();

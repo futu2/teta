@@ -93,6 +93,19 @@ export type SortStage = {
   projectAll: ProjectionItem[];
 };
 
+export type UnnestStage = {
+  kind: "unnest";
+  mode: "inner" | "outer";
+  expr: ExprNode<unknown>;
+  withOrdinality: boolean;
+  as: string | null;
+  columnNames: readonly string[];
+  columnIdentifiers: Readonly<Record<string, SqlIdentifier>>;
+  projectAll: ProjectionItem[];
+  rightScopeId: ScopeId;
+  outputScopeId: ScopeId;
+};
+
 export type TakeStage = {
   kind: "take";
   count: number;
@@ -104,6 +117,7 @@ export type Stage =
   | { kind: "filter"; predicate: ExprNode<boolean>; projectAll: ProjectionItem[] }
   | SortStage
   | TakeStage
+  | UnnestStage
   | {
       kind: "join";
       joinType: JoinType;

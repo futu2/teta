@@ -26,6 +26,9 @@ export const filter: typeof import("./src/edsl/query.ts").filter = query.filter;
 /** Joins two query inputs with an explicit join condition. */
 export const join: typeof import("./src/edsl/query.ts").join = query.join;
 
+/** Expands an array expression into rows. */
+export const unnest: typeof import("./src/edsl/query.ts").unnest = query.unnest;
+
 /** Limits the number of rows returned by a query. */
 export const take: typeof import("./src/edsl/query.ts").take = query.take;
 
@@ -533,4 +536,3 @@ export type WatchQuerySourceOptions = import("./src/edsl/dev.ts").WatchQuerySour
 
 /** Watches source files, re-renders SQL, and optionally copies or writes the result. */
 export const watchQuerySourceToClipboard: typeof import("./src/edsl/dev.ts").watchQuerySourceToClipboard = dev.watchQuerySourceToClipboard;
-

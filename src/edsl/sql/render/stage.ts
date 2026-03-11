@@ -11,6 +11,7 @@ import {
   createStageRenderContext,
 } from "./stage_ast.ts";
 import { buildJoinStageAst } from "./stage_join.ts";
+import { buildUnnestStageAst } from "./stage_unnest.ts";
 import { internalError } from "../../errors.ts";
 
 export function compileStageAst(
@@ -40,6 +41,8 @@ export function compileStageAst(
       return buildTakeStageAst(stage, context);
     case "join":
       return buildJoinStageAst(stage, context, ctePrefix);
+    case "unnest":
+      return buildUnnestStageAst(stage, context);
     case "union":
       internalError("INTERNAL_UNION_STAGE_ROUTING", "union stages must be compiled by buildPipelineAst");
     default:

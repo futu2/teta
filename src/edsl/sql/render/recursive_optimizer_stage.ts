@@ -82,6 +82,7 @@ export function optimizeLoopStage(
     }
     case "sort":
     case "take":
+    case "unnest":
     case "union":
       userError("LOOP_UNSUPPORTED_STAGE", `loop ${label} does not allow ${stage.kind} stages`);
     default:
@@ -100,6 +101,7 @@ function validateLoopStage(stage: Stage, label: LoopPartLabel): void {
   switch (stage.kind) {
     case "sort":
     case "take":
+    case "unnest":
     case "union":
       userError("LOOP_UNSUPPORTED_STAGE", `loop ${label} does not allow ${stage.kind} stages`);
     default:

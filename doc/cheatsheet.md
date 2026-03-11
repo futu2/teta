@@ -8,7 +8,7 @@ or `pipe(users, map(fn))`. In practice, the examples here prefer Remeda's `pipe(
 ```ts
 import { pick, pipe } from "remeda";
 
-import { fold, and, arrayAppend, arrayContains, arrayJoin, arrayLength, arrayPosition, arraySlice, asc, avg, bitLength, cast, charLength, characterLength, coalesce, concat, count, currentDate, currentTimestamp, dateAdd, dateDiff, dateFormat, dateLiteral, dateParse, dateTrunc, day, desc, eq, explain, ExprRef, f, filter, fn, fromUnixTime, group, gt, gte, hour, isIn, isNotNull, isNull, join, lag, lead, left, like, take, loop, lower, lt, lte, max, min, minute, mod, month, mul, ne, not, ntile, nullIf, octetLength, sort, over, overlay, param, percentRank, position, pow, Query, rank, regexExtract, regexLike, regexReplace, replace, reverse, right, round, rowNumber, rpad, map, shape, sqrt, sub, substring, sum, sumOver, t, table, timestampLiteral, toAst, toDate, toFloat, toIR, toInt, toSql, toSqlResult, toUnixTime, trim, union, unionAll, upper, when, windowFn, year } from "@teta/teta";
+import { fold, and, arrayAppend, arrayContains, arrayJoin, arrayLength, arrayPosition, arraySlice, asc, avg, bitLength, cast, charLength, characterLength, coalesce, concat, count, currentDate, currentTimestamp, dateAdd, dateDiff, dateFormat, dateLiteral, dateParse, dateTrunc, day, desc, eq, explain, ExprRef, f, filter, fn, fromUnixTime, group, gt, gte, hour, isIn, isNotNull, isNull, join, lag, lead, left, like, take, loop, lower, lt, lte, max, min, minute, mod, month, mul, ne, not, ntile, nullIf, octetLength, sort, over, overlay, param, percentRank, position, pow, Query, rank, regexExtract, regexLike, regexReplace, replace, reverse, right, round, rowNumber, rpad, map, shape, sqrt, sub, substring, sum, sumOver, t, table, timestampLiteral, toAst, toDate, toFloat, toIR, toInt, toSql, toSqlResult, toUnixTime, trim, union, unionAll, unnest, upper, when, windowFn, year } from "@teta/teta";
 
 import { copyTextToClipboard, renderSqlFromSource, watchQuerySourceToClipboard } from "@teta/teta";
 ```
@@ -84,6 +84,19 @@ const spend = pipe(
 );
 ```
 
+### `unnest(selector, columns, options?)`
+Expand an array-valued expression into rows.
+
+```ts
+const q = pipe(
+  table("sessions", {
+    id: t.int(),
+    tags: t.array(t.string()),
+  }),
+  unnest((s) => s.tags, { value: "tag", ordinality: "tag_index" })
+);
+```
+
 ### Set operations
 
 ```ts
@@ -99,6 +112,7 @@ const uniqueUsers = union(activeUsers, inactiveUsers);
 - `sort(selector)`
 - `take(count)`
 - `join(rightOrBuilder, on, { type?, lateral?, merge? })`
+- `unnest(selector, { value, ordinality? }, { outer? })`
 - `unionAll(right)`
 - `union(right)`
 - `loop(step)`
@@ -157,6 +171,7 @@ const info = explain(q, { dialect: "postgresql", renderStrategy: "readable" });
 - `t.uuid()`
 - `t.json<T>()`
 - `t.bytes()`
+- `t.array(inner)`
 - `t.nullable(inner)`
 
 ## 5) Expression helpers
