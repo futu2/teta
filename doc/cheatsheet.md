@@ -26,6 +26,8 @@ const users = table("users", {
 });
 ```
 
+Use dotted strings like `table("analytics.users", ...)` for schema-qualified paths. If the literal table name contains a dot, use `table({ table: "schema1.table1" }, ...)`.
+
 ### Multi-stage pipelines
 Use Remeda's `pipe(...)` to compose query stages.
 

@@ -14,6 +14,12 @@ describe("query helpers", () => {
       table: { name: "events", quoted: false },
       as: null,
     });
+    expect(normalizeTableSource("analytics.events")).toEqual({
+      db: null,
+      schema: { name: "analytics", quoted: false },
+      table: { name: "events", quoted: false },
+      as: null,
+    });
     expect(normalizeTableSource({ table: "events", schema: "analytics" })).toEqual({
       db: null,
       schema: { name: "analytics", quoted: false },

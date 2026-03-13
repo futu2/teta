@@ -20,7 +20,23 @@ import { createQuery } from "./builder.ts";
 import { freshScopeId } from "./planner.ts";
 import { normalizeTableSource } from "./utils.ts";
 
-export const t = {
+type TableColumnHelpers = {
+  string: () => ColumnType<string>;
+  int: () => ColumnType<SqlInt>;
+  float: () => ColumnType<SqlFloat>;
+  bigint: () => ColumnType<SqlBigInt>;
+  decimal: () => ColumnType<SqlDecimal>;
+  boolean: () => ColumnType<boolean>;
+  date: () => ColumnType<SqlDate>;
+  timestamp: () => ColumnType<SqlTimestamp>;
+  uuid: () => ColumnType<SqlUuid>;
+  json: <T = unknown>() => ColumnType<SqlJson<T>>;
+  bytes: () => ColumnType<SqlBytes>;
+  array: <T>(column: ColumnType<T>) => ColumnType<T[]>;
+  nullable: <T>(column: ColumnType<T>) => ColumnType<T | null>;
+};
+
+export const t: TableColumnHelpers = {
   string: () => ({ kind: "column_type" } as ColumnType<string>),
   int: () => ({ kind: "column_type" } as ColumnType<SqlInt>),
   float: () => ({ kind: "column_type" } as ColumnType<SqlFloat>),
@@ -32,7 +48,7 @@ export const t = {
   uuid: () => ({ kind: "column_type" } as ColumnType<SqlUuid>),
   json: <T = unknown>() => ({ kind: "column_type" } as ColumnType<SqlJson<T>>),
   bytes: () => ({ kind: "column_type" } as ColumnType<SqlBytes>),
-  array: <T>(column: ColumnType<T>) => {
+  array: <T>(column: ColumnType<T>): ColumnType<T[]> => {
     void column;
     return { kind: "column_type" } as ColumnType<T[]>;
   },

@@ -142,6 +142,8 @@ const orders = table("sales.orders", {
 });
 ```
 
+Use dotted strings for schema-qualified paths. If the actual table name contains a dot, use the structured form instead: `table({ table: "schema1.table1" }, ...)`.
+
 ## More examples
 
 Teta keeps logical stage order stable, but the rendered SQL shape depends on

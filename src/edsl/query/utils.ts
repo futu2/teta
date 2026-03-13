@@ -79,12 +79,7 @@ export function columnNamesToIdentifierMap(
 
 export function normalizeTableSource(input: TableSourceInput): Source {
   if (typeof input === "string") {
-    return {
-      db: null,
-      schema: null,
-      table: normalizeIdentifier(input, "table"),
-      as: null,
-    };
+    return fromStringPath(input);
   }
 
   if ("path" in input) {
@@ -97,6 +92,33 @@ export function normalizeTableSource(input: TableSourceInput): Source {
     table: normalizeIdentifier(input.table, "table"),
     as: normalizeOptionalIdentifier(input.as, "alias"),
   };
+}
+
+function fromStringPath(input: string): Source {
+  const normalized = normalizeSourcePart(input, "table");
+  const path = normalized.split(".");
+
+  if (path.length === 1) {
+    return {
+      db: null,
+      schema: null,
+      table: normalizeIdentifier(path[0]!, "table"),
+      as: null,
+    };
+  }
+
+  if (path.length === 2) {
+    return fromPath([path[0]!, path[1]!], null);
+  }
+
+  if (path.length === 3) {
+    return fromPath([path[0]!, path[1]!, path[2]!], null);
+  }
+
+  userError(
+    "INVALID_TABLE_SOURCE",
+    "string table sources may contain at most db.schema.table"
+  );
 }
 
 export function autoAlias(table: string | SqlIdentifier, stages: Stage[]): string {
