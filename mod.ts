@@ -2,7 +2,6 @@
  * Public API for `@teta/teta`.
  *
  * Import query builders, expression helpers, SQL rendering types, and development utilities from this module.
- * @module
  */
 import * as query from "./src/edsl/query.ts";
 import * as expr from "./src/edsl/expr.ts";
