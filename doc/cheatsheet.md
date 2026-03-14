@@ -409,6 +409,8 @@ Returns a controller with:
 
 ## 8) Key exported types
 
+For a guided explanation of how these fit together in the EDSL, see `doc/TYPES.md`.
+
 - `Query`
 - `QueryIR`
 - `QueryExplainResult`

@@ -126,6 +126,83 @@ SELECT concat(names_0.prefix, ' ', names_0.first, ' ', names_0.last, ' ', names_
 FROM names AS names_0
 ```
 
+## Type inference examples
+
+For a deeper walkthrough of public EDSL types, see `doc/TYPES.md`.
+
+### Schema inference from `table(...)`
+
+```ts
+import { table, t } from "./mod.ts";
+
+const users = table("users", {
+  id: t.int(),
+  name: t.string(),
+  age: t.int(),
+  active: t.boolean(),
+});
+
+// users is inferred as:
+// Query<{
+//   id: SqlInt;
+//   name: string;
+//   age: SqlInt;
+//   active: boolean;
+// }>
+```
+
+### `map(...)` changes the row shape
+
+```ts
+import { map } from "./mod.ts";
+
+const labels = map(users, (user) => ({
+  user_id: user.id,
+  label: user.name,
+}));
+
+// Query<{
+//   user_id: SqlInt;
+//   label: string;
+// }>
+```
+
+### `join(...)` and `unnest(...)` refine types
+
+```ts
+import { eq, join, table, t, unnest } from "./mod.ts";
+
+const orders = table("orders", {
+  order_id: t.int(),
+  user_id: t.int(),
+  total: t.float(),
+});
+
+const leftJoined = join(
+  users,
+  orders,
+  (user, order) => eq(user.id, order.user_id),
+  { type: "left" }
+);
+
+// right-side columns become nullable on a left join
+// joined rows later expose `total` as ExprRef<SqlFloat | null>
+
+const usersWithTags = table("users", {
+  id: t.int(),
+  tags: t.array(t.string()),
+});
+
+const exploded = unnest(usersWithTags, (user) => user.tags, {
+  value: "tag",
+  ordinality: "tag_index",
+});
+
+// adds inferred columns:
+// tag: string
+// tag_index: SqlInt
+```
+
 ## Schema-qualified tables
 
 ```ts

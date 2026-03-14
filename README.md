@@ -22,6 +22,7 @@ Build typed queries, inspect how they lower, and render SQL for PostgreSQL, SQLi
 - Playground: https://futu2.github.io/teta-tutorial/
 - Examples: `examples/README.md`
 - API reference: `doc/cheatsheet.md`
+- Type guide: `doc/TYPES.md`
 
 ## Quick start
 
@@ -276,6 +277,7 @@ See `examples/README.md` for runnable examples.
 ## Learn more
 
 - `doc/TUTORIAL.md` — end-to-end examples
+- `doc/TYPES.md` — public type system guide for the EDSL
 - `doc/cheatsheet.md` — compact API reference
 - `doc/LANGUAGE_SPEC.md` — canonical SQL operation coverage and dialect notes
 - `doc/DEV_GUIDE.md` — internals, lowering stages, and dev utilities
