@@ -8,11 +8,11 @@ import type {
 } from "./types.ts";
 
 export type { CompileSourceRef } from "./source_ref.ts";
-export { buildTableFromRef, sourceToFrom } from "./source_ref.ts";
+export { buildTableFromRef, compileSourceRef, sourceToFrom } from "./source_ref.ts";
 export { compileJoinSource, hoistJoinSubquery } from "./source_join.ts";
 
 export function buildSqlSelectAst(params: {
-  from: FromAst[];
+  from: FromAst[] | null;
   columns: SelectColumnAst[];
   where: SelectAst["where"];
   groupby: GroupByAst | null;

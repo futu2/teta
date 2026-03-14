@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { TetaUserError, fold, join, map, eq, group, loop, toSql, count } from "../mod.ts";
-import { GROUP_INSIDE_AGGREGATE_FUNCTION_ERROR, GROUP_OUTSIDE_AGGREGATE_ERROR, LEGACY_SELECTION_ARRAY_ERROR, LOOP_COLUMN_MISMATCH_ERROR, NON_CANONICAL_POSTGRES_DIALECT_ERROR, UNSUPPORTED_CROSS_JOIN_ERROR } from "./helpers/expected-errors.ts";
+import { TetaUserError, count, eq, fold, group, join, loop, map, toSql, values } from "../mod.ts";
+import { GROUP_INSIDE_AGGREGATE_FUNCTION_ERROR, GROUP_OUTSIDE_AGGREGATE_ERROR, LEGACY_SELECTION_ARRAY_ERROR, LOOP_COLUMN_MISMATCH_ERROR, NON_CANONICAL_POSTGRES_DIALECT_ERROR, UNSUPPORTED_CROSS_JOIN_ERROR, VALUES_COLUMN_MISMATCH_ERROR, VALUES_EMPTY_ERROR } from "./helpers/expected-errors.ts";
 import { createOrdersTable, createUsersTable } from "./helpers/fixtures.ts";
 describe("error paths", () => {
     test("rejects group() outside fold", () => {
@@ -36,6 +36,15 @@ describe("error paths", () => {
     test("rejects non-canonical built-in dialect names", () => {
         const users = createUsersTable();
         expect(() => toSql(map(users, (user) => ({ id: user.id })), { dialect: "PostgreSQL" })).toThrow(NON_CANONICAL_POSTGRES_DIALECT_ERROR);
+    });
+    test("rejects empty values() inputs", () => {
+        expect(() => values([] as unknown as [{ id: number }])).toThrow(VALUES_EMPTY_ERROR);
+    });
+    test("rejects values() rows with mismatched columns", () => {
+        expect(() => values([
+            { id: 1, name: "Ada" },
+            { id: 2, email: "grace@example.com" } as unknown as { id: number; name: string },
+        ])).toThrow(VALUES_COLUMN_MISMATCH_ERROR);
     });
     test("user-facing errors expose stable error codes", () => {
         const users = createUsersTable();

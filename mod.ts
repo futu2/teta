@@ -9,7 +9,7 @@ import * as language from "./src/edsl/sql/language.ts";
 import * as errors from "./src/edsl/errors.ts";
 import * as dev from "./src/edsl/dev.ts";
 
-/** Query builder class returned by `table(...)` and query stage helpers. */
+/** Query builder class returned by query roots and stage helpers. */
 export const Query: typeof import("./src/edsl/query.ts").Query = query.Query;
 export type Query<TColumns extends Record<string, any>> = import("./src/edsl/query.ts").Query<TColumns>;
 
@@ -45,6 +45,9 @@ export const t: typeof import("./src/edsl/query.ts").t = query.t;
 
 /** Creates a typed query root from a table schema. */
 export const table: typeof import("./src/edsl/query.ts").table = query.table;
+
+/** Creates a typed query root from inline literal rows. */
+export const values: typeof import("./src/edsl/query.ts").values = query.values;
 
 /** Lowers a query into the SQL AST used by the renderer. */
 export const toAst: typeof import("./src/edsl/query.ts").toAst = query.toAst;

@@ -1,9 +1,11 @@
-import type { SourceRef, SqlIdentifier } from "../../core/types.ts";
+import type { Source, SourceRef, SqlIdentifier, Value, ValuesRow } from "../../core/types.ts";
+import { isValuesSource } from "../../core/types.ts";
 import { identifierName } from "../../query/utils.ts";
 import type { QueryDialect } from "../types.ts";
-import type { BaseFromRef, FromAst, SelectAst, SubqueryFromRef } from "./types.ts";
+import type { BaseFromRef, FromAst, SelectAst, SelectColumnAst, SubqueryFromRef } from "./types.ts";
+import { toParserSelect } from "./ast.ts";
 import { getDefaultDialect } from "../dialect.ts";
-import { getSqlRenderContext } from "./render.ts";
+import { exprToAst, getSqlRenderContext } from "./render.ts";
 import {
   registerIdentifierBinding,
   renderIdentifier,
@@ -19,6 +21,34 @@ export type CompileSourceRef =
       as: string | null;
       columnIdentifiers: Readonly<Record<string, SqlIdentifier>>;
     };
+
+type SelectAstWithNext = SelectAst & {
+  _next?: ReturnType<typeof toParserSelect>;
+};
+
+export function compileSourceRef(
+  source: Source,
+  columnIdentifiers: Readonly<Record<string, SqlIdentifier>>,
+  dialect: QueryDialect = getDefaultDialect()
+): CompileSourceRef {
+  if (isValuesSource(source)) {
+    return {
+      kind: "subquery",
+      ast: buildValuesSourceAst(source.rows, columnIdentifiers, dialect),
+      as: "values_0",
+      columnIdentifiers,
+    };
+  }
+
+  return {
+    kind: "table",
+    db: source.db,
+    name: source.table,
+    schema: source.schema,
+    as: source.as,
+    columnIdentifiers,
+  };
+}
 
 export function sourceToFrom(
   source: CompileSourceRef,
@@ -104,5 +134,54 @@ export function buildTableFromRef(
     rawTable: resolveIdentifierName(identifierName(params.table), renderContext),
     as: renderedAlias,
     rawAlias,
+  };
+}
+
+function buildValuesSourceAst(
+  rows: readonly ValuesRow[],
+  columnIdentifiers: Readonly<Record<string, SqlIdentifier>>,
+  dialect: QueryDialect
+): SelectAst {
+  const rowSelects = rows.map((row) => buildValuesRowAst(row, columnIdentifiers, dialect));
+  const [head, ...tail] = rowSelects;
+  let cursor = head! as SelectAstWithNext;
+
+  for (const nextSelect of tail) {
+    cursor.set_op = "union all";
+    cursor._next = toParserSelect(nextSelect);
+    cursor = nextSelect as SelectAstWithNext;
+  }
+
+  return head!;
+}
+
+function buildValuesRowAst(
+  row: ValuesRow,
+  columnIdentifiers: Readonly<Record<string, SqlIdentifier>>,
+  dialect: QueryDialect
+): SelectAst {
+  const renderContext = getSqlRenderContext();
+  const columns: SelectColumnAst[] = Object.keys(columnIdentifiers).map((columnName) => ({
+    expr: exprToAst({ kind: "literal", value: row[columnName] as Value }),
+    as: renderIdentifier(columnIdentifiers[columnName]!, dialect, renderContext),
+  }));
+
+  return {
+    with: null,
+    type: "select",
+    options: null,
+    distinct: null,
+    columns,
+    into: { position: null },
+    from: null,
+    where: null,
+    groupby: null,
+    having: null,
+    qualify: null,
+    orderby: null,
+    limit: null,
+    locking_read: null,
+    window: undefined,
+    collate: null,
   };
 }

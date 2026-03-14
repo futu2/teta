@@ -9,7 +9,7 @@ import type {
   Stage,
   TableSourceInput,
 } from "../core/types.ts";
-import { OUTER_TABLE_ALIAS, internalCteLabel, isInternalCteName } from "../core/types.ts";
+import { OUTER_TABLE_ALIAS, internalCteLabel, isInternalCteName, isValuesSource } from "../core/types.ts";
 import { ColumnRef, type ColumnRefs } from "../core/expr.ts";
 import { internalError, userError } from "../errors.ts";
 
@@ -133,6 +133,13 @@ export function autoAlias(table: string | SqlIdentifier, stages: Stage[]): strin
   const base = aliasBase.replace(/[^A-Za-z0-9_]+/g, "_").replace(/^_+|_+$/g, "");
   const name = base.length ? base : "t";
   return `${name}_${joinCount + 1}`;
+}
+
+export function sourceAliasBase(source: Source): string | SqlIdentifier {
+  if (isValuesSource(source)) {
+    return "values";
+  }
+  return source.table;
 }
 
 export function normalizeJoinType(type: JoinTypeInput): JoinType {

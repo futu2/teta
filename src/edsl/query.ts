@@ -17,4 +17,4 @@ export {
 } from "./query/builder.ts";
 export type { QueryExplainResult, QueryIR, QueryStageKind, QueryStep } from "./query/builder.ts";
 export { loop } from "./query/loop.ts";
-export { t, table } from "./query/schema.ts";
+export { t, table, values } from "./query/schema.ts";

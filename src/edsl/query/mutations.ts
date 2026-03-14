@@ -5,6 +5,7 @@ import type {
   OrderItem,
   Stage,
 } from "../core/types.ts";
+import { isValuesSource } from "../core/types.ts";
 import {
   createColumnRefs,
   dedupeExprs,
@@ -23,6 +24,7 @@ import {
   mergeWiths,
   normalizeJoinType,
   projectionItemsToIdentifierMap,
+  sourceAliasBase,
 } from "./utils.ts";
 import {
   freshScopeId,
@@ -140,7 +142,7 @@ export function resolveJoinQuery<
   mergeColumns?: JoinColumnMerger<Record<string, any>, Record<string, any>, TMerged>
 ): QueryDeriveInit<TMerged> {
   const normalizedJoinType = normalizeJoinType(joinType);
-  const alias = autoAlias(rightQuery.source.table, leftQuery.stages);
+  const alias = autoAlias(sourceAliasBase(rightQuery.source), leftQuery.stages);
   const rightKeys = [...rightQuery.columnNames];
   const rightColumns = createColumnRefs<TRight>(rightQuery.scopeId, rightKeys);
   const predicate = on(leftQuery.columns, rightColumns).node;
@@ -155,7 +157,7 @@ export function resolveJoinQuery<
   const outputScopeId = freshScopeId();
   const nextColumns = createColumnRefs<TMerged>(outputScopeId, nextNames);
   const joinSource: JoinSource =
-    lateral || rightQuery.stages.length > 0
+    lateral || rightQuery.stages.length > 0 || isValuesSource(rightQuery.source)
       ? {
           kind: "subquery",
           query: toQuerySpec(rightQuery),

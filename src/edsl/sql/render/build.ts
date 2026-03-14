@@ -5,7 +5,7 @@ import { columnNamesToIdentifierMap } from "../../query/utils.ts";
 import type { ScopeBindings, SelectAst } from "./types.ts";
 import { toParserSelect } from "./ast.ts";
 import { getDefaultDialect } from "../dialect.ts";
-import { hoistJoinSubquery, type CompileSourceRef } from "./source.ts";
+import { compileSourceRef, hoistJoinSubquery, type CompileSourceRef } from "./source.ts";
 import {
   advanceStagePlanningState,
   nextStageColumnIdentifiers,
@@ -37,15 +37,16 @@ export function buildPipelineAst(
   const scopeBindings = options?.scopeBindings;
   const dialect = options?.dialect ?? getDefaultDialect();
   const renderStrategy = options?.renderStrategy ?? "optimized";
+  const columnIdentifiers = columnNamesToIdentifierMap(columnNames);
+  const baseSource = compileSourceRef(source, columnIdentifiers, dialect);
 
   if (stages.length === 0) {
     return {
-      ast: buildBaseSelectAst(source, columnNames, sourceScopeId, scopeBindings, dialect),
+      ast: buildBaseSelectAst(baseSource, columnNames, sourceScopeId, scopeBindings, dialect),
       ctes: [],
     };
   }
 
-  const columnIdentifiers = columnNamesToIdentifierMap(columnNames);
   const ctes: With[] = [];
   const fusedOptions: FusedBuildOptions = {
     ctes,
@@ -53,14 +54,7 @@ export function buildPipelineAst(
     inheritedBindings: scopeBindings,
     dialect,
   };
-  let current: CompileSourceRef = {
-    kind: "table",
-    db: source.db,
-    name: source.table,
-    schema: source.schema,
-    as: source.as,
-    columnIdentifiers,
-  };
+  let current: CompileSourceRef = baseSource;
   let currentPlan: StagePlanningState = {
     scopeId: sourceScopeId,
     columnNames,

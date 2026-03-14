@@ -1,6 +1,6 @@
 import { omit, pick, pipe } from "remeda";
 import type { ExprRef, SqlBigInt, SqlBytes, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlUuid, } from "../mod.ts";
-import { filter, join, take, sort, param, map, table, t, fold, asc, desc, eq, gt, upper, add, coalesce, count, group, loop, sum, and, sub, caseWhen, when, mapShape, groupShape, lt, unnest } from "../mod.ts";
+import { filter, join, take, sort, param, map, table, t, fold, asc, desc, eq, gt, upper, add, coalesce, count, group, loop, sum, and, sub, caseWhen, when, mapShape, groupShape, lt, unnest, values } from "../mod.ts";
 type Equal<A, B> = ((<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false);
 type Expect<T extends true> = T;
 type ExprType<TExpr> = TExpr extends ExprRef<infer TValue> ? TValue : never;
@@ -17,6 +17,10 @@ const sessions = table("sessions", {
     id: t.int(),
     tags: t.array(t.string()),
 });
+const inlineRows = values([
+    { id: 1 as number, name: "Ada" as string },
+    { id: 2 as number, name: "Grace" as string },
+]);
 type ProfileMeta = {
     theme: string;
     flags: string[];
@@ -115,6 +119,8 @@ type _FullJoinTotal = Expect<Equal<ExprType<typeof fullJoined.columns.total>, Sq
 type _LeftViaJoinTotal = Expect<Equal<ExprType<typeof leftViaJoin.columns.total>, SqlFloat | null>>;
 type _ProjectedUsersId = Expect<Equal<ExprType<typeof projectedUsers.columns.id>, SqlInt>>;
 type _ProjectedUsersName = Expect<Equal<ExprType<typeof projectedUsers.columns.name>, string>>;
+type _InlineRowsId = Expect<Equal<ExprType<typeof inlineRows.columns.id>, number>>;
+type _InlineRowsName = Expect<Equal<ExprType<typeof inlineRows.columns.name>, string>>;
 type _CurriedJoinTotal = Expect<Equal<ExprType<typeof curriedJoin.columns.total>, SqlFloat | null>>;
 type _RemedaPickedId = Expect<Equal<ExprType<typeof remedaPickedSelection.columns.id>, SqlInt>>;
 type _RemedaOmittedId = Expect<Equal<ExprType<typeof remedaOmittedSelection.columns.id>, SqlInt>>;
@@ -145,6 +151,7 @@ void rightSelected;
 void fullSelected;
 void curriedPipeline;
 void curriedJoin;
+void inlineRows;
 void remedaPickedSelection;
 void remedaOmittedSelection;
 void remedaOmittedAggregate;

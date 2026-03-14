@@ -2,7 +2,7 @@ import type { QuerySpec } from "../../core/types.ts";
 import type { QueryDialect } from "../types.ts";
 import type { SelectAst } from "./types.ts";
 import { compileStageAst } from "./stage.ts";
-import type { CompileSourceRef } from "./source.ts";
+import { compileSourceRef, type CompileSourceRef } from "./source.ts";
 import { buildBaseSelectAst } from "./segment.ts";
 import { optimizeLoopStages, type LoopPartLabel } from "./recursive_optimizer.ts";
 import { advanceStagePlanningState, type StagePlanningState } from "./planner.ts";
@@ -14,23 +14,17 @@ export function compileLoopPart(
   dialect: QueryDialect
 ): SelectAst {
   const { source, stages, columnNames, columnIdentifiers, scopeId } = input;
+  const baseSource = compileSourceRef(source, columnIdentifiers, dialect);
   if (stages.length === 0) {
-    return buildBaseSelectAst(source, columnNames, scopeId, undefined, dialect);
+    return buildBaseSelectAst(baseSource, columnNames, scopeId, undefined, dialect);
   }
 
   const optimizedStages = optimizeLoopStages(stages, columnNames, label);
   if (optimizedStages.length === 0) {
-    return buildBaseSelectAst(source, columnNames, scopeId, undefined, dialect);
+    return buildBaseSelectAst(baseSource, columnNames, scopeId, undefined, dialect);
   }
 
-  let current: CompileSourceRef = {
-    kind: "table",
-    db: source.db,
-    name: source.table,
-    schema: source.schema,
-    as: source.as,
-    columnIdentifiers,
-  };
+  let current: CompileSourceRef = baseSource;
   let currentPlan: StagePlanningState = {
     scopeId,
     columnNames,

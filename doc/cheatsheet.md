@@ -28,6 +28,18 @@ const users = table("users", {
 
 Use dotted strings like `table("analytics.users", ...)` for schema-qualified paths. If the literal table name contains a dot, use `table({ table: "schema1.table1" }, ...)`.
 
+### `values(rows)`
+Create a typed inline row-set query root.
+
+```ts
+const seed = values([
+  { id: 1, name: "Ada" },
+  { id: 2, name: "Grace" },
+]);
+```
+
+`values(...)` requires at least one row, every row must have the same columns, and values must be SQL literals supported by `lit(...)`.
+
 ### Multi-stage pipelines
 Use Remeda's `pipe(...)` to compose query stages.
 

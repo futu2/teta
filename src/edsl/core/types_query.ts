@@ -5,6 +5,7 @@ import type {
   OrderItem,
   ProjectionItem,
   SqlIdentifier,
+  Value,
 } from "./types_expr.ts";
 import type { GeneratedCteName, InternalCteName, ScopeId } from "./types_internal.ts";
 
@@ -14,6 +15,17 @@ export type StructuredTableSource = {
   table: SqlIdentifier;
   as: SqlIdentifier | null;
 };
+
+export type ValuesRow = Readonly<Record<string, Value>>;
+
+export type ValuesSource = {
+  kind: "values";
+  rows: readonly ValuesRow[];
+};
+
+export function isValuesSource(source: Source): source is ValuesSource {
+  return "kind" in source && source.kind === "values";
+}
 
 export type TableSourceInput =
   | string
@@ -31,7 +43,7 @@ export type TableSourceInput =
       as?: IdentifierInput | null;
     };
 
-export type Source = StructuredTableSource;
+export type Source = StructuredTableSource | ValuesSource;
 export type SourceRef =
   | {
       kind: "table";

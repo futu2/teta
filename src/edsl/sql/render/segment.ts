@@ -1,7 +1,7 @@
 import type { QueryDialect } from "../types.ts";
-import type { ExprNode, ScopeId, Source, SqlIdentifier, Stage } from "../../core/types.ts";
+import type { ExprNode, ScopeId, SqlIdentifier, Stage } from "../../core/types.ts";
 import { createColumnRefs, projectAllItems } from "../../core/expr.ts";
-import { columnNamesToIdentifierMap, projectionItemsToIdentifierMap } from "../../query/utils.ts";
+import { projectionItemsToIdentifierMap } from "../../query/utils.ts";
 import type { FromAst, GroupByAst, LimitAst, OrderByAst, ScopeBindings, SelectAst, SelectColumnAst } from "./types.ts";
 import { ensureAlias } from "./ast.ts";
 import { bindExprScopes, exprToAst, getSqlRenderContext } from "./render.ts";
@@ -17,25 +17,17 @@ export type CompiledSegment = {
 };
 
 export function buildBaseSelectAst(
-  source: Source,
+  source: CompileSourceRef,
   columnNames: readonly string[],
   sourceScopeId: ScopeId,
   inheritedBindings: ScopeBindings | undefined,
   dialect: QueryDialect
 ): SelectAst {
-  const baseFrom: CompileSourceRef = {
-    kind: "table",
-    db: source.db,
-    name: source.table,
-    schema: source.schema,
-    as: source.as,
-    columnIdentifiers: columnNamesToIdentifierMap(columnNames),
-  };
-  const from = buildBaseFrom(baseFrom, dialect);
+  const from = buildBaseFrom(source, dialect);
   const baseAlias = ensureAlias(from);
   registerColumnIdentifierBindings(
     baseAlias,
-    baseFrom.columnIdentifiers,
+    source.columnIdentifiers,
     dialect,
     getSqlRenderContext()
   );
@@ -46,7 +38,7 @@ export function buildBaseSelectAst(
   const columns = createColumnRefs<Record<string, unknown>>(sourceScopeId, columnNames);
   return buildSqlSelectAst({
     from: [from],
-    columns: projectAllItems(columns, columnNames, baseFrom.columnIdentifiers).map((item) => ({
+    columns: projectAllItems(columns, columnNames, source.columnIdentifiers).map((item) => ({
       expr: exprToAst(bindExprScopes(item.expr, baseBindings, dialect)),
       as: renderIdentifier(item.as, dialect, getSqlRenderContext()),
     })),

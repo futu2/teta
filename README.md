@@ -147,6 +147,32 @@ toSql(query, { dialect: "postgresql" });
 toSql(query, { dialect: "sqlite" });
 ```
 
+### Inline rows with `values(...)`
+
+Use `values(...)` when you want a small typed row set without creating a real table.
+
+```ts
+import { values, toSql } from "@teta/teta";
+
+const seed = values([
+  { id: 1, name: "Ada" },
+  { id: 2, name: "Grace" },
+]);
+
+console.log(toSql(seed, { dialect: "postgresql", format: "compact" }));
+```
+
+Typical output:
+
+```sql
+SELECT values_0.id, values_0.name
+FROM (
+  SELECT 1 AS id, 'Ada' AS name
+  UNION ALL
+  SELECT 2 AS id, 'Grace' AS name
+) AS values_0
+```
+
 ### Safe runtime parameters
 
 Using the same `users` table, use `param(...)` and `toSqlResult(...)` when you need SQL plus bound params:

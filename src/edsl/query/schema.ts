@@ -2,8 +2,10 @@ import type {
   ColumnType,
   InferSchema,
   TableSourceInput,
+  Value,
 } from "../core/types.ts";
 import { createColumnRefs } from "../expr.ts";
+import { userError } from "../errors.ts";
 import type {
   SqlBigInt,
   SqlBytes,
@@ -19,6 +21,11 @@ import type { Query } from "./builder.ts";
 import { createQuery } from "./builder.ts";
 import { freshScopeId } from "./planner.ts";
 import { normalizeTableSource } from "./utils.ts";
+
+type ValuesRow = Readonly<Record<string, Value>>;
+type ValuesColumns<TRows extends readonly ValuesRow[]> = {
+  [K in keyof TRows[number] & string]: TRows[number][K];
+};
 
 type TableColumnHelpers = {
   string: () => ColumnType<string>;
@@ -74,4 +81,70 @@ export function table<S extends Record<string, ColumnType<any>>>(
     sourceScopeId: scopeId,
     scopeId,
   });
+}
+
+/** Define an inline row set and return a typed query builder. */
+export function values<const TRows extends readonly [ValuesRow, ...ValuesRow[]]>(
+  rows: TRows
+): Query<ValuesColumns<TRows>> {
+  const normalizedRows = normalizeValuesRows(rows);
+  const columnNames = Object.keys(normalizedRows[0]!);
+  const scopeId = freshScopeId();
+  return createQuery({
+    source: {
+      kind: "values",
+      rows: normalizedRows,
+    },
+    stages: [],
+    columns: createColumnRefs<ValuesColumns<TRows>>(scopeId, columnNames),
+    columnNames,
+    sourceScopeId: scopeId,
+    scopeId,
+  });
+}
+
+function normalizeValuesRows(rows: readonly ValuesRow[]): readonly ValuesRow[] {
+  if (rows.length === 0) {
+    userError("VALUES_EMPTY", "values() requires at least one row");
+  }
+
+  const firstRow = rows[0]!;
+  const columnNames = Object.keys(firstRow);
+  if (columnNames.length === 0) {
+    userError("VALUES_NO_COLUMNS", "values() rows must define at least one column");
+  }
+
+  return rows.map((row, rowIndex) => normalizeValuesRow(row, rowIndex, columnNames));
+}
+
+function normalizeValuesRow(
+  row: ValuesRow,
+  rowIndex: number,
+  columnNames: readonly string[]
+): ValuesRow {
+  const rowKeys = Object.keys(row);
+  const hasSameColumns =
+    rowKeys.length === columnNames.length
+    && columnNames.every((columnName) => rowKeys.includes(columnName));
+
+  if (!hasSameColumns) {
+    userError(
+      "VALUES_COLUMN_MISMATCH",
+      `values() row ${rowIndex + 1} must have exactly the same columns as row 1`
+    );
+  }
+
+  const normalizedRow: Record<string, Value> = {};
+  for (const columnName of columnNames) {
+    const value = row[columnName];
+    if (value === undefined) {
+      userError(
+        "VALUES_UNDEFINED",
+        `values() row ${rowIndex + 1} column '${columnName}' cannot be undefined`
+      );
+    }
+    normalizedRow[columnName] = value;
+  }
+
+  return normalizedRow;
 }

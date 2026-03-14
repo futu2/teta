@@ -15,6 +15,12 @@ export const NON_CANONICAL_POSTGRES_DIALECT_ERROR =
 export const LEGACY_SELECTION_ARRAY_ERROR =
   "map() and fold() now expect an object shape";
 
+export const VALUES_EMPTY_ERROR =
+  "values() requires at least one row";
+
+export const VALUES_COLUMN_MISMATCH_ERROR =
+  "values() row 2 must have exactly the same columns as row 1";
+
 export function missingQueryExportError(path: string): string {
   return `Export 'query' not found in ${path}`;
 }
