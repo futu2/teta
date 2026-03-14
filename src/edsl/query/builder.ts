@@ -518,7 +518,11 @@ export function join<
 ): QueryStep<TLeft, TMerged>;
 
 export function join(...args: unknown[]): unknown {
-  if (args[0] instanceof Query) {
+  const isDataFirst =
+    args[0] instanceof Query &&
+    (args.length >= 4 || (args.length === 3 && typeof args[2] === "function"));
+
+  if (isDataFirst) {
     const [left, right, on, options] = args;
     return _join(
       left as Query<QueryColumns>,
