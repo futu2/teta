@@ -51,7 +51,8 @@ export function hoistJoinSubquery(
 export function compileJoinSource(
   source: JoinSource & { kind: "subquery" },
   ctePrefix: string,
-  dialect: QueryDialect
+  dialect: QueryDialect,
+  allowJoinSubqueryHoist = true
 ): SelectAst {
   const compiled = buildPipelineAst(
     source.query.source,
@@ -62,6 +63,7 @@ export function compileJoinSource(
       ctePrefix,
       scopeBindings: source.inheritedBindings ?? undefined,
       dialect,
+      allowJoinSubqueryHoist,
     }
   );
   const ast = compiled.ast;

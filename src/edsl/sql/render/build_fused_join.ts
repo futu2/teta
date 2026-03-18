@@ -19,7 +19,8 @@ export function buildFusedJoinFrom(
   currentBindings: ScopeBindings,
   baseAlias: string,
   ctePrefix: string,
-  dialect: QueryDialect
+  dialect: QueryDialect,
+  allowJoinSubqueryHoist = true
 ): FusedJoinFrom {
   const alias = stage.as ?? fail("Join stage requires an alias");
   const joinBindings: ScopeBindings = {
@@ -56,7 +57,12 @@ export function buildFusedJoinFrom(
     };
   }
 
-  const compiledSubquery = compileJoinSource(stage.source, `${ctePrefix}join_`, dialect);
+  const compiledSubquery = compileJoinSource(
+    stage.source,
+    `${ctePrefix}join_`,
+    dialect,
+    allowJoinSubqueryHoist
+  );
   const subqueryAst = stage.lateral
     ? ensureSelectAst(
         replaceOuterAlias(toParserSelect(compiledSubquery), baseAlias),

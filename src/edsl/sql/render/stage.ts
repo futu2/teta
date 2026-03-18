@@ -20,7 +20,8 @@ export function compileStageAst(
   sourceScopeId: ScopeId,
   inheritedBindings: ScopeBindings | undefined,
   dialect: QueryDialect = getDefaultDialect(),
-  ctePrefix = ""
+  ctePrefix = "",
+  allowJoinSubqueryHoist = true
 ): SelectAst {
   const context = createStageRenderContext(
     source,
@@ -40,7 +41,7 @@ export function compileStageAst(
     case "take":
       return buildTakeStageAst(stage, context);
     case "join":
-      return buildJoinStageAst(stage, context, ctePrefix);
+      return buildJoinStageAst(stage, context, ctePrefix, allowJoinSubqueryHoist);
     case "unnest":
       return buildUnnestStageAst(stage, context);
     case "union":

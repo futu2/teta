@@ -24,6 +24,7 @@ export type BuildPipelineOptions = {
   scopeBindings?: ScopeBindings;
   dialect?: QueryDialect;
   renderStrategy?: SqlRenderStrategy;
+  allowJoinSubqueryHoist?: boolean;
 };
 
 export function buildPipelineAst(
@@ -37,6 +38,7 @@ export function buildPipelineAst(
   const scopeBindings = options?.scopeBindings;
   const dialect = options?.dialect ?? getDefaultDialect();
   const renderStrategy = options?.renderStrategy ?? "optimized";
+  const allowJoinSubqueryHoist = options?.allowJoinSubqueryHoist ?? true;
   const columnIdentifiers = columnNamesToIdentifierMap(columnNames);
   const baseSource = compileSourceRef(source, columnIdentifiers, dialect);
 
@@ -53,6 +55,7 @@ export function buildPipelineAst(
     ctePrefix,
     inheritedBindings: scopeBindings,
     dialect,
+    allowJoinSubqueryHoist,
   };
   let current: CompileSourceRef = baseSource;
   let currentPlan: StagePlanningState = {
@@ -63,7 +66,10 @@ export function buildPipelineAst(
 
   for (let index = 0; index < stages.length; ) {
     if (renderStrategy === "readable") {
-      const stage = hoistJoinSubquery(stages[index]!, ctes, ctePrefix, dialect);
+      const rawStage = stages[index]!;
+      const stage = allowJoinSubqueryHoist
+        ? hoistJoinSubquery(rawStage, ctes, ctePrefix, dialect)
+        : rawStage;
       const stageAst = compileSingleStageAst(stage, current, currentPlan.scopeId, fusedOptions);
       index += 1;
       if (index >= stages.length) {
@@ -101,7 +107,10 @@ export function buildPipelineAst(
       continue;
     }
 
-    const stage = hoistJoinSubquery(stages[index]!, ctes, ctePrefix, dialect);
+    const rawStage = stages[index]!;
+    const stage = allowJoinSubqueryHoist
+      ? hoistJoinSubquery(rawStage, ctes, ctePrefix, dialect)
+      : rawStage;
     const stageAst = compileSingleStageAst(stage, current, currentPlan.scopeId, fusedOptions);
     index += 1;
     if (index >= stages.length) {

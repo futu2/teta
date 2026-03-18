@@ -17,7 +17,8 @@ import { internalError } from "../../errors.ts";
 export function buildJoinStageAst(
   stage: Extract<Stage, { kind: "join" }>,
   context: StageRenderContext,
-  ctePrefix: string
+  ctePrefix: string,
+  allowJoinSubqueryHoist = true
 ): SelectAst {
   const join = `${stage.joinType} JOIN`;
   const rightAlias = stage.as ?? fail("Join stage requires an alias");
@@ -38,7 +39,7 @@ export function buildJoinStageAst(
   return buildSqlSelectAst({
     from: [
       context.baseFrom,
-      buildJoinFromRef(stage, context, joinBindings, ctePrefix, join),
+      buildJoinFromRef(stage, context, joinBindings, ctePrefix, join, allowJoinSubqueryHoist),
     ],
     columns: renderBoundProjectionItems(stage.projectAll, joinBindings, context.dialect),
     where: null,
@@ -55,7 +56,8 @@ function buildJoinFromRef(
   context: StageRenderContext,
   joinBindings: ScopeBindings,
   ctePrefix: string,
-  join: string
+  join: string,
+  allowJoinSubqueryHoist: boolean
 ): FromAst {
   const on = exprToAst(bindExprScopes(stage.on, joinBindings, context.dialect));
   const prefix = lateralJoinPrefix(stage.lateral, context.dialect);
@@ -80,7 +82,8 @@ function buildJoinFromRef(
   const compiledSubquery = compileJoinSource(
     stage.source,
     `${ctePrefix}join_`,
-    context.dialect
+    context.dialect,
+    allowJoinSubqueryHoist
   );
   const subqueryAst = stage.lateral
     ? ensureSelectAst(

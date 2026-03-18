@@ -1,3 +1,4 @@
+import type { With } from "node-sql-parser";
 import type { QuerySpec } from "../../core/types.ts";
 import type { QueryDialect } from "../types.ts";
 import type { SelectAst } from "./types.ts";
@@ -7,6 +8,7 @@ import { buildBaseSelectAst } from "./segment.ts";
 import { optimizeLoopStages, type LoopPartLabel } from "./recursive_optimizer.ts";
 import { advanceStagePlanningState, type StagePlanningState } from "./planner.ts";
 import { internalError } from "../../errors.ts";
+import { tryBuildFusedSegmentAst } from "./build_fused.ts";
 
 export function compileLoopPart(
   input: QuerySpec,
@@ -15,6 +17,7 @@ export function compileLoopPart(
 ): SelectAst {
   const { source, stages, columnNames, columnIdentifiers, scopeId } = input;
   const baseSource = compileSourceRef(source, columnIdentifiers, dialect);
+  const fusedCtes: With[] = [];
   if (stages.length === 0) {
     return buildBaseSelectAst(baseSource, columnNames, scopeId, undefined, dialect);
   }
@@ -22,6 +25,23 @@ export function compileLoopPart(
   const optimizedStages = optimizeLoopStages(stages, columnNames, label);
   if (optimizedStages.length === 0) {
     return buildBaseSelectAst(baseSource, columnNames, scopeId, undefined, dialect);
+  }
+
+  const fused = tryBuildFusedSegmentAst(
+    baseSource,
+    scopeId,
+    columnNames,
+    columnIdentifiers,
+    optimizedStages,
+    {
+      ctes: fusedCtes,
+      ctePrefix: `loop_${label}_`,
+      dialect,
+      allowJoinSubqueryHoist: false,
+    }
+  );
+  if (fused && fused.consumed === optimizedStages.length && fusedCtes.length === 0) {
+    return fused.ast;
   }
 
   let current: CompileSourceRef = baseSource;
@@ -40,7 +60,8 @@ export function compileLoopPart(
       currentPlan.scopeId,
       undefined,
       dialect,
-      `loop_${label}_${index}_`
+      `loop_${label}_${index}_`,
+      false
     );
     if (index < optimizedStages.length - 1) {
       const nextPlan = advanceStagePlanningState(stage, currentPlan);

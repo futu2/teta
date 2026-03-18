@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { eq, filter, isNull, join, loop, map, toSql } from "../mod.ts";
+import { add, eq, filter, isNotNull, isNull, join, loop, map, t, table, toSql } from "../mod.ts";
 import { buildOrgTreeQuery, createEmployeesTable } from "./helpers/fixtures.ts";
 
 describe("recursive loop queries", () => {
@@ -65,5 +65,41 @@ describe("recursive loop queries", () => {
 
     expect(sql).toContain("WITH RECURSIVE");
     expect(sql).toContain("INNER JOIN");
+  });
+
+  test("avoids nested WITH clauses when recursive steps join staged subqueries", () => {
+    const orgTree = table("orgTree", {
+      orgId: t.int(),
+      sup_orgId: t.nullable(t.int()),
+    });
+
+    const directSup = map(filter(orgTree, (row) => isNotNull(row.sup_orgId)), (row) => ({
+      orgId: row.orgId,
+      sup_orgId: row.sup_orgId,
+      distance: 1,
+    }));
+
+    const sql = toSql(
+      loop(
+        directSup,
+        (self) => join(
+          self,
+          directSup,
+          (current, parent) => eq(current.sup_orgId, parent.orgId),
+          {
+            merge: (current, parent) => ({
+              orgId: current.orgId,
+              sup_orgId: parent.sup_orgId,
+              distance: add(current.distance, 1),
+            }),
+          }
+        )
+      ),
+      { dialect: "postgresql", format: "compact" }
+    );
+
+    expect(sql.match(/\bWITH\b/g) ?? []).toHaveLength(1);
+    expect(sql).not.toContain("loop_base_");
+    expect(sql).toContain('SELECT "orgTree_0"."orgId", "orgTree_0"."sup_orgId", 1 AS distance FROM "orgTree" AS "orgTree_0" WHERE "orgTree_0"."sup_orgId" IS NOT NULL');
   });
 });

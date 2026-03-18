@@ -29,6 +29,7 @@ export type FusedBuildOptions = {
   ctePrefix: string;
   inheritedBindings?: ScopeBindings;
   dialect: QueryDialect;
+  allowJoinSubqueryHoist?: boolean;
 };
 
 export function tryBuildFusedSegmentAst(
@@ -40,6 +41,7 @@ export function tryBuildFusedSegmentAst(
   options: FusedBuildOptions
 ): CompiledSegment | null {
   const { ctes, ctePrefix, inheritedBindings, dialect } = options;
+  const allowJoinSubqueryHoist = options.allowJoinSubqueryHoist ?? true;
 
   if (stages.length === 0) return null;
   if (stages[0]?.kind === "union") return null;
@@ -56,7 +58,7 @@ export function tryBuildFusedSegmentAst(
   for (let stageIndex = 0; stageIndex < stages.length; stageIndex += 1) {
     const rawStage = stages[stageIndex]!;
     const stage =
-      rawStage.kind === "join"
+      allowJoinSubqueryHoist && rawStage.kind === "join"
         ? hoistJoinSubquery(rawStage, ctes, ctePrefix, dialect)
         : rawStage;
 
@@ -80,7 +82,8 @@ export function tryBuildFusedSegmentAst(
               state.currentBindings,
               state.baseAlias,
               ctePrefix,
-              dialect
+              dialect,
+              allowJoinSubqueryHoist
             );
             applyFusedJoinStage(state, stage, nextJoin);
             continue;
