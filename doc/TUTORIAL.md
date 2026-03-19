@@ -328,6 +328,20 @@ Typical patterns:
 - `pipe(...)` when the reshaping reads better as a small pipeline
 - `mapKeys(...)` for systematic renaming like prefixes or namespaces
 
+Type note:
+If a reshaping helper widens keys to a plain `string` type, Teta will not expose arbitrary downstream column property access for that stage. That keeps follow-up pipelines safe: TypeScript only lets you access renamed columns when their names stay statically known.
+
+For `mapKeys(...)`, prefer template literals when you want exact renamed keys:
+
+```ts
+const prefixed = map(users, pipe(
+  pick(["id", "name"] as const),
+  mapKeys((key) => `user_${key}`)
+));
+```
+
+Using string concatenation like `"user_" + key` usually widens to `string`, so downstream code will not see concrete properties such as `user_id`.
+
 ### Join (auto alias)
 
 ```ts

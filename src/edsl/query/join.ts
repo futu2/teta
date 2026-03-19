@@ -1,15 +1,21 @@
 import type { JoinType, JoinTypeInput } from "../core/types.ts";
 import { mergeColumnNames } from "../expr.ts";
-import type { ColumnRefs, ExprRefs } from "../expr.ts";
+import type { ColumnRefs, ExprRef, ExprRefs } from "../expr.ts";
+
+export type JoinSelection = Record<string, ExprRef<unknown>>;
+
+export type JoinSelectionResult<TSelection extends JoinSelection> = {
+  [K in keyof TSelection]: TSelection[K] extends ExprRef<infer TValue> ? TValue : never;
+};
 
 export type JoinColumnMerger<
   TLeft extends Record<string, any>,
   TRight extends Record<string, any>,
-  TMerged extends Record<string, any> = TLeft & TRight
+  TSelection extends JoinSelection = ExprRefs<TLeft & TRight>
 > = (
   left: ColumnRefs<TLeft>,
   right: ColumnRefs<TRight>
-) => ExprRefs<TMerged>;
+) => TSelection;
 
 type NullableColumns<TColumns extends Record<string, any>> = {
   [K in keyof TColumns]: TColumns[K] | null;
@@ -75,30 +81,30 @@ export type JoinColumnMergerForType<
   TLeft extends Record<string, any>,
   TRight extends Record<string, any>,
   TType extends JoinKind,
-  TMerged extends Record<string, any>,
+  TSelection extends JoinSelection,
 > = JoinColumnMerger<
   JoinLeftColumnsForType<TLeft, TType>,
   JoinRightColumnsForType<TRight, TType>,
-  TMerged
+  TSelection
 >;
 
 export function resolveJoinColumns<
   TLeft extends Record<string, any>,
   TRight extends Record<string, any>,
-  TMerged extends Record<string, any>,
+  TSelection extends JoinSelection,
 >(
   leftColumns: ColumnRefs<TLeft>,
   rightColumns: ColumnRefs<TRight>,
   leftNames: readonly string[],
   rightNames: readonly string[],
   joinType: JoinType,
-  mergeColumns?: JoinColumnMerger<Record<string, any>, Record<string, any>, TMerged>
-): { mergedColumns: ExprRefs<TMerged>; nextNames: readonly string[] } {
+  mergeColumns?: JoinColumnMerger<Record<string, any>, Record<string, any>, TSelection>
+): { mergedColumns: TSelection; nextNames: readonly string[] } {
   const mergeResolver =
     (mergeColumns ?? defaultJoinColumnMerger) as JoinColumnMerger<
       Record<string, any>,
       Record<string, any>,
-      TMerged
+      TSelection
     >;
   const mergeLeftColumns =
     joinType === "RIGHT" || joinType === "FULL"
@@ -125,8 +131,8 @@ function defaultJoinColumnMerger<
   return { ...left, ...right } as ExprRefs<TLeft & TRight>;
 }
 
-function resolveMergedColumnNames<TColumns extends Record<string, any>>(
-  columns: ExprRefs<TColumns>,
+function resolveMergedColumnNames(
+  columns: JoinSelection,
   left: readonly string[],
   right: readonly string[]
 ): readonly string[] {

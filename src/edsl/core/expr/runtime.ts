@@ -72,11 +72,19 @@ export class ColumnRef<T, Name extends string> extends ExprRef<T> {
   }
 }
 
+type KnownStringKeyOf<T extends Record<string, unknown>> = Extract<{
+  [K in keyof T]: K extends string
+    ? string extends K
+      ? never
+      : K
+    : never;
+}[keyof T], string>;
+
 export type ColumnRefs<T extends Record<string, unknown>> = {
-  [K in keyof T & string]: ColumnRef<T[K], K>;
+  [K in KnownStringKeyOf<T>]: ColumnRef<T[K], K>;
 };
 export type ExprRefs<T extends Record<string, unknown>> = {
-  [K in keyof T & string]: ExprRef<T[K]>;
+  [K in KnownStringKeyOf<T>]: ExprRef<T[K]>;
 };
 
 export function lit<T extends Value>(value: T): ExprRef<T> {

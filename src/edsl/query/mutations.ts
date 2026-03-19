@@ -35,6 +35,8 @@ import { userError } from "../errors.ts";
 import {
   resolveJoinColumns,
   type JoinColumnMerger,
+  type JoinSelection,
+  type JoinSelectionResult,
 } from "./join.ts";
 import type {
   QueryDeriveInit,
@@ -132,15 +134,15 @@ export function resolveTakeQuery<TColumns extends Record<string, any>>(
 export function resolveJoinQuery<
   TLeft extends Record<string, any>,
   TRight extends Record<string, any>,
-  TMerged extends Record<string, any>,
+  TSelection extends JoinSelection,
 >(
   leftQuery: QueryState<TLeft>,
   rightQuery: QueryState<TRight>,
   on: (left: ColumnRefs<TLeft>, right: ColumnRefs<TRight>) => ExprRef<boolean>,
   lateral: boolean,
   joinType: JoinTypeInput,
-  mergeColumns?: JoinColumnMerger<Record<string, any>, Record<string, any>, TMerged>
-): QueryDeriveInit<TMerged> {
+  mergeColumns?: JoinColumnMerger<Record<string, any>, Record<string, any>, TSelection>
+): QueryDeriveInit<JoinSelectionResult<TSelection>> {
   const normalizedJoinType = normalizeJoinType(joinType);
   const alias = autoAlias(sourceAliasBase(rightQuery.source), leftQuery.stages);
   const rightKeys = [...rightQuery.columnNames];
@@ -155,7 +157,7 @@ export function resolveJoinQuery<
     mergeColumns
   );
   const outputScopeId = freshScopeId();
-  const nextColumns = createColumnRefs<TMerged>(outputScopeId, nextNames);
+  const nextColumns = createColumnRefs<JoinSelectionResult<TSelection>>(outputScopeId, nextNames);
   const joinSource: JoinSource =
     lateral || rightQuery.stages.length > 0 || isValuesSource(rightQuery.source)
       ? {

@@ -1,4 +1,4 @@
-import { omit, pick, pipe } from "remeda";
+import { mapKeys, omit, pick, pipe } from "remeda";
 import type { ExprRef, SqlBigInt, SqlBytes, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlUuid, } from "../mod.ts";
 import { filter, fullJoin, innerJoin, join, leftJoin, rightJoin, take, sort, param, map, table, t, fold, asc, desc, eq, gt, upper, add, coalesce, count, group, loop, sum, and, sub, caseWhen, when, mapShape, groupShape, lt, unnest, values } from "../mod.ts";
 type Equal<A, B> = ((<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false);
@@ -55,6 +55,16 @@ const remedaPickedSelection = map(users, pick(["id"]));
 const remedaOmittedSelection = map(users, (user) => ({
     ...omit(user, ["name"]),
     upper_name: upper(user.name),
+}));
+const remedaKeyMappedSelection = map(users, pipe(
+    mapKeys((key) => "prefix1_" + key),
+));
+const remedaTemplateKeyMappedSelection = map(users, pipe(
+    mapKeys((key) => `prefix1_${key}`),
+));
+const remedaTemplateKeyMappedUsage = map(remedaTemplateKeyMappedSelection, (user) => ({
+    id: user.prefix1_id,
+    name: user.prefix1_name,
 }));
 const remedaOmittedAggregate = fold(orders, (order) => omit({
     user_id: group(order.user_id),
@@ -160,6 +170,9 @@ void curriedJoin;
 void inlineRows;
 void remedaPickedSelection;
 void remedaOmittedSelection;
+void remedaKeyMappedSelection;
+void remedaTemplateKeyMappedSelection;
+void remedaTemplateKeyMappedUsage;
 void remedaOmittedAggregate;
 void leftViaJoinSelected;
 void projectedWithQuotedKey;
@@ -178,3 +191,7 @@ join(users, orders, (user, order) => order.total);
 map(users, (user) => [user.id]);
 // @ts-expect-error legacy array fold syntax is removed
 fold(orders, (order) => [group(order.user_id)]);
+// @ts-expect-error remeda mapKeys with widened string keys should not expose arbitrary renamed column refs
+map(remedaKeyMappedSelection, (user) => ({ broken: user.prefix1_na }));
+// @ts-expect-error template-literal mapKeys should still reject unknown renamed fields
+map(remedaTemplateKeyMappedSelection, (user) => ({ broken: user.prefix1_na }));
