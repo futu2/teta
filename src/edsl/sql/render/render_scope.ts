@@ -88,7 +88,7 @@ function resolveExprScopes(
       return {
         ...expr,
         whens: expr.whens.map((item) => ({
-          when: resolveExprScopes(item.when, scopeBindings),
+          when: resolveExprScopes(item.when, scopeBindings) as ExprNode<boolean>,
           then: resolveExprScopes(item.then, scopeBindings),
         })),
         elseExpr: expr.elseExpr

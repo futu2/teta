@@ -36,6 +36,25 @@ export type NormalizeNumericLiteralTuple<
   [K in keyof TValues]: NormalizeNumericLiteral<TContext, TValues[K]>;
 };
 
+export type NormalizeExpressionLiteral<TValue> =
+  TValue extends SqlNumber | SqlDate | SqlTimestamp | SqlUuid | SqlBytes
+    ? TValue
+  : TValue extends number
+    ? number extends TValue
+      ? TValue
+      : SqlNumber
+  : TValue extends bigint
+    ? bigint extends TValue
+      ? TValue
+      : SqlBigInt
+  : TValue extends string
+    ? string extends TValue
+      ? TValue
+      : string
+  : TValue extends boolean
+    ? boolean
+  : TValue;
+
 export type BuiltinDialect =
   | "mysql"
   | "mariadb"
@@ -146,4 +165,3 @@ export type SqlResult = {
   sql: string;
   params: SqlParam[];
 };
-

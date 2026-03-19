@@ -122,7 +122,7 @@ export function windowFn<T = unknown>(
 
 export function wrapExpr<T>(value: ExprInput<T>): ExprRef<T> {
   if (value instanceof ExprRef) return value;
-  return new ExprRef<T>(toExprNode(value) as ExprNode<T>);
+  return new ExprRef<T>(toExprNode(value));
 }
 
 export function aggregateExpr<T>(name: AggFunc, arg: ExprInput<unknown>): ExprRef<T> {
@@ -138,7 +138,7 @@ export function windowExpr<T>(name: string, ...args: ExprInput<unknown>[]): Wind
   return new WindowBuilder<T>(name, args.map((arg) => toExprNode(arg)));
 }
 
-export function toExprNode<T>(value: ExprInput<T>): ExprNode<unknown> {
+export function toExprNode<T>(value: ExprInput<T>): ExprNode<T> {
   if (value instanceof ExprRef) return value.node;
   if (value === undefined) {
     userError("INVALID_LITERAL_VALUE", "Unsupported literal value: undefined");
@@ -146,10 +146,10 @@ export function toExprNode<T>(value: ExprInput<T>): ExprNode<unknown> {
   if (value === null) return { kind: "literal", value: null };
   const type = typeof value;
   if (type === "string" || type === "number" || type === "boolean" || type === "bigint") {
-    return { kind: "literal", value: value as Value };
+    return { kind: "literal", value: value as Value } as ExprNode<T>;
   }
   if (isTemporalLiteral(value)) {
-    return { kind: "literal", value };
+    return { kind: "literal", value } as ExprNode<T>;
   }
   userError("INVALID_LITERAL_VALUE", `Unsupported literal value: ${String(value)}`);
 }
@@ -177,7 +177,7 @@ export function toOrderItems(input?: OrderItem | OrderItem[]): OrderItem[] | nul
 }
 
 export class WindowBuilder<T> {
-  declare readonly __valueType?: never & T;
+  declare readonly __valueType?: T;
 
   constructor(readonly name: string, readonly args: ExprNode<unknown>[]) {}
 }

@@ -170,6 +170,10 @@ void aggregatedWithGroupShape;
 void projectedProfiles;
 void uuidFilteredProfiles;
 void bigintFilteredProfiles;
+// @ts-expect-error filter predicates must return boolean expressions
+filter(users, (user) => user.name);
+// @ts-expect-error join predicates must return boolean expressions
+join(users, orders, (user, order) => order.total);
 // @ts-expect-error legacy array selection syntax is removed
 map(users, (user) => [user.id]);
 // @ts-expect-error legacy array fold syntax is removed

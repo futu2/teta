@@ -2,7 +2,7 @@ import type { SqlFloat, SqlInt, SqlNumber } from "../../types.ts";
 import { ExprRef, fn, toExprNode, type ExprInput, type PropagateNull } from "../core.ts";
 import { userError } from "../../../errors.ts";
 
-type NullableSqlNumber = SqlNumber | null;
+type NullableSqlNumber = SqlNumber | number | bigint | null;
 
 export function add<TValue extends NullableSqlNumber>(
   left: ExprInput<TValue>,

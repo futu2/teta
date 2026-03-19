@@ -118,7 +118,7 @@ function expandScopeExprs(
       return {
         ...expr,
         whens: expr.whens.map((item) => ({
-          when: expandScopeExprs(item.when, scopeExprs),
+          when: expandScopeExprs(item.when, scopeExprs) as ExprNode<boolean>,
           then: expandScopeExprs(item.then, scopeExprs),
         })),
         elseExpr: expr.elseExpr

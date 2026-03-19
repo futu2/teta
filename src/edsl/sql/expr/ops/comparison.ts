@@ -3,7 +3,7 @@ import type { SqlDate, SqlNumber, SqlTimestamp } from "../../types.ts";
 import { ExprRef, binaryExpr, toExprNode, type ExprInput } from "../core.ts";
 import { userError } from "../../../errors.ts";
 
-type ComparableInput = SqlNumber | SqlDate | SqlTimestamp | null;
+type ComparableInput = SqlNumber | number | bigint | SqlDate | SqlTimestamp | null;
 
 export function eq<T>(left: ExprInput<T>, right: ExprInput<T>): ExprRef<boolean> {
   return binaryExpr("=", toExprNode(left), toExprNode(right)) as ExprRef<boolean>;

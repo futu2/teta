@@ -26,7 +26,7 @@ export type JoinType = "INNER" | "LEFT" | "RIGHT" | "FULL";
 export type JoinTypeInput = "inner" | "left" | "right" | "full" | JoinType;
 
 type ExprNodeResult<T> = {
-  readonly __valueType?: never & T;
+  readonly __valueType?: T;
 };
 
 export type ExprNode<T> = (

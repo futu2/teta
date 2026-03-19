@@ -81,7 +81,7 @@ export function rewriteDialectExpr(
       return {
         ...expr,
         whens: expr.whens.map((item) => ({
-          when: rewriteDialectExpr(item.when, language),
+          when: rewriteDialectExpr(item.when, language) as ExprNode<boolean>,
           then: rewriteDialectExpr(item.then, language),
         })),
         elseExpr: expr.elseExpr ? rewriteDialectExpr(expr.elseExpr, language) : null,

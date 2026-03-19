@@ -7,6 +7,7 @@ import type {
 import { createColumnRefs } from "../expr.ts";
 import { userError } from "../errors.ts";
 import type {
+  NormalizeExpressionLiteral,
   SqlBigInt,
   SqlBytes,
   SqlDate,
@@ -24,7 +25,7 @@ import { normalizeTableSource } from "./utils.ts";
 
 type ValuesRow = Readonly<Record<string, Value>>;
 type ValuesColumns<TRows extends readonly ValuesRow[]> = {
-  [K in keyof TRows[number] & string]: TRows[number][K];
+  [K in keyof TRows[number] & string]: NormalizeExpressionLiteral<TRows[number][K]>;
 };
 
 type TableColumnHelpers = {
