@@ -124,7 +124,7 @@ const userCounts = fold(users, (user) => ({
 - `full` join makes both sides nullable
 
 ```ts
-import { eq, join, table, t } from "@teta/teta";
+import { eq, leftJoin, table, t } from "@teta/teta";
 
 const orders = table("orders", {
   id: t.int(),
@@ -132,13 +132,26 @@ const orders = table("orders", {
   total: t.float(),
 });
 
-const usersWithOrders = join(
+const usersWithOrders = leftJoin(
+  users,
+  orders,
+  (user, order) => eq(user.id, order.user_id)
+);
+// order columns are inferred as nullable because this is a left join
+```
+
+Custom merged shapes are positional:
+
+```ts
+const renamed = join(
   users,
   orders,
   (user, order) => eq(user.id, order.user_id),
-  { type: "left" }
+  (user, order) => ({
+    user_id: user.id,
+    order_total: order.total,
+  })
 );
-// order columns are inferred as nullable because this is a left join
 ```
 
 ### Shape-extending helpers

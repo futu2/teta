@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { TetaUserError, count, eq, fold, group, join, loop, map, toSql, values } from "../mod.ts";
-import { GROUP_INSIDE_AGGREGATE_FUNCTION_ERROR, GROUP_OUTSIDE_AGGREGATE_ERROR, LEGACY_SELECTION_ARRAY_ERROR, LOOP_COLUMN_MISMATCH_ERROR, NON_CANONICAL_POSTGRES_DIALECT_ERROR, UNSUPPORTED_CROSS_JOIN_ERROR, VALUES_COLUMN_MISMATCH_ERROR, VALUES_EMPTY_ERROR } from "./helpers/expected-errors.ts";
+import { GROUP_INSIDE_AGGREGATE_FUNCTION_ERROR, GROUP_OUTSIDE_AGGREGATE_ERROR, LEGACY_JOIN_MERGE_OPTION_ERROR, LEGACY_SELECTION_ARRAY_ERROR, LOOP_COLUMN_MISMATCH_ERROR, NON_CANONICAL_POSTGRES_DIALECT_ERROR, UNSUPPORTED_CROSS_JOIN_ERROR, VALUES_COLUMN_MISMATCH_ERROR, VALUES_EMPTY_ERROR } from "./helpers/expected-errors.ts";
 import { createOrdersTable, createUsersTable } from "./helpers/fixtures.ts";
 describe("error paths", () => {
     test("rejects group() outside fold", () => {
@@ -19,6 +19,16 @@ describe("error paths", () => {
         const users = createUsersTable();
         const orders = createOrdersTable();
         expect(() => join(users, orders, (user, order) => eq(user.id, order.user_id), { type: "cross" as never })).toThrow(UNSUPPORTED_CROSS_JOIN_ERROR);
+    });
+    test("rejects legacy join merge options at runtime", () => {
+        const users = createUsersTable();
+        const orders = createOrdersTable();
+        expect(() => join(users, orders, (user, order) => eq(user.id, order.user_id), {
+            merge: (user: typeof users.columns, order: typeof orders.columns) => ({
+                id: user.id,
+                total: order.total,
+            }),
+        } as never)).toThrow(LEGACY_JOIN_MERGE_OPTION_ERROR);
     });
     test("rejects loop steps with mismatched column names", () => {
         const users = createUsersTable();

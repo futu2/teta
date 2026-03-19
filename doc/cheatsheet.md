@@ -69,13 +69,13 @@ const base = map(table("seed", { n: t.int() }), (s) => ({ n: s.n }));
 const q = loop(base, (self) => map(self, (s) => ({ n: add(s.n, 1) })));
 ```
 
-### `join(right, on, options?)`
+### `join(right, on, merge?, options?)`
 Join queries with `inner`, `left`, `right`, or `full` behavior.
 
 ```ts
 const usersWithOrders = pipe(
   users,
-  join(orders, (u, o) => eq(u.id, o.user_id), { type: "left" }),
+  leftJoin(orders, (u, o) => eq(u.id, o.user_id)),
   map((row) => ({
     user_id: row.id,
     user_name: row.name,
@@ -83,6 +83,9 @@ const usersWithOrders = pipe(
   }))
 );
 ```
+
+### `innerJoin(...)`, `leftJoin(...)`, `rightJoin(...)`, `fullJoin(...)`
+Fixed join-kind helpers with the same positional `merge` argument as `join(...)`.
 
 ### `fold(selector)`
 Use `group(expr)` inside the selector for grouping keys.
@@ -125,7 +128,11 @@ const uniqueUsers = union(activeUsers, inactiveUsers);
 - `filter(predicate)`
 - `sort(selector)`
 - `take(count)`
-- `join(rightOrBuilder, on, { type?, lateral?, merge? })`
+- `join(rightOrBuilder, on, merge?, { type?, lateral? })`
+- `innerJoin(rightOrBuilder, on, merge?, { lateral? })`
+- `leftJoin(rightOrBuilder, on, merge?, { lateral? })`
+- `rightJoin(rightOrBuilder, on, merge?, { lateral? })`
+- `fullJoin(rightOrBuilder, on, merge?, { lateral? })`
 - `unnest(selector, { value, ordinality? }, { outer? })`
 - `unionAll(right)`
 - `union(right)`

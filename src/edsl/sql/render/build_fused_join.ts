@@ -20,7 +20,8 @@ export function buildFusedJoinFrom(
   baseAlias: string,
   ctePrefix: string,
   dialect: QueryDialect,
-  allowJoinSubqueryHoist = true
+  allowJoinSubqueryHoist = true,
+  allowIntermediateCtes = true
 ): FusedJoinFrom {
   const alias = stage.as ?? fail("Join stage requires an alias");
   const joinBindings: ScopeBindings = {
@@ -61,7 +62,8 @@ export function buildFusedJoinFrom(
     stage.source,
     `${ctePrefix}join_`,
     dialect,
-    allowJoinSubqueryHoist
+    allowJoinSubqueryHoist,
+    allowIntermediateCtes
   );
   const subqueryAst = stage.lateral
     ? ensureSelectAst(

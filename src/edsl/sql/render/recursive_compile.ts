@@ -38,6 +38,7 @@ export function compileLoopPart(
       ctePrefix: `loop_${label}_`,
       dialect,
       allowJoinSubqueryHoist: false,
+      allowIntermediateCtes: false,
     }
   );
   if (fused && fused.consumed === optimizedStages.length && fusedCtes.length === 0) {
@@ -61,6 +62,7 @@ export function compileLoopPart(
       undefined,
       dialect,
       `loop_${label}_${index}_`,
+      false,
       false
     );
     if (index < optimizedStages.length - 1) {

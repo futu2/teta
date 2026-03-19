@@ -21,6 +21,9 @@ export const VALUES_EMPTY_ERROR =
 export const VALUES_COLUMN_MISMATCH_ERROR =
   "values() row 2 must have exactly the same columns as row 1";
 
+export const LEGACY_JOIN_MERGE_OPTION_ERROR =
+  "join() no longer accepts { merge }. Pass merge as the next argument before options.";
+
 export function missingQueryExportError(path: string): string {
   return `Export 'query' not found in ${path}`;
 }

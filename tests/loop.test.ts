@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { add, eq, filter, isNotNull, isNull, join, loop, map, t, table, toSql } from "../mod.ts";
+import { add, charLength, eq, filter, isNotNull, isNull, join, loop, map, not, t, table, toSql } from "../mod.ts";
 import { buildOrgTreeQuery, createEmployeesTable } from "./helpers/fixtures.ts";
 
 describe("recursive loop queries", () => {
@@ -49,13 +49,11 @@ describe("recursive loop queries", () => {
             employees,
             self,
             (employee, current) => eq(employee.manager_id, current.id),
-            {
-              merge: (employee) => ({
-                id: employee.id,
-                name: employee.name,
-                manager_id: employee.manager_id,
-              }),
-            }
+            (employee) => ({
+              id: employee.id,
+              name: employee.name,
+              manager_id: employee.manager_id,
+            })
           )
         ),
         (employee) => ({ id: employee.id, name: employee.name })
@@ -86,13 +84,11 @@ describe("recursive loop queries", () => {
           self,
           directSup,
           (current, parent) => eq(current.sup_orgId, parent.orgId),
-          {
-            merge: (current, parent) => ({
-              orgId: current.orgId,
-              sup_orgId: parent.sup_orgId,
-              distance: add(current.distance, 1),
-            }),
-          }
+          (current, parent) => ({
+            orgId: current.orgId,
+            sup_orgId: parent.sup_orgId,
+            distance: add(current.distance, 1),
+          })
         )
       ),
       { dialect: "postgresql", format: "compact" }
@@ -101,5 +97,42 @@ describe("recursive loop queries", () => {
     expect(sql.match(/\bWITH\b/g) ?? []).toHaveLength(1);
     expect(sql).not.toContain("loop_base_");
     expect(sql).toContain('SELECT "orgTree_0"."orgId", "orgTree_0"."sup_orgId", 1 AS distance FROM "orgTree" AS "orgTree_0" WHERE "orgTree_0"."sup_orgId" IS NOT NULL');
+  });
+
+  test("avoids internal CTEs for recursive join sources with multiple map stages", () => {
+    const orgTree = table("orgTree", {
+      stru_id: t.string(),
+      sup_stru: t.string(),
+    });
+
+    const orgInfo = filter(
+      map(
+        map(orgTree, (row) => ({
+          stru_id: row.stru_id,
+          sup_stru: row.sup_stru,
+        })),
+        (row) => ({
+          ...row,
+          distance: 1,
+        })
+      ),
+      (row) => not(eq(charLength(row.sup_stru), 0))
+    );
+
+    const sql = toSql(
+      loop(
+        orgInfo,
+        (self) => join(self, orgInfo, (u, o) => eq(u.sup_stru, o.stru_id), (u, o) => ({
+            stru_id: u.stru_id,
+            sup_stru: o.sup_stru,
+            distance: add(o.distance, 1),
+          }))
+      ),
+      { dialect: "hetu", format: "compact" }
+    );
+
+    expect(sql.match(/\bWITH\b/g) ?? []).toHaveLength(1);
+    expect(sql).not.toContain("loop_step_join_cte_");
+    expect(sql).not.toContain("INNER JOIN (WITH ");
   });
 });

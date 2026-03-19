@@ -1,6 +1,6 @@
 import { omit, pick, pipe } from "remeda";
 import type { ExprRef, SqlBigInt, SqlBytes, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlUuid, } from "../mod.ts";
-import { filter, join, take, sort, param, map, table, t, fold, asc, desc, eq, gt, upper, add, coalesce, count, group, loop, sum, and, sub, caseWhen, when, mapShape, groupShape, lt, unnest, values } from "../mod.ts";
+import { filter, fullJoin, innerJoin, join, leftJoin, rightJoin, take, sort, param, map, table, t, fold, asc, desc, eq, gt, upper, add, coalesce, count, group, loop, sum, and, sub, caseWhen, when, mapShape, groupShape, lt, unnest, values } from "../mod.ts";
 type Equal<A, B> = ((<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false);
 type Expect<T extends true> = T;
 type ExprType<TExpr> = TExpr extends ExprRef<infer TValue> ? TValue : never;
@@ -33,10 +33,14 @@ const profiles = table("profiles", {
     avatar: t.nullable(t.bytes()),
     nickname: t.nullable(t.string()),
 });
-const leftJoined = join(users, orders, (user, order) => eq(user.id, order.user_id), { type: "left" });
-const rightJoined = join(users, orders, (user, order) => eq(user.id, order.user_id), { type: "right" });
-const fullJoined = join(users, orders, (user, order) => eq(user.id, order.user_id), { type: "full" });
+const leftJoined = leftJoin(users, orders, (user, order) => eq(user.id, order.user_id));
+const rightJoined = rightJoin(users, orders, (user, order) => eq(user.id, order.user_id));
+const fullJoined = fullJoin(users, orders, (user, order) => eq(user.id, order.user_id));
 const leftViaJoin = join(users, orders, (user, order) => eq(user.id, order.user_id), { type: "left" });
+const renamedJoin = innerJoin(users, orders, (user, order) => eq(user.id, order.user_id), (user, order) => ({
+    user_id: user.id,
+    order_total: order.total,
+}));
 const filteredUsers = filter(users, (user: typeof users.columns) => gt(user.id, 0));
 const projectedUsers = map(filteredUsers, (user: typeof filteredUsers.columns) => ({
     id: user.id,
@@ -46,7 +50,7 @@ const curriedPipeline = pipe(users, filter((user: typeof users.columns) => gt(us
     id: user.id,
     name: upper(user.name),
 })), sort((row) => [asc(row.name), desc(row.id)]), take(5));
-const curriedJoin = pipe(users, join(orders, (user: typeof users.columns, order: typeof orders.columns) => eq(user.id, order.user_id), { type: "left" }));
+const curriedJoin = pipe(users, leftJoin(orders, (user: typeof users.columns, order: typeof orders.columns) => eq(user.id, order.user_id)));
 const remedaPickedSelection = map(users, pick(["id"]));
 const remedaOmittedSelection = map(users, (user) => ({
     ...omit(user, ["name"]),
@@ -129,6 +133,8 @@ type _RemedaOmittedAggregateUserId = Expect<Equal<ExprType<typeof remedaOmittedA
 type _RemedaOmittedAggregateTotalSpend = Expect<Equal<ExprType<typeof remedaOmittedAggregate.columns.total_spend>, SqlFloat>>;
 type _LeftJoinCoalescedTotal = Expect<Equal<ExprType<typeof leftJoinTotal>, SqlFloat>>;
 type _LeftJoinCoalescedSub = Expect<Equal<ExprType<typeof leftJoinTotalRemaining>, SqlFloat>>;
+type _RenamedJoinUserId = Expect<Equal<ExprType<typeof renamedJoin.columns.user_id>, SqlInt>>;
+type _RenamedJoinOrderTotal = Expect<Equal<ExprType<typeof renamedJoin.columns.order_total>, SqlFloat>>;
 type _ProjectedWithQuotedKey = Expect<Equal<ExprType<typeof projectedWithQuotedKey.columns["User Id"]>, SqlInt>>;
 type _AggregatedWithQuotedKey = Expect<Equal<ExprType<typeof aggregatedWithQuotedKey.columns["Total Spend"]>, SqlFloat>>;
 type _LoopedId = Expect<Equal<ExprType<typeof looped.columns.id>, SqlInt>>;

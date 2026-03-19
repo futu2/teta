@@ -60,7 +60,7 @@ LIMIT 5
 
 ```ts
 import { pipe } from "remeda";
-import { fold, count, eq, group, join, sum, table, t, toSql } from "./mod.ts";
+import { fold, count, eq, group, leftJoin, sum, table, t, toSql } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -75,7 +75,7 @@ const orders = table("orders", {
 
 const q = pipe(
   users,
-  join(orders, (u, o) => eq(u.id, o.user_id), { type: "left" }),
+  leftJoin(orders, (u, o) => eq(u.id, o.user_id)),
   fold((row) => ({
     user_id: group(row.id),
     order_count: count(row.order_id),
@@ -170,7 +170,7 @@ const labels = map(users, (user) => ({
 ### `join(...)` and `unnest(...)` refine types
 
 ```ts
-import { eq, join, table, t, unnest } from "./mod.ts";
+import { eq, leftJoin, join, table, t, unnest } from "./mod.ts";
 
 const orders = table("orders", {
   order_id: t.int(),
@@ -178,11 +178,20 @@ const orders = table("orders", {
   total: t.float(),
 });
 
-const leftJoined = join(
+const leftJoined = leftJoin(
+  users,
+  orders,
+  (user, order) => eq(user.id, order.user_id)
+);
+
+const renamedJoin = join(
   users,
   orders,
   (user, order) => eq(user.id, order.user_id),
-  { type: "left" }
+  (user, order) => ({
+    user_id: user.id,
+    order_total: order.total,
+  })
 );
 
 // right-side columns become nullable on a left join
@@ -323,7 +332,7 @@ Typical patterns:
 
 ```ts
 import { pipe } from "remeda";
-import { eq, join, map, table, t, toSql } from "./mod.ts";
+import { eq, leftJoin, map, table, t, toSql } from "./mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -338,7 +347,7 @@ const orders = table("orders", {
 
 const q = pipe(
   users,
-  join(orders, (u, o) => eq(u.id, o.user_id), { type: "left" }),
+  leftJoin(orders, (u, o) => eq(u.id, o.user_id)),
   map((row) => ({
     user_id: row.id,
     user_name: row.name,
@@ -350,7 +359,7 @@ const q = pipe(
 console.log(toSql(q, {});
 ```
 
-Use the `options` object to control join behavior, for example `{ type: "left" }` or `{ type: "right" }`.
+Use `leftJoin(...)`, `rightJoin(...)`, `fullJoin(...)`, or the generic `join(..., { type })` form when you want one API for all join kinds.
 
 ### Lateral join
 

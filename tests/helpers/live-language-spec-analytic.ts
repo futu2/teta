@@ -162,11 +162,11 @@ export const LIVE_LANGUAGE_ANALYTIC_CASES: LiveSpecCase[] = [
                 id: employee.id,
                 name: employee.name,
                 manager_id: employee.manager_id,
-            })), (self) => join(employees, self, (employee, current) => eq(employee.manager_id, current.id), { merge: (employee) => ({
-                    id: employee.id,
-                    name: employee.name,
-                    manager_id: employee.manager_id,
-                }) }));
+            })), (self) => join(employees, self, (employee, current) => eq(employee.manager_id, current.id), (employee) => ({
+                id: employee.id,
+                name: employee.name,
+                manager_id: employee.manager_id,
+            })));
             return sort(map(orgTree, (employee) => ({ id: employee.id, name: employee.name })), (employee) => asc(employee.id));
         },
         outcomes: {

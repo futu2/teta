@@ -47,11 +47,11 @@ export function buildOrgTreeQuery() {
         id: employee.id,
         name: employee.name,
         manager_id: employee.manager_id,
-    })), (self) => join(employees, self, (employee, current) => eq(employee.manager_id, current.id), { merge: (employee) => ({
-            id: employee.id,
-            name: employee.name,
-            manager_id: employee.manager_id,
-        }) }));
+    })), (self) => join(employees, self, (employee, current) => eq(employee.manager_id, current.id), (employee) => ({
+        id: employee.id,
+        name: employee.name,
+        manager_id: employee.manager_id,
+    })));
 }
 export function buildDialectMatrixQuery() {
     const users = createDialectUsersTable();

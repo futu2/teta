@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { pipe } from "remeda";
-import { filter, take, sort, map, toSql, asc, desc, eq, gte, replace, and, coalesce, join } from "../mod.ts";
+import { filter, take, sort, map, toSql, asc, desc, eq, gte, replace, and, coalesce, leftJoin } from "../mod.ts";
 import { USER_PIPELINE_POSTGRES_COMPACT, USERS_ORDERS_LEFT_JOIN_SELECT_POSTGRES_COMPACT } from "./helpers/expected-sql.ts";
 import { createOrdersTable, createUsersPipelineTable, createUsersTable } from "./helpers/fixtures.ts";
 describe("function-first query api", () => {
@@ -16,7 +16,7 @@ describe("function-first query api", () => {
     test("supports curried join with a built query", () => {
         const users = createUsersTable();
         const orders = createOrdersTable();
-        const query = pipe(users, join(orders, (user, order) => eq(user.id, order.user_id), { type: "left" }), map((row) => ({
+        const query = pipe(users, leftJoin(orders, (user, order) => eq(user.id, order.user_id)), map((row) => ({
             user_id: row.id,
             total: row.total,
         })));

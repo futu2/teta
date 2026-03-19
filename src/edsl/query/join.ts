@@ -65,19 +65,22 @@ type JoinRightColumnsForType<
 > = TType extends "left" | "full" ? NullableColumns<TRight> : TRight;
 
 export type JoinOptions<
-  TLeft extends Record<string, any>,
-  TRight extends Record<string, any>,
   TType extends JoinTypeInput | undefined = undefined,
-  TMerged extends Record<string, any> = JoinColumnsForType<TLeft, TRight, CanonicalJoinType<TType>>,
 > = {
   type?: TType;
   lateral?: boolean;
-  merge?: JoinColumnMerger<
-    JoinLeftColumnsForType<TLeft, CanonicalJoinType<TType>>,
-    JoinRightColumnsForType<TRight, CanonicalJoinType<TType>>,
-    TMerged
-  >;
 };
+
+export type JoinColumnMergerForType<
+  TLeft extends Record<string, any>,
+  TRight extends Record<string, any>,
+  TType extends JoinKind,
+  TMerged extends Record<string, any>,
+> = JoinColumnMerger<
+  JoinLeftColumnsForType<TLeft, TType>,
+  JoinRightColumnsForType<TRight, TType>,
+  TMerged
+>;
 
 export function resolveJoinColumns<
   TLeft extends Record<string, any>,

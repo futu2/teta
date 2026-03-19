@@ -18,7 +18,8 @@ export function buildJoinStageAst(
   stage: Extract<Stage, { kind: "join" }>,
   context: StageRenderContext,
   ctePrefix: string,
-  allowJoinSubqueryHoist = true
+  allowJoinSubqueryHoist = true,
+  allowIntermediateCtes = true
 ): SelectAst {
   const join = `${stage.joinType} JOIN`;
   const rightAlias = stage.as ?? fail("Join stage requires an alias");
@@ -39,7 +40,15 @@ export function buildJoinStageAst(
   return buildSqlSelectAst({
     from: [
       context.baseFrom,
-      buildJoinFromRef(stage, context, joinBindings, ctePrefix, join, allowJoinSubqueryHoist),
+      buildJoinFromRef(
+        stage,
+        context,
+        joinBindings,
+        ctePrefix,
+        join,
+        allowJoinSubqueryHoist,
+        allowIntermediateCtes
+      ),
     ],
     columns: renderBoundProjectionItems(stage.projectAll, joinBindings, context.dialect),
     where: null,
@@ -57,7 +66,8 @@ function buildJoinFromRef(
   joinBindings: ScopeBindings,
   ctePrefix: string,
   join: string,
-  allowJoinSubqueryHoist: boolean
+  allowJoinSubqueryHoist: boolean,
+  allowIntermediateCtes: boolean
 ): FromAst {
   const on = exprToAst(bindExprScopes(stage.on, joinBindings, context.dialect));
   const prefix = lateralJoinPrefix(stage.lateral, context.dialect);
@@ -83,7 +93,8 @@ function buildJoinFromRef(
     stage.source,
     `${ctePrefix}join_`,
     context.dialect,
-    allowJoinSubqueryHoist
+    allowJoinSubqueryHoist,
+    allowIntermediateCtes
   );
   const subqueryAst = stage.lateral
     ? ensureSelectAst(
