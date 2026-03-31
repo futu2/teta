@@ -5,17 +5,38 @@ on:
       - master
 
 jobs:
-  publish:
+  publish-teta:
     runs-on: ubuntu-latest
     permissions:
       contents: read
       id-token: write
+    defaults:
+      run:
+        working-directory: packages/teta
     steps:
       - uses: actions/checkout@v6
       - uses: oven-sh/setup-bun@v1
         with:
           bun-version: latest
       - name: Install deps
-        run: bun install
-      - name: Publish package
+        run: bun install --frozen-lockfile
+      - name: Publish @teta/teta
+        run: bunx jsr publish
+
+  publish-dev:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        working-directory: packages/dev
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+      - name: Install deps
+        run: bun install --frozen-lockfile
+      - name: Publish @teta/dev
         run: bunx jsr publish

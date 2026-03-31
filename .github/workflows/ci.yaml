@@ -63,10 +63,13 @@ jobs:
       - name: Run benchmark regression check
         run: bun run bench:render:check
 
-  jsr-dry-run:
+  jsr-dry-run-teta:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    defaults:
+      run:
+        working-directory: packages/teta
     steps:
       - uses: actions/checkout@v6
       - uses: oven-sh/setup-bun@v1
@@ -74,5 +77,22 @@ jobs:
           bun-version: latest
       - name: Install dependencies
         run: bun install --frozen-lockfile
-      - name: Validate JSR publish bundle
+      - name: Validate @teta/teta publish bundle
+        run: bunx jsr publish --dry-run --allow-dirty
+
+  jsr-dry-run-dev:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: packages/dev
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Validate @teta/dev publish bundle
         run: bunx jsr publish --dry-run --allow-dirty
