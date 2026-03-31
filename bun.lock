@@ -4,6 +4,9 @@
   "workspaces": {
     "": {
       "name": "teta",
+      "devDependencies": {
+        "typescript": "^5.9.3",
+      },
     },
     "packages/dev": {
       "name": "@teta/dev",
