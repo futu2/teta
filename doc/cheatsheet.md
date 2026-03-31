@@ -1,6 +1,6 @@
 # Teta Cheatsheet
 
-Quick reference for the public API exported from `@teta/teta`.
+Quick reference for the public API exported from `@teta/teta` (plus dev helpers from `@teta/dev`).
 
 Teta is function-first. Query helpers are dual-mode, so you can write either `map(users, fn)`
 or `pipe(users, map(fn))`. In practice, the examples here prefer Remeda's `pipe(...)`.
@@ -10,7 +10,7 @@ import { pick, pipe } from "remeda";
 
 import { fold, and, arrayAppend, arrayContains, arrayJoin, arrayLength, arrayPosition, arraySlice, asc, avg, bitLength, cast, charLength, characterLength, coalesce, concat, count, currentDate, currentTimestamp, dateAdd, dateDiff, dateFormat, dateLiteral, dateParse, dateTrunc, day, desc, eq, explain, ExprRef, f, filter, fn, fromUnixTime, group, gt, gte, hour, isIn, isNotNull, isNull, join, lag, lead, left, like, take, loop, lower, lt, lte, max, min, minute, mod, month, mul, ne, not, ntile, nullIf, octetLength, sort, over, overlay, param, percentRank, position, pow, Query, rank, regexExtract, regexLike, regexReplace, replace, reverse, right, round, rowNumber, rpad, map, shape, sqrt, sub, substring, sum, sumOver, t, table, timestampLiteral, toAst, toDate, toFloat, toIR, toInt, toSql, toSqlResult, toUnixTime, trim, union, unionAll, unnest, upper, when, windowFn, year } from "@teta/teta";
 
-import { copyTextToClipboard, renderSqlFromSource, watchQuerySourceToClipboard } from "@teta/teta";
+import { copyTextToClipboard, renderSqlFromSource, watchQuerySourceToClipboard } from "@teta/dev";
 ```
 
 ## 1) Query roots and composition
@@ -353,6 +353,7 @@ const groupedUsers = fold(users, (user) => ({
 ```
 
 ## 7) Dev utilities
+Import these from `@teta/dev` (not `@teta/teta`).
 
 ### `copyTextToClipboard(text, preferred = "auto")`
 Copy SQL to the clipboard using one of:
@@ -392,7 +393,7 @@ export const query = map(
 
 ```ts
 // scripts/watch_users_report.ts
-import { watchQuerySourceToClipboard } from "@teta/teta";
+import { watchQuerySourceToClipboard } from "@teta/dev";
 
 const watcher = await watchQuerySourceToClipboard({
   source: "./queries/users_report.ts",

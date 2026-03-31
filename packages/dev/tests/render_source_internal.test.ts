@@ -37,7 +37,16 @@ describe("render source internals", () => {
     const circular: { self?: unknown } = {};
     circular.self = circular;
 
-    expect(() => serializeRendererOptions(circular as never)).toThrow(TetaUserError);
+    try {
+      serializeRendererOptions(circular as never);
+      throw new Error("Expected serializeRendererOptions() to throw");
+    } catch (error) {
+      expect(error).toBeInstanceOf(TetaUserError);
+      expect((error as TetaUserError).code).toBe("INVALID_RENDERER_OPTIONS");
+      expect((error as TetaUserError).message).toBe(
+        "watchQuerySourceToClipboard isolateModules mode requires JSON-serializable rendererOptions"
+      );
+    }
   });
 
   test("renderSqlFromSourceIsolated returns direct SQL string exports", async () => {
@@ -47,6 +56,13 @@ describe("render source internals", () => {
 
   test("renderSqlFromSourceIsolated preserves missing export user errors", async () => {
     const file = await writeTempModule("export const notQuery = 1;");
-    expect(() => renderSqlFromSourceIsolated(file)).toThrow(TetaUserError);
+    try {
+      renderSqlFromSourceIsolated(file);
+      throw new Error("Expected renderSqlFromSourceIsolated() to throw");
+    } catch (error) {
+      expect(error).toBeInstanceOf(TetaUserError);
+      expect((error as TetaUserError).code).toBe("INVALID_TABLE_SOURCE");
+      expect((error as TetaUserError).message).toBe(`Export 'query' not found in ${file}`);
+    }
   });
 });
