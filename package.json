@@ -6,19 +6,19 @@
   ],
   "scripts": {
     "test": "bun run test:teta && bun run test:dev",
-    "test:teta": "bun --cwd packages/teta run test",
-    "test:dev": "bun --cwd packages/dev run test",
+    "test:teta": "bun run --cwd packages/teta test",
+    "test:dev": "bun run --cwd packages/dev test",
     "typecheck": "bun run typecheck:repo && bun run typecheck:teta && bun run typecheck:dev",
     "typecheck:repo": "tsc --noEmit -p tsconfig.json",
-    "typecheck:teta": "bun --cwd packages/teta run typecheck",
-    "typecheck:dev": "bun --cwd packages/dev run typecheck",
+    "typecheck:teta": "bun run --cwd packages/teta typecheck",
+    "typecheck:dev": "bun run --cwd packages/dev typecheck",
     "check": "bun run check:teta && bun run check:dev",
-    "check:teta": "bun --cwd packages/teta run check",
-    "check:dev": "bun --cwd packages/dev run check",
-    "test:runtime:bun": "bun --cwd packages/teta run test:runtime:bun",
-    "test:runtime:node": "bun --cwd packages/teta run test:runtime:node",
-    "test:runtime:deno": "bun --cwd packages/teta run test:runtime:deno",
-    "bench:render": "bun --cwd packages/teta run bench:render",
-    "bench:render:check": "bun --cwd packages/teta run bench:render:check"
+    "check:teta": "bun run --cwd packages/teta check",
+    "check:dev": "bun run --cwd packages/dev check",
+    "test:runtime:bun": "bun run --cwd packages/teta test:runtime:bun",
+    "test:runtime:node": "bun run --cwd packages/teta test:runtime:node",
+    "test:runtime:deno": "bun run --cwd packages/teta test:runtime:deno",
+    "bench:render": "bun run --cwd packages/teta bench:render",
+    "bench:render:check": "bun run --cwd packages/teta bench:render:check"
   }
 }
