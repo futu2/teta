@@ -8,7 +8,7 @@ or `pipe(users, map(fn))`. In practice, the examples here prefer Remeda's `pipe(
 ```ts
 import { pick, pipe } from "remeda";
 
-import { fold, and, arrayAppend, arrayContains, arrayJoin, arrayLength, arrayPosition, arraySlice, asc, avg, bitLength, cast, charLength, characterLength, coalesce, concat, count, currentDate, currentTimestamp, dateAdd, dateDiff, dateFormat, dateLiteral, dateParse, dateTrunc, day, desc, eq, explain, ExprRef, f, filter, fn, fromUnixTime, group, gt, gte, hour, isIn, isNotNull, isNull, join, lag, lead, left, like, take, loop, lower, lt, lte, max, min, minute, mod, month, mul, ne, not, ntile, nullIf, octetLength, sort, over, overlay, param, percentRank, position, pow, Query, rank, regexExtract, regexLike, regexReplace, replace, reverse, right, round, rowNumber, rpad, map, shape, sqrt, sub, substring, sum, sumOver, t, table, timestampLiteral, toAst, toDate, toFloat, toIR, toInt, toSql, toSqlResult, toUnixTime, trim, union, unionAll, unnest, upper, when, windowFn, year } from "@teta/teta";
+import { fold, and, arrayAppend, arrayContains, arrayJoin, arrayLength, arrayPosition, arraySlice, asc, avg, bitLength, cast, charLength, characterLength, coalesce, concat, count, currentDate, currentTimestamp, dateAdd, dateDiff, dateFormat, dateLiteral, dateParse, dateTrunc, day, desc, eq, explain, ExprRef, f, filter, fn, fromUnixTime, group, gt, gte, hour, isIn, isNotNull, isNull, join, lag, lead, left, like, take, loop, lower, lt, lte, max, min, minute, mod, month, mul, ne, not, ntile, nullIf, octetLength, sort, over, overlay, param, percentRank, position, pow, Query, rank, regexExtract, regexLike, regexReplace, replace, reverse, right, round, rowNumber, rpad, map, shape, sqrt, sub, substring, sum, sumOver, t, table, timestampLiteral, toAst, toDate, toFloat, toIR, toInt, toSql, toSqlResult, toUnixTime, trim, union, unionAll, unnest, upper, values, when, windowFn, year } from "@teta/teta";
 
 ```
 
@@ -354,11 +354,11 @@ const groupedUsers = fold(users, (user) => ({
 ## 7) Dev package
 
 Source-module rendering, file watching, and clipboard helpers now live in `@teta/dev`.
-See `packages/dev/README.md` for setup and usage.
+See [the dev package README](../packages/dev/README.md) for setup and usage.
 
 ## 8) Key exported types
 
-For a guided explanation of how these fit together in the EDSL, see `doc/TYPES.md`.
+For a guided explanation of how these fit together in the EDSL, see [TYPES.md](./TYPES.md).
 
 - `Query`
 - `QueryIR`

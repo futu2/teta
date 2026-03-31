@@ -27,6 +27,8 @@ const sql = await renderSqlFromSource("./queries/users.ts");
 console.log(sql);
 ```
 
+`renderSqlFromSource(...)` looks for an export named `query` by default. Pass a custom `exportName` if your source module uses a different name.
+
 ## Watch and copy SQL
 
 ```ts
@@ -37,6 +39,8 @@ const watcher = await watchQuerySourceToClipboard({
   outputFile: "./tmp/users.sql",
 });
 ```
+
+Watch mode copies SQL to the clipboard by default and uses isolated module loading by default. Set `copyToClipboard: false` if you only want file output or logging.
 
 ## Copy SQL directly
 

@@ -17,12 +17,6 @@
     "noImplicitOverride": true,
     "noUnusedLocals": false,
     "noUnusedParameters": true,
-    "noPropertyAccessFromIndexSignature": false,
-    "baseUrl": ".",
-    "paths": {
-      "@teta/teta": ["packages/teta/mod.ts"],
-      "@teta/dev": ["packages/dev/mod.ts"],
-      "jsr:@teta/teta": ["packages/teta/mod.ts"]
-    }
+    "noPropertyAccessFromIndexSignature": false
   }
 }

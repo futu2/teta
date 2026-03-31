@@ -1,5 +1,13 @@
 {
   "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@teta/teta": ["packages/teta/mod.ts"],
+      "@teta/dev": ["packages/dev/mod.ts"],
+      "jsr:@teta/teta": ["packages/teta/mod.ts"]
+    }
+  },
   "include": [
     "packages/*/mod.ts",
     "packages/*/src/**/*.ts",

@@ -128,7 +128,7 @@ FROM names AS names_0
 
 ## Type inference examples
 
-For a deeper walkthrough of public EDSL types, see `doc/TYPES.md`.
+For a deeper walkthrough of public EDSL types, see [TYPES.md](./TYPES.md).
 
 ### Schema inference from `table(...)`
 

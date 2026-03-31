@@ -51,6 +51,6 @@ console.log(toSql(query, { dialect: "postgresql", format: "pretty" }));
 
 More docs:
 
-- [Tutorial](../../doc/TUTORIAL.md)
-- [Cheatsheet](../../doc/cheatsheet.md)
-- [Type guide](../../doc/TYPES.md)
+- [Tutorial](https://github.com/futu2/teta/blob/master/doc/TUTORIAL.md)
+- [Cheatsheet](https://github.com/futu2/teta/blob/master/doc/cheatsheet.md)
+- [Type guide](https://github.com/futu2/teta/blob/master/doc/TYPES.md)
