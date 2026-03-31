@@ -35,7 +35,7 @@ export async function watchQuerySourceToClipboard(
     }
 
     if (resolved.shouldCopy) {
-      const tool = copyTextToClipboard(sql, resolved.clipboard);
+      const tool = await copyTextToClipboard(sql, resolved.clipboard);
       resolved.log(`[teta-watch] copied SQL to clipboard via ${tool}`);
     }
 

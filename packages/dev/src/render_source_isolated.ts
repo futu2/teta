@@ -1,6 +1,11 @@
 import { spawnSync } from "node:child_process";
-import { TetaInternalError, TetaUserError, internalError, type TetaErrorCode, type TetaErrorKind, userError } from "../errors.ts";
-import type { SqlOptions } from "../sql.ts";
+import {
+  TetaInternalError,
+  TetaUserError,
+  type SqlOptions,
+  type TetaErrorCode,
+  type TetaErrorKind,
+} from "@teta/teta";
 import { normalizeRenderSourcePath } from "./render_source_shared.ts";
 
 export type SerializedIsolatedRenderError = {
@@ -27,14 +32,13 @@ export const RENDER_SQL_EVAL_SCRIPT = String.raw`(async () => {
   try {
     const { resolve } = await import("node:path");
     const { pathToFileURL } = await import("node:url");
-    const errorsModule = await import(process.env.TETA_ERRORS_MODULE);
-    TetaError = errorsModule.TetaError;
-    const { userError } = errorsModule;
-    const { renderSql } = await import(process.env.TETA_SQL_RENDERER_MODULE);
+    const teta = await import(process.env.TETA_CORE_MODULE ?? "@teta/teta");
+    TetaError = teta.TetaError;
+    const toSql = teta.toSql;
 
     const source = (process.env.TETA_SOURCE ?? "").trim();
     if (!source) {
-      userError("INVALID_TABLE_SOURCE", "renderSqlFromSource requires a source path");
+      throw new teta.TetaUserError("INVALID_TABLE_SOURCE", "renderSqlFromSource requires a source path");
     }
 
     const exportName = (process.env.TETA_EXPORT_NAME ?? "query").trim() || "query";
@@ -42,7 +46,7 @@ export const RENDER_SQL_EVAL_SCRIPT = String.raw`(async () => {
     const importedModule = await import(pathToFileURL(resolve(source)).href);
 
     if (!(exportName in importedModule)) {
-      userError("INVALID_TABLE_SOURCE", "Export '" + exportName + "' not found in " + source);
+      throw new teta.TetaUserError("INVALID_TABLE_SOURCE", "Export '" + exportName + "' not found in " + source);
     }
 
     let target = importedModule[exportName];
@@ -55,13 +59,13 @@ export const RENDER_SQL_EVAL_SCRIPT = String.raw`(async () => {
       return;
     }
     if (!target || typeof target !== "object") {
-      userError(
+      throw new teta.TetaUserError(
         "INVALID_TABLE_SOURCE",
         "Export '" + exportName + "' must be a SQL string, Query-like object, or a function returning one"
       );
     }
 
-    respond({ ok: true, sql: renderSql(target, rendererOptions) });
+    respond({ ok: true, sql: toSql(target, rendererOptions) });
   } catch (error) {
     if (error instanceof Error && error.name === "SyntaxError") {
       fail("user", "INVALID_RENDERER_OPTIONS", error.message, error.stack);
@@ -91,15 +95,14 @@ export function renderSqlFromSourceIsolated(
       TETA_SOURCE: sourcePath,
       TETA_EXPORT_NAME: exportName,
       TETA_RENDERER_OPTIONS: serializedRendererOptions,
-      TETA_ERRORS_MODULE: new URL("../errors.ts", import.meta.url).href,
-      TETA_SQL_RENDERER_MODULE: new URL("../sql.ts", import.meta.url).href,
+      TETA_CORE_MODULE: "@teta/teta",
     },
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
   });
 
   if (result.error) {
-    internalError(
+    throw new TetaInternalError(
       "INTERNAL_DEV_RENDER_FAILED",
       result.error.message || "Failed to spawn isolated SQL render process"
     );
@@ -116,21 +119,21 @@ export function renderSqlFromSourceIsolated(
   const stderr = result.stderr?.trim() ?? "";
   const details = stderr
     || `Failed to render SQL in isolated process (exit ${result.status ?? "unknown"})`;
-  internalError("INTERNAL_DEV_RENDER_FAILED", details);
+  throw new TetaInternalError("INTERNAL_DEV_RENDER_FAILED", details);
 }
 
 export function serializeRendererOptions(rendererOptions: SqlOptions): string {
   try {
     const serialized = JSON.stringify(rendererOptions);
     if (serialized === undefined) {
-      userError(
+      throw new TetaUserError(
         "INVALID_RENDERER_OPTIONS",
         "watchQuerySourceToClipboard isolateModules mode requires JSON-serializable rendererOptions"
       );
     }
     return serialized;
   } catch {
-    userError(
+    throw new TetaUserError(
       "INVALID_RENDERER_OPTIONS",
       "watchQuerySourceToClipboard isolateModules mode requires JSON-serializable rendererOptions"
     );

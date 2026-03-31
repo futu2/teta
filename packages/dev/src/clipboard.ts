@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { userError } from "../errors.ts";
+import { TetaUserError } from "@teta/teta";
 
 export type ClipboardTool =
   | "auto"
@@ -22,10 +22,10 @@ const CLIPBOARD_COMMANDS: Record<Exclude<ClipboardTool, "auto">, ClipboardComman
   clip: { command: "clip", args: [] },
 };
 
-export function copyTextToClipboard(
+export async function copyTextToClipboard(
   text: string,
   preferred: ClipboardTool = "auto"
-): string {
+): Promise<Exclude<ClipboardTool, "auto">> {
   const candidates = resolveClipboardCandidates(preferred);
   for (const candidate of candidates) {
     const command = CLIPBOARD_COMMANDS[candidate];
@@ -38,7 +38,7 @@ export function copyTextToClipboard(
       return candidate;
     }
   }
-  userError(
+  throw new TetaUserError(
     "CLIPBOARD_TOOL_UNAVAILABLE",
     "Unable to copy SQL to clipboard. Install one of: wl-copy, xclip, xsel, pbcopy, or clip."
   );

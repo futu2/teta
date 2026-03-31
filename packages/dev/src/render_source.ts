@@ -1,8 +1,8 @@
-import type { SqlOptions } from "../sql.ts";
+import type { SqlOptions } from "@teta/teta";
 import {
   importSourceModule,
-  renderSourceModuleUrl,
   normalizeRenderSourcePath,
+  renderSourceModuleUrl,
   resolveRenderedSqlFromModule,
 } from "./render_source_shared.ts";
 

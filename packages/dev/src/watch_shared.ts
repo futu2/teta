@@ -1,5 +1,4 @@
-import { userError } from "../errors.ts";
-import type { SqlOptions } from "../sql.ts";
+import { TetaUserError, type SqlOptions } from "@teta/teta";
 import type { ClipboardTool } from "./clipboard.ts";
 
 export type WatchQuerySourceOptions = {
@@ -44,7 +43,7 @@ export function resolveWatchQuerySourceOptions(
 ): ResolvedWatchQuerySourceOptions {
   const source = options.source.toString().trim();
   if (!source) {
-    userError("INVALID_TABLE_SOURCE", "watchQuerySourceToClipboard requires a non-empty source path");
+    throw new TetaUserError("INVALID_TABLE_SOURCE", "watchQuerySourceToClipboard requires a non-empty source path");
   }
 
   return {

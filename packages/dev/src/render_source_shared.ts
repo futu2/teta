@@ -1,14 +1,13 @@
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { renderSql, type SqlCompilable, type SqlOptions } from "../sql.ts";
-import { userError } from "../errors.ts";
+import { TetaUserError, toSql, type SqlCompilable, type SqlOptions } from "@teta/teta";
 
 export type QueryLike = SqlCompilable;
 
 export function normalizeRenderSourcePath(source: string): string {
   const sourcePath = source.toString().trim();
   if (!sourcePath) {
-    userError("INVALID_TABLE_SOURCE", "renderSqlFromSource requires a source path");
+    throw new TetaUserError("INVALID_TABLE_SOURCE", "renderSqlFromSource requires a source path");
   }
   return sourcePath;
 }
@@ -34,7 +33,7 @@ export async function resolveRenderedSqlFromModule(
   rendererOptions: SqlOptions = {}
 ): Promise<string> {
   if (!(exportName in importedModule)) {
-    userError("INVALID_TABLE_SOURCE", `Export '${exportName}' not found in ${sourcePath}`);
+    throw new TetaUserError("INVALID_TABLE_SOURCE", `Export '${exportName}' not found in ${sourcePath}`);
   }
 
   let target = importedModule[exportName];
@@ -46,12 +45,12 @@ export async function resolveRenderedSqlFromModule(
     return target;
   }
   if (!isQueryLike(target)) {
-    userError(
+    throw new TetaUserError(
       "INVALID_TABLE_SOURCE",
       `Export '${exportName}' must be a SQL string, Query-like object, or a function returning one`
     );
   }
-  return renderSql(target, rendererOptions);
+  return toSql(target, rendererOptions);
 }
 
 export function isQueryLike(value: unknown): value is QueryLike {

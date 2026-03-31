@@ -1,11 +1,18 @@
 import { describe, expect, test } from "bun:test";
+import { TetaUserError } from "@teta/teta";
 
 import {
   normalizeWatchPaths,
   resolveWatchQuerySourceOptions,
-} from "../src/edsl/dev/watch_shared.ts";
+} from "../src/watch_shared.ts";
 
-describe("watch dev helpers", () => {
+describe("watch option normalization", () => {
+  test("applies the source path when watchPaths is blank", () => {
+    expect(resolveWatchQuerySourceOptions({ source: " queries/user.ts " }).watchPaths).toEqual([
+      "queries/user.ts",
+    ]);
+  });
+
   test("normalizeWatchPaths falls back to source for blank values", () => {
     expect(normalizeWatchPaths("queries/user.ts")).toEqual(["queries/user.ts"]);
     expect(normalizeWatchPaths("queries/user.ts", "   ")).toEqual(["queries/user.ts"]);
@@ -26,5 +33,9 @@ describe("watch dev helpers", () => {
     expect(options.shouldCopy).toBe(true);
     expect(options.runImmediately).toBe(true);
     expect(options.debounceMs).toBe(120);
+  });
+
+  test("rejects blank source paths with a user error", () => {
+    expect(() => resolveWatchQuerySourceOptions({ source: "   " })).toThrow(TetaUserError);
   });
 });
