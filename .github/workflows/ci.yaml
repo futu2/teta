@@ -11,12 +11,42 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v1
         with:
           bun-version: latest
       - name: Install dependencies
         run: bun install --frozen-lockfile
+      - name: Validate package metadata
+        run: |
+          bun -e '
+          import { readFileSync } from "node:fs";
+
+          const readJson = (path) => JSON.parse(readFileSync(path, "utf8"));
+          const assertEqual = (actual, expected, label) => {
+            if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+              throw new Error(`${label} mismatch`);
+            }
+          };
+
+          const tetaPackage = readJson("packages/teta/package.json");
+          const tetaJsr = readJson("packages/teta/jsr.json");
+          assertEqual(tetaPackage.name, tetaJsr.name, "@teta/teta name");
+          assertEqual(tetaPackage.version, tetaJsr.version, "@teta/teta version");
+          assertEqual(tetaPackage.exports, tetaJsr.exports, "@teta/teta exports");
+
+          const devPackage = readJson("packages/dev/package.json");
+          const devJsr = readJson("packages/dev/jsr.json");
+          const devDeno = readJson("packages/dev/deno.json");
+          assertEqual(devPackage.name, devJsr.name, "@teta/dev jsr name");
+          assertEqual(devPackage.version, devJsr.version, "@teta/dev jsr version");
+          assertEqual(devPackage.exports, devJsr.exports, "@teta/dev jsr exports");
+          assertEqual(devPackage.name, devDeno.name, "@teta/dev deno name");
+          assertEqual(devPackage.version, devDeno.version, "@teta/dev deno version");
+          assertEqual(devPackage.exports["."], devDeno.exports, "@teta/dev deno exports");
+
+          console.log("package metadata ok");
+          '
       - name: Run check
         run: bun run check
 
@@ -32,7 +62,7 @@ jobs:
           - node
           - deno
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v1
         with:
           bun-version: latest
@@ -54,7 +84,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v1
         with:
           bun-version: latest
@@ -71,10 +101,13 @@ jobs:
       run:
         working-directory: packages/teta
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v1
         with:
           bun-version: latest
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
       - name: Install dependencies
         run: bun install --frozen-lockfile
       - name: Validate @teta/teta publish bundle
@@ -88,10 +121,13 @@ jobs:
       run:
         working-directory: packages/dev
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v1
         with:
           bun-version: latest
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
       - name: Install dependencies
         run: bun install --frozen-lockfile
       - name: Validate @teta/dev publish bundle

@@ -5,7 +5,39 @@ on:
       - master
 
 jobs:
+  detect-release-changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      teta: ${{ steps.detect.outputs.teta }}
+      dev: ${{ steps.detect.outputs.dev }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - id: detect
+        run: |
+          before="${{ github.event.before }}"
+          if [ "$before" = "0000000000000000000000000000000000000000" ]; then
+            before="$(git rev-list --max-parents=0 HEAD)"
+          fi
+
+          if git diff --quiet "$before" "$GITHUB_SHA" -- packages/teta/package.json packages/teta/jsr.json; then
+            echo "teta=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "teta=true" >> "$GITHUB_OUTPUT"
+          fi
+
+          if git diff --quiet "$before" "$GITHUB_SHA" -- packages/dev/package.json packages/dev/jsr.json packages/dev/deno.json; then
+            echo "dev=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "dev=true" >> "$GITHUB_OUTPUT"
+          fi
+
   publish-teta:
+    needs: detect-release-changes
+    if: needs.detect-release-changes.outputs.teta == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -14,16 +46,21 @@ jobs:
       run:
         working-directory: packages/teta
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v1
         with:
           bun-version: latest
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
       - name: Install deps
         run: bun install --frozen-lockfile
       - name: Publish @teta/teta
         run: bunx jsr publish
 
   publish-dev:
+    needs: detect-release-changes
+    if: needs.detect-release-changes.outputs.dev == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -32,10 +69,13 @@ jobs:
       run:
         working-directory: packages/dev
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v1
         with:
           bun-version: latest
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
       - name: Install deps
         run: bun install --frozen-lockfile
       - name: Publish @teta/dev
