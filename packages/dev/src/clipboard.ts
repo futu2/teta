@@ -1,57 +1,35 @@
-import { spawnSync } from "node:child_process";
 import { TetaUserError } from "@teta/teta";
+import { writeClipboardText } from "./clipboard_client.ts";
 
-export type ClipboardTool =
-  | "auto"
-  | "xclip"
-  | "xsel"
-  | "wl-copy"
-  | "pbcopy"
-  | "clip";
-
-type ClipboardCommand = {
-  command: string;
-  args: string[];
-};
-
-const CLIPBOARD_COMMANDS: Record<Exclude<ClipboardTool, "auto">, ClipboardCommand> = {
-  "wl-copy": { command: "wl-copy", args: [] },
-  xclip: { command: "xclip", args: ["-selection", "clipboard"] },
-  xsel: { command: "xsel", args: ["--clipboard", "--input"] },
-  pbcopy: { command: "pbcopy", args: [] },
-  clip: { command: "clip", args: [] },
-};
+export type ClipboardTool = "auto" | "native";
 
 export async function copyTextToClipboard(
   text: string,
   preferred: ClipboardTool = "auto"
-): Promise<Exclude<ClipboardTool, "auto">> {
-  const candidates = resolveClipboardCandidates(preferred);
-  for (const candidate of candidates) {
-    const command = CLIPBOARD_COMMANDS[candidate];
-    const result = spawnSync(command.command, command.args, {
-      input: text,
-      encoding: "utf8",
-      stdio: ["pipe", "ignore", "pipe"],
-    });
-    if (result.status === 0 && !result.error) {
-      return candidate;
-    }
-  }
-  throw new TetaUserError(
-    "CLIPBOARD_TOOL_UNAVAILABLE",
-    "Unable to copy SQL to clipboard. Install one of: wl-copy, xclip, xsel, pbcopy, or clip."
-  );
+): Promise<ClipboardTool> {
+  return copyTextToClipboardWithWriter(text, preferred, writeClipboardText);
 }
 
-function resolveClipboardCandidates(tool: ClipboardTool): Exclude<ClipboardTool, "auto">[] {
-  if (tool !== "auto") return [tool];
-  switch (process.platform) {
-    case "darwin":
-      return ["pbcopy", "wl-copy", "xclip", "xsel"];
-    case "win32":
-      return ["clip"];
-    default:
-      return ["wl-copy", "xclip", "xsel", "pbcopy", "clip"];
+export async function copyTextToClipboardWithWriter(
+  text: string,
+  preferred: ClipboardTool,
+  writeClipboard: (text: string) => Promise<void>
+): Promise<ClipboardTool> {
+  if (preferred !== "auto" && preferred !== "native") {
+    throw new TetaUserError(
+      "CLIPBOARD_TOOL_UNAVAILABLE",
+      `Unsupported clipboard backend '${preferred}'`
+    );
+  }
+
+  try {
+    await writeClipboard(text);
+    return "native";
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new TetaUserError(
+      "CLIPBOARD_TOOL_UNAVAILABLE",
+      `Unable to copy SQL to clipboard: ${message}`
+    );
   }
 }
