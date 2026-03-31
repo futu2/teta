@@ -1,5 +1,5 @@
 import { pipe } from "remeda";
-import { dateTrunc, desc, take, sort, map, table, t, toSql } from "../../mod.ts";
+import { dateTrunc, desc, take, sort, map, table, t, toSql } from "../../packages/teta/mod.ts";
 
 const events = table("events", {
   id: t.int(),

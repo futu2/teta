@@ -1,5 +1,5 @@
 import { pipe } from "remeda";
-import { desc, eq, filter, take, sort, param, map, t, table, toSqlResult } from "../../mod.ts";
+import { desc, eq, filter, take, sort, param, map, t, table, toSqlResult } from "../../packages/teta/mod.ts";
 
 const orders = table("orders", {
   id: t.bigint(),

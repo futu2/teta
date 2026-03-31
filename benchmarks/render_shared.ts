@@ -16,8 +16,8 @@ import {
   take,
   toSql,
   trim,
-} from "../mod.ts";
-import type { SqlOptions } from "../mod.ts";
+} from "../packages/teta/mod.ts";
+import type { SqlOptions } from "../packages/teta/mod.ts";
 
 export type RenderBenchmarkCase = {
   label: string;

@@ -12,7 +12,7 @@
     "typecheck:repo": "tsc --noEmit -p tsconfig.json",
     "typecheck:teta": "bun run --cwd packages/teta typecheck",
     "typecheck:dev": "bun run --cwd packages/dev typecheck",
-    "check": "bun run check:teta && bun run check:dev",
+    "check": "bun run typecheck:repo && bun run check:teta && bun run check:dev",
     "check:teta": "bun run --cwd packages/teta check",
     "check:dev": "bun run --cwd packages/dev check",
     "test:runtime:bun": "bun run --cwd packages/teta test:runtime:bun",

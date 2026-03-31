@@ -1,4 +1,13 @@
-import { bitLength, characterLength, dateFormat, map, table, t, toSql } from "../../mod.ts";
+import {
+  bitLength,
+  characterLength,
+  dateFormat,
+  map,
+  table,
+  t,
+  toSql,
+  type SqlOptions,
+} from "../../packages/teta/mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -6,7 +15,7 @@ const users = table("users", {
   created_at: t.timestamp(),
 });
 
-const customSqliteRenderer = {
+const customSqliteRenderer: SqlOptions = {
   dialect: {
     name: "sqlite_custom",
     parserDialect: "SQLite",
@@ -22,7 +31,7 @@ const customSqliteRenderer = {
     },
   },
   format: "pretty",
-});
+};
 
 const report = map(users, (user) => ({
   id: user.id,

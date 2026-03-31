@@ -1,5 +1,4 @@
-import { pipe } from "npm:remeda";
-import { eq, filter, map, table, t, toSql } from "../../mod.ts";
+import { eq, filter, map, table, t, toSql } from "../../packages/teta/mod.ts";
 
 const users = table("users", {
   id: t.int(),
@@ -8,14 +7,13 @@ const users = table("users", {
   active: t.boolean(),
 });
 
-const query = pipe(
-  users,
-  filter((user) => eq(user.active, true)),
-  map((user) => ({
+const query = map(
+  filter(users, (user) => eq(user.active, true)),
+  (user) => ({
     id: user.id,
     email: user.email,
     tenant_id: user.tenant_id,
-  }))
+  })
 );
 
 const sql = toSql(query, {
