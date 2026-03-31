@@ -6,7 +6,7 @@ export type ClipboardTool = "auto" | "native";
 export async function copyTextToClipboard(
   text: string,
   preferred: ClipboardTool = "auto"
-): Promise<ClipboardTool> {
+): Promise<"native"> {
   return copyTextToClipboardWithWriter(text, preferred, writeClipboardText);
 }
 
@@ -14,7 +14,7 @@ export async function copyTextToClipboardWithWriter(
   text: string,
   preferred: ClipboardTool,
   writeClipboard: (text: string) => Promise<void>
-): Promise<ClipboardTool> {
+): Promise<"native"> {
   if (preferred !== "auto" && preferred !== "native") {
     throw new TetaUserError(
       "CLIPBOARD_TOOL_UNAVAILABLE",
