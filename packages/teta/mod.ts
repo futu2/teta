@@ -7,7 +7,6 @@ import * as query from "./src/edsl/query.ts";
 import * as expr from "./src/edsl/expr.ts";
 import * as language from "./src/edsl/sql/language.ts";
 import * as errors from "./src/edsl/errors.ts";
-import * as dev from "./src/edsl/dev.ts";
 
 /** Query builder class returned by query roots and stage helpers. */
 export const Query: typeof import("./src/edsl/query.ts").Query = query.Query;
@@ -529,24 +528,3 @@ export type TetaErrorCode = import("./src/edsl/errors.ts").TetaErrorCode;
 
 /** High-level category assigned to a Teta error. */
 export type TetaErrorKind = import("./src/edsl/errors.ts").TetaErrorKind;
-
-/** Clipboard backend names supported by `copyTextToClipboard(...)`. */
-export type ClipboardTool = import("./src/edsl/dev.ts").ClipboardTool;
-
-/** Copies text to the system clipboard using the requested backend when available. */
-export const copyTextToClipboard: typeof import("./src/edsl/dev.ts").copyTextToClipboard = dev.copyTextToClipboard;
-
-/** Module export shapes accepted by `renderSqlFromSource(...)`. */
-export type QueryLike = import("./src/edsl/dev.ts").QueryLike;
-
-/** Loads a source module and renders SQL from one of its exports. */
-export const renderSqlFromSource: typeof import("./src/edsl/dev.ts").renderSqlFromSource = dev.renderSqlFromSource;
-
-/** Controller returned by `watchQuerySourceToClipboard(...)`. */
-export type WatchQueryController = import("./src/edsl/dev.ts").WatchQueryController;
-
-/** Options for watching a source file and re-rendering SQL on change. */
-export type WatchQuerySourceOptions = import("./src/edsl/dev.ts").WatchQuerySourceOptions;
-
-/** Watches source files, re-renders SQL, and optionally copies or writes the result. */
-export const watchQuerySourceToClipboard: typeof import("./src/edsl/dev.ts").watchQuerySourceToClipboard = dev.watchQuerySourceToClipboard;
