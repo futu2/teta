@@ -61,7 +61,7 @@ describe("watch clipboard flow", () => {
   test("routes clipboard load failures to onError during queued runs", async () => {
     const errors: unknown[] = [];
     const logs: string[] = [];
-    const renderSourceSpecifier = new URL("../src/render_source.ts", import.meta.url).href;
+    const watchRenderSpecifier = new URL("../src/watch_render.ts", import.meta.url).href;
     let resolveOnError!: () => void;
     const onErrorCalled = new Promise<void>((resolve) => {
       resolveOnError = resolve;
@@ -75,7 +75,7 @@ describe("watch clipboard flow", () => {
         close: () => {},
       }),
     }));
-    mock.module(renderSourceSpecifier, () => ({
+    mock.module(watchRenderSpecifier, () => ({
       renderSqlFromSource: async () => "SELECT 1",
       renderSqlFromSourceIsolated: () => "SELECT 1",
     }));

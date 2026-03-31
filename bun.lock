@@ -5,6 +5,7 @@
     "": {
       "name": "teta",
       "devDependencies": {
+        "remeda": "^2.33.6",
         "typescript": "^5.9.3",
       },
     },

@@ -4,7 +4,7 @@ import { copyTextToClipboard } from "./clipboard.ts";
 import {
   renderSqlFromSource,
   renderSqlFromSourceIsolated,
-} from "./render_source.ts";
+} from "./watch_render.ts";
 import type { WatchQueryController, WatchQuerySourceOptions } from "./watch_shared.ts";
 import { resolveWatchQuerySourceOptions } from "./watch_shared.ts";
 
