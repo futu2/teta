@@ -1,0 +1,5 @@
+{
+  "imports": {
+    "@teta/teta": "jsr:@teta/teta@^0.4.0"
+  }
+}

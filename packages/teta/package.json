@@ -1,0 +1,30 @@
+{
+  "name": "@teta/teta",
+  "module": "./mod.ts",
+  "version": "0.4.0",
+  "exports": {
+    ".": "./mod.ts"
+  },
+  "types": "./mod.ts",
+  "type": "module",
+  "scripts": {
+    "test": "bun test tests",
+    "test:all": "bun test",
+    "test:runtime:bun": "bun run tests/runtime_smoke.ts",
+    "test:runtime:node": "node --experimental-transform-types tests/runtime_smoke.ts",
+    "test:runtime:deno": "deno run --node-modules-dir=auto tests/runtime_smoke.ts",
+    "bench:render": "bun run ../../benchmarks/render.ts",
+    "bench:render:check": "bun run ../../benchmarks/render_regression.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "check": "bun run test && bun run typecheck"
+  },
+  "devDependencies": {
+    "@duckdb/node-api": "^1.4.4-r.3",
+    "@types/bun": "latest",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "node-sql-parser": "^5.4.0",
+    "remeda": "^2.33.6"
+  }
+}

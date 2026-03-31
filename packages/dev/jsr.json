@@ -1,0 +1,13 @@
+{
+  "name": "@teta/dev",
+  "version": "0.1.0",
+  "description": "Developer utilities for rendering, watching, and copying Teta SQL.",
+  "license": "BSD-2-Clause-Patent",
+  "exports": {
+    ".": "./mod.ts"
+  },
+  "compatibility": {
+    "node": true,
+    "bun": true
+  }
+}

@@ -1,31 +1,24 @@
 {
-  "name": "teta",
-  "module": "./mod.ts",
-  "version": "0.4.0",
-  "exports": {
-    ".": "./mod.ts"
-  },
-  "types": "./mod.ts",
-  "type": "module",
+  "name": "teta-monorepo",
   "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "test": "bun test tests",
-    "test:all": "bun test",
-    "test:runtime:bun": "bun run tests/runtime_smoke.ts",
-    "test:runtime:node": "node --experimental-transform-types tests/runtime_smoke.ts",
-    "test:runtime:deno": "deno run --node-modules-dir=auto tests/runtime_smoke.ts",
-    "bench:render": "bun run benchmarks/render.ts",
-    "bench:render:check": "bun run benchmarks/render_regression.ts",
-    "typecheck": "tsc --noEmit",
-    "check": "bun run test && bun run typecheck"
-  },
-  "devDependencies": {
-    "@duckdb/node-api": "^1.4.4-r.3",
-    "@types/bun": "latest",
-    "typescript": "^5.9.3"
-  },
-  "dependencies": {
-    "remeda": "^2.33.6",
-    "node-sql-parser": "^5.4.0"
+    "test": "bun run test:teta && bun run test:dev",
+    "test:teta": "bun --cwd packages/teta run test",
+    "test:dev": "bun --cwd packages/dev run test",
+    "typecheck": "bun run typecheck:repo && bun run typecheck:teta && bun run typecheck:dev",
+    "typecheck:repo": "tsc --noEmit -p tsconfig.json",
+    "typecheck:teta": "bun --cwd packages/teta run typecheck",
+    "typecheck:dev": "bun --cwd packages/dev run typecheck",
+    "check": "bun run check:teta && bun run check:dev",
+    "check:teta": "bun --cwd packages/teta run check",
+    "check:dev": "bun --cwd packages/dev run check",
+    "test:runtime:bun": "bun --cwd packages/teta run test:runtime:bun",
+    "test:runtime:node": "bun --cwd packages/teta run test:runtime:node",
+    "test:runtime:deno": "bun --cwd packages/teta run test:runtime:deno",
+    "bench:render": "bun --cwd packages/teta run bench:render",
+    "bench:render:check": "bun --cwd packages/teta run bench:render:check"
   }
 }
