@@ -19,7 +19,7 @@ All rendering examples below pass plain `SqlOptions` objects into `toSql(...)` o
 
 ```ts
 import { pipe } from "remeda";
-import { and, asc, desc, eq, filter, gte, take, sort, map, table, t, toSql } from "./mod.ts";
+import { and, asc, desc, eq, filter, gte, take, sort, map, table, t, toSql } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -60,7 +60,7 @@ LIMIT 5
 
 ```ts
 import { pipe } from "remeda";
-import { fold, count, eq, group, leftJoin, sum, table, t, toSql } from "./mod.ts";
+import { fold, count, eq, group, leftJoin, sum, table, t, toSql } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -102,7 +102,7 @@ GROUP BY cte_0_0.id
 ### 3) String concat with template helper
 
 ```ts
-import { f, map, table, t, toSql } from "./mod.ts";
+import { f, map, table, t, toSql } from "@teta/teta";
 
 const names = table("names", {
   id: t.int(),
@@ -133,7 +133,7 @@ For a deeper walkthrough of public EDSL types, see `doc/TYPES.md`.
 ### Schema inference from `table(...)`
 
 ```ts
-import { table, t } from "./mod.ts";
+import { table, t } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -154,7 +154,7 @@ const users = table("users", {
 ### `map(...)` changes the row shape
 
 ```ts
-import { map } from "./mod.ts";
+import { map } from "@teta/teta";
 
 const labels = map(users, (user) => ({
   user_id: user.id,
@@ -170,7 +170,7 @@ const labels = map(users, (user) => ({
 ### `join(...)` and `unnest(...)` refine types
 
 ```ts
-import { eq, leftJoin, join, table, t, unnest } from "./mod.ts";
+import { eq, leftJoin, join, table, t, unnest } from "@teta/teta";
 
 const orders = table("orders", {
   order_id: t.int(),
@@ -215,7 +215,7 @@ const exploded = unnest(usersWithTags, (user) => user.tags, {
 ## Schema-qualified tables
 
 ```ts
-import { table, t } from "./mod.ts";
+import { table, t } from "@teta/teta";
 
 const users = table("analytics.users", {
   id: t.int(),
@@ -242,7 +242,7 @@ more literally with staged CTEs.
 
 ```ts
 import { pipe } from "remeda";
-import { add, filter, gt, map, table, t, toSql } from "./mod.ts";
+import { add, filter, gt, map, table, t, toSql } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -271,7 +271,7 @@ Use `explain(query, ...)` when you want to inspect logical stages without guessi
 from the final SQL string alone.
 
 ```ts
-import { explain } from "./mod.ts";
+import { explain } from "@teta/teta";
 
 const info = explain(q, {
   dialect: "postgresql",
@@ -296,7 +296,7 @@ If you already use `remeda` in your app, it pairs nicely with Teta's object-shap
 
 ```ts
 import { mapKeys, merge, omit, pick, pipe } from "remeda";
-import { replace, map, table, t, upper } from "./mod.ts";
+import { replace, map, table, t, upper } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -346,7 +346,7 @@ Using string concatenation like `"user_" + key` usually widens to `string`, so d
 
 ```ts
 import { pipe } from "remeda";
-import { eq, leftJoin, map, table, t, toSql } from "./mod.ts";
+import { eq, leftJoin, map, table, t, toSql } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -381,7 +381,7 @@ Use `join(..., { lateral: true })` when the right-hand query needs to reference 
 
 ```ts
 import { pipe } from "remeda";
-import { eq, filter, join, lit, map, table, t, toSql } from "./mod.ts";
+import { eq, filter, join, lit, map, table, t, toSql } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -421,7 +421,7 @@ For `sqlite`, the keyword is omitted during SQL rendering because correlated sub
 Use a custom dialect config when runtime dialect and parser dialect differ:
 
 ```ts
-import { map, table, t, toSql } from "./mod.ts";
+import { map, table, t, toSql } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -469,7 +469,7 @@ Teta language spec categories:
 The expression API is function-first, so query code stays friendly to pipelines and ordinary function composition.
 
 ```ts
-import { arrayContains, arrayJoin, arrayLength, cast, dateDiff, dateFormat, dateParse, dateTrunc, regexLike, regexReplace, map, table, t, toSql, toUnixTime } from "./mod.ts";
+import { arrayContains, arrayJoin, arrayLength, cast, dateDiff, dateFormat, dateParse, dateTrunc, regexLike, regexReplace, map, table, t, toSql, toUnixTime } from "@teta/teta";
 
 const sessions = table("sessions", {
   id: t.int(),
@@ -498,7 +498,7 @@ console.log(toSql(q, { dialect: "postgresql", format: "pretty" }));
 You can customize a dialect so unsupported direct functions map to equivalents or fallbacks:
 
 ```ts
-import { bitLength, dateFormat, map, table, t, toSql } from "./mod.ts";
+import { bitLength, dateFormat, map, table, t, toSql } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -538,7 +538,7 @@ There is no separate `groupBy` stage.
 
 ```ts
 import { pipe } from "remeda";
-import { fold, count, filter, group, gt, sum, table, t, toSql } from "./mod.ts";
+import { fold, count, filter, group, gt, sum, table, t, toSql } from "@teta/teta";
 
 const orders = table("orders", {
   id: t.int(),
@@ -562,7 +562,7 @@ console.log(toSql(q, {});
 ### Window function
 
 ```ts
-import { asc, desc, lag, lead, ntile, over, rank, rowNumber, map, sumOver, table, t, toSql } from "./mod.ts";
+import { asc, desc, lag, lead, ntile, over, rank, rowNumber, map, sumOver, table, t, toSql } from "@teta/teta";
 
 const orders = table("orders", {
   id: t.int(),
@@ -594,7 +594,7 @@ console.log(toSql(q, { dialect: "postgresql", format: "pretty" }));
 ### Custom SQL functions (UDF)
 
 ```ts
-import { desc, fn, over, map, table, t, toSql, windowFn } from "./mod.ts";
+import { desc, fn, over, map, table, t, toSql, windowFn } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -613,7 +613,7 @@ console.log(toSql(q, { dialect: "postgresql", format: "pretty" }));
 ### SQL92 string helpers
 
 ```ts
-import { charLength, lower, position, regexExtract, regexLike, regexReplace, map, substring, table, t, toSql, trim, upper } from "./mod.ts";
+import { charLength, lower, position, regexExtract, regexLike, regexReplace, map, substring, table, t, toSql, trim, upper } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -639,7 +639,7 @@ console.log(toSql(q, { dialect: "postgresql", format: "pretty" }));
 ### Array helpers
 
 ```ts
-import { arrayAppend, arrayContains, arrayJoin, arrayLength, arrayPosition, arraySlice, map, table, t, toSql } from "./mod.ts";
+import { arrayAppend, arrayContains, arrayJoin, arrayLength, arrayPosition, arraySlice, map, table, t, toSql } from "@teta/teta";
 
 const sessions = table("sessions", {
   id: t.int(),
@@ -663,7 +663,7 @@ console.log(toSql(q, { dialect: "postgresql", format: "pretty" }));
 
 ```ts
 import { pipe } from "remeda";
-import { filter, isIn, map, table, t } from "./mod.ts";
+import { filter, isIn, map, table, t } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -680,7 +680,7 @@ const q = pipe(
 ### SQL standard date/time helpers
 
 ```ts
-import { currentDate, currentTimestamp, dateAdd, dateDiff, dateFormat, dateLiteral, dateParse, dateTrunc, month, map, table, t, timestampLiteral, toUnixTime, year } from "./mod.ts";
+import { currentDate, currentTimestamp, dateAdd, dateDiff, dateFormat, dateLiteral, dateParse, dateTrunc, month, map, table, t, timestampLiteral, toUnixTime, year } from "@teta/teta";
 
 const posts = table("posts", {
   id: t.int(),
@@ -711,7 +711,7 @@ Use `cast(expr, type)` to emit `CAST(expr AS type)`.
 Use `toDate(expr)` as a convenience when you want `CAST(expr AS DATE)`.
 
 ```ts
-import { cast, map, table, t, toDate } from "./mod.ts";
+import { cast, map, table, t, toDate } from "@teta/teta";
 
 const orders = table("orders", {
   id: t.int(),
@@ -727,7 +727,7 @@ const q = map(orders, (o) => ({
 
 ```ts
 import { pipe } from "remeda";
-import { cast, filter, gt, map, table, t } from "./mod.ts";
+import { cast, filter, gt, map, table, t } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -749,7 +749,7 @@ const q = pipe(
 ### CASE WHEN
 
 ```ts
-import { caseWhen, lt, map, table, t, when } from "./mod.ts";
+import { caseWhen, lt, map, table, t, when } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -769,7 +769,7 @@ const q = map(users, (u) => ({
 
 ```ts
 import { pipe } from "remeda";
-import { eq, filter, map, table, t, unionAll } from "./mod.ts";
+import { eq, filter, map, table, t, unionAll } from "@teta/teta";
 
 const activeUsers = pipe(
   table("users", {
@@ -798,7 +798,7 @@ const allUsers = unionAll(activeUsers, inactiveUsers);
 
 ```ts
 import { pick, pipe } from "remeda";
-import { eq, filter, isNull, join, loop, map, table, t } from "./mod.ts";
+import { eq, filter, isNull, join, loop, map, table, t } from "@teta/teta";
 
 const treeCols = ["id", "name", "manager_id"] as const;
 

@@ -1,4 +1,4 @@
-import { eq, filter, map, table, t, toSql } from "../../packages/teta/mod.ts";
+import { eq, filter, map, table, t, toSql } from "jsr:@teta/teta";
 
 const users = table("users", {
   id: t.int(),

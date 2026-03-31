@@ -1,6 +1,6 @@
 # Teta Cheatsheet
 
-Quick reference for the public API exported from `@teta/teta` (plus dev helpers from `@teta/dev`).
+Quick reference for the public API exported from `@teta/teta`.
 
 Teta is function-first. Query helpers are dual-mode, so you can write either `map(users, fn)`
 or `pipe(users, map(fn))`. In practice, the examples here prefer Remeda's `pipe(...)`.
@@ -10,7 +10,6 @@ import { pick, pipe } from "remeda";
 
 import { fold, and, arrayAppend, arrayContains, arrayJoin, arrayLength, arrayPosition, arraySlice, asc, avg, bitLength, cast, charLength, characterLength, coalesce, concat, count, currentDate, currentTimestamp, dateAdd, dateDiff, dateFormat, dateLiteral, dateParse, dateTrunc, day, desc, eq, explain, ExprRef, f, filter, fn, fromUnixTime, group, gt, gte, hour, isIn, isNotNull, isNull, join, lag, lead, left, like, take, loop, lower, lt, lte, max, min, minute, mod, month, mul, ne, not, ntile, nullIf, octetLength, sort, over, overlay, param, percentRank, position, pow, Query, rank, regexExtract, regexLike, regexReplace, replace, reverse, right, round, rowNumber, rpad, map, shape, sqrt, sub, substring, sum, sumOver, t, table, timestampLiteral, toAst, toDate, toFloat, toIR, toInt, toSql, toSqlResult, toUnixTime, trim, union, unionAll, unnest, upper, when, windowFn, year } from "@teta/teta";
 
-import { copyTextToClipboard, renderSqlFromSource, watchQuerySourceToClipboard } from "@teta/dev";
 ```
 
 ## 1) Query roots and composition
@@ -352,68 +351,10 @@ const groupedUsers = fold(users, (user) => ({
 }));
 ```
 
-## 7) Dev utilities
-Import these from `@teta/dev` (not `@teta/teta`).
+## 7) Dev package
 
-### `copyTextToClipboard(text, preferred = "auto")`
-Copy SQL to the clipboard using one of:
-- `"auto"`, `"wl-copy"`, `"xclip"`, `"xsel"`, `"pbcopy"`, `"clip"`
-
-Returns the clipboard tool actually used.
-
-### `renderSqlFromSource(source, exportName = "query", rendererOptions = {})`
-Load a module and render SQL from:
-- a query-like object
-- a SQL string export
-- a function returning either of the above
-
-### `watchQuerySourceToClipboard(options)`
-Watch source files, re-render SQL on change, optionally write an output file and/or copy to the clipboard.
-
-Example:
-
-```ts
-// queries/users_report.ts
-import { eq, filter, map, table, t } from "@teta/teta";
-
-const users = table("users", {
-  id: t.int(),
-  email: t.string(),
-  active: t.boolean(),
-});
-
-export const query = map(
-  filter(users, (user) => eq(user.active, true)),
-  (user) => ({
-    id: user.id,
-    email: user.email,
-  })
-);
-```
-
-```ts
-// scripts/watch_users_report.ts
-import { watchQuerySourceToClipboard } from "@teta/dev";
-
-const watcher = await watchQuerySourceToClipboard({
-  source: "./queries/users_report.ts",
-  watchPaths: ["./queries"],
-  outputFile: "./tmp/users_report.sql",
-  copyToClipboard: true,
-  rendererOptions: {
-    dialect: "postgresql",
-    format: "pretty",
-  },
-});
-
-process.on("SIGINT", () => watcher.stop());
-```
-
-Saving `queries/users_report.ts` re-renders the SQL, writes `./tmp/users_report.sql`, and copies the latest SQL to your clipboard.
-
-Returns a controller with:
-- `stop()`
-- `runOnce()`
+Source-module rendering, file watching, and clipboard helpers now live in `@teta/dev`.
+See `packages/dev/README.md` for setup and usage.
 
 ## 8) Key exported types
 

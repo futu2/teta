@@ -7,7 +7,7 @@ import {
   t,
   toSql,
   type SqlOptions,
-} from "../../packages/teta/mod.ts";
+} from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
