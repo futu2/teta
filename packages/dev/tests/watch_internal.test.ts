@@ -62,6 +62,10 @@ describe("watch clipboard flow", () => {
     const errors: unknown[] = [];
     const logs: string[] = [];
     const renderSourceSpecifier = new URL("../src/render_source.ts", import.meta.url).href;
+    let resolveOnError!: () => void;
+    const onErrorCalled = new Promise<void>((resolve) => {
+      resolveOnError = resolve;
+    });
 
     mock.module("@mariozechner/clipboard", () => {
       throw new Error("native load failed");
@@ -83,11 +87,19 @@ describe("watch clipboard flow", () => {
     const controller = await watchQuerySourceToClipboard({
       source: "queries/user.ts",
       runImmediately: true,
-      onError: (error: unknown) => errors.push(error),
+      onError: (error: unknown) => {
+        errors.push(error);
+        resolveOnError();
+      },
       log: (message: string) => logs.push(message),
     });
 
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    await Promise.race([
+      onErrorCalled,
+      Bun.sleep(1000).then(() => {
+        throw new Error("Timed out waiting for watch onError callback");
+      }),
+    ]);
     controller.stop();
 
     expect(errors).toHaveLength(1);
