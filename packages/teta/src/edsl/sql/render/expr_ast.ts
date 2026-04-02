@@ -51,8 +51,8 @@ export function exprNodeToAst(
       const binaryExpr: BinaryExprAst = {
         type: "binary_expr",
         operator: expr.op,
-        left: exprNodeToAst(expr.left, renderContext),
-        right: exprNodeToAst(expr.right, renderContext),
+        left: renderBinaryOperand(expr.left, expr.op, renderContext),
+        right: renderBinaryOperand(expr.right, expr.op, renderContext),
       };
       return binaryExpr;
     }
@@ -79,7 +79,7 @@ export function exprNodeToAst(
       return aggregateExpr;
     }
     case "group":
-      return exprNodeToAst(expr.expr, renderContext);
+      return parenthesizeAst(exprNodeToAst(expr.expr, renderContext));
     case "extract": {
       const extractExpr: ExtractAst = {
         type: "extract",
@@ -118,4 +118,72 @@ export function exprNodeToAst(
 
 function assertNever(value: never): never {
   internalError("INTERNAL_UNEXPECTED_EXPRESSION_NODE", `Unexpected expression node: ${JSON.stringify(value)}`);
+}
+
+function renderBinaryOperand(
+  expr: ExprNode<unknown>,
+  parentOp: BinaryExprAst["operator"],
+  renderContext: SqlRenderContext | null
+): ParserExprAst {
+  const ast = exprNodeToAst(expr, renderContext);
+  const normalized = unwrapGroups(expr);
+  if (normalized.kind === "binary" && binaryPrecedence(normalized.op) < binaryPrecedence(parentOp)) {
+    return parenthesizeAst(ast);
+  }
+  return ast;
+}
+
+function parenthesizeAst(ast: ParserExprAst): ParserExprAst {
+  switch (ast.type) {
+    case "binary_expr":
+      return {
+        ...ast,
+        parentheses: true,
+      };
+    case "expr_list":
+      return {
+        ...ast,
+        parentheses: true,
+      };
+    default:
+      return ast;
+  }
+}
+
+function unwrapGroups(expr: ExprNode<unknown>): ExprNode<unknown> {
+  let current = expr;
+  while (current.kind === "group") {
+    current = current.expr;
+  }
+  return current;
+}
+
+function binaryPrecedence(op: BinaryExprAst["operator"]): number {
+  switch (op) {
+    case "OR":
+      return 1;
+    case "AND":
+      return 2;
+    case "=":
+    case "!=":
+    case "<":
+    case "<=":
+    case ">":
+    case ">=":
+    case "LIKE":
+    case "IS":
+    case "IS NOT":
+    case "IN":
+      return 3;
+    case "||":
+      return 4;
+    case "+":
+    case "-":
+      return 5;
+    case "*":
+    case "/":
+      return 6;
+    default:
+      return 0;
+  }
 }

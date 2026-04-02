@@ -21,6 +21,14 @@ describe("toSql(query, options)", () => {
         })), (row) => eq(row.normalized_name, "Ada_Lovelace"));
         expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe(USERS_SELECT_FILTER_POSTGRES_COMPACT);
     });
+    test("wraps earlier disjunctions when chained filters are merged", () => {
+        const users = table("users", {
+            id: t.int(),
+            active: t.boolean(),
+        });
+        const query = filter(filter(users, (user) => or(eq(user.id, 1), eq(user.id, 2))), (user) => eq(user.active, true));
+        expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe("SELECT users_0.id AS id, users_0.active AS active FROM users AS users_0 WHERE (users_0.id = 1 OR users_0.id = 2) AND users_0.active = TRUE");
+    });
     test("renders a lateral join through join options", () => {
         const users = table("users", {
             id: t.int(),

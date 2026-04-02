@@ -1,9 +1,12 @@
 import { describe, expect, test } from "bun:test";
+import { fileURLToPath } from "node:url";
 import ts from "typescript";
+
+const MOD_PATH = fileURLToPath(new URL("../mod.ts", import.meta.url));
 
 function getModSourceFile(): ts.SourceFile {
   const program = ts.createProgram({
-    rootNames: ["mod.ts"],
+    rootNames: [MOD_PATH],
     options: {
       allowImportingTsExtensions: true,
       module: ts.ModuleKind.ESNext,
@@ -12,7 +15,7 @@ function getModSourceFile(): ts.SourceFile {
     },
   });
 
-  const sourceFile = program.getSourceFile("mod.ts");
+  const sourceFile = program.getSourceFile(MOD_PATH);
   if (!sourceFile) {
     throw new Error("Could not load mod.ts");
   }
