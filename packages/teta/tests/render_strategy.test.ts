@@ -24,8 +24,8 @@ describe("render strategy", () => {
             format: "compact",
             renderStrategy: "readable",
         });
-        expect(sql).toContain("WITH cte_0 AS");
-        expect(sql).toContain("cte_1 AS");
+        expect(sql).toContain("WITH cte_0(id, active) AS");
+        expect(sql).toContain("cte_1(id) AS");
         expect(sql).toContain("LIMIT 1");
     });
 });

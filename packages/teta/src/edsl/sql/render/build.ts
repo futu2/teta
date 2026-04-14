@@ -3,12 +3,11 @@ import type { QueryDialect, SqlRenderStrategy } from "../types.ts";
 import { generatedCteName, type GeneratedCteName, type ScopeId, type Source, type SqlIdentifier, type Stage } from "../../core/types.ts";
 import { columnNamesToIdentifierMap } from "../../query/utils.ts";
 import type { ScopeBindings, SelectAst } from "./types.ts";
-import { toParserSelect } from "./ast.ts";
+import { buildNamedCte } from "./cte.ts";
 import { getDefaultDialect } from "../dialect.ts";
 import { compileSourceRef, hoistJoinSubquery, type CompileSourceRef } from "./source.ts";
 import {
   advanceStagePlanningState,
-  nextStageColumnIdentifiers,
   type StagePlanningState,
 } from "./planner.ts";
 import { buildBaseSelectAst } from "./segment.ts";
@@ -78,15 +77,17 @@ export function buildPipelineAst(
       if (index >= stages.length) {
         return { ast: stageAst, ctes };
       }
+      const nextPlan = advanceStagePlanningState(stage, currentPlan);
       current = buildIntermediateSourceRef(
         ctes,
         ctePrefix,
         index - 1,
         stageAst,
-        nextStageColumnIdentifiers(stage, currentPlan.columnIdentifiers),
+        nextPlan.columnNames,
+        nextPlan.columnIdentifiers,
         allowIntermediateCtes
       );
-      currentPlan = advanceStagePlanningState(stage, currentPlan);
+      currentPlan = nextPlan;
       continue;
     }
 
@@ -109,6 +110,7 @@ export function buildPipelineAst(
         ctePrefix,
         index - 1,
         fused.ast,
+        fused.output.columnNames,
         fused.output.columnIdentifiers,
         allowIntermediateCtes
       );
@@ -125,15 +127,17 @@ export function buildPipelineAst(
     if (index >= stages.length) {
       return { ast: stageAst, ctes };
     }
+    const nextPlan = advanceStagePlanningState(stage, currentPlan);
     current = buildIntermediateSourceRef(
       ctes,
       ctePrefix,
       index - 1,
       stageAst,
-      nextStageColumnIdentifiers(stage, currentPlan.columnIdentifiers),
+      nextPlan.columnNames,
+      nextPlan.columnIdentifiers,
       allowIntermediateCtes
     );
-    currentPlan = advanceStagePlanningState(stage, currentPlan);
+    currentPlan = nextPlan;
   }
 
   internalError("INTERNAL_BUILD_PIPELINE_FAILED", "Internal error: buildPipelineAst did not produce a final AST");
@@ -143,17 +147,11 @@ function appendIntermediateCte(
   ctes: With[],
   ctePrefix: string,
   stageIndex: number,
-  ast: SelectAst
+  ast: SelectAst,
+  columnNames: readonly string[]
 ): GeneratedCteName {
   const name = generatedCteName(ctePrefix, "cte", stageIndex);
-  ctes.push({
-    name: { value: name },
-    stmt: {
-      ast: toParserSelect(ast),
-      tableList: [],
-      columnList: [],
-    },
-  });
+  ctes.push(buildNamedCte(name, ast, columnNames));
   return name;
 }
 
@@ -162,6 +160,7 @@ function buildIntermediateSourceRef(
   ctePrefix: string,
   stageIndex: number,
   ast: SelectAst,
+  columnNames: readonly string[],
   columnIdentifiers: Readonly<Record<string, SqlIdentifier>>,
   allowIntermediateCtes: boolean
 ): CompileSourceRef {
@@ -176,7 +175,7 @@ function buildIntermediateSourceRef(
 
   return {
     kind: "cte",
-    name: appendIntermediateCte(ctes, ctePrefix, stageIndex, ast),
+    name: appendIntermediateCte(ctes, ctePrefix, stageIndex, ast, columnNames),
     columnIdentifiers,
   };
 }
