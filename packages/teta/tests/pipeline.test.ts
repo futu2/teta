@@ -34,6 +34,7 @@ describe("pipeline render pipeline", () => {
         }) as any;
         expect(ast.with).toHaveLength(2);
         expect(ast.with[0].name.value).toBe("seed");
+        expect(ast.with[0].columns?.map((column: any) => column.column.expr.value)).toEqual(["id"]);
         expect(ast.with[1].name.value).toBe("test_cte_0");
     });
 });

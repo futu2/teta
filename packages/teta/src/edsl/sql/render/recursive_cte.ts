@@ -2,8 +2,7 @@ import type { With } from "node-sql-parser";
 import type { CteSpec, InternalCteName } from "../../core/types.ts";
 import { internalError, userError } from "../../errors.ts";
 import type { QueryDialect } from "../types.ts";
-import type { ColumnRefAst } from "./types.ts";
-import { toParserSelect } from "./ast.ts";
+import { buildNamedCte } from "./cte.ts";
 import { buildPipelineAst } from "./build.ts";
 import { getDefaultDialect } from "../dialect.ts";
 import { getSqlRenderContext } from "./render.ts";
@@ -28,13 +27,7 @@ export function buildRecursiveCte(
   const stepAst = compileLoopPart(step, "step", dialect);
   const unionAst = attachUnion(baseAst, stepAst, "union all");
   return {
-    name: { value: renderedName },
-    stmt: {
-      ast: toParserSelect(unionAst),
-      tableList: [],
-      columnList: [],
-    },
-    columns: columnNames.map(toCteColumnRef),
+    ...buildNamedCte(renderedName, unionAst, columnNames),
     recursive: true,
   } as With & { recursive: boolean };
 }
@@ -57,32 +50,11 @@ export function materializeCte(cte: CteSpec, dialect: QueryDialect): With {
       );
       const ast = compiled.ast;
       ast.with = compiled.ctes.length ? compiled.ctes : null;
-      return {
-        name: { value: renderedName },
-        stmt: {
-          ast: toParserSelect(ast),
-          tableList: [],
-          columnList: [],
-        },
-      };
+      return buildNamedCte(renderedName, ast, cte.query.columnNames);
     }
     default:
       return assertNever(cte);
   }
-}
-
-function toCteColumnRef(name: string): ColumnRefAst {
-  return {
-    type: "column_ref",
-    table: null,
-    column: {
-      expr: {
-        type: "default",
-        value: name,
-      },
-    },
-    collate: null,
-  };
 }
 
 function assertNever(value: never): never {
