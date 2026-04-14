@@ -2,8 +2,8 @@ import type { With } from "node-sql-parser";
 import { generatedCteName, type GeneratedCteName, type JoinSource, type Stage } from "../../core/types.ts";
 import type { QueryDialect } from "../types.ts";
 import type { SelectAst } from "./types.ts";
-import { toParserSelect } from "./ast.ts";
 import { buildPipelineAst } from "./build.ts";
+import { buildNamedCte } from "./cte.ts";
 import { getDefaultDialect } from "../dialect.ts";
 
 export function hoistJoinSubquery(
@@ -26,14 +26,7 @@ export function hoistJoinSubquery(
   }
 
   const cteName: GeneratedCteName = generatedCteName(ctePrefix, "join", ctes.length);
-  ctes.push({
-    name: { value: cteName },
-    stmt: {
-      ast: toParserSelect(subqueryAst),
-      tableList: [],
-      columnList: [],
-    },
-  });
+  ctes.push(buildNamedCte(cteName, subqueryAst, stage.source.query.columnNames));
 
   return {
     ...stage,

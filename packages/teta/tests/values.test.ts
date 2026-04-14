@@ -60,7 +60,7 @@ describe("values(query root)", () => {
     );
 
     expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe(
-      "WITH join_0 AS (SELECT values_0.user_id, values_0.label FROM (SELECT 1 AS user_id, 'vip' AS label UNION ALL SELECT 2 AS user_id, 'staff' AS label) AS values_0) SELECT users_0.id, users_0.name, values_1.label FROM users AS users_0 INNER JOIN join_0 AS values_1 ON users_0.id = values_1.user_id"
+      "WITH join_0(user_id, label) AS (SELECT values_0.user_id, values_0.label FROM (SELECT 1 AS user_id, 'vip' AS label UNION ALL SELECT 2 AS user_id, 'staff' AS label) AS values_0) SELECT users_0.id, users_0.name, values_1.label FROM users AS users_0 INNER JOIN join_0 AS values_1 ON users_0.id = values_1.user_id"
     );
   });
 });

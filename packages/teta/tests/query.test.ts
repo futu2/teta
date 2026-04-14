@@ -79,7 +79,7 @@ describe("toSql(query, options)", () => {
             total: order.total,
         })), (user, order) => eq(user.id, order.user_id));
         const sql = toSql(query, { dialect: "postgresql", format: "compact" });
-        expect(sql).toContain("WITH join_0 AS (SELECT");
+        expect(sql).toContain("WITH join_0(user_id, total) AS (SELECT");
         expect(sql).toContain("JOIN join_0 AS");
         expect(sql).not.toContain("JOIN (SELECT");
     });
