@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { Parser } from "node-sql-parser";
 import { omit, pick } from "remeda";
-import { lit, table, t, filter, innerJoin, join, leftJoin, map, toAst, toSql, asc, bitLength, characterLength, eq, gt, replace, rowNumber, upper, sort, over, and, take, not, or, group, unnest } from "../mod.ts";
+import { lit, table, t, filter, innerJoin, join, leftJoin, map, toAst, toSql, asc, bitLength, characterLength, eq, gt, replace, rowNumber, upper, sort, over, and, take, not, or, group, unnest, dropOverlapLeft, usingCols } from "../mod.ts";
 import { USER_PIPELINE_POSTGRES_COMPACT, USER_PIPELINE_POSTGRES_PRETTY, USERS_NAME_LENGTH_SQLITE_COMPACT, EMPLOYEES_SELF_JOIN_POSTGRES_COMPACT, USERS_ORDERS_LEFT_JOIN_SELECT_POSTGRES_COMPACT, USERS_SELECT_FILTER_POSTGRES_COMPACT, ANALYTICS_EVENTS_SELECT_POSTGRES_COMPACT, QUOTED_ANALYTICS_EVENTS_SELECT_POSTGRES_COMPACT, QUOTED_ANALYTICS_EVENTS_SELECT_BIGQUERY_COMPACT, QUOTED_USERS_ALIAS_SELECT_POSTGRES_COMPACT, QUOTED_USERS_PROJECTED_ALIAS_BIGQUERY_COMPACT, QUOTED_ROW_NUMBER_ALIAS_FILTER_POSTGRES_COMPACT, ORDERS_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT, ORDERS_ROW_NUMBER_FILTER_POSTGRES_COMPACT, ORDERS_ROW_NUMBER_FILTER_ORDER_LIMIT_POSTGRES_COMPACT, ORDERS_TOTAL_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT, ORDERS_TOTAL_ROW_NUMBER_FILTER_POSTGRES_COMPACT, ORDERS_TOTAL_SHARED_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT, ORDERS_TOTAL_SHARED_ROW_NUMBER_FILTER_POSTGRES_COMPACT, ORDERS_TOTAL_NOT_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT, ORDERS_TOTAL_NOT_ROW_NUMBER_FILTER_POSTGRES_COMPACT, ORDERS_SHARED_DISJUNCTION_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT } from "./helpers/expected-sql.ts";
 import { buildUserPipelineQuery, createOrdersTable, createUsersTable } from "./helpers/fixtures.ts";
 describe("toSql(query, options)", () => {
@@ -100,6 +100,17 @@ describe("toSql(query, options)", () => {
             manager_name: manager.name,
         }));
         expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe(EMPLOYEES_SELF_JOIN_POSTGRES_COMPACT);
+    });
+    test("renders join with usingCols helper and dropOverlapLeft merge", () => {
+        const users = table("users", {
+            id: t.int(),
+        });
+        const profiles = table("profiles", {
+            id: t.int(),
+            bio: t.string(),
+        });
+        const query = join(users, profiles, usingCols("id"), dropOverlapLeft());
+        expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe("SELECT profiles_1.id AS id, profiles_1.bio AS bio FROM users AS users_0 INNER JOIN profiles AS profiles_1 ON users_0.id = profiles_1.id");
     });
     test("renders a compact postgres pipeline", () => {
         const query = buildUserPipelineQuery();

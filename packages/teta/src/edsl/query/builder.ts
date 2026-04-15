@@ -906,9 +906,18 @@ function parseJoinInvocation(args: unknown[]):
       merge: unknown;
       options: unknown;
     } {
-  const isDataFirst =
-    args[0] instanceof Query &&
-    (args.length >= 4 || (args.length === 3 && typeof args[2] === "function"));
+  const isDataFirst = (() => {
+    if (!(args[0] instanceof Query)) return false;
+    if (args.length >= 4) return true;
+    if (args.length !== 3) return false;
+
+    const [, second, third] = args;
+    if (second instanceof Query) return true;
+    if (typeof second !== "function" || typeof third !== "function") return false;
+
+    // For 3-arg invocations, two-parameter second callbacks are join predicates (curried form).
+    return second.length <= 1;
+  })();
 
   if (isDataFirst) {
     const [left, right, on, maybeMerge, maybeOptions] = args;

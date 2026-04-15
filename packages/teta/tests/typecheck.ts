@@ -1,6 +1,6 @@
 import { mapKeys, omit, pick, pipe } from "remeda";
 import type { ExprRef, SqlBigInt, SqlBytes, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlUuid, } from "../mod.ts";
-import { filter, fullJoin, innerJoin, join, leftJoin, rightJoin, take, sort, param, map, table, t, fold, asc, desc, eq, gt, upper, add, coalesce, count, group, loop, sum, and, sub, caseWhen, when, mapShape, groupShape, lt, unnest, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight } from "../mod.ts";
+import { filter, fullJoin, innerJoin, join, leftJoin, rightJoin, take, sort, param, map, table, t, fold, asc, desc, eq, gt, upper, add, coalesce, count, group, loop, sum, and, sub, caseWhen, when, mapShape, groupShape, lt, unnest, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq } from "../mod.ts";
 type Equal<A, B> = ((<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false);
 type Expect<T extends true> = T;
 type ExprType<TExpr> = TExpr extends ExprRef<infer TValue> ? TValue : never;
@@ -53,6 +53,12 @@ const allSuffixedLeft = rightJoin(users, orders, (user, order) => eq(user.id, or
 const allSuffixedRight = fullJoin(users, orders, (user, order) => eq(user.id, order.user_id), suffixAllRight("_order"));
 const droppedOverlapLeft = innerJoin(users, profileRows, (user, profile) => eq(user.id, profile.id), dropOverlapLeft());
 const droppedOverlapRight = innerJoin(users, profileRows, (user, profile) => eq(user.id, profile.id), dropOverlapRight());
+const usingJoin = join(users, profileRows, usingCols("id"), dropOverlapLeft());
+const mappedJoin = leftJoin(users, table("profiles_mapped", {
+    id: t.int(),
+    user_id: t.int(),
+    bio: t.string(),
+}), onEq({ id: "user_id" }), prefixOverlapLeft("left_"));
 const filteredUsers = filter(users, (user: typeof users.columns) => gt(user.id, 0));
 const projectedUsers = map(filteredUsers, (user: typeof filteredUsers.columns) => ({
     id: user.id,
@@ -171,6 +177,10 @@ type _AllSuffixedLeftId = Expect<Equal<ExprType<typeof allSuffixedLeft.columns.i
 type _AllSuffixedRightTotal = Expect<Equal<ExprType<typeof allSuffixedRight.columns.total_order>, SqlFloat | null>>;
 type _DroppedOverlapLeftId = Expect<Equal<ExprType<typeof droppedOverlapLeft.columns.id>, number>>;
 type _DroppedOverlapRightId = Expect<Equal<ExprType<typeof droppedOverlapRight.columns.id>, SqlInt>>;
+type _UsingJoinId = Expect<Equal<ExprType<typeof usingJoin.columns.id>, number>>;
+type _UsingJoinBio = Expect<Equal<ExprType<typeof usingJoin.columns.bio>, string>>;
+type _MappedJoinLeftId = Expect<Equal<ExprType<typeof mappedJoin.columns.left_id>, SqlInt>>;
+type _MappedJoinBio = Expect<Equal<ExprType<typeof mappedJoin.columns.bio>, string | null>>;
 type _ProjectedWithQuotedKey = Expect<Equal<ExprType<typeof projectedWithQuotedKey.columns["User Id"]>, SqlInt>>;
 type _AggregatedWithQuotedKey = Expect<Equal<ExprType<typeof aggregatedWithQuotedKey.columns["Total Spend"]>, SqlFloat>>;
 type _AggregatedTotals = Expect<Equal<ExprType<typeof aggregatedTotals.columns.totals>, SqlFloat[]>>;
@@ -211,6 +221,8 @@ void allSuffixedLeft;
 void allSuffixedRight;
 void droppedOverlapLeft;
 void droppedOverlapRight;
+void usingJoin;
+void mappedJoin;
 void projectedWithQuotedKey;
 void aggregatedWithQuotedKey;
 void aggregatedTotals;

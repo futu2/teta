@@ -36,6 +36,12 @@ export const fullJoin: typeof import("./src/edsl/query.ts").fullJoin = query.ful
 /** Joins two query inputs with an explicit join condition. */
 export const join: typeof import("./src/edsl/query.ts").join = query.join;
 
+/** Builds a join predicate by equating same-named columns. */
+export const usingCols: typeof import("./src/edsl/query.ts").usingCols = query.usingCols;
+
+/** Builds a join predicate from left-to-right column equality mappings. */
+export const onEq: typeof import("./src/edsl/query.ts").onEq = query.onEq;
+
 /** Prefixes overlapping left join columns before merge. */
 export const prefixOverlapLeft: typeof import("./src/edsl/query.ts").prefixOverlapLeft = query.prefixOverlapLeft;
 

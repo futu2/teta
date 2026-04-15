@@ -1,5 +1,5 @@
 import type { JoinType, JoinTypeInput } from "../core/types.ts";
-import { mergeColumnNames } from "../expr.ts";
+import { and, eq, mergeColumnNames } from "../expr.ts";
 import type { ColumnRefs, ExprRef, ExprRefs } from "../expr.ts";
 import { userError } from "../errors.ts";
 
@@ -177,6 +177,81 @@ export type JoinOptions<
   type?: TType;
   lateral?: boolean;
 };
+
+export function usingCols<const TName extends string>(
+  name: TName
+): <
+  TLeft extends Record<TName, any>,
+  TRight extends Record<TName, any>,
+>(
+  left: ColumnRefs<TLeft>,
+  right: ColumnRefs<TRight>
+) => ExprRef<boolean>;
+export function usingCols<const TNames extends readonly string[]>(
+  names: TNames
+): <
+  TLeft extends Record<TNames[number], any>,
+  TRight extends Record<TNames[number], any>,
+>(
+  left: ColumnRefs<TLeft>,
+  right: ColumnRefs<TRight>
+) => ExprRef<boolean>;
+export function usingCols(nameOrNames: string | readonly string[]) {
+  const names = Array.isArray(nameOrNames) ? nameOrNames : [nameOrNames];
+
+  return function <
+    TLeft extends Record<string, any>,
+    TRight extends Record<string, any>,
+  >(
+    left: ColumnRefs<TLeft>,
+    right: ColumnRefs<TRight>
+  ): ExprRef<boolean> {
+    let predicate: ExprRef<boolean> | undefined;
+
+    for (const name of names) {
+      const next = eq(
+        left[name as keyof typeof left] as ExprRef<any>,
+        right[name as keyof typeof right] as ExprRef<any>
+      );
+      predicate = predicate ? and(predicate, next) : next;
+    }
+
+    if (!predicate) {
+      userError("INVALID_FUNCTION_NAME", "usingCols requires at least one column");
+    }
+    return predicate;
+  };
+}
+
+export function onEq<const TMapping extends Record<string, string>>(
+  mapping: TMapping
+) {
+  type LeftKey = Extract<keyof TMapping, string>;
+  type RightKey = TMapping[LeftKey] & string;
+
+  return function <
+    TLeft extends Record<LeftKey, any>,
+    TRight extends Record<RightKey, any>,
+  >(
+    left: ColumnRefs<TLeft>,
+    right: ColumnRefs<TRight>
+  ): ExprRef<boolean> {
+    let predicate: ExprRef<boolean> | undefined;
+
+    for (const [leftName, rightName] of Object.entries(mapping) as Array<[LeftKey, RightKey]>) {
+      const next = eq(
+        left[leftName as keyof typeof left] as ExprRef<any>,
+        right[rightName as unknown as keyof typeof right] as ExprRef<any>
+      );
+      predicate = predicate ? and(predicate, next) : next;
+    }
+
+    if (!predicate) {
+      userError("INVALID_FUNCTION_NAME", "onEq requires at least one mapping");
+    }
+    return predicate;
+  };
+}
 
 export function prefixOverlapLeft<const TPrefix extends string>(prefix: TPrefix) {
   return function <
