@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { pipe } from "remeda";
-import { filter, take, sort, map, toSql, asc, desc, eq, gte, replace, and, coalesce, leftJoin } from "../mod.ts";
+import { filter, take, sort, map, toSql, asc, desc, eq, gte, replace, and, coalesce, leftJoin, onEq, prefixOverlapLeft, table, t } from "../mod.ts";
 import { USER_PIPELINE_POSTGRES_COMPACT, USERS_ORDERS_LEFT_JOIN_SELECT_POSTGRES_COMPACT } from "./helpers/expected-sql.ts";
 import { createOrdersTable, createUsersPipelineTable, createUsersTable } from "./helpers/fixtures.ts";
 describe("function-first query api", () => {
@@ -21,5 +21,36 @@ describe("function-first query api", () => {
             total: row.total,
         })));
         expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe(USERS_ORDERS_LEFT_JOIN_SELECT_POSTGRES_COMPACT);
+    });
+    test("supports leftJoin with onEq mapping in function-first pipeline", () => {
+        const users = table("users", {
+            id: t.int(),
+        });
+        const profiles = table("profiles", {
+            id: t.int(),
+            user_id: t.int(),
+            bio: t.string(),
+        });
+        const query = pipe(users, leftJoin(profiles, onEq({ id: "user_id" }), prefixOverlapLeft("left_")), map((row) => ({
+            left_id: row.left_id,
+            bio: row.bio,
+        })));
+        expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe("SELECT users_0.id AS left_id, profiles_1.bio AS bio FROM users AS users_0 LEFT JOIN profiles AS profiles_1 ON users_0.id = profiles_1.user_id");
+    });
+    test("supports curried 3-arg join when predicate uses default parameter", () => {
+        const users = table("users", {
+            id: t.int(),
+        });
+        const profiles = table("profiles", {
+            id: t.int(),
+            user_id: t.int(),
+            bio: t.string(),
+        });
+        const query = leftJoin(
+            profiles,
+            (u: typeof users.columns, p: typeof profiles.columns = profiles.columns) => eq(u.id, p.user_id),
+            prefixOverlapLeft("left_")
+        )(users);
+        expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe("SELECT users_0.id AS left_id, profiles_1.id AS id, profiles_1.user_id AS user_id, profiles_1.bio AS bio FROM users AS users_0 LEFT JOIN profiles AS profiles_1 ON users_0.id = profiles_1.user_id");
     });
 });

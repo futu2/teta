@@ -124,7 +124,15 @@ const userCounts = fold(users, (user) => ({
 - `full` join makes both sides nullable
 
 ```ts
-import { eq, leftJoin, table, t } from "@teta/teta";
+import { pipe } from "remeda";
+import {
+  dropOverlapLeft,
+  leftJoin,
+  onEq,
+  prefixOverlapLeft,
+  table,
+  t,
+} from "@teta/teta";
 
 const orders = table("orders", {
   id: t.int(),
@@ -132,25 +140,26 @@ const orders = table("orders", {
   total: t.float(),
 });
 
-const usersWithOrders = leftJoin(
+const usersWithOrders = pipe(
   users,
-  orders,
-  (user, order) => eq(user.id, order.user_id)
+  leftJoin(orders, onEq({ id: "user_id" }), dropOverlapLeft())
 );
 // order columns are inferred as nullable because this is a left join
 ```
 
-Custom merged shapes are positional:
+Default joins only infer a merged shape when the left and right output names do not overlap. If names overlap, pass an explicit merge helper such as dropOverlapLeft() or prefixOverlapLeft("left_").
+Legacy `join(..., { merge })` is no longer supported. Pass the merge helper positionally before the options object, for example `join(right, on, dropOverlapLeft(), { type: "left" })`.
 
 ```ts
-const renamed = join(
+const profiles = table("profiles", {
+  user_id: t.int(),
+  id: t.int(),
+  bio: t.string(),
+});
+
+const renamed = pipe(
   users,
-  orders,
-  (user, order) => eq(user.id, order.user_id),
-  (user, order) => ({
-    user_id: user.id,
-    order_total: order.total,
-  })
+  leftJoin(profiles, onEq({ id: "user_id" }), prefixOverlapLeft("left_"))
 );
 ```
 

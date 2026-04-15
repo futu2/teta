@@ -1,5 +1,5 @@
 import type { QueryDialect } from "../types.ts";
-import type { ExprNode, ScopeId, SqlIdentifier, Stage } from "../../core/types.ts";
+import { isInternalScopeName, type ExprNode, type ScopeId, type SqlIdentifier, type Stage } from "../../core/types.ts";
 import { createColumnRefs, projectAllItems } from "../../core/expr.ts";
 import { projectionItemsToIdentifierMap } from "../../query/utils.ts";
 import type { FromAst, GroupByAst, LimitAst, OrderByAst, ScopeBindings, SelectAst, SelectColumnAst } from "./types.ts";
@@ -67,11 +67,48 @@ export function buildCompiledSegment(
   dialect: QueryDialect,
   consumed = 0
 ): CompiledSegment {
+  const fusedProjectionItems = projection
+    ? projection.items.map((item, index) => {
+        const boundExpr = bindFusedExpr(item.expr, scopeExprs, currentBindings, dialect);
+        const outputName = projection.keys[index] ?? item.as?.name ?? null;
+        return { item, boundExpr, outputName };
+      })
+    : null;
+  const hasExpandedAliasMismatch = !!fusedProjectionItems?.some(({ item, boundExpr, outputName }) =>
+    item.as === null &&
+    outputName !== null &&
+    item.expr.kind === "column" &&
+    isInternalScopeName(item.expr.table) &&
+    item.expr.name === outputName &&
+    boundExpr.kind === "column" &&
+    boundExpr.name !== outputName
+  );
   const columns: SelectColumnAst[] = projection
-    ? projection.items.map((item) => ({
-        expr: exprToAst(bindFusedExpr(item.expr, scopeExprs, currentBindings, dialect)),
-        as: renderIdentifier(item.as, dialect, getSqlRenderContext()),
-      }))
+    ? fusedProjectionItems!.map(({ item, boundExpr, outputName }) => {
+        const alias = outputName
+          ? (item.as ?? { name: outputName, quoted: false })
+          : null;
+        const needsAlias = !!alias && (
+          item.as !== null ||
+          alias.quoted ||
+          (
+            item.as === null &&
+            item.expr.kind === "column" &&
+            isInternalScopeName(item.expr.table) &&
+            (
+              (boundExpr.kind === "column" && boundExpr.name !== outputName) ||
+              hasExpandedAliasMismatch
+            )
+          )
+        );
+
+        return {
+          expr: exprToAst(boundExpr),
+          as: needsAlias
+            ? renderIdentifier(alias, dialect, getSqlRenderContext())
+            : null,
+        };
+      })
     : expandProjectedColumns(currentScopeId, currentColumnNames, scopeExprs, currentBindings, dialect);
   const groupby: GroupByAst | null = projection?.kind === "fold" && projection.groupBy
     ? {

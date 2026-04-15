@@ -8,7 +8,7 @@ or `pipe(users, map(fn))`. In practice, the examples here prefer Remeda's `pipe(
 ```ts
 import { pick, pipe } from "remeda";
 
-import { fold, and, arrayAppend, arrayContains, arrayJoin, arrayLength, arrayPosition, arraySlice, asc, avg, bitLength, cast, charLength, characterLength, coalesce, concat, count, currentDate, currentTimestamp, dateAdd, dateDiff, dateFormat, dateLiteral, dateParse, dateTrunc, day, desc, eq, explain, ExprRef, f, filter, fn, fromUnixTime, group, gt, gte, hour, isIn, isNotNull, isNull, join, lag, lead, left, like, take, loop, lower, lt, lte, max, min, minute, mod, month, mul, ne, not, ntile, nullIf, octetLength, sort, over, overlay, param, percentRank, position, pow, Query, rank, regexExtract, regexLike, regexReplace, replace, reverse, right, round, rowNumber, rpad, map, shape, sqrt, sub, substring, sum, sumOver, t, table, timestampLiteral, toAst, toDate, toFloat, toIR, toInt, toSql, toSqlResult, toUnixTime, trim, union, unionAll, unnest, upper, values, when, windowFn, year } from "@teta/teta";
+import { add, and, arrayAppend, arrayContains, arrayJoin, arrayLength, arrayPosition, arraySlice, asc, avg, bitLength, cast, charLength, characterLength, coalesce, concat, count, currentDate, currentTimestamp, dateAdd, dateDiff, dateFormat, dateLiteral, dateParse, dateTrunc, day, desc, dropOverlapLeft, dropOverlapRight, eq, explain, ExprRef, f, filter, fn, fold, fromUnixTime, fullJoin, group, gt, gte, hour, innerJoin, isIn, isNotNull, isNull, join, lag, lead, left, leftJoin, like, loop, lower, lt, lte, map, max, min, minute, mod, month, mul, ne, not, ntile, nullIf, octetLength, onEq, over, overlay, param, percentRank, position, pow, prefixAllLeft, prefixAllRight, prefixOverlapLeft, prefixOverlapRight, Query, rank, regexExtract, regexLike, regexReplace, replace, reverse, right, rightJoin, round, rowNumber, rpad, shape, sort, sqrt, sub, substring, suffixAllLeft, suffixAllRight, sum, sumOver, t, table, take, timestampLiteral, toAst, toDate, toFloat, toInt, toIR, toSql, toSqlResult, toUnixTime, trim, union, unionAll, unnest, upper, usingCols, values, when, windowFn, year } from "@teta/teta";
 
 ```
 
@@ -68,13 +68,13 @@ const base = map(table("seed", { n: t.int() }), (s) => ({ n: s.n }));
 const q = loop(base, (self) => map(self, (s) => ({ n: add(s.n, 1) })));
 ```
 
-### `join(right, on, merge?, options?)`
+### `join(rightOrBuilder, on, merge?, { type?, lateral? })`
 Join queries with `inner`, `left`, `right`, or `full` behavior.
 
 ```ts
 const usersWithOrders = pipe(
   users,
-  leftJoin(orders, (u, o) => eq(u.id, o.user_id)),
+  leftJoin(orders, onEq({ id: "user_id" })),
   map((row) => ({
     user_id: row.id,
     user_name: row.name,
@@ -83,8 +83,10 @@ const usersWithOrders = pipe(
 );
 ```
 
+Legacy `join(..., { merge })` is no longer supported. Pass the merge helper positionally before the options object, for example `join(right, on, dropOverlapLeft(), { type: "left" })`.
+
 ### `innerJoin(...)`, `leftJoin(...)`, `rightJoin(...)`, `fullJoin(...)`
-Fixed join-kind helpers with the same positional `merge` argument as `join(...)`.
+Fixed join-kind helpers with the same `on` and optional merge-helper arguments as `join(...)`.
 
 ### `fold(selector)`
 Use `group(expr)` inside the selector for grouping keys.
@@ -132,6 +134,16 @@ const uniqueUsers = union(activeUsers, inactiveUsers);
 - `leftJoin(rightOrBuilder, on, merge?, { lateral? })`
 - `rightJoin(rightOrBuilder, on, merge?, { lateral? })`
 - `fullJoin(rightOrBuilder, on, merge?, { lateral? })`
+- `usingCols(name | names)`
+- `onEq({ leftName: rightName })`
+- `dropOverlapLeft()`
+- `dropOverlapRight()`
+- `prefixOverlapLeft(prefix)`
+- `prefixOverlapRight(prefix)`
+- `prefixAllLeft(prefix)`
+- `prefixAllRight(prefix)`
+- `suffixAllLeft(suffix)`
+- `suffixAllRight(suffix)`
 - `unnest(selector, { value, ordinality? }, { outer? })`
 - `unionAll(right)`
 - `union(right)`
