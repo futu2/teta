@@ -141,6 +141,7 @@ const usersWithOrders = pipe(
 ```
 
 Default joins only infer a merged shape when the left and right output names do not overlap. If names overlap, pass an explicit merge helper such as dropOverlapLeft() or prefixOverlapLeft("left_").
+Legacy `join(..., { merge })` is no longer supported. Pass the merge helper positionally before the options object, for example `join(right, on, dropOverlapLeft(), { type: "left" })`.
 
 ```ts
 const profiles = table("profiles", {

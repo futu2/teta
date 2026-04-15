@@ -173,6 +173,17 @@ const labels = map(users, (user) => ({
 import { pipe } from "remeda";
 import { leftJoin, onEq, prefixOverlapLeft, table, t } from "@teta/teta";
 
+const users = table("users", {
+  id: t.int(),
+  name: t.string(),
+});
+
+const profiles = table("profiles", {
+  user_id: t.int(),
+  id: t.int(),
+  bio: t.string(),
+});
+
 const usersWithProfiles = pipe(
   users,
   leftJoin(profiles, onEq({ id: "user_id" }), prefixOverlapLeft("left_"))
@@ -180,6 +191,7 @@ const usersWithProfiles = pipe(
 ```
 
 If both sides expose the same output column name, Teta now requires an explicit merge helper such as dropOverlapLeft() or prefixOverlapLeft("left_").
+Legacy `join(..., { merge })` is no longer supported. Pass the merge helper positionally before the options object, for example `join(right, on, dropOverlapLeft(), { type: "left" })`.
 
 ```ts
 import { pipe } from "remeda";

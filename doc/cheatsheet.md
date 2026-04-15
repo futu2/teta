@@ -8,7 +8,7 @@ or `pipe(users, map(fn))`. In practice, the examples here prefer Remeda's `pipe(
 ```ts
 import { pick, pipe } from "remeda";
 
-import { fold, and, arrayAppend, arrayContains, arrayJoin, arrayLength, arrayPosition, arraySlice, asc, avg, bitLength, cast, charLength, characterLength, coalesce, concat, count, currentDate, currentTimestamp, dateAdd, dateDiff, dateFormat, dateLiteral, dateParse, dateTrunc, day, desc, eq, explain, ExprRef, f, filter, fn, fromUnixTime, group, gt, gte, hour, isIn, isNotNull, isNull, join, lag, lead, left, like, take, loop, lower, lt, lte, max, min, minute, mod, month, mul, ne, not, ntile, nullIf, octetLength, sort, over, overlay, param, percentRank, position, pow, Query, rank, regexExtract, regexLike, regexReplace, replace, reverse, right, round, rowNumber, rpad, map, shape, sqrt, sub, substring, sum, sumOver, t, table, timestampLiteral, toAst, toDate, toFloat, toIR, toInt, toSql, toSqlResult, toUnixTime, trim, union, unionAll, unnest, upper, values, when, windowFn, year } from "@teta/teta";
+import { and, arrayAppend, arrayContains, arrayJoin, arrayLength, arrayPosition, arraySlice, asc, avg, bitLength, cast, charLength, characterLength, coalesce, concat, count, currentDate, currentTimestamp, dateAdd, dateDiff, dateFormat, dateLiteral, dateParse, dateTrunc, day, desc, dropOverlapLeft, dropOverlapRight, eq, explain, ExprRef, f, filter, fn, fold, fromUnixTime, fullJoin, group, gt, gte, hour, innerJoin, isIn, isNotNull, isNull, join, lag, lead, left, leftJoin, like, loop, lower, lt, lte, map, max, min, minute, mod, month, mul, ne, not, ntile, nullIf, octetLength, onEq, over, overlay, param, percentRank, position, pow, prefixAllLeft, prefixAllRight, prefixOverlapLeft, prefixOverlapRight, Query, rank, regexExtract, regexLike, regexReplace, replace, reverse, right, rightJoin, round, rowNumber, rpad, shape, sort, sqrt, sub, substring, suffixAllLeft, suffixAllRight, sum, sumOver, t, table, take, timestampLiteral, toAst, toDate, toFloat, toInt, toIR, toSql, toSqlResult, toUnixTime, trim, union, unionAll, unnest, upper, usingCols, values, when, windowFn, year } from "@teta/teta";
 
 ```
 
@@ -82,6 +82,8 @@ const usersWithOrders = pipe(
   }))
 );
 ```
+
+Legacy `join(..., { merge })` is no longer supported. Pass the merge helper positionally before the options object, for example `join(right, on, dropOverlapLeft(), { type: "left" })`.
 
 ### `innerJoin(...)`, `leftJoin(...)`, `rightJoin(...)`, `fullJoin(...)`
 Fixed join-kind helpers with the same `on` and optional merge-helper arguments as `join(...)`.
