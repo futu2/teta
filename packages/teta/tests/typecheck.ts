@@ -199,9 +199,8 @@ void bigintFilteredProfiles;
 filter(users, (user) => user.name);
 // @ts-expect-error join predicates must return boolean expressions
 join(users, orders, (user, order) => order.total);
-const overlappingJoin = join(users, profileRows, (user, profile) => eq(user.id, profile.id));
 // @ts-expect-error default joins with overlapping output names require an explicit merge strategy
-overlappingJoin.columns.id;
+join(users, profileRows, (user, profile) => eq(user.id, profile.id));
 // @ts-expect-error legacy array selection syntax is removed
 map(users, (user) => [user.id]);
 // @ts-expect-error legacy array fold syntax is removed

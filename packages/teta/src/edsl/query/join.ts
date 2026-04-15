@@ -19,7 +19,10 @@ export type JoinNoMergeResult<
 export type JoinNoMergeGuard<
   TLeft extends Record<string, any>,
   TRight extends Record<string, any>,
-> = [JoinOverlappingColumnNames<TLeft, TRight>] extends [never] ? unknown : never;
+> = string extends keyof TLeft ? unknown
+  : string extends keyof TRight ? unknown
+    : [JoinOverlappingColumnNames<TLeft, TRight>] extends [never] ? unknown
+      : never;
 
 export type JoinSelectionResult<TSelection extends JoinSelection> = {
   [K in keyof TSelection]: TSelection[K] extends ExprRef<infer TValue> ? TValue : never;

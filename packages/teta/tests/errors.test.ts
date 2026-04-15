@@ -36,7 +36,11 @@ describe("error paths", () => {
             { id: 1, bio: "A" },
             { id: 2, bio: "B" },
         ]);
-        expect(() => join(users, profiles, (user, profile) => eq(user.id, profile.id))).toThrow(JOIN_OVERLAPPING_COLUMNS_ERROR);
+        expect(() => (join as any)(
+            users,
+            profiles,
+            (user: typeof users.columns, profile: typeof profiles.columns) => eq(user.id, profile.id)
+        )).toThrow(JOIN_OVERLAPPING_COLUMNS_ERROR);
     });
     test("rejects loop steps with mismatched column names", () => {
         const users = createUsersTable();
