@@ -202,6 +202,9 @@ export const min: typeof import("./src/edsl/expr.ts").min = expr.min;
 /** Builds a `MAX` aggregate expression. */
 export const max: typeof import("./src/edsl/expr.ts").max = expr.max;
 
+/** Builds an `ARRAY_AGG` aggregate expression. */
+export const arrayAgg: typeof import("./src/edsl/expr.ts").arrayAgg = expr.arrayAgg;
+
 /** Builds a `RANK` window function expression. */
 export const rank: typeof import("./src/edsl/expr.ts").rank = expr.rank;
 

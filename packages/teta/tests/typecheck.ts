@@ -1,6 +1,6 @@
 import { mapKeys, omit, pick, pipe } from "remeda";
 import type { ExprRef, SqlBigInt, SqlBytes, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlUuid, } from "../mod.ts";
-import { filter, fullJoin, innerJoin, join, leftJoin, rightJoin, take, sort, param, map, table, t, fold, asc, desc, eq, gt, upper, add, coalesce, count, group, loop, sum, and, sub, caseWhen, when, mapShape, groupShape, lt, unnest, values } from "../mod.ts";
+import { filter, fullJoin, innerJoin, join, leftJoin, rightJoin, take, sort, param, map, table, t, fold, asc, desc, eq, gt, upper, add, coalesce, count, group, loop, sum, and, sub, caseWhen, when, mapShape, groupShape, lt, unnest, values, arrayAgg } from "../mod.ts";
 type Equal<A, B> = ((<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false);
 type Expect<T extends true> = T;
 type ExprType<TExpr> = TExpr extends ExprRef<infer TValue> ? TValue : never;
@@ -96,6 +96,10 @@ const aggregatedWithQuotedKey = fold(orders, (order) => ({
     ["User Id"]: group(order.user_id),
     ["Total Spend"]: sum(order.total),
 }));
+const aggregatedTotals = fold(orders, (order) => ({
+    user_id: group(order.user_id),
+    totals: arrayAgg(order.total),
+}));
 const loopBase = map(users, (user) => ({ id: user.id }));
 const looped = loop(loopBase, (self) => filter(self, (row) => gt(row.id, 0)));
 const projectedWithCase = map(users, (user) => ({
@@ -147,6 +151,7 @@ type _RenamedJoinUserId = Expect<Equal<ExprType<typeof renamedJoin.columns.user_
 type _RenamedJoinOrderTotal = Expect<Equal<ExprType<typeof renamedJoin.columns.order_total>, SqlFloat>>;
 type _ProjectedWithQuotedKey = Expect<Equal<ExprType<typeof projectedWithQuotedKey.columns["User Id"]>, SqlInt>>;
 type _AggregatedWithQuotedKey = Expect<Equal<ExprType<typeof aggregatedWithQuotedKey.columns["Total Spend"]>, SqlFloat>>;
+type _AggregatedTotals = Expect<Equal<ExprType<typeof aggregatedTotals.columns.totals>, SqlFloat[]>>;
 type _LoopedId = Expect<Equal<ExprType<typeof looped.columns.id>, SqlInt>>;
 type _ProjectedWithCaseAgeBucket = Expect<Equal<ExprType<typeof projectedWithCase.columns.age_bucket>, string>>;
 type _ProjectedWithCaseBumpedId = Expect<Equal<ExprType<typeof projectedWithCase.columns.bumped_id>, SqlInt>>;
@@ -177,6 +182,7 @@ void remedaOmittedAggregate;
 void leftViaJoinSelected;
 void projectedWithQuotedKey;
 void aggregatedWithQuotedKey;
+void aggregatedTotals;
 void looped;
 void projectedWithCase;
 void aggregatedWithGroupShape;

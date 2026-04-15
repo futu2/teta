@@ -21,7 +21,7 @@ export type BinaryOp =
   | "IS NOT"
   | "IN";
 export type UnaryOp = "NOT";
-export type AggFunc = "COUNT" | "SUM" | "AVG" | "MIN" | "MAX";
+export type AggFunc = "COUNT" | "SUM" | "AVG" | "MIN" | "MAX" | "ARRAY_AGG";
 export type JoinType = "INNER" | "LEFT" | "RIGHT" | "FULL";
 export type JoinTypeInput = "inner" | "left" | "right" | "full" | JoinType;
 

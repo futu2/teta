@@ -37,6 +37,10 @@ export function max<T>(value: ExprInput<T>): ExprRef<T> {
   return aggregateExpr<T>("MAX", value);
 }
 
+export function arrayAgg<T>(value: ExprInput<T>): ExprRef<T[]> {
+  return aggregateExpr<T[]>("ARRAY_AGG", value);
+}
+
 export function rank(_value?: ExprInput<unknown>): WindowBuilder<SqlInt> {
   return windowExpr<SqlInt>("RANK");
 }

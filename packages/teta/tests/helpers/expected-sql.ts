@@ -16,6 +16,9 @@ export const USERS_ORDERS_LEFT_JOIN_AGG_POSTGRES_COMPACT =
 export const ORDERS_GROUPED_TOTALS_POSTGRES_COMPACT =
   "SELECT orders_0.user_id, COUNT(orders_0.order_id) AS order_count, SUM(orders_0.total) AS total_spend FROM orders AS orders_0 WHERE orders_0.total > 0 GROUP BY orders_0.user_id";
 
+export const ORDERS_GROUPED_ARRAY_AGG_POSTGRES_COMPACT =
+  "SELECT orders_0.user_id, ARRAY_AGG(orders_0.total) AS totals FROM orders AS orders_0 GROUP BY orders_0.user_id";
+
 export const PARAMETERIZED_USERS_FILTER_POSTGRES_COMPACT =
   "SELECT users_0.id FROM users AS users_0 WHERE users_0.id = :p1 AND users_0.name = :p2";
 
