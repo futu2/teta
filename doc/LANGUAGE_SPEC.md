@@ -137,6 +137,7 @@ Convenience date-part helpers over `extract(...)`:
 | `AVG` | `avg(value)` | Direct | Direct | Direct | Direct | Direct |
 | `MIN` | `min(value)` | Direct | Direct | Direct | Direct | Direct |
 | `MAX` | `max(value)` | Direct | Direct | Direct | Direct | Direct |
+| `ARRAY_AGG` | `arrayAgg(value)` | Direct | Configurable | Mapped → `JSON_GROUP_ARRAY` | Direct | Mapped → `COLLECT_LIST` (Hive), otherwise direct (dialect-dependent) |
 | `RANK` | `over(rank(), spec)` | Direct | Direct (MySQL 8+) | Direct | Direct | Direct |
 | `DENSE_RANK` | `over(denseRank(), spec)` | Direct | Direct (MySQL 8+) | Direct | Direct | Direct |
 | `ROW_NUMBER` | `over(rowNumber(), spec)` | Direct | Direct (MySQL 8+) | Direct | Direct | Direct |

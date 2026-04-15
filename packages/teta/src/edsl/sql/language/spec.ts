@@ -86,6 +86,7 @@ export const LANGUAGE_SPEC = {
     "AVG",
     "MIN",
     "MAX",
+    "ARRAY_AGG",
     "RANK",
     "DENSE_RANK",
     "ROW_NUMBER",
