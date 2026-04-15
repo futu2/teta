@@ -42,7 +42,7 @@ import type {
   JoinColumnMerger,
   JoinColumnMergerForType,
   JoinColumnsForType,
-  JoinNoMergeOptionsArg,
+  JoinNoMergeGuard,
   JoinOptions,
   JoinSelection,
   JoinSelectionResult,
@@ -513,9 +513,9 @@ export function join<
   >,
 >(
   left: Query<TLeft>,
-  right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
+  right: (Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>)) & JoinNoMergeGuard<TLeft, TRight>,
   on: (left: ColumnRefs<TLeft>, right: ColumnRefs<TRight>) => ExprRef<boolean>,
-  ...rest: JoinNoMergeOptionsArg<TLeft, TRight, JoinOptions<TType>>
+  options?: JoinOptions<TType>
 ): Query<TMerged>;
 
 export function join<
@@ -541,9 +541,9 @@ export function join<
     CanonicalJoinType<TType>
   >,
 >(
-  right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
+  right: (Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>)) & JoinNoMergeGuard<TLeft, TRight>,
   on: (left: ColumnRefs<TLeft>, right: ColumnRefs<TRight>) => ExprRef<boolean>,
-  ...rest: JoinNoMergeOptionsArg<TLeft, TRight, JoinOptions<TType>>
+  options?: JoinOptions<TType>
 ): QueryStep<TLeft, TMerged>;
 
 export function join<
@@ -587,9 +587,9 @@ export function innerJoin<
   TMerged extends QueryColumns = TLeft & TRight,
 >(
   left: Query<TLeft>,
-  right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
+  right: (Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>)) & JoinNoMergeGuard<TLeft, TRight>,
   on: (left: ColumnRefs<TLeft>, right: ColumnRefs<TRight>) => ExprRef<boolean>,
-  ...rest: JoinNoMergeOptionsArg<TLeft, TRight, FixedJoinOptions>
+  options?: FixedJoinOptions
 ): Query<TMerged>;
 
 export function innerJoin<
@@ -609,9 +609,9 @@ export function innerJoin<
   TRight extends QueryColumns,
   TMerged extends QueryColumns = TLeft & TRight,
 >(
-  right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
+  right: (Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>)) & JoinNoMergeGuard<TLeft, TRight>,
   on: (left: ColumnRefs<TLeft>, right: ColumnRefs<TRight>) => ExprRef<boolean>,
-  ...rest: JoinNoMergeOptionsArg<TLeft, TRight, FixedJoinOptions>
+  options?: FixedJoinOptions
 ): QueryStep<TLeft, TMerged>;
 
 export function innerJoin<
@@ -635,9 +635,9 @@ export function leftJoin<
   TMerged extends QueryColumns = JoinColumnsForType<TLeft, TRight, "left">,
 >(
   left: Query<TLeft>,
-  right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
+  right: (Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>)) & JoinNoMergeGuard<TLeft, TRight>,
   on: (left: ColumnRefs<TLeft>, right: ColumnRefs<TRight>) => ExprRef<boolean>,
-  ...rest: JoinNoMergeOptionsArg<TLeft, TRight, FixedJoinOptions>
+  options?: FixedJoinOptions
 ): Query<TMerged>;
 
 export function leftJoin<
@@ -657,9 +657,9 @@ export function leftJoin<
   TRight extends QueryColumns,
   TMerged extends QueryColumns = JoinColumnsForType<TLeft, TRight, "left">,
 >(
-  right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
+  right: (Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>)) & JoinNoMergeGuard<TLeft, TRight>,
   on: (left: ColumnRefs<TLeft>, right: ColumnRefs<TRight>) => ExprRef<boolean>,
-  ...rest: JoinNoMergeOptionsArg<TLeft, TRight, FixedJoinOptions>
+  options?: FixedJoinOptions
 ): QueryStep<TLeft, TMerged>;
 
 export function leftJoin<
@@ -683,9 +683,9 @@ export function rightJoin<
   TMerged extends QueryColumns = JoinColumnsForType<TLeft, TRight, "right">,
 >(
   left: Query<TLeft>,
-  right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
+  right: (Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>)) & JoinNoMergeGuard<TLeft, TRight>,
   on: (left: ColumnRefs<TLeft>, right: ColumnRefs<TRight>) => ExprRef<boolean>,
-  ...rest: JoinNoMergeOptionsArg<TLeft, TRight, FixedJoinOptions>
+  options?: FixedJoinOptions
 ): Query<TMerged>;
 
 export function rightJoin<
@@ -705,9 +705,9 @@ export function rightJoin<
   TRight extends QueryColumns,
   TMerged extends QueryColumns = JoinColumnsForType<TLeft, TRight, "right">,
 >(
-  right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
+  right: (Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>)) & JoinNoMergeGuard<TLeft, TRight>,
   on: (left: ColumnRefs<TLeft>, right: ColumnRefs<TRight>) => ExprRef<boolean>,
-  ...rest: JoinNoMergeOptionsArg<TLeft, TRight, FixedJoinOptions>
+  options?: FixedJoinOptions
 ): QueryStep<TLeft, TMerged>;
 
 export function rightJoin<
@@ -731,9 +731,9 @@ export function fullJoin<
   TMerged extends QueryColumns = JoinColumnsForType<TLeft, TRight, "full">,
 >(
   left: Query<TLeft>,
-  right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
+  right: (Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>)) & JoinNoMergeGuard<TLeft, TRight>,
   on: (left: ColumnRefs<TLeft>, right: ColumnRefs<TRight>) => ExprRef<boolean>,
-  ...rest: JoinNoMergeOptionsArg<TLeft, TRight, FixedJoinOptions>
+  options?: FixedJoinOptions
 ): Query<TMerged>;
 
 export function fullJoin<
@@ -753,9 +753,9 @@ export function fullJoin<
   TRight extends QueryColumns,
   TMerged extends QueryColumns = JoinColumnsForType<TLeft, TRight, "full">,
 >(
-  right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
+  right: (Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>)) & JoinNoMergeGuard<TLeft, TRight>,
   on: (left: ColumnRefs<TLeft>, right: ColumnRefs<TRight>) => ExprRef<boolean>,
-  ...rest: JoinNoMergeOptionsArg<TLeft, TRight, FixedJoinOptions>
+  options?: FixedJoinOptions
 ): QueryStep<TLeft, TMerged>;
 
 export function fullJoin<
