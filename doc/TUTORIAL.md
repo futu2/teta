@@ -60,7 +60,7 @@ LIMIT 5
 
 ```ts
 import { pipe } from "remeda";
-import { fold, count, eq, group, leftJoin, sum, table, t, toSql } from "@teta/teta";
+import { count, fold, group, leftJoin, onEq, sum, table, t, toSql } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -75,7 +75,7 @@ const orders = table("orders", {
 
 const q = pipe(
   users,
-  leftJoin(orders, (u, o) => eq(u.id, o.user_id)),
+  leftJoin(orders, onEq({ id: "user_id" })),
   fold((row) => ({
     user_id: group(row.id),
     order_count: count(row.order_id),
@@ -170,7 +170,20 @@ const labels = map(users, (user) => ({
 ### `join(...)` and `unnest(...)` refine types
 
 ```ts
-import { eq, leftJoin, join, table, t, unnest } from "@teta/teta";
+import { pipe } from "remeda";
+import { leftJoin, onEq, prefixOverlapLeft, table, t } from "@teta/teta";
+
+const usersWithProfiles = pipe(
+  users,
+  leftJoin(profiles, onEq({ id: "user_id" }), prefixOverlapLeft("left_"))
+);
+```
+
+If both sides expose the same output column name, Teta now requires an explicit merge helper such as dropOverlapLeft() or prefixOverlapLeft("left_").
+
+```ts
+import { pipe } from "remeda";
+import { join, leftJoin, onEq, prefixOverlapLeft, table, t, unnest } from "@teta/teta";
 
 const orders = table("orders", {
   order_id: t.int(),
@@ -178,20 +191,25 @@ const orders = table("orders", {
   total: t.float(),
 });
 
-const leftJoined = leftJoin(
+const profiles = table("profiles", {
+  user_id: t.int(),
+  id: t.int(),
+  bio: t.string(),
+});
+
+const leftJoined = pipe(
   users,
-  orders,
-  (user, order) => eq(user.id, order.user_id)
+  leftJoin(orders, onEq({ id: "user_id" }))
 );
 
-const renamedJoin = join(
+const usersWithProfiles = pipe(
   users,
-  orders,
-  (user, order) => eq(user.id, order.user_id),
-  (user, order) => ({
-    user_id: user.id,
-    order_total: order.total,
-  })
+  leftJoin(profiles, onEq({ id: "user_id" }), prefixOverlapLeft("left_"))
+);
+
+const renamedJoin = pipe(
+  users,
+  join(orders, onEq({ id: "user_id" }))
 );
 
 // right-side columns become nullable on a left join
@@ -346,7 +364,7 @@ Using string concatenation like `"user_" + key` usually widens to `string`, so d
 
 ```ts
 import { pipe } from "remeda";
-import { eq, leftJoin, map, table, t, toSql } from "@teta/teta";
+import { leftJoin, map, onEq, table, t, toSql } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -361,7 +379,7 @@ const orders = table("orders", {
 
 const q = pipe(
   users,
-  leftJoin(orders, (u, o) => eq(u.id, o.user_id)),
+  leftJoin(orders, onEq({ id: "user_id" })),
   map((row) => ({
     user_id: row.id,
     user_name: row.name,
@@ -370,7 +388,7 @@ const q = pipe(
   }))
 );
 
-console.log(toSql(q, {});
+console.log(toSql(q, {}));
 ```
 
 Use `leftJoin(...)`, `rightJoin(...)`, `fullJoin(...)`, or the generic `join(..., { type })` form when you want one API for all join kinds.
@@ -410,7 +428,7 @@ const q = pipe(
   )
 );
 
-console.log(toSql(q, {});
+console.log(toSql(q, {}));
 ```
 
 Note: `JOIN LATERAL` is emitted for dialects with `lateralJoinKeyword = true`.
@@ -556,7 +574,7 @@ const q = pipe(
   }))
 );
 
-console.log(toSql(q, {});
+console.log(toSql(q, {}));
 ```
 
 ### Window function

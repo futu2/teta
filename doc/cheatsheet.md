@@ -68,13 +68,13 @@ const base = map(table("seed", { n: t.int() }), (s) => ({ n: s.n }));
 const q = loop(base, (self) => map(self, (s) => ({ n: add(s.n, 1) })));
 ```
 
-### `join(right, on, merge?, options?)`
+### `join(rightOrBuilder, on, merge?, { type?, lateral? })`
 Join queries with `inner`, `left`, `right`, or `full` behavior.
 
 ```ts
 const usersWithOrders = pipe(
   users,
-  leftJoin(orders, (u, o) => eq(u.id, o.user_id)),
+  leftJoin(orders, onEq({ id: "user_id" })),
   map((row) => ({
     user_id: row.id,
     user_name: row.name,
@@ -84,7 +84,7 @@ const usersWithOrders = pipe(
 ```
 
 ### `innerJoin(...)`, `leftJoin(...)`, `rightJoin(...)`, `fullJoin(...)`
-Fixed join-kind helpers with the same positional `merge` argument as `join(...)`.
+Fixed join-kind helpers with the same `on` and optional merge-helper arguments as `join(...)`.
 
 ### `fold(selector)`
 Use `group(expr)` inside the selector for grouping keys.
@@ -132,6 +132,16 @@ const uniqueUsers = union(activeUsers, inactiveUsers);
 - `leftJoin(rightOrBuilder, on, merge?, { lateral? })`
 - `rightJoin(rightOrBuilder, on, merge?, { lateral? })`
 - `fullJoin(rightOrBuilder, on, merge?, { lateral? })`
+- `usingCols(name | names)`
+- `onEq({ leftName: rightName })`
+- `dropOverlapLeft()`
+- `dropOverlapRight()`
+- `prefixOverlapLeft(prefix)`
+- `prefixOverlapRight(prefix)`
+- `prefixAllLeft(prefix)`
+- `prefixAllRight(prefix)`
+- `suffixAllLeft(suffix)`
+- `suffixAllRight(suffix)`
 - `unnest(selector, { value, ordinality? }, { outer? })`
 - `unionAll(right)`
 - `union(right)`
