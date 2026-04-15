@@ -125,7 +125,14 @@ const userCounts = fold(users, (user) => ({
 
 ```ts
 import { pipe } from "remeda";
-import { leftJoin, onEq, prefixOverlapLeft, table, t } from "@teta/teta";
+import {
+  dropOverlapLeft,
+  leftJoin,
+  onEq,
+  prefixOverlapLeft,
+  table,
+  t,
+} from "@teta/teta";
 
 const orders = table("orders", {
   id: t.int(),
@@ -135,7 +142,7 @@ const orders = table("orders", {
 
 const usersWithOrders = pipe(
   users,
-  leftJoin(orders, onEq({ id: "user_id" }))
+  leftJoin(orders, onEq({ id: "user_id" }), dropOverlapLeft())
 );
 // order columns are inferred as nullable because this is a left join
 ```
