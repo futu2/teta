@@ -201,6 +201,14 @@ filter(users, (user) => user.name);
 join(users, orders, (user, order) => order.total);
 // @ts-expect-error default joins with overlapping output names require an explicit merge strategy
 join(users, profileRows, (user, profile) => eq(user.id, profile.id));
+// @ts-expect-error innerJoin without merge must reject overlapping output names
+innerJoin(users, profileRows, (user, profile) => eq(user.id, profile.id));
+// @ts-expect-error leftJoin without merge must reject overlapping output names
+leftJoin(users, profileRows, (user, profile) => eq(user.id, profile.id));
+// @ts-expect-error rightJoin without merge must reject overlapping output names
+rightJoin(users, profileRows, (user, profile) => eq(user.id, profile.id));
+// @ts-expect-error fullJoin without merge must reject overlapping output names
+fullJoin(users, profileRows, (user, profile) => eq(user.id, profile.id));
 // @ts-expect-error legacy array selection syntax is removed
 map(users, (user) => [user.id]);
 // @ts-expect-error legacy array fold syntax is removed

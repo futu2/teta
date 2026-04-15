@@ -10,12 +10,6 @@ export type JoinOverlappingColumnNames<
   TRight extends Record<string, any>,
 > = Extract<keyof TLeft, keyof TRight> & string;
 
-export type JoinNoMergeResult<
-  TLeft extends Record<string, any>,
-  TRight extends Record<string, any>,
-  TColumns extends Record<string, any>,
-> = [JoinOverlappingColumnNames<TLeft, TRight>] extends [never] ? TColumns : never;
-
 export type JoinNoMergeGuard<
   TLeft extends Record<string, any>,
   TRight extends Record<string, any>,
@@ -23,6 +17,16 @@ export type JoinNoMergeGuard<
   : string extends keyof TRight ? unknown
     : [JoinOverlappingColumnNames<TLeft, TRight>] extends [never] ? unknown
       : never;
+
+export type JoinNoMergeOptionsArg<
+  TLeft extends Record<string, any>,
+  TRight extends Record<string, any>,
+  TOptions,
+> = JoinNoMergeGuard<TLeft, TRight> extends never
+  ? [options: TOptions & {
+      __teta_join_overlap_requires_merge__: JoinOverlappingColumnNames<TLeft, TRight>;
+    }]
+  : [options?: TOptions];
 
 export type JoinSelectionResult<TSelection extends JoinSelection> = {
   [K in keyof TSelection]: TSelection[K] extends ExprRef<infer TValue> ? TValue : never;
