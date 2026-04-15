@@ -28,7 +28,7 @@ export const JOIN_OVERLAPPING_COLUMNS_ERROR =
   "join() requires an explicit merge strategy for overlapping columns: id";
 
 export const JOIN_MERGE_CONFLICT_ERROR =
-  "join merge helper produced duplicate output column: user_id";
+  "join merge helper still overlaps after renaming: user_id";
 
 export function missingQueryExportError(path: string): string {
   return `Export 'query' not found in ${path}`;

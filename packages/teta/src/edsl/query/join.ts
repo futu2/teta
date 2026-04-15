@@ -422,7 +422,7 @@ function assignJoinMergeColumn(
   value: ExprRef<unknown>
 ): void {
   if (Object.prototype.hasOwnProperty.call(target, key)) {
-    userError("JOIN_MERGE_CONFLICT", `join merge helper produced duplicate output column: ${key}`);
+    userError("JOIN_MERGE_CONFLICT", `join merge helper still overlaps after renaming: ${key}`);
   }
   target[key] = value;
 }
