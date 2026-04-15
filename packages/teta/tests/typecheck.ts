@@ -240,6 +240,22 @@ const profileRowsWithUserId = values([
 ]);
 // @ts-expect-error prefixOverlapLeft can still collide with right-side keys after rename
 innerJoin(users, profileRowsWithUserId, (user, profile) => eq(user.id, profile.user_id), prefixOverlapLeft("user_"));
+const leftRowsWithUserId = values([
+    { id: 1 as number, user_id: 11 as number, name: "Ada" as string },
+    { id: 2 as number, user_id: 22 as number, name: "Grace" as string },
+]);
+const rightRowsOverlappingId = values([
+    { id: 1 as number, bio: "A" as string },
+    { id: 2 as number, bio: "B" as string },
+]);
+// @ts-expect-error prefixOverlapLeft must reject self-collision when renamed overlap key hits unchanged left key
+innerJoin(leftRowsWithUserId, rightRowsOverlappingId, (left, right) => eq(left.id, right.id), prefixOverlapLeft("user_"));
+const rightRowsWithUserId = values([
+    { id: 1 as number, user_id: 11 as number, bio: "A" as string },
+    { id: 2 as number, user_id: 22 as number, bio: "B" as string },
+]);
+// @ts-expect-error prefixOverlapRight must reject self-collision when renamed overlap key hits unchanged right key
+innerJoin(users, rightRowsWithUserId, (user, right) => eq(user.id, right.id), prefixOverlapRight("user_"));
 // @ts-expect-error legacy array selection syntax is removed
 map(users, (user) => [user.id]);
 // @ts-expect-error legacy array fold syntax is removed

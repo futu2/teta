@@ -141,15 +141,35 @@ type DropOverlapRightKeys<
 type JoinMergeConflictGuard<
   TLeft extends Record<string, any>,
   TRight extends Record<string, any>,
-> = [Extract<keyof TLeft, keyof TRight> & string] extends [never] ? unknown
+  TExtraConflicts extends string = never,
+> = [Extract<keyof TLeft, keyof TRight> & string | TExtraConflicts] extends [never] ? unknown
   : {
-      __teta_join_merge_conflict__: Extract<keyof TLeft, keyof TRight> & string;
+      __teta_join_merge_conflict__: Extract<keyof TLeft, keyof TRight> & string | TExtraConflicts;
     };
 
 type JoinHelperSelection<
   TLeft extends Record<string, any>,
   TRight extends Record<string, any>,
-> = ExprRefs<TLeft & TRight> & JoinMergeConflictGuard<TLeft, TRight>;
+  TExtraConflicts extends string = never,
+> = ExprRefs<TLeft & TRight> & JoinMergeConflictGuard<TLeft, TRight, TExtraConflicts>;
+
+type PrefixOverlapLeftSelfConflicts<
+  TLeft extends Record<string, any>,
+  TRight extends Record<string, any>,
+  TPrefix extends string,
+> = Extract<
+  `${TPrefix}${JoinOverlappingColumnNames<TLeft, TRight>}`,
+  Exclude<keyof TLeft, JoinOverlappingColumnNames<TLeft, TRight>> & string
+>;
+
+type PrefixOverlapRightSelfConflicts<
+  TLeft extends Record<string, any>,
+  TRight extends Record<string, any>,
+  TPrefix extends string,
+> = Extract<
+  `${TPrefix}${JoinOverlappingColumnNames<TLeft, TRight>}`,
+  Exclude<keyof TRight, JoinOverlappingColumnNames<TLeft, TRight>> & string
+>;
 
 export type JoinOptions<
   TType extends JoinTypeInput | undefined = undefined,
@@ -165,7 +185,11 @@ export function prefixOverlapLeft<const TPrefix extends string>(prefix: TPrefix)
   >(
     left: ColumnRefs<TLeft>,
     right: ColumnRefs<TRight>
-  ): JoinHelperSelection<RenameOverlapLeftKeys<TLeft, TRight, TPrefix>, TRight> {
+  ): JoinHelperSelection<
+    RenameOverlapLeftKeys<TLeft, TRight, TPrefix>,
+    TRight,
+    PrefixOverlapLeftSelfConflicts<TLeft, TRight, TPrefix>
+  > {
     const overlapping = new Set(getOverlappingColumnNames(Object.keys(left), Object.keys(right)));
     const merged: JoinSelection = {};
 
@@ -177,7 +201,11 @@ export function prefixOverlapLeft<const TPrefix extends string>(prefix: TPrefix)
       assignJoinMergeColumn(merged, key, right[key as keyof typeof right]);
     }
 
-    return merged as JoinHelperSelection<RenameOverlapLeftKeys<TLeft, TRight, TPrefix>, TRight>;
+    return merged as JoinHelperSelection<
+      RenameOverlapLeftKeys<TLeft, TRight, TPrefix>,
+      TRight,
+      PrefixOverlapLeftSelfConflicts<TLeft, TRight, TPrefix>
+    >;
   };
 }
 
@@ -188,7 +216,11 @@ export function prefixOverlapRight<const TPrefix extends string>(prefix: TPrefix
   >(
     left: ColumnRefs<TLeft>,
     right: ColumnRefs<TRight>
-  ): JoinHelperSelection<TLeft, RenameOverlapRightKeys<TLeft, TRight, TPrefix>> {
+  ): JoinHelperSelection<
+    TLeft,
+    RenameOverlapRightKeys<TLeft, TRight, TPrefix>,
+    PrefixOverlapRightSelfConflicts<TLeft, TRight, TPrefix>
+  > {
     const overlapping = new Set(getOverlappingColumnNames(Object.keys(left), Object.keys(right)));
     const merged: JoinSelection = {};
 
@@ -200,7 +232,11 @@ export function prefixOverlapRight<const TPrefix extends string>(prefix: TPrefix
       assignJoinMergeColumn(merged, outputKey, right[key as keyof typeof right]);
     }
 
-    return merged as JoinHelperSelection<TLeft, RenameOverlapRightKeys<TLeft, TRight, TPrefix>>;
+    return merged as JoinHelperSelection<
+      TLeft,
+      RenameOverlapRightKeys<TLeft, TRight, TPrefix>,
+      PrefixOverlapRightSelfConflicts<TLeft, TRight, TPrefix>
+    >;
   };
 }
 
