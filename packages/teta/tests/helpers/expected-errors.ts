@@ -24,6 +24,9 @@ export const VALUES_COLUMN_MISMATCH_ERROR =
 export const LEGACY_JOIN_MERGE_OPTION_ERROR =
   "join() no longer accepts { merge }. Pass merge as the next argument before options.";
 
+export const JOIN_OVERLAPPING_COLUMNS_ERROR =
+  "join() requires an explicit merge strategy for overlapping columns: id";
+
 export function missingQueryExportError(path: string): string {
   return `Export 'query' not found in ${path}`;
 }

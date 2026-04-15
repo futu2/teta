@@ -1,8 +1,25 @@
 import type { JoinType, JoinTypeInput } from "../core/types.ts";
 import { mergeColumnNames } from "../expr.ts";
 import type { ColumnRefs, ExprRef, ExprRefs } from "../expr.ts";
+import { userError } from "../errors.ts";
 
 export type JoinSelection = Record<string, ExprRef<unknown>>;
+
+export type JoinOverlappingColumnNames<
+  TLeft extends Record<string, any>,
+  TRight extends Record<string, any>,
+> = Extract<keyof TLeft, keyof TRight> & string;
+
+export type JoinNoMergeResult<
+  TLeft extends Record<string, any>,
+  TRight extends Record<string, any>,
+  TColumns extends Record<string, any>,
+> = [JoinOverlappingColumnNames<TLeft, TRight>] extends [never] ? TColumns : never;
+
+export type JoinNoMergeGuard<
+  TLeft extends Record<string, any>,
+  TRight extends Record<string, any>,
+> = [JoinOverlappingColumnNames<TLeft, TRight>] extends [never] ? unknown : never;
 
 export type JoinSelectionResult<TSelection extends JoinSelection> = {
   [K in keyof TSelection]: TSelection[K] extends ExprRef<infer TValue> ? TValue : never;
@@ -100,6 +117,15 @@ export function resolveJoinColumns<
   joinType: JoinType,
   mergeColumns?: JoinColumnMerger<Record<string, any>, Record<string, any>, TSelection>
 ): { mergedColumns: TSelection; nextNames: readonly string[] } {
+  if (!mergeColumns) {
+    const overlapping = getOverlappingColumnNames(leftNames, rightNames);
+    if (overlapping.length > 0) {
+      userError(
+        "JOIN_OVERLAPPING_COLUMNS",
+        `join() requires an explicit merge strategy for overlapping columns: ${overlapping.join(", ")}`
+      );
+    }
+  }
   const mergeResolver =
     (mergeColumns ?? defaultJoinColumnMerger) as JoinColumnMerger<
       Record<string, any>,
@@ -139,4 +165,13 @@ function resolveMergedColumnNames(
   const merged = Object.keys(columns);
   if (merged.length) return merged;
   return mergeColumnNames(left, right);
+}
+
+function getOverlappingColumnNames(
+  leftNames: readonly string[],
+  rightNames: readonly string[]
+): string[] {
+  if (leftNames.length === 0 || rightNames.length === 0) return [];
+  const right = new Set(rightNames);
+  return leftNames.filter((name) => right.has(name));
 }

@@ -21,6 +21,10 @@ const inlineRows = values([
     { id: 1 as number, name: "Ada" as string },
     { id: 2 as number, name: "Grace" as string },
 ]);
+const profileRows = values([
+    { id: 1 as number, bio: "A" as string },
+    { id: 2 as number, bio: "B" as string },
+]);
 type ProfileMeta = {
     theme: string;
     flags: string[];
@@ -139,6 +143,7 @@ type _ProjectedUsersId = Expect<Equal<ExprType<typeof projectedUsers.columns.id>
 type _ProjectedUsersName = Expect<Equal<ExprType<typeof projectedUsers.columns.name>, string>>;
 type _InlineRowsId = Expect<Equal<ExprType<typeof inlineRows.columns.id>, number>>;
 type _InlineRowsName = Expect<Equal<ExprType<typeof inlineRows.columns.name>, string>>;
+type _ProfileRowsBio = Expect<Equal<ExprType<typeof profileRows.columns.bio>, string>>;
 type _CurriedJoinTotal = Expect<Equal<ExprType<typeof curriedJoin.columns.total>, SqlFloat | null>>;
 type _RemedaPickedId = Expect<Equal<ExprType<typeof remedaPickedSelection.columns.id>, SqlInt>>;
 type _RemedaOmittedId = Expect<Equal<ExprType<typeof remedaOmittedSelection.columns.id>, SqlInt>>;
@@ -173,6 +178,7 @@ void fullSelected;
 void curriedPipeline;
 void curriedJoin;
 void inlineRows;
+void profileRows;
 void remedaPickedSelection;
 void remedaOmittedSelection;
 void remedaKeyMappedSelection;
@@ -193,6 +199,9 @@ void bigintFilteredProfiles;
 filter(users, (user) => user.name);
 // @ts-expect-error join predicates must return boolean expressions
 join(users, orders, (user, order) => order.total);
+const overlappingJoin = join(users, profileRows, (user, profile) => eq(user.id, profile.id));
+// @ts-expect-error default joins with overlapping output names require an explicit merge strategy
+overlappingJoin.columns.id;
 // @ts-expect-error legacy array selection syntax is removed
 map(users, (user) => [user.id]);
 // @ts-expect-error legacy array fold syntax is removed
