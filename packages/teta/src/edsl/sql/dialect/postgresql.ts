@@ -5,6 +5,7 @@ export const POSTGRESQL_DIALECT: BuiltinDialectDefinition = {
   parserDialect: "Postgresql",
   language: {
     functions: {
+      ARRAY_AGG: "ARRAY_AGG",
       CHARACTER_LENGTH: "CHAR_LENGTH",
       DATE_FORMAT: "TO_CHAR",
       DATE_PARSE: "TO_TIMESTAMP",

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { omit } from "remeda";
 import { fold, filter, leftJoin, count, eq, group, gt, sum, lt, toSql, and, or, arrayAgg } from "../mod.ts";
-import { ORDERS_GROUPED_ARRAY_AGG_POSTGRES_COMPACT, ORDERS_GROUPED_TOTALS_POSTGRES_COMPACT, ORDERS_GROUPED_TOTALS_HAVING_POSTGRES_COMPACT, ORDERS_GROUPED_TOTALS_WHERE_HAVING_POSTGRES_COMPACT, ORDERS_GROUPED_TOTALS_WHERE_HAVING_OR_POSTGRES_COMPACT, ORDERS_GROUPED_USER_RANGE_HAVING_OR_POSTGRES_COMPACT, USERS_ORDERS_LEFT_JOIN_AGG_POSTGRES_COMPACT, QUOTED_TOTAL_SPEND_AGG_LIST_POSTGRES_COMPACT } from "./helpers/expected-sql.ts";
+import { ORDERS_GROUPED_ARRAY_AGG_HETU_COMPACT, ORDERS_GROUPED_ARRAY_AGG_HIVE_COMPACT, ORDERS_GROUPED_ARRAY_AGG_POSTGRES_COMPACT, ORDERS_GROUPED_ARRAY_AGG_SQLITE_COMPACT, ORDERS_GROUPED_TOTALS_POSTGRES_COMPACT, ORDERS_GROUPED_TOTALS_HAVING_POSTGRES_COMPACT, ORDERS_GROUPED_TOTALS_WHERE_HAVING_POSTGRES_COMPACT, ORDERS_GROUPED_TOTALS_WHERE_HAVING_OR_POSTGRES_COMPACT, ORDERS_GROUPED_USER_RANGE_HAVING_OR_POSTGRES_COMPACT, USERS_ORDERS_LEFT_JOIN_AGG_POSTGRES_COMPACT, QUOTED_TOTAL_SPEND_AGG_LIST_POSTGRES_COMPACT } from "./helpers/expected-sql.ts";
 import { createOrdersTable, createUsersTable } from "./helpers/fixtures.ts";
 describe("joins and aggregates", () => {
     test("renders ARRAY_AGG in grouped folds for postgresql", () => {
@@ -11,6 +11,30 @@ describe("joins and aggregates", () => {
             totals: arrayAgg(order.total),
         }));
         expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe(ORDERS_GROUPED_ARRAY_AGG_POSTGRES_COMPACT);
+    });
+    test("renders ARRAY_AGG in grouped folds for hetu", () => {
+        const orders = createOrdersTable();
+        const query = fold(orders, (order) => ({
+            user_id: group(order.user_id),
+            totals: arrayAgg(order.total),
+        }));
+        expect(toSql(query, { dialect: "hetu", format: "compact" })).toBe(ORDERS_GROUPED_ARRAY_AGG_HETU_COMPACT);
+    });
+    test("renders COLLECT_LIST in grouped folds for hive", () => {
+        const orders = createOrdersTable();
+        const query = fold(orders, (order) => ({
+            user_id: group(order.user_id),
+            totals: arrayAgg(order.total),
+        }));
+        expect(toSql(query, { dialect: "hive", format: "compact" })).toBe(ORDERS_GROUPED_ARRAY_AGG_HIVE_COMPACT);
+    });
+    test("renders JSON_GROUP_ARRAY in grouped folds for sqlite", () => {
+        const orders = createOrdersTable();
+        const query = fold(orders, (order) => ({
+            user_id: group(order.user_id),
+            totals: arrayAgg(order.total),
+        }));
+        expect(toSql(query, { dialect: "sqlite", format: "compact" })).toBe(ORDERS_GROUPED_ARRAY_AGG_SQLITE_COMPACT);
     });
     test("renders a left join followed by fold grouping", () => {
         const users = createUsersTable();

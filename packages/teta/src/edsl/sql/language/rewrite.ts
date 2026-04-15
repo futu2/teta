@@ -25,7 +25,11 @@ export function rewriteDialectExpr(
     case "unary":
       return { ...expr, expr: rewriteDialectExpr(expr.expr, language) };
     case "agg":
-      return { ...expr, arg: rewriteDialectExpr(expr.arg, language) };
+      return {
+        ...expr,
+        name: resolveFunctionName(expr.name, language),
+        arg: rewriteDialectExpr(expr.arg, language),
+      };
     case "group":
       return { ...expr, expr: rewriteDialectExpr(expr.expr, language) };
     case "list":

@@ -5,6 +5,7 @@ export const HETU_DIALECT: BuiltinDialectDefinition = {
   parserDialect: "Trino",
   language: {
     functions: {
+      ARRAY_AGG: "ARRAY_AGG",
       CHARACTER_LENGTH: "LENGTH",
       CHAR_LENGTH: "LENGTH",
       ARRAY_LENGTH: "CARDINALITY",

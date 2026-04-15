@@ -22,6 +22,7 @@ export type BinaryOp =
   | "IN";
 export type UnaryOp = "NOT";
 export type AggFunc = "COUNT" | "SUM" | "AVG" | "MIN" | "MAX" | "ARRAY_AGG";
+export type AggFuncName = AggFunc | (string & {});
 export type JoinType = "INNER" | "LEFT" | "RIGHT" | "FULL";
 export type JoinTypeInput = "inner" | "left" | "right" | "full" | JoinType;
 
@@ -78,7 +79,7 @@ export type UnaryNode = {
 
 export type AggNode = {
   kind: "agg";
-  name: AggFunc;
+  name: AggFuncName;
   arg: ExprNode<any>;
   distinct: boolean;
 };

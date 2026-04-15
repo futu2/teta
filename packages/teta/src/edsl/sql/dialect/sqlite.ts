@@ -9,6 +9,7 @@ export const SQLITE_DIALECT: BuiltinDialectDefinition = {
   },
   language: {
     functions: {
+      ARRAY_AGG: "JSON_GROUP_ARRAY",
       CHARACTER_LENGTH: "LENGTH",
       CHAR_LENGTH: "LENGTH",
       OCTET_LENGTH: "LENGTH",
