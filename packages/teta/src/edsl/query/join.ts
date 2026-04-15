@@ -20,6 +20,16 @@ export type JoinNoMergeGuard<
           __teta_join_overlap_requires_merge__: JoinOverlappingColumnNames<TLeft, TRight>;
         };
 
+export type JoinOn<
+  TLeft extends Record<string, any>,
+  TRight extends Record<string, any>,
+> = (left: ColumnRefs<TLeft>, right: ColumnRefs<TRight>) => ExprRef<boolean>;
+
+export type JoinOnNoMerge<
+  TLeft extends Record<string, any>,
+  TRight extends Record<string, any>,
+> = JoinOn<TLeft, TRight> & JoinNoMergeGuard<TLeft, TRight>;
+
 export type JoinSelectionResult<TSelection extends JoinSelection> = {
   [K in keyof TSelection]: TSelection[K] extends ExprRef<infer TValue> ? TValue : never;
 };
