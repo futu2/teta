@@ -47,6 +47,24 @@ describe("toSql(query, options)", () => {
         expect(sql).toContain("JOIN LATERAL (");
         expect(sql).toContain("WHERE orders_0.user_id = users_0.id");
     });
+    test("keeps function-right 3-arg joins as lateral data-first joins", () => {
+        const users = table("users", {
+            id: t.int(),
+            name: t.string(),
+        });
+        const orders = table("orders", {
+            id: t.int(),
+            user_id: t.int(),
+            total: t.float(),
+        });
+        const query = join(users, (_user) => map(orders, (order) => ({
+            user_id: order.user_id,
+            total: order.total,
+        })), () => lit(true));
+        const sql = toSql(query, { dialect: "postgresql", format: "compact" });
+        expect(sql).toContain("JOIN LATERAL (");
+        expect(sql).not.toContain("WITH join_0(");
+    });
     test("renders postgres unnest as cross join lateral", () => {
         const sessions = table("sessions", {
             id: t.int(),
