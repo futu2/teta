@@ -906,18 +906,45 @@ function parseJoinInvocation(args: unknown[]):
       merge: unknown;
       options: unknown;
     } {
-  const isDataFirst = (() => {
-    if (!(args[0] instanceof Query)) return false;
-    if (args.length >= 4) return true;
-    if (args.length !== 3) return false;
+  if (
+    args.length === 3 &&
+    args[0] instanceof Query &&
+    typeof args[1] === "function" &&
+    typeof args[2] === "function"
+  ) {
+    const left = args[0] as Query<QueryColumns>;
+    const maybeRight = args[1] as (outer: ColumnRefs<QueryColumns>) => unknown;
 
-    const [, second, third] = args;
-    if (second instanceof Query) return true;
-    if (typeof second !== "function" || typeof third !== "function") return false;
+    try {
+      // Narrow probe for ambiguous 3-arg forms: if second callback resolves to a Query
+      // from outer columns, it is data-first lateral join.
+      const probed = maybeRight(qualifyOuterColumns(left.columns));
+      if (probed instanceof Query) {
+        return {
+          kind: "data_first",
+          left,
+          right: probed,
+          on: args[2],
+          merge: undefined,
+          options: undefined,
+        };
+      }
+    } catch {
+      // Treat probe errors as curried predicate invocation.
+    }
 
-    // For 3-arg invocations, two-parameter second callbacks are join predicates (curried form).
-    return second.length <= 1;
-  })();
+    return {
+      kind: "curried",
+      right: args[0],
+      on: args[1],
+      merge: args[2],
+      options: undefined,
+    };
+  }
+
+  const isDataFirst =
+    args[0] instanceof Query &&
+    (args.length >= 4 || (args.length === 3 && args[1] instanceof Query));
 
   if (isDataFirst) {
     const [left, right, on, maybeMerge, maybeOptions] = args;

@@ -37,4 +37,20 @@ describe("function-first query api", () => {
         })));
         expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe("SELECT users_0.id AS left_id, profiles_1.bio AS bio FROM users AS users_0 LEFT JOIN profiles AS profiles_1 ON users_0.id = profiles_1.user_id");
     });
+    test("supports curried 3-arg join when predicate uses default parameter", () => {
+        const users = table("users", {
+            id: t.int(),
+        });
+        const profiles = table("profiles", {
+            id: t.int(),
+            user_id: t.int(),
+            bio: t.string(),
+        });
+        const query = leftJoin(
+            profiles,
+            (u: typeof users.columns, p: typeof profiles.columns = profiles.columns) => eq(u.id, p.user_id),
+            prefixOverlapLeft("left_")
+        )(users);
+        expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe("SELECT users_0.id AS left_id, profiles_1.id AS id, profiles_1.user_id AS user_id, profiles_1.bio AS bio FROM users AS users_0 LEFT JOIN profiles AS profiles_1 ON users_0.id = profiles_1.user_id");
+    });
 });
