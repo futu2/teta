@@ -65,6 +65,24 @@ describe("toSql(query, options)", () => {
         expect(sql).toContain("JOIN LATERAL (");
         expect(sql).not.toContain("WITH join_0(");
     });
+    test("invokes ambiguous function-right callback only once", () => {
+        const users = table("users", {
+            id: t.int(),
+            name: t.string(),
+        });
+        const orders = table("orders", {
+            id: t.int(),
+            user_id: t.int(),
+            total: t.float(),
+        });
+        let n = 0;
+        const query = join(users, () => map(orders, (_order) => ({
+            seq: ++n,
+        })), () => lit(true));
+        expect(n).toBe(1);
+        const sql = toSql(query, { dialect: "postgresql", format: "compact" });
+        expect(sql).toContain("JOIN LATERAL (");
+    });
     test("renders postgres unnest as cross join lateral", () => {
         const sessions = table("sessions", {
             id: t.int(),

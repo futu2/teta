@@ -923,7 +923,7 @@ function parseJoinInvocation(args: unknown[]):
         return {
           kind: "data_first",
           left,
-          right: args[1],
+          right: () => probed,
           on: args[2],
           merge: undefined,
           options: undefined,
