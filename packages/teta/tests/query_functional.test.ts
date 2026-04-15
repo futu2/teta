@@ -35,6 +35,6 @@ describe("function-first query api", () => {
             left_id: row.left_id,
             bio: row.bio,
         })));
-        expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe("SELECT users_0.id, profiles_1.bio FROM users AS users_0 LEFT JOIN profiles AS profiles_1 ON users_0.id = profiles_1.user_id");
+        expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe("SELECT users_0.id AS left_id, profiles_1.bio AS bio FROM users AS users_0 LEFT JOIN profiles AS profiles_1 ON users_0.id = profiles_1.user_id");
     });
 });
