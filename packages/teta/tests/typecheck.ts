@@ -1,6 +1,6 @@
 import { mapKeys, omit, pick, pipe } from "remeda";
 import type { ExprRef, SqlBigInt, SqlBytes, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlUuid, } from "../mod.ts";
-import { filter, fullJoin, innerJoin, join, leftJoin, rightJoin, take, sort, param, map, table, t, fold, asc, desc, eq, gt, upper, add, coalesce, count, group, loop, sum, and, sub, caseWhen, when, mapShape, groupShape, lt, unnest, values, arrayAgg } from "../mod.ts";
+import { filter, fullJoin, innerJoin, join, leftJoin, rightJoin, take, sort, param, map, table, t, fold, asc, desc, eq, gt, upper, add, coalesce, count, group, loop, sum, and, sub, caseWhen, when, mapShape, groupShape, lt, unnest, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight } from "../mod.ts";
 type Equal<A, B> = ((<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false);
 type Expect<T extends true> = T;
 type ExprType<TExpr> = TExpr extends ExprRef<infer TValue> ? TValue : never;
@@ -45,6 +45,14 @@ const renamedJoin = innerJoin(users, orders, (user, order) => eq(user.id, order.
     user_id: user.id,
     order_total: order.total,
 }));
+const overlapPrefixedLeft = innerJoin(users, profileRows, (user, profile) => eq(user.id, profile.id), prefixOverlapLeft("user_"));
+const overlapPrefixedRight = innerJoin(users, profileRows, (user, profile) => eq(user.id, profile.id), prefixOverlapRight("profile_"));
+const allPrefixedLeft = innerJoin(users, profileRows, (user, profile) => eq(user.id, profile.id), prefixAllLeft("left_"));
+const allPrefixedRight = leftJoin(users, orders, (user, order) => eq(user.id, order.user_id), prefixAllRight("order_"));
+const allSuffixedLeft = rightJoin(users, orders, (user, order) => eq(user.id, order.user_id), suffixAllLeft("_user"));
+const allSuffixedRight = fullJoin(users, orders, (user, order) => eq(user.id, order.user_id), suffixAllRight("_order"));
+const droppedOverlapLeft = innerJoin(users, profileRows, (user, profile) => eq(user.id, profile.id), dropOverlapLeft());
+const droppedOverlapRight = innerJoin(users, profileRows, (user, profile) => eq(user.id, profile.id), dropOverlapRight());
 const filteredUsers = filter(users, (user: typeof users.columns) => gt(user.id, 0));
 const projectedUsers = map(filteredUsers, (user: typeof filteredUsers.columns) => ({
     id: user.id,
@@ -154,6 +162,15 @@ type _LeftJoinCoalescedTotal = Expect<Equal<ExprType<typeof leftJoinTotal>, SqlF
 type _LeftJoinCoalescedSub = Expect<Equal<ExprType<typeof leftJoinTotalRemaining>, SqlFloat>>;
 type _RenamedJoinUserId = Expect<Equal<ExprType<typeof renamedJoin.columns.user_id>, SqlInt>>;
 type _RenamedJoinOrderTotal = Expect<Equal<ExprType<typeof renamedJoin.columns.order_total>, SqlFloat>>;
+type _OverlapPrefixedLeftUserId = Expect<Equal<ExprType<typeof overlapPrefixedLeft.columns.user_id>, SqlInt>>;
+type _OverlapPrefixedLeftRightId = Expect<Equal<ExprType<typeof overlapPrefixedLeft.columns.id>, number>>;
+type _OverlapPrefixedRightProfileId = Expect<Equal<ExprType<typeof overlapPrefixedRight.columns.profile_id>, number>>;
+type _AllPrefixedLeftId = Expect<Equal<ExprType<typeof allPrefixedLeft.columns.left_id>, SqlInt>>;
+type _AllPrefixedRightTotal = Expect<Equal<ExprType<typeof allPrefixedRight.columns.order_total>, SqlFloat | null>>;
+type _AllSuffixedLeftId = Expect<Equal<ExprType<typeof allSuffixedLeft.columns.id_user>, SqlInt | null>>;
+type _AllSuffixedRightTotal = Expect<Equal<ExprType<typeof allSuffixedRight.columns.total_order>, SqlFloat | null>>;
+type _DroppedOverlapLeftId = Expect<Equal<ExprType<typeof droppedOverlapLeft.columns.id>, number>>;
+type _DroppedOverlapRightId = Expect<Equal<ExprType<typeof droppedOverlapRight.columns.id>, SqlInt>>;
 type _ProjectedWithQuotedKey = Expect<Equal<ExprType<typeof projectedWithQuotedKey.columns["User Id"]>, SqlInt>>;
 type _AggregatedWithQuotedKey = Expect<Equal<ExprType<typeof aggregatedWithQuotedKey.columns["Total Spend"]>, SqlFloat>>;
 type _AggregatedTotals = Expect<Equal<ExprType<typeof aggregatedTotals.columns.totals>, SqlFloat[]>>;
@@ -186,6 +203,14 @@ void remedaTemplateKeyMappedSelection;
 void remedaTemplateKeyMappedUsage;
 void remedaOmittedAggregate;
 void leftViaJoinSelected;
+void overlapPrefixedLeft;
+void overlapPrefixedRight;
+void allPrefixedLeft;
+void allPrefixedRight;
+void allSuffixedLeft;
+void allSuffixedRight;
+void droppedOverlapLeft;
+void droppedOverlapRight;
 void projectedWithQuotedKey;
 void aggregatedWithQuotedKey;
 void aggregatedTotals;
@@ -209,6 +234,12 @@ leftJoin(users, profileRows, (user, profile) => eq(user.id, profile.id));
 rightJoin(users, profileRows, (user, profile) => eq(user.id, profile.id));
 // @ts-expect-error fullJoin without merge must reject overlapping output names
 fullJoin(users, profileRows, (user, profile) => eq(user.id, profile.id));
+const profileRowsWithUserId = values([
+    { id: 1 as number, user_id: 1 as number, bio: "A" as string },
+    { id: 2 as number, user_id: 2 as number, bio: "B" as string },
+]);
+// @ts-expect-error prefixOverlapLeft can still collide with right-side keys after rename
+innerJoin(users, profileRowsWithUserId, (user, profile) => eq(user.id, profile.user_id), prefixOverlapLeft("user_"));
 // @ts-expect-error legacy array selection syntax is removed
 map(users, (user) => [user.id]);
 // @ts-expect-error legacy array fold syntax is removed

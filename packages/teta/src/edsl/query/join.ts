@@ -96,12 +96,243 @@ type JoinRightColumnsForType<
   TType extends JoinKind,
 > = TType extends "left" | "full" ? NullableColumns<TRight> : TRight;
 
+type PrefixKeys<TColumns extends Record<string, any>, TPrefix extends string> = {
+  [K in keyof TColumns as K extends string ? `${TPrefix}${K}` : never]: TColumns[K];
+};
+
+type SuffixKeys<TColumns extends Record<string, any>, TSuffix extends string> = {
+  [K in keyof TColumns as K extends string ? `${K}${TSuffix}` : never]: TColumns[K];
+};
+
+type RenameOverlapLeftKeys<
+  TLeft extends Record<string, any>,
+  TRight extends Record<string, any>,
+  TPrefix extends string,
+> = {
+  [K in keyof TLeft as K extends string
+    ? K extends JoinOverlappingColumnNames<TLeft, TRight>
+      ? `${TPrefix}${K}`
+      : K
+    : never]: TLeft[K];
+};
+
+type RenameOverlapRightKeys<
+  TLeft extends Record<string, any>,
+  TRight extends Record<string, any>,
+  TPrefix extends string,
+> = {
+  [K in keyof TRight as K extends string
+    ? K extends JoinOverlappingColumnNames<TLeft, TRight>
+      ? `${TPrefix}${K}`
+      : K
+    : never]: TRight[K];
+};
+
+type DropOverlapLeftKeys<
+  TLeft extends Record<string, any>,
+  TRight extends Record<string, any>,
+> = Omit<TLeft, JoinOverlappingColumnNames<TLeft, TRight>>;
+
+type DropOverlapRightKeys<
+  TLeft extends Record<string, any>,
+  TRight extends Record<string, any>,
+> = Omit<TRight, JoinOverlappingColumnNames<TLeft, TRight>>;
+
+type JoinMergeConflictGuard<
+  TLeft extends Record<string, any>,
+  TRight extends Record<string, any>,
+> = [Extract<keyof TLeft, keyof TRight> & string] extends [never] ? unknown
+  : {
+      __teta_join_merge_conflict__: Extract<keyof TLeft, keyof TRight> & string;
+    };
+
+type JoinHelperSelection<
+  TLeft extends Record<string, any>,
+  TRight extends Record<string, any>,
+> = ExprRefs<TLeft & TRight> & JoinMergeConflictGuard<TLeft, TRight>;
+
 export type JoinOptions<
   TType extends JoinTypeInput | undefined = undefined,
 > = {
   type?: TType;
   lateral?: boolean;
 };
+
+export function prefixOverlapLeft<const TPrefix extends string>(prefix: TPrefix) {
+  return function <
+    TLeft extends Record<string, any>,
+    TRight extends Record<string, any>,
+  >(
+    left: ColumnRefs<TLeft>,
+    right: ColumnRefs<TRight>
+  ): JoinHelperSelection<RenameOverlapLeftKeys<TLeft, TRight, TPrefix>, TRight> {
+    const overlapping = new Set(getOverlappingColumnNames(Object.keys(left), Object.keys(right)));
+    const merged: JoinSelection = {};
+
+    for (const key of Object.keys(left)) {
+      const outputKey = overlapping.has(key) ? `${prefix}${key}` : key;
+      assignJoinMergeColumn(merged, outputKey, left[key as keyof typeof left]);
+    }
+    for (const key of Object.keys(right)) {
+      assignJoinMergeColumn(merged, key, right[key as keyof typeof right]);
+    }
+
+    return merged as JoinHelperSelection<RenameOverlapLeftKeys<TLeft, TRight, TPrefix>, TRight>;
+  };
+}
+
+export function prefixOverlapRight<const TPrefix extends string>(prefix: TPrefix) {
+  return function <
+    TLeft extends Record<string, any>,
+    TRight extends Record<string, any>,
+  >(
+    left: ColumnRefs<TLeft>,
+    right: ColumnRefs<TRight>
+  ): JoinHelperSelection<TLeft, RenameOverlapRightKeys<TLeft, TRight, TPrefix>> {
+    const overlapping = new Set(getOverlappingColumnNames(Object.keys(left), Object.keys(right)));
+    const merged: JoinSelection = {};
+
+    for (const key of Object.keys(left)) {
+      assignJoinMergeColumn(merged, key, left[key as keyof typeof left]);
+    }
+    for (const key of Object.keys(right)) {
+      const outputKey = overlapping.has(key) ? `${prefix}${key}` : key;
+      assignJoinMergeColumn(merged, outputKey, right[key as keyof typeof right]);
+    }
+
+    return merged as JoinHelperSelection<TLeft, RenameOverlapRightKeys<TLeft, TRight, TPrefix>>;
+  };
+}
+
+export function prefixAllLeft<const TPrefix extends string>(prefix: TPrefix) {
+  return function <
+    TLeft extends Record<string, any>,
+    TRight extends Record<string, any>,
+  >(
+    left: ColumnRefs<TLeft>,
+    right: ColumnRefs<TRight>
+  ): JoinHelperSelection<PrefixKeys<TLeft, TPrefix>, TRight> {
+    const merged: JoinSelection = {};
+
+    for (const key of Object.keys(left)) {
+      assignJoinMergeColumn(merged, `${prefix}${key}`, left[key as keyof typeof left]);
+    }
+    for (const key of Object.keys(right)) {
+      assignJoinMergeColumn(merged, key, right[key as keyof typeof right]);
+    }
+
+    return merged as JoinHelperSelection<PrefixKeys<TLeft, TPrefix>, TRight>;
+  };
+}
+
+export function prefixAllRight<const TPrefix extends string>(prefix: TPrefix) {
+  return function <
+    TLeft extends Record<string, any>,
+    TRight extends Record<string, any>,
+  >(
+    left: ColumnRefs<TLeft>,
+    right: ColumnRefs<TRight>
+  ): JoinHelperSelection<TLeft, PrefixKeys<TRight, TPrefix>> {
+    const merged: JoinSelection = {};
+
+    for (const key of Object.keys(left)) {
+      assignJoinMergeColumn(merged, key, left[key as keyof typeof left]);
+    }
+    for (const key of Object.keys(right)) {
+      assignJoinMergeColumn(merged, `${prefix}${key}`, right[key as keyof typeof right]);
+    }
+
+    return merged as JoinHelperSelection<TLeft, PrefixKeys<TRight, TPrefix>>;
+  };
+}
+
+export function suffixAllLeft<const TSuffix extends string>(suffix: TSuffix) {
+  return function <
+    TLeft extends Record<string, any>,
+    TRight extends Record<string, any>,
+  >(
+    left: ColumnRefs<TLeft>,
+    right: ColumnRefs<TRight>
+  ): JoinHelperSelection<SuffixKeys<TLeft, TSuffix>, TRight> {
+    const merged: JoinSelection = {};
+
+    for (const key of Object.keys(left)) {
+      assignJoinMergeColumn(merged, `${key}${suffix}`, left[key as keyof typeof left]);
+    }
+    for (const key of Object.keys(right)) {
+      assignJoinMergeColumn(merged, key, right[key as keyof typeof right]);
+    }
+
+    return merged as JoinHelperSelection<SuffixKeys<TLeft, TSuffix>, TRight>;
+  };
+}
+
+export function suffixAllRight<const TSuffix extends string>(suffix: TSuffix) {
+  return function <
+    TLeft extends Record<string, any>,
+    TRight extends Record<string, any>,
+  >(
+    left: ColumnRefs<TLeft>,
+    right: ColumnRefs<TRight>
+  ): JoinHelperSelection<TLeft, SuffixKeys<TRight, TSuffix>> {
+    const merged: JoinSelection = {};
+
+    for (const key of Object.keys(left)) {
+      assignJoinMergeColumn(merged, key, left[key as keyof typeof left]);
+    }
+    for (const key of Object.keys(right)) {
+      assignJoinMergeColumn(merged, `${key}${suffix}`, right[key as keyof typeof right]);
+    }
+
+    return merged as JoinHelperSelection<TLeft, SuffixKeys<TRight, TSuffix>>;
+  };
+}
+
+export function dropOverlapLeft() {
+  return function <
+    TLeft extends Record<string, any>,
+    TRight extends Record<string, any>,
+  >(
+    left: ColumnRefs<TLeft>,
+    right: ColumnRefs<TRight>
+  ): JoinHelperSelection<DropOverlapLeftKeys<TLeft, TRight>, TRight> {
+    const overlapping = new Set(getOverlappingColumnNames(Object.keys(left), Object.keys(right)));
+    const merged: JoinSelection = {};
+
+    for (const key of Object.keys(left)) {
+      if (overlapping.has(key)) continue;
+      assignJoinMergeColumn(merged, key, left[key as keyof typeof left]);
+    }
+    for (const key of Object.keys(right)) {
+      assignJoinMergeColumn(merged, key, right[key as keyof typeof right]);
+    }
+
+    return merged as JoinHelperSelection<DropOverlapLeftKeys<TLeft, TRight>, TRight>;
+  };
+}
+
+export function dropOverlapRight() {
+  return function <
+    TLeft extends Record<string, any>,
+    TRight extends Record<string, any>,
+  >(
+    left: ColumnRefs<TLeft>,
+    right: ColumnRefs<TRight>
+  ): JoinHelperSelection<TLeft, DropOverlapRightKeys<TLeft, TRight>> {
+    const overlapping = new Set(getOverlappingColumnNames(Object.keys(left), Object.keys(right)));
+    const merged: JoinSelection = {};
+
+    for (const key of Object.keys(left)) {
+      assignJoinMergeColumn(merged, key, left[key as keyof typeof left]);
+    }
+    for (const key of Object.keys(right)) {
+      if (overlapping.has(key)) continue;
+      assignJoinMergeColumn(merged, key, right[key as keyof typeof right]);
+    }
+
+    return merged as JoinHelperSelection<TLeft, DropOverlapRightKeys<TLeft, TRight>>;
+  };
+}
 
 export type JoinColumnMergerForType<
   TLeft extends Record<string, any>,
@@ -183,4 +414,15 @@ function getOverlappingColumnNames(
   if (leftNames.length === 0 || rightNames.length === 0) return [];
   const right = new Set(rightNames);
   return leftNames.filter((name) => right.has(name));
+}
+
+function assignJoinMergeColumn(
+  target: JoinSelection,
+  key: string,
+  value: ExprRef<unknown>
+): void {
+  if (Object.prototype.hasOwnProperty.call(target, key)) {
+    userError("JOIN_MERGE_CONFLICT", `join merge helper produced duplicate output column: ${key}`);
+  }
+  target[key] = value;
 }

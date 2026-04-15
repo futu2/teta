@@ -36,6 +36,30 @@ export const fullJoin: typeof import("./src/edsl/query.ts").fullJoin = query.ful
 /** Joins two query inputs with an explicit join condition. */
 export const join: typeof import("./src/edsl/query.ts").join = query.join;
 
+/** Prefixes overlapping left join columns before merge. */
+export const prefixOverlapLeft: typeof import("./src/edsl/query.ts").prefixOverlapLeft = query.prefixOverlapLeft;
+
+/** Prefixes overlapping right join columns before merge. */
+export const prefixOverlapRight: typeof import("./src/edsl/query.ts").prefixOverlapRight = query.prefixOverlapRight;
+
+/** Prefixes all left join columns before merge. */
+export const prefixAllLeft: typeof import("./src/edsl/query.ts").prefixAllLeft = query.prefixAllLeft;
+
+/** Prefixes all right join columns before merge. */
+export const prefixAllRight: typeof import("./src/edsl/query.ts").prefixAllRight = query.prefixAllRight;
+
+/** Suffixes all left join columns before merge. */
+export const suffixAllLeft: typeof import("./src/edsl/query.ts").suffixAllLeft = query.suffixAllLeft;
+
+/** Suffixes all right join columns before merge. */
+export const suffixAllRight: typeof import("./src/edsl/query.ts").suffixAllRight = query.suffixAllRight;
+
+/** Drops overlapping columns from the left side before merge. */
+export const dropOverlapLeft: typeof import("./src/edsl/query.ts").dropOverlapLeft = query.dropOverlapLeft;
+
+/** Drops overlapping columns from the right side before merge. */
+export const dropOverlapRight: typeof import("./src/edsl/query.ts").dropOverlapRight = query.dropOverlapRight;
+
 /** Expands an array expression into rows. */
 export const unnest: typeof import("./src/edsl/query.ts").unnest = query.unnest;
 
