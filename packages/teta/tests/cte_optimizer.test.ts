@@ -48,4 +48,20 @@ describe("cte optimizer", () => {
 
     expect(optimizedOuterAst.with?.map((cte: any) => cte.name.value)).toEqual(["nested_live"]);
   });
+
+  test("dedupes equivalent dependency chains and removes duplicate-only leaves", () => {
+    const leftLeaf = buildNamedCte("left_leaf", selectFrom("orders"));
+    const rightLeaf = buildNamedCte("right_leaf", selectFrom("orders"));
+    const leftOuter = buildNamedCte("left_outer", selectFrom("left_leaf"));
+    const rightOuter = buildNamedCte("right_outer", selectFrom("right_leaf"));
+
+    const root = selectFrom("right_outer");
+    const optimized = optimizeCtes(root, [leftLeaf, rightLeaf, leftOuter, rightOuter]);
+
+    expect(optimized.map((cte) => cte.name.value)).toEqual(["right_leaf", "right_outer"]);
+    expect((root.from as any)[0].table).toBe("right_outer");
+    expect((ensureSelectAst(optimized[1]!.stmt.ast, "right_outer").from as any)[0].table).toBe(
+      "right_leaf"
+    );
+  });
 });

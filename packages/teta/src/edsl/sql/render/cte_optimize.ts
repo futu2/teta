@@ -1,6 +1,6 @@
 import type { Select, With } from "node-sql-parser";
 
-import { ensureSelectAst, isSelectAst, toParserSelect } from "./ast.ts";
+import { cloneAst, ensureSelectAst, isSelectAst, toParserSelect } from "./ast.ts";
 import { internalError } from "../../errors.ts";
 import type { FromAst, SelectAst } from "./types.ts";
 
@@ -32,9 +32,20 @@ function optimizeNestedWiths(select: SelectAst): void {
 function optimizeCurrentCtes(ast: SelectAst, ctes: With[]): With[] {
   if (ctes.length === 0) return ctes;
 
-  const known = new Map(ctes.map((cte) => [cte.name.value, optimizeCteBody(cte)]));
-  const live = collectLiveCteNames(ast, known);
-  return ctes.filter((cte) => live.has(cte.name.value));
+  const prepared = ctes.map((cte) => optimizeCteBody(cte));
+  const originalLive = collectLiveCteNames(ast, new Map(prepared.map((cte) => [cte.name.value, cte])));
+  const renameMap = buildCanonicalRenameMap(prepared, originalLive);
+
+  rewriteSelectCteRefs(ast, renameMap);
+  prepared.forEach((cte) =>
+    rewriteSelectCteRefs(mutableSelectAst(cte.stmt.ast, `cte ${cte.name.value}`), renameMap)
+  );
+
+  const survivors = prepared.filter(
+    (cte) => resolveCanonicalName(cte.name.value, renameMap) === cte.name.value
+  );
+  const live = collectLiveCteNames(ast, new Map(survivors.map((cte) => [cte.name.value, cte])));
+  return survivors.filter((cte) => live.has(cte.name.value));
 }
 
 function collectLiveCteNames(root: SelectAst, known: ReadonlyMap<string, With>): Set<string> {
@@ -103,6 +114,78 @@ function nestedSelects(select: SelectAst): SelectAst[] {
 function toFromList(from: Select["from"] | FromAst[] | FromAst | null): FromAst[] {
   if (!from) return [];
   return Array.isArray(from) ? from : [from];
+}
+
+function buildCanonicalRenameMap(
+  ctes: With[],
+  originalLive: ReadonlySet<string>
+): Map<string, string> {
+  const canonicalByFingerprint = new Map<string, { name: string; live: boolean }>();
+  const renameMap = new Map<string, string>();
+
+  for (const cte of ctes) {
+    if ((cte as With & { recursive?: boolean }).recursive) continue;
+
+    const fingerprint = fingerprintCte(cte, renameMap);
+    const candidate = canonicalByFingerprint.get(fingerprint);
+    const isLive = originalLive.has(cte.name.value);
+    if (candidate) {
+      if (isLive && !candidate.live) {
+        renameMap.set(candidate.name, cte.name.value);
+        canonicalByFingerprint.set(fingerprint, { name: cte.name.value, live: true });
+        continue;
+      }
+
+      renameMap.set(cte.name.value, candidate.name);
+      continue;
+    }
+
+    canonicalByFingerprint.set(fingerprint, { name: cte.name.value, live: isLive });
+  }
+
+  return renameMap;
+}
+
+function fingerprintCte(cte: With, renameMap: ReadonlyMap<string, string>): string {
+  const ast = cloneAst(mutableSelectAst(cte.stmt.ast, `fingerprint ${cte.name.value}`));
+  rewriteSelectCteRefs(ast, renameMap);
+  return JSON.stringify(ast);
+}
+
+function rewriteSelectCteRefs(select: SelectAst, renameMap: ReadonlyMap<string, string>): void {
+  for (const from of toFromList(select.from)) {
+    if ("expr" in from && from.expr?.ast) {
+      rewriteSelectCteRefs(mutableSelectAst(from.expr.ast, "subquery"), renameMap);
+      continue;
+    }
+
+    const tableName = from.rawTable ?? from.table;
+    if (!tableName) continue;
+
+    const canonical = resolveCanonicalName(tableName, renameMap);
+    if (canonical === tableName) continue;
+
+    from.table = canonical;
+    from.rawTable = canonical;
+  }
+
+  if (select._next) {
+    rewriteSelectCteRefs(mutableSelectAst(select._next, "set operation"), renameMap);
+  }
+
+  if (select.with?.length) {
+    select.with.forEach((cte) =>
+      rewriteSelectCteRefs(mutableSelectAst(cte.stmt.ast, `cte ${cte.name.value}`), renameMap)
+    );
+  }
+}
+
+function resolveCanonicalName(name: string, renameMap: ReadonlyMap<string, string>): string {
+  let current = name;
+  while (renameMap.has(current)) {
+    current = renameMap.get(current)!;
+  }
+  return current;
 }
 
 function mutableSelectAst(ast: Select | SelectAst, context: string): SelectAst {

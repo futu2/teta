@@ -119,6 +119,27 @@ describe("toSql(query, options)", () => {
         expect(sql).toContain("JOIN join_0 AS");
         expect(sql).not.toContain("JOIN (SELECT");
     });
+    test("dedupes identical hoisted join subqueries", () => {
+        const users = createUsersTable();
+        const orders = createOrdersTable();
+        const positiveOrders = map(filter(orders, (order) => gt(order.total, 0)), (order) => ({
+            user_id: order.user_id,
+            total: order.total,
+        }));
+        const joinedOnce = innerJoin(users, positiveOrders, (user, order) => eq(user.id, order.user_id), (user, order) => ({
+            id: user.id,
+            first_total: order.total,
+        }));
+        const query = innerJoin(joinedOnce, positiveOrders, (row, order) => eq(row.id, order.user_id), (row, order) => ({
+            id: row.id,
+            first_total: row.first_total,
+            second_total: order.total,
+        }));
+        const sql = toSql(query, { dialect: "postgresql", format: "compact" });
+        expect(sql).toContain("WITH join_0(user_id, total) AS (SELECT");
+        expect(sql).not.toContain("join_1(");
+        expect(sql.match(/JOIN join_0 AS /g)?.length).toBe(2);
+    });
     test("renders a self-join with distinct aliases", () => {
         const employees = table("employees", {
             id: t.int(),

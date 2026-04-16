@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { table, t, map, replace } from "../mod.ts";
 import { renderPipelineAst } from "../src/edsl/sql/render/pipeline.ts";
 describe("pipeline render pipeline", () => {
-    test("prepends base CTEs before generated stage CTEs", () => {
+    test("drops unused base CTEs before attaching generated stage CTEs", () => {
         const users = table("users", {
             id: t.int(),
             name: t.string(),
@@ -32,9 +32,8 @@ describe("pipeline render pipeline", () => {
                 },
             ],
         }) as any;
-        expect(ast.with).toHaveLength(2);
-        expect(ast.with[0].name.value).toBe("seed");
-        expect(ast.with[0].columns?.map((column: any) => column.column.expr.value)).toEqual(["id"]);
-        expect(ast.with[1].name.value).toBe("test_cte_0");
+        expect(ast.with).toHaveLength(1);
+        expect(ast.with[0].name.value).toBe("test_cte_0");
+        expect(ast.with.map((cte: any) => cte.name.value)).not.toContain("seed");
     });
 });
