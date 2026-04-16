@@ -103,6 +103,7 @@ export type DialectLanguageFallback =
   | "date_diff_via_julianday"
   | "date_diff_via_extract_epoch"
   | "date_add_via_epoch_timestamp"
+  | "date_add_via_hive_datetime"
   | "to_unixtime_via_strftime_s"
   | "to_unixtime_via_extract_epoch"
   | "from_unixtime_via_datetime"

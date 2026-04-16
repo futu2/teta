@@ -22,6 +22,42 @@ export function rewriteArithmeticDateFallback(
   fallback: DialectLanguageFallback
 ): ExprNode<any> | null {
   switch (fallback) {
+    case "date_add_via_hive_datetime": {
+      const unitExpr = args[0];
+      const amountExpr = args[1];
+      const valueExpr = args[2];
+      const unit = unitExpr ? normalizeUnit(literalString(unitExpr)) : null;
+      if (!unit || !amountExpr || !valueExpr) {
+        return func(functionName, args);
+      }
+      switch (unit) {
+        case "year":
+          return buildHiveAddMonths(valueExpr, binaryExpr("*", amountExpr, literal(12)));
+        case "quarter":
+          return buildHiveAddMonths(valueExpr, binaryExpr("*", amountExpr, literal(3)));
+        case "month":
+          return buildHiveAddMonths(valueExpr, amountExpr);
+        case "week":
+        case "day":
+        case "hour":
+        case "minute":
+        case "second": {
+          const factor = DATE_ADD_EPOCH_FACTORS[unit];
+          if (!factor) {
+            return func(functionName, args);
+          }
+          const delta = factor === 1 ? amountExpr : binaryExpr("*", amountExpr, literal(factor));
+          return castExpr(
+            func("FROM_UNIXTIME", [
+              binaryExpr("+", func("UNIX_TIMESTAMP", [valueExpr]), delta),
+            ]),
+            "TIMESTAMP"
+          );
+        }
+        default:
+          return func(functionName, args);
+      }
+    }
     case "date_add_via_datetime": {
       const unitExpr = args[0];
       const amountExpr = args[1];
@@ -184,4 +220,21 @@ export function rewriteArithmeticDateFallback(
     default:
       return null;
   }
+}
+
+function buildHiveAddMonths(
+  valueExpr: ExprNode<any>,
+  amountExpr: ExprNode<any>
+): ExprNode<any> {
+  return castExpr(
+    func("CONCAT", [
+      castExpr(
+        func("ADD_MONTHS", [castExpr(valueExpr, "DATE"), amountExpr]),
+        "STRING"
+      ),
+      literal(" "),
+      func("DATE_FORMAT", [valueExpr, literal("HH:mm:ss")]),
+    ]),
+    "TIMESTAMP"
+  );
 }

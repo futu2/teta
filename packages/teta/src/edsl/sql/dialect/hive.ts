@@ -7,5 +7,8 @@ export const HIVE_DIALECT: BuiltinDialectDefinition = {
     functions: {
       ARRAY_AGG: "COLLECT_LIST",
     },
+    fallbacks: {
+      DATE_ADD: "date_add_via_hive_datetime",
+    },
   },
 };
