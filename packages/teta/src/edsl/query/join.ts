@@ -225,6 +225,15 @@ export function usingCols(nameOrNames: string | readonly string[]) {
 
 export function onEq<const TMapping extends Record<string, string>>(
   mapping: TMapping
+): <
+  TLeft extends Record<Extract<keyof TMapping, string>, any>,
+  TRight extends Record<TMapping[Extract<keyof TMapping, string>] & string, any>,
+>(
+  left: ColumnRefs<TLeft>,
+  right: ColumnRefs<TRight>
+) => ExprRef<boolean>;
+export function onEq<const TMapping extends Record<string, string>>(
+  mapping: TMapping
 ) {
   type LeftKey = Extract<keyof TMapping, string>;
   type RightKey = TMapping[LeftKey] & string;
@@ -253,6 +262,19 @@ export function onEq<const TMapping extends Record<string, string>>(
   };
 }
 
+export function prefixOverlapLeft<const TPrefix extends string>(
+  prefix: TPrefix
+): <
+  TLeft extends Record<string, any>,
+  TRight extends Record<string, any>,
+>(
+  left: ColumnRefs<TLeft>,
+  right: ColumnRefs<TRight>
+) => JoinHelperSelection<
+  RenameOverlapLeftKeys<TLeft, TRight, TPrefix>,
+  TRight,
+  PrefixOverlapLeftSelfConflicts<TLeft, TRight, TPrefix>
+>;
 export function prefixOverlapLeft<const TPrefix extends string>(prefix: TPrefix) {
   return function <
     TLeft extends Record<string, any>,
@@ -284,6 +306,19 @@ export function prefixOverlapLeft<const TPrefix extends string>(prefix: TPrefix)
   };
 }
 
+export function prefixOverlapRight<const TPrefix extends string>(
+  prefix: TPrefix
+): <
+  TLeft extends Record<string, any>,
+  TRight extends Record<string, any>,
+>(
+  left: ColumnRefs<TLeft>,
+  right: ColumnRefs<TRight>
+) => JoinHelperSelection<
+  TLeft,
+  RenameOverlapRightKeys<TLeft, TRight, TPrefix>,
+  PrefixOverlapRightSelfConflicts<TLeft, TRight, TPrefix>
+>;
 export function prefixOverlapRight<const TPrefix extends string>(prefix: TPrefix) {
   return function <
     TLeft extends Record<string, any>,
@@ -315,6 +350,15 @@ export function prefixOverlapRight<const TPrefix extends string>(prefix: TPrefix
   };
 }
 
+export function prefixAllLeft<const TPrefix extends string>(
+  prefix: TPrefix
+): <
+  TLeft extends Record<string, any>,
+  TRight extends Record<string, any>,
+>(
+  left: ColumnRefs<TLeft>,
+  right: ColumnRefs<TRight>
+) => JoinHelperSelection<PrefixKeys<TLeft, TPrefix>, TRight>;
 export function prefixAllLeft<const TPrefix extends string>(prefix: TPrefix) {
   return function <
     TLeft extends Record<string, any>,
@@ -336,6 +380,15 @@ export function prefixAllLeft<const TPrefix extends string>(prefix: TPrefix) {
   };
 }
 
+export function prefixAllRight<const TPrefix extends string>(
+  prefix: TPrefix
+): <
+  TLeft extends Record<string, any>,
+  TRight extends Record<string, any>,
+>(
+  left: ColumnRefs<TLeft>,
+  right: ColumnRefs<TRight>
+) => JoinHelperSelection<TLeft, PrefixKeys<TRight, TPrefix>>;
 export function prefixAllRight<const TPrefix extends string>(prefix: TPrefix) {
   return function <
     TLeft extends Record<string, any>,
@@ -357,6 +410,15 @@ export function prefixAllRight<const TPrefix extends string>(prefix: TPrefix) {
   };
 }
 
+export function suffixAllLeft<const TSuffix extends string>(
+  suffix: TSuffix
+): <
+  TLeft extends Record<string, any>,
+  TRight extends Record<string, any>,
+>(
+  left: ColumnRefs<TLeft>,
+  right: ColumnRefs<TRight>
+) => JoinHelperSelection<SuffixKeys<TLeft, TSuffix>, TRight>;
 export function suffixAllLeft<const TSuffix extends string>(suffix: TSuffix) {
   return function <
     TLeft extends Record<string, any>,
@@ -378,6 +440,15 @@ export function suffixAllLeft<const TSuffix extends string>(suffix: TSuffix) {
   };
 }
 
+export function suffixAllRight<const TSuffix extends string>(
+  suffix: TSuffix
+): <
+  TLeft extends Record<string, any>,
+  TRight extends Record<string, any>,
+>(
+  left: ColumnRefs<TLeft>,
+  right: ColumnRefs<TRight>
+) => JoinHelperSelection<TLeft, SuffixKeys<TRight, TSuffix>>;
 export function suffixAllRight<const TSuffix extends string>(suffix: TSuffix) {
   return function <
     TLeft extends Record<string, any>,
@@ -399,6 +470,13 @@ export function suffixAllRight<const TSuffix extends string>(suffix: TSuffix) {
   };
 }
 
+export function dropOverlapLeft(): <
+  TLeft extends Record<string, any>,
+  TRight extends Record<string, any>,
+>(
+  left: ColumnRefs<TLeft>,
+  right: ColumnRefs<TRight>
+) => JoinHelperSelection<DropOverlapLeftKeys<TLeft, TRight>, TRight>;
 export function dropOverlapLeft() {
   return function <
     TLeft extends Record<string, any>,
@@ -422,6 +500,13 @@ export function dropOverlapLeft() {
   };
 }
 
+export function dropOverlapRight(): <
+  TLeft extends Record<string, any>,
+  TRight extends Record<string, any>,
+>(
+  left: ColumnRefs<TLeft>,
+  right: ColumnRefs<TRight>
+) => JoinHelperSelection<TLeft, DropOverlapRightKeys<TLeft, TRight>>;
 export function dropOverlapRight() {
   return function <
     TLeft extends Record<string, any>,
