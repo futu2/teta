@@ -2,6 +2,7 @@ import type { AST, With } from "node-sql-parser";
 import type { CteSpec } from "../../core/types.ts";
 import type { QueryDialect } from "../types.ts";
 import { toParserAst } from "./ast.ts";
+import { optimizeCtes } from "./cte_optimize.ts";
 import { materializeCte } from "./recursive.ts";
 import type { SelectAst } from "./types.ts";
 
@@ -17,7 +18,8 @@ export function buildPipelineParserAst(
   baseCtes: With[],
   stageCtes: With[]
 ): AST {
-  const merged = baseCtes.length ? [...baseCtes, ...stageCtes] : stageCtes;
-  ast.with = merged.length ? merged : null;
+  const merged = baseCtes.length ? [...baseCtes, ...stageCtes] : [...stageCtes];
+  const optimized = optimizeCtes(ast, merged);
+  ast.with = optimized.length ? optimized : null;
   return toParserAst(ast);
 }
