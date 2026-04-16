@@ -394,6 +394,9 @@ export const toInt: typeof import("./src/edsl/expr.ts").toInt = expr.toInt;
 /** Builds a cast-to-float expression. */
 export const toFloat: typeof import("./src/edsl/expr.ts").toFloat = expr.toFloat;
 
+/** Builds a cast-to-string expression. */
+export const toString: typeof import("./src/edsl/expr.ts").toString = expr.toString;
+
 /** Builds a cast-to-date expression. */
 export const toDate: typeof import("./src/edsl/expr.ts").toDate = expr.toDate;
 

@@ -117,6 +117,12 @@ export function toFloat<TValue extends NullableSqlNumber>(
   return cast<PropagateNull<TValue, SqlFloat>>(value, "FLOAT");
 }
 
+export function toString<TValue>(
+  value: ExprInput<TValue>
+): ExprRef<PropagateNull<TValue, string>> {
+  return cast<PropagateNull<TValue, string>>(value, "VARCHAR");
+}
+
 export function round<TValue extends NullableSqlNumber>(
   value: ExprInput<TValue>,
   scale?: ExprInput<SqlInt>

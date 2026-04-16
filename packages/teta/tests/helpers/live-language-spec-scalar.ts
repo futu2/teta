@@ -1,6 +1,6 @@
 import { SQLITE_UNSUPPORTED, currentDate, currentTimestamp, scalarTable, } from "./live-language-spec-shared.ts";
 import type { LiveSpecCase } from "./live-language-spec-shared.ts";
-import { isNotNull, map, abs, add, cast, ceil, coalesce, dateAdd, dateDiff, dateFormat, dateParse, dateTrunc, day, div, eq, extract, floor, greatest, gt, gte, hour, isIn, isNull, least, lt, lte, minute, mod, month, mul, ne, nullIf, pow, round, second, sqrt, sub, toDate, toInt, trim, year, and, bitLength, charLength, characterLength, concat, fromUnixTime, left, like, lower, lpad, not, octetLength, or, overlay, position, regexExtract, regexLike, regexReplace, replace, reverse, right, rpad, substring, toFloat, upper, toUnixTime } from "../../mod.ts";
+import { isNotNull, map, abs, add, cast, ceil, coalesce, dateAdd, dateDiff, dateFormat, dateParse, dateTrunc, day, div, eq, extract, floor, greatest, gt, gte, hour, isIn, isNull, least, lt, lte, minute, mod, month, mul, ne, nullIf, pow, round, second, sqrt, sub, toDate, toInt, toString, trim, year, and, bitLength, charLength, characterLength, concat, fromUnixTime, left, like, lower, lpad, not, octetLength, or, overlay, position, regexExtract, regexLike, regexReplace, replace, reverse, right, rpad, substring, toFloat, upper, toUnixTime } from "../../mod.ts";
 export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
     {
         name: "math functions",
@@ -387,10 +387,11 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
         name: "type conversion and null handling",
         build: () => {
             const scalar = scalarTable();
-            return map(scalar, ({ nullable_txt, num_txt, ts, txt, txt2, x }) => ({
+            return map(scalar, ({ i, nullable_txt, num_txt, ts, txt, txt2, x }) => ({
                 cast_v: cast(num_txt, "INTEGER"),
                 to_int_v: toInt(x),
                 to_float_v: toFloat(toInt(x)),
+                to_string_v: toString(i),
                 to_date_v: dateFormat(toDate(ts), "%Y-%m-%d"),
                 coalesce_v: coalesce(nullable_txt, txt2),
                 nullif_is_null_v: isNull(nullIf(txt2, "World")),
@@ -405,6 +406,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
                         cast_v: 42,
                         to_int_v: 7,
                         to_float_v: 7,
+                        to_string_v: "5",
                         to_date_v: "2024-01-02",
                         coalesce_v: "World",
                         nullif_is_null_v: 1,
@@ -419,6 +421,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
                         cast_v: 42,
                         to_int_v: 8,
                         to_float_v: 8,
+                        to_string_v: "5",
                         to_date_v: "2024-01-02",
                         coalesce_v: "World",
                         nullif_is_null_v: true,
