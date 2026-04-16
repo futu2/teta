@@ -400,6 +400,9 @@ export const toString: typeof import("./src/edsl/expr.ts").toString = expr.toStr
 /** Builds a cast-to-date expression. */
 export const toDate: typeof import("./src/edsl/expr.ts").toDate = expr.toDate;
 
+/** Builds a cast-to-timestamp expression. */
+export const toTimestamp: typeof import("./src/edsl/expr.ts").toTimestamp = expr.toTimestamp;
+
 /** Builds a rounding expression. */
 export const round: typeof import("./src/edsl/expr.ts").round = expr.round;
 

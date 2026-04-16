@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { toSql } from "../mod.ts";
+import { dateFormat, map, table, t, toSql, toTimestamp } from "../mod.ts";
 import { buildLiveDialectQuery } from "./helpers/fixtures.ts";
 let DuckDBConnection: (typeof import("@duckdb/node-api"))["DuckDBConnection"] | null = null;
 try {
@@ -49,5 +49,30 @@ describe("live duckdb dialect", () => {
             day: new Date("2024-01-02T00:00:00.000Z"),
             fmt: "2024-01-02",
         });
+    });
+    liveDuckDbTest("executes TIMESTAMP cast helper SQL", async () => {
+        if (!DuckDBConnection) {
+            throw new Error("DuckDBConnection is unavailable");
+        }
+        connection = await DuckDBConnection.create();
+        await connection.run("SET TimeZone = 'UTC'");
+        await connection.run(`
+      CREATE TABLE events (
+        event_date DATE NOT NULL
+      );
+    `);
+        await connection.run(`
+      INSERT INTO events (event_date)
+      VALUES (DATE '2024-01-02');
+    `);
+        const events = table("events", {
+            event_date: t.date(),
+        });
+        const query = map(events, (event) => ({
+            event_ts: dateFormat(toTimestamp(event.event_date), "%Y-%m-%d %H:%M:%S"),
+        }));
+        const sql = toSql(query, { dialect: "duckdb", format: "compact" });
+        const rows = await (await connection.run(sql)).getRowObjectsJS();
+        expect(rows).toEqual([{ event_ts: "2024-01-02 00:00:00" }]);
     });
 });
