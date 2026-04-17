@@ -1,12 +1,12 @@
 import type { Select, With } from "node-sql-parser";
 
-import { cloneAst, ensureSelectAst, isSelectAst, toParserSelect } from "./ast.ts";
+import { cloneAst, ensureSelectAst } from "./ast.ts";
 import { internalError } from "../../errors.ts";
-import type { FromAst, SelectAst } from "./types.ts";
+import type { FromAst, SelectAst, SubqueryFromRef } from "./types.ts";
 
 export function optimizeCtes(ast: SelectAst, ctes: With[]): With[] {
-  optimizeNestedWiths(toParserSelect(ast));
-  return optimizeCurrentCtes(toParserSelect(ast), ctes);
+  optimizeNestedWiths(ast);
+  return optimizeCurrentCtes(ast, ctes);
 }
 
 function optimizeCteBody(cte: With): With {
@@ -73,9 +73,9 @@ function collectReferencedCteNames(
   const refs = new Set<string>();
 
   for (const from of toFromList(select.from)) {
-    if ("expr" in from && from.expr?.ast) {
-      collectReferencedCteNames(ensureSelectAst(from.expr.ast, "subquery"), known).forEach(
-        (name) => refs.add(name)
+    if (isSubqueryFrom(from)) {
+      collectReferencedCteNames(mutableSelectAst(from.expr.ast, "subquery"), known).forEach((name) =>
+        refs.add(name)
       );
       continue;
     }
@@ -87,8 +87,8 @@ function collectReferencedCteNames(
   }
 
   if (select._next) {
-    collectReferencedCteNames(ensureSelectAst(select._next, "set operation"), known).forEach(
-      (name) => refs.add(name)
+    collectReferencedCteNames(mutableSelectAst(select._next, "set operation"), known).forEach((name) =>
+      refs.add(name)
     );
   }
 
@@ -99,7 +99,7 @@ function nestedSelects(select: SelectAst): SelectAst[] {
   const nested: SelectAst[] = [];
 
   for (const from of toFromList(select.from)) {
-    if ("expr" in from && from.expr?.ast) {
+    if (isSubqueryFrom(from)) {
       nested.push(mutableSelectAst(from.expr.ast, "subquery"));
     }
   }
@@ -111,7 +111,7 @@ function nestedSelects(select: SelectAst): SelectAst[] {
   return nested;
 }
 
-function toFromList(from: Select["from"] | FromAst[] | FromAst | null): FromAst[] {
+function toFromList(from: FromAst[] | FromAst | null): FromAst[] {
   if (!from) return [];
   return Array.isArray(from) ? from : [from];
 }
@@ -154,7 +154,7 @@ function fingerprintCte(cte: With, renameMap: ReadonlyMap<string, string>): stri
 
 function rewriteSelectCteRefs(select: SelectAst, renameMap: ReadonlyMap<string, string>): void {
   for (const from of toFromList(select.from)) {
-    if ("expr" in from && from.expr?.ast) {
+    if (isSubqueryFrom(from)) {
       rewriteSelectCteRefs(mutableSelectAst(from.expr.ast, "subquery"), renameMap);
       continue;
     }
@@ -189,11 +189,15 @@ function resolveCanonicalName(name: string, renameMap: ReadonlyMap<string, strin
 }
 
 function mutableSelectAst(ast: Select | SelectAst, context: string): SelectAst {
-  if (!isSelectAst(ast)) {
+  if (ast.type !== "select") {
     internalError(
       "INTERNAL_PARSER_SELECT_EXPECTED",
       `${context} expected a select AST but got ${ast.type}`
     );
   }
   return ast as SelectAst;
+}
+
+function isSubqueryFrom(from: FromAst): from is SubqueryFromRef {
+  return typeof from.expr === "object" && from.expr !== null && "ast" in from.expr;
 }
