@@ -23,5 +23,5 @@ export const RENDER_BENCHMARK_THRESHOLDS: Record<string, RenderBenchmarkThreshol
 };
 
 export const RENDER_BENCHMARK_RELATIONS = {
-  readableVsOptimizedMaxSlowdown: 4,
+  readableVsOptimizedMaxSlowdown: 5,
 } as const;

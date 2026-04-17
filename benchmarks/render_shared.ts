@@ -7,7 +7,7 @@ import {
   desc,
   eq,
   filter,
-  join,
+  leftJoin,
   lower,
   map,
   sort,
@@ -16,8 +16,8 @@ import {
   take,
   toSql,
   trim,
-} from "@teta/teta";
-import type { SqlOptions } from "@teta/teta";
+} from "../packages/teta/mod.ts";
+import type { SqlOptions } from "../packages/teta/mod.ts";
 
 export type RenderBenchmarkCase = {
   label: string;
@@ -56,7 +56,16 @@ const orders = table("orders", {
 });
 
 export const renderBenchmarkQuery = pipe(
-  join(users, orders, (user, order) => eq(user.id, order.user_id), { type: "left" }),
+  leftJoin(users, orders, (user, order) => eq(user.id, order.user_id), (user, order) => ({
+    id: user.id,
+    name: user.name,
+    active: user.active,
+    tenant_id: user.tenant_id,
+    spend_cents: user.spend_cents,
+    status: order.status,
+    total_cents: order.total_cents,
+    created_at: order.created_at,
+  })),
   filter((row) => and(eq(row.active, true), eq(row.status, "paid"))),
   map((row) => ({
     id: row.id,
