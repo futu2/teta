@@ -1275,12 +1275,13 @@ function parseJoinMergeAndOptions(
   maybeMerge: unknown,
   maybeOptions: unknown
 ): { merge: unknown; options: unknown } {
+  assertNoLegacyJoinMergeOption(maybeMerge);
+  assertNoLegacyJoinMergeOption(maybeOptions);
   const merge =
     typeof maybeMerge === "function" || isJoinMergeShape(maybeMerge, maybeOptions)
       ? maybeMerge
       : undefined;
   const options = merge === undefined ? maybeMerge : maybeOptions;
-  assertNoLegacyJoinMergeOption(options);
   return { merge, options };
 }
 
