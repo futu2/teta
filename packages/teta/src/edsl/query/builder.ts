@@ -476,21 +476,17 @@ export function map<const Sel extends Record<string, unknown>>(
 ): <TColumns extends QueryColumns>(query: Query<TColumns>) => Query<ProjectionResult<DefinedProjectionShape<Sel>>>;
 
 export function map<TColumns extends QueryColumns, const Sel extends ProjectionShape>(
-  query: Query<TColumns>,
-  selector: (cols: ColumnRefs<TColumns>) => Sel
-): Query<ProjectionResult<Sel>>;
-
-export function map<TColumns extends QueryColumns, const Sel extends Record<string, unknown>>(
-  query: Query<TColumns>,
-  selection: NonCallableSelection<Sel> & DeferredProjectionShapeInput<Sel>
-): Query<ProjectionResult<DefinedProjectionShape<Sel>>>;
-
-export function map<TColumns extends QueryColumns, const Sel extends ProjectionShape>(
   selector: (cols: ColumnRefs<TColumns>) => Sel
 ): QueryStep<TColumns, ProjectionResult<Sel>>;
 
 export function map(...args: unknown[]): unknown {
-  return purry(_map, args);
+  assertNotDataFirstQueryHelper("map", "map(selector)", args);
+  const [selector] = args;
+  return (query: Query<QueryColumns>) =>
+    _map(
+      query,
+      selector as SelectorOrSelection<QueryColumns, ProjectionShape>
+    );
 }
 
 function _map<TColumns extends QueryColumns, const Sel extends ProjectionShape>(
@@ -505,21 +501,17 @@ export function fold<const Sel extends Record<string, unknown>>(
 ): <TColumns extends QueryColumns>(query: Query<TColumns>) => Query<ProjectionResult<DefinedProjectionShape<Sel>>>;
 
 export function fold<TColumns extends QueryColumns, const Sel extends ProjectionShape>(
-  query: Query<TColumns>,
-  selector: (cols: ColumnRefs<TColumns>) => Sel
-): Query<ProjectionResult<Sel>>;
-
-export function fold<TColumns extends QueryColumns, const Sel extends Record<string, unknown>>(
-  query: Query<TColumns>,
-  selection: NonCallableSelection<Sel> & DeferredProjectionShapeInput<Sel>
-): Query<ProjectionResult<DefinedProjectionShape<Sel>>>;
-
-export function fold<TColumns extends QueryColumns, const Sel extends ProjectionShape>(
   selector: (cols: ColumnRefs<TColumns>) => Sel
 ): QueryStep<TColumns, ProjectionResult<Sel>>;
 
 export function fold(...args: unknown[]): unknown {
-  return purry(_fold, args);
+  assertNotDataFirstQueryHelper("fold", "fold(selector)", args);
+  const [selector] = args;
+  return (query: Query<QueryColumns>) =>
+    _fold(
+      query,
+      selector as SelectorOrSelection<QueryColumns, ProjectionShape>
+    );
 }
 
 function _fold<TColumns extends QueryColumns, const Sel extends ProjectionShape>(
@@ -530,16 +522,6 @@ function _fold<TColumns extends QueryColumns, const Sel extends ProjectionShape>
 }
 
 export function filter<TColumns extends QueryColumns>(
-  query: Query<TColumns>,
-  predicate: ExprRef<boolean>
-): Query<TColumns>;
-
-export function filter<TColumns extends QueryColumns>(
-  query: Query<TColumns>,
-  predicate: (cols: ColumnRefs<TColumns>) => ExprRef<boolean>
-): Query<TColumns>;
-
-export function filter<TColumns extends QueryColumns>(
   predicate: ExprRef<boolean>
 ): QueryStep<TColumns, TColumns>;
 
@@ -548,7 +530,10 @@ export function filter<TColumns extends QueryColumns>(
 ): QueryStep<TColumns, TColumns>;
 
 export function filter(...args: unknown[]): unknown {
-  return purry(_filter, args);
+  assertNotDataFirstQueryHelper("filter", "filter(predicate)", args);
+  const [predicate] = args;
+  return (query: Query<QueryColumns>) =>
+    _filter(query, predicate as PredicateInput<QueryColumns>);
 }
 
 function _filter<TColumns extends QueryColumns>(
@@ -559,16 +544,6 @@ function _filter<TColumns extends QueryColumns>(
 }
 
 export function sort<TColumns extends QueryColumns>(
-  query: Query<TColumns>,
-  selector: OrderItem | OrderItem[]
-): Query<TColumns>;
-
-export function sort<TColumns extends QueryColumns>(
-  query: Query<TColumns>,
-  selector: (cols: ColumnRefs<TColumns>) => OrderItem | OrderItem[]
-): Query<TColumns>;
-
-export function sort<TColumns extends QueryColumns>(
   selector: OrderItem | OrderItem[]
 ): QueryStep<TColumns, TColumns>;
 
@@ -577,7 +552,10 @@ export function sort<TColumns extends QueryColumns>(
 ): QueryStep<TColumns, TColumns>;
 
 export function sort(...args: unknown[]): unknown {
-  return purry(_sort, args);
+  assertNotDataFirstQueryHelper("sort", "sort(selector)", args);
+  const [selector] = args;
+  return (query: Query<QueryColumns>) =>
+    _sort(query, selector as SortInput<QueryColumns>);
 }
 
 function _sort<TColumns extends QueryColumns>(
@@ -587,15 +565,12 @@ function _sort<TColumns extends QueryColumns>(
   return buildSort(query, selector);
 }
 
-export function take<TColumns extends QueryColumns>(
-  query: Query<TColumns>,
-  count: number
-): Query<TColumns>;
-
 export function take<TColumns extends QueryColumns>(count: number): QueryStep<TColumns, TColumns>;
 
 export function take(...args: unknown[]): unknown {
-  return purry(_take, args);
+  assertNotDataFirstQueryHelper("take", "take(count)", args);
+  const [count] = args;
+  return (query: Query<QueryColumns>) => _take(query, count as number);
 }
 
 function _take<TColumns extends QueryColumns>(
@@ -671,49 +646,6 @@ export function join<
     CanonicalJoinType<TType>
   >,
 >(
-  left: Query<TLeft>,
-  right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
-  on: JoinOnNoMergeInput<TLeft, TRight>,
-  options?: JoinOptions<TType>
-): Query<TMerged>;
-
-export function join<
-  TLeft extends QueryColumns,
-  TRight extends QueryColumns,
-  TType extends JoinTypeInput | undefined = undefined,
-  const TSelection extends JoinSelection = JoinSelection,
->(
-  left: Query<TLeft>,
-  right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
-  on: JoinOnInput<TLeft, TRight>,
-  merge: JoinColumnMergerForType<TLeft, TRight, CanonicalJoinType<TType>, TSelection>,
-  options?: JoinOptions<TType>
-): Query<JoinSelectionResult<TSelection>>;
-
-export function join<
-  TLeft extends QueryColumns,
-  TRight extends QueryColumns,
-  TType extends JoinTypeInput | undefined = undefined,
-  const Sel extends Record<string, unknown> = JoinSelection,
-  TSelection extends JoinSelection = DefinedJoinSelection<Sel>,
->(
-  left: Query<TLeft>,
-  right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
-  on: JoinOnInput<TLeft, TRight>,
-  merge: DeferredJoinSelection<Sel>,
-  options?: JoinOptions<TType>
-): Query<JoinSelectionResult<TSelection>>;
-
-export function join<
-  TLeft extends QueryColumns,
-  TRight extends QueryColumns,
-  TType extends JoinTypeInput | undefined = undefined,
-  TMerged extends QueryColumns = JoinColumnsForType<
-    TLeft,
-    TRight,
-    CanonicalJoinType<TType>
-  >,
->(
   right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
   on: JoinOnNoMergeInput<TLeft, TRight>,
   options?: JoinOptions<TType>
@@ -745,17 +677,7 @@ export function join<
 ): QueryStep<TLeft, JoinSelectionResult<TSelection>>;
 
 export function join(...args: unknown[]): unknown {
-  const parsed = parseJoinInvocation(args);
-
-  if (parsed.kind === "data_first") {
-    return _join(
-      parsed.left as Query<QueryColumns>,
-      parsed.right as Query<QueryColumns> | ((outer: ColumnRefs<QueryColumns>) => Query<QueryColumns>),
-      parsed.on as JoinOnInput<QueryColumns, QueryColumns>,
-      parsed.merge as JoinMergeInput<QueryColumns, QueryColumns, "inner", JoinSelection> | undefined,
-      parsed.options as JoinOptions<JoinTypeInput | undefined> | undefined
-    );
-  }
+  const parsed = parseCurriedJoinInvocation(args, "join", "join(right, on, merge?, options?)");
 
   return (left: Query<QueryColumns>) =>
     _join(
@@ -766,42 +688,6 @@ export function join(...args: unknown[]): unknown {
       parsed.options as JoinOptions<JoinTypeInput | undefined> | undefined
     );
 }
-
-export function innerJoin<
-  TLeft extends QueryColumns,
-  TRight extends QueryColumns,
-  TMerged extends QueryColumns = TLeft & TRight,
->(
-  left: Query<TLeft>,
-  right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
-  on: JoinOnNoMergeInput<TLeft, TRight>,
-  options?: FixedJoinOptions
-): Query<TMerged>;
-
-export function innerJoin<
-  TLeft extends QueryColumns,
-  TRight extends QueryColumns,
-  const TSelection extends JoinSelection = JoinSelection,
->(
-  left: Query<TLeft>,
-  right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
-  on: JoinOnInput<TLeft, TRight>,
-  merge: JoinColumnMergerForType<TLeft, TRight, "inner", TSelection>,
-  options?: FixedJoinOptions
-): Query<JoinSelectionResult<TSelection>>;
-
-export function innerJoin<
-  TLeft extends QueryColumns,
-  TRight extends QueryColumns,
-  const Sel extends Record<string, unknown>,
-  TSelection extends JoinSelection = DefinedJoinSelection<Sel>,
->(
-  left: Query<TLeft>,
-  right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
-  on: JoinOnInput<TLeft, TRight>,
-  merge: DeferredJoinSelection<Sel>,
-  options?: FixedJoinOptions
-): Query<JoinSelectionResult<TSelection>>;
 
 export function innerJoin<
   TLeft extends QueryColumns,
@@ -845,42 +731,6 @@ export function leftJoin<
   TRight extends QueryColumns,
   TMerged extends QueryColumns = JoinColumnsForType<TLeft, TRight, "left">,
 >(
-  left: Query<TLeft>,
-  right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
-  on: JoinOnNoMergeInput<TLeft, TRight>,
-  options?: FixedJoinOptions
-): Query<TMerged>;
-
-export function leftJoin<
-  TLeft extends QueryColumns,
-  TRight extends QueryColumns,
-  const TSelection extends JoinSelection = JoinSelection,
->(
-  left: Query<TLeft>,
-  right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
-  on: JoinOnInput<TLeft, TRight>,
-  merge: JoinColumnMergerForType<TLeft, TRight, "left", TSelection>,
-  options?: FixedJoinOptions
-): Query<JoinSelectionResult<TSelection>>;
-
-export function leftJoin<
-  TLeft extends QueryColumns,
-  TRight extends QueryColumns,
-  const Sel extends Record<string, unknown>,
-  TSelection extends JoinSelection = DefinedJoinSelection<Sel>,
->(
-  left: Query<TLeft>,
-  right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
-  on: JoinOnInput<TLeft, TRight>,
-  merge: DeferredJoinSelection<Sel>,
-  options?: FixedJoinOptions
-): Query<JoinSelectionResult<TSelection>>;
-
-export function leftJoin<
-  TLeft extends QueryColumns,
-  TRight extends QueryColumns,
-  TMerged extends QueryColumns = JoinColumnsForType<TLeft, TRight, "left">,
->(
   right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
   on: JoinOnNoMergeInput<TLeft, TRight>,
   options?: FixedJoinOptions
@@ -918,42 +768,6 @@ export function rightJoin<
   TRight extends QueryColumns,
   TMerged extends QueryColumns = JoinColumnsForType<TLeft, TRight, "right">,
 >(
-  left: Query<TLeft>,
-  right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
-  on: JoinOnNoMergeInput<TLeft, TRight>,
-  options?: FixedJoinOptions
-): Query<TMerged>;
-
-export function rightJoin<
-  TLeft extends QueryColumns,
-  TRight extends QueryColumns,
-  const TSelection extends JoinSelection = JoinSelection,
->(
-  left: Query<TLeft>,
-  right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
-  on: JoinOnInput<TLeft, TRight>,
-  merge: JoinColumnMergerForType<TLeft, TRight, "right", TSelection>,
-  options?: FixedJoinOptions
-): Query<JoinSelectionResult<TSelection>>;
-
-export function rightJoin<
-  TLeft extends QueryColumns,
-  TRight extends QueryColumns,
-  const Sel extends Record<string, unknown>,
-  TSelection extends JoinSelection = DefinedJoinSelection<Sel>,
->(
-  left: Query<TLeft>,
-  right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
-  on: JoinOnInput<TLeft, TRight>,
-  merge: DeferredJoinSelection<Sel>,
-  options?: FixedJoinOptions
-): Query<JoinSelectionResult<TSelection>>;
-
-export function rightJoin<
-  TLeft extends QueryColumns,
-  TRight extends QueryColumns,
-  TMerged extends QueryColumns = JoinColumnsForType<TLeft, TRight, "right">,
->(
   right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
   on: JoinOnNoMergeInput<TLeft, TRight>,
   options?: FixedJoinOptions
@@ -985,42 +799,6 @@ export function rightJoin<
 export function rightJoin(...args: unknown[]): unknown {
   return buildFixedJoinOverload(args, "right");
 }
-
-export function fullJoin<
-  TLeft extends QueryColumns,
-  TRight extends QueryColumns,
-  TMerged extends QueryColumns = JoinColumnsForType<TLeft, TRight, "full">,
->(
-  left: Query<TLeft>,
-  right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
-  on: JoinOnNoMergeInput<TLeft, TRight>,
-  options?: FixedJoinOptions
-): Query<TMerged>;
-
-export function fullJoin<
-  TLeft extends QueryColumns,
-  TRight extends QueryColumns,
-  const TSelection extends JoinSelection = JoinSelection,
->(
-  left: Query<TLeft>,
-  right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
-  on: JoinOnInput<TLeft, TRight>,
-  merge: JoinColumnMergerForType<TLeft, TRight, "full", TSelection>,
-  options?: FixedJoinOptions
-): Query<JoinSelectionResult<TSelection>>;
-
-export function fullJoin<
-  TLeft extends QueryColumns,
-  TRight extends QueryColumns,
-  const Sel extends Record<string, unknown>,
-  TSelection extends JoinSelection = DefinedJoinSelection<Sel>,
->(
-  left: Query<TLeft>,
-  right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
-  on: JoinOnInput<TLeft, TRight>,
-  merge: DeferredJoinSelection<Sel>,
-  options?: FixedJoinOptions
-): Query<JoinSelectionResult<TSelection>>;
 
 export function fullJoin<
   TLeft extends QueryColumns,
@@ -1215,71 +993,66 @@ function assertNoLegacyJoinMergeOption(options: unknown): void {
   }
 }
 
-function parseJoinInvocation(args: unknown[]):
-  | {
-      kind: "data_first";
-      left: unknown;
-      right: unknown;
-      on: unknown;
-      merge: unknown;
-      options: unknown;
-    }
-  | {
-      kind: "curried";
-      right: unknown;
-      on: unknown;
-      merge: unknown;
-      options: unknown;
-    } {
-  if (
-    args.length === 3 &&
-    args[0] instanceof Query &&
-    typeof args[1] === "function" &&
-    typeof args[2] === "function"
-  ) {
-    const left = args[0] as Query<QueryColumns>;
-    const maybeRight = args[1] as (outer: ColumnRefs<QueryColumns>) => unknown;
+function curriedOnlyError(helper: string, usage: string): never {
+  userError(
+    "QUERY_HELPER_CURRIED_ONLY",
+    `${helper}() is curried-only. Use pipe(query, ${usage}).`
+  );
+}
 
-    try {
-      // Narrow probe for ambiguous 3-arg forms: if second callback resolves to a Query
-      // from outer columns, it is data-first lateral join.
-      const probed = maybeRight(qualifyOuterColumns(left.columns));
-      if (probed instanceof Query) {
-        return {
-          kind: "data_first",
-          left,
-          right: () => probed,
-          on: args[2],
-          merge: undefined,
-          options: undefined,
-        };
-      }
-    } catch {
-      // Treat probe errors as curried predicate invocation.
-    }
-
-    return {
-      kind: "curried",
-      right: args[0],
-      on: args[1],
-      merge: args[2],
-      options: undefined,
-    };
+function assertNotDataFirstQueryHelper(helper: string, usage: string, args: unknown[]): void {
+  if (args[0] instanceof Query) {
+    curriedOnlyError(helper, usage);
   }
+}
 
-  const isDataFirst =
-    args[0] instanceof Query &&
-    (args.length >= 4 || (args.length === 3 && args[1] instanceof Query));
+type ParsedCurriedJoinInvocation = {
+  right: unknown;
+  on: unknown;
+  merge: unknown;
+  options: unknown;
+};
 
-  if (isDataFirst) {
-    const [left, right, on, maybeMerge, maybeOptions] = args;
-    const { merge, options } = parseJoinMergeAndOptions(maybeMerge, maybeOptions);
-    return { kind: "data_first", left, right, on, merge, options };
-  }
+const DATA_FIRST_JOIN_INVOCATION = Symbol("DATA_FIRST_JOIN_INVOCATION");
 
+function parseCurriedJoinInvocation(
+  args: unknown[],
+  helper: string,
+  usage: string
+): ParsedCurriedJoinInvocation {
+  assertNotDataFirstJoinInvocation(args, helper, usage);
   const [right, on, maybeMerge, maybeOptions] = args;
   const { merge, options } = parseJoinMergeAndOptions(maybeMerge, maybeOptions);
-  return { kind: "curried", right, on, merge, options };
+  return { right, on, merge, options };
+}
+
+function assertNotDataFirstJoinInvocation(
+  args: unknown[],
+  helper: string,
+  usage: string
+): void {
+  const first = args[0];
+  const second = args[1];
+  if (!(first instanceof Query)) return;
+
+  if (second instanceof Query) {
+    curriedOnlyError(helper, usage);
+  }
+
+  if (typeof second === "function" && typeof args[2] === "function") {
+    try {
+      const probed = (second as (outer: ColumnRefs<QueryColumns>) => unknown)(
+        qualifyOuterColumns(first.columns)
+      );
+      if (probed instanceof Query) {
+        throw DATA_FIRST_JOIN_INVOCATION;
+      }
+    } catch (error) {
+      if (error === DATA_FIRST_JOIN_INVOCATION) {
+        curriedOnlyError(helper, usage);
+      }
+    }
+  }
 }
 
 function parseJoinMergeAndOptions(
@@ -1323,17 +1096,8 @@ function buildFixedJoinOverload(
   args: unknown[],
   type: "inner" | "left" | "right" | "full"
 ): unknown {
-  const parsed = parseJoinInvocation(args);
-
-  if (parsed.kind === "data_first") {
-    return _join(
-      parsed.left as Query<QueryColumns>,
-      parsed.right as Query<QueryColumns> | ((outer: ColumnRefs<QueryColumns>) => Query<QueryColumns>),
-      parsed.on as JoinOnInput<QueryColumns, QueryColumns>,
-      parsed.merge as JoinMergeInput<QueryColumns, QueryColumns, typeof type, JoinSelection> | undefined,
-      { ...(parsed.options as FixedJoinOptions | undefined), type }
-    );
-  }
+  const helper = fixedJoinHelperName(type);
+  const parsed = parseCurriedJoinInvocation(args, helper, `${helper}(right, on, merge?, options?)`);
 
   return (left: Query<QueryColumns>) =>
     _join(
@@ -1343,6 +1107,19 @@ function buildFixedJoinOverload(
       parsed.merge as JoinMergeInput<QueryColumns, QueryColumns, typeof type, JoinSelection> | undefined,
       { ...(parsed.options as FixedJoinOptions | undefined), type }
     );
+}
+
+function fixedJoinHelperName(type: "inner" | "left" | "right" | "full"): string {
+  switch (type) {
+    case "inner":
+      return "innerJoin";
+    case "left":
+      return "leftJoin";
+    case "right":
+      return "rightJoin";
+    case "full":
+      return "fullJoin";
+  }
 }
 
 export function toIR<TColumns extends QueryColumns>(query: Query<TColumns>): QueryIR<TColumns> {

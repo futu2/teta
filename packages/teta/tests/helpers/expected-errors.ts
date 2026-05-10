@@ -24,6 +24,36 @@ export const VALUES_COLUMN_MISMATCH_ERROR =
 export const LEGACY_JOIN_MERGE_OPTION_ERROR =
   "join() no longer accepts { merge }. Pass merge as the next argument before options.";
 
+export const MAP_CURRIED_ONLY_ERROR =
+  "map() is curried-only. Use pipe(query, map(selector)).";
+
+export const FILTER_CURRIED_ONLY_ERROR =
+  "filter() is curried-only. Use pipe(query, filter(predicate)).";
+
+export const FOLD_CURRIED_ONLY_ERROR =
+  "fold() is curried-only. Use pipe(query, fold(selector)).";
+
+export const SORT_CURRIED_ONLY_ERROR =
+  "sort() is curried-only. Use pipe(query, sort(selector)).";
+
+export const TAKE_CURRIED_ONLY_ERROR =
+  "take() is curried-only. Use pipe(query, take(count)).";
+
+export const JOIN_CURRIED_ONLY_ERROR =
+  "join() is curried-only. Use pipe(query, join(right, on, merge?, options?)).";
+
+export const INNER_JOIN_CURRIED_ONLY_ERROR =
+  "innerJoin() is curried-only. Use pipe(query, innerJoin(right, on, merge?, options?)).";
+
+export const LEFT_JOIN_CURRIED_ONLY_ERROR =
+  "leftJoin() is curried-only. Use pipe(query, leftJoin(right, on, merge?, options?)).";
+
+export const RIGHT_JOIN_CURRIED_ONLY_ERROR =
+  "rightJoin() is curried-only. Use pipe(query, rightJoin(right, on, merge?, options?)).";
+
+export const FULL_JOIN_CURRIED_ONLY_ERROR =
+  "fullJoin() is curried-only. Use pipe(query, fullJoin(right, on, merge?, options?)).";
+
 export const JOIN_OVERLAPPING_COLUMNS_ERROR =
   "join() requires an explicit merge strategy for overlapping columns: id";
 

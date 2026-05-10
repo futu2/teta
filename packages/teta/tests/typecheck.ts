@@ -312,3 +312,25 @@ unnest(sessions, undefined, { value: "tag" });
 map(remedaKeyMappedSelection, (user) => ({ broken: user.prefix1_na }));
 // @ts-expect-error template-literal mapKeys should still reject unknown renamed fields
 map(remedaTemplateKeyMappedSelection, (user) => ({ broken: user.prefix1_na }));
+// @ts-expect-error map is curried-only
+map(users, (user) => ({ id: user.id }));
+// @ts-expect-error filter is curried-only
+filter(users, (user) => eq(user.id, 1));
+// @ts-expect-error fold is curried-only
+fold(orders, (order) => ({ user_id: group(order.user_id) }));
+// @ts-expect-error sort is curried-only
+sort(users, (user) => asc(user.id));
+// @ts-expect-error take is curried-only
+take(users, 10);
+// @ts-expect-error join is curried-only
+join(users, orders, (user, order) => eq(user.id, order.user_id));
+// @ts-expect-error lateral join is curried-only
+join(users, (user) => pipe(orders, filter((order) => eq(order.user_id, user.id))), (user, order) => eq(user.id, order.user_id));
+// @ts-expect-error innerJoin is curried-only
+innerJoin(users, orders, (user, order) => eq(user.id, order.user_id));
+// @ts-expect-error leftJoin is curried-only
+leftJoin(users, orders, (user, order) => eq(user.id, order.user_id));
+// @ts-expect-error rightJoin is curried-only
+rightJoin(users, orders, (user, order) => eq(user.id, order.user_id));
+// @ts-expect-error fullJoin is curried-only
+fullJoin(users, orders, (user, order) => eq(user.id, order.user_id));
