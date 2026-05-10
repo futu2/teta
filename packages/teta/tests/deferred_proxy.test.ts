@@ -15,7 +15,6 @@ import {
   fold,
   group,
   gte,
-  leftJoin,
   map,
   pickCols,
   replace,

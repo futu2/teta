@@ -29,6 +29,7 @@ import type {
   ExprRefs,
   ProjectionResult,
   ProjectionShape,
+  ProjectionValue,
 } from "../expr.ts";
 import {
   buildSqlOptions,
@@ -104,9 +105,23 @@ type SelectorOrSelection<
   TSelection extends ProjectionShape,
 > = ((cols: ColumnRefs<TColumns>) => TSelection) | TSelection;
 
+type NonCallableSelection<TSelection> = TSelection & {
+  readonly apply?: never;
+  readonly bind?: never;
+  readonly call?: never;
+};
+
+type DeferredProjectionShapeInput = Record<string, ProjectionValue | undefined>;
+
+type DefinedProjectionShape<TSelection extends DeferredProjectionShapeInput> = {
+  [K in keyof TSelection]: Exclude<TSelection[K], undefined>;
+} & ProjectionShape;
+
 type PredicateInput<TColumns extends QueryColumns> =
   | ((cols: ColumnRefs<TColumns>) => ExprRef<boolean>)
   | ExprRef<boolean>;
+
+type DeferredExprInput<T> = ExprRef<T> | undefined;
 
 type SortInput<TColumns extends QueryColumns> =
   | ((cols: ColumnRefs<TColumns>) => OrderItem | OrderItem[])
@@ -116,7 +131,7 @@ type SortInput<TColumns extends QueryColumns> =
 type UnnestSelectorInput<
   TLeft extends QueryColumns,
   TCollection extends readonly unknown[] | unknown[] | null,
-> = ((cols: ColumnRefs<TLeft>) => ExprRef<TCollection>) | ExprRef<TCollection>;
+> = ((cols: ColumnRefs<TLeft>) => ExprRef<TCollection>) | DeferredExprInput<TCollection>;
 
 function currentDeferredScope<TColumns extends QueryColumns>(query: Query<TColumns>) {
   return {
@@ -278,7 +293,7 @@ function buildUnnest<
   const collection =
     typeof selector === "function"
       ? selector(left.columns)
-      : resolveDeferredExpr(selector, currentDeferredScope(left));
+      : resolveDeferredExpr(selector as ExprRef<TCollection>, currentDeferredScope(left));
   return deriveQuery(
     left,
     resolveUnnestQuery<TLeft, TGenerated>(
@@ -409,22 +424,22 @@ function buildLoop<TColumns extends QueryColumns>(
   });
 }
 
+export function map<const Sel extends DeferredProjectionShapeInput>(
+  selection: NonCallableSelection<Sel>
+): <TColumns extends QueryColumns>(query: Query<TColumns>) => Query<ProjectionResult<DefinedProjectionShape<Sel>>>;
+
 export function map<TColumns extends QueryColumns, const Sel extends ProjectionShape>(
   query: Query<TColumns>,
   selector: (cols: ColumnRefs<TColumns>) => Sel
 ): Query<ProjectionResult<Sel>>;
 
-export function map<TColumns extends QueryColumns, const Sel extends ProjectionShape>(
+export function map<TColumns extends QueryColumns, const Sel extends DeferredProjectionShapeInput>(
   query: Query<TColumns>,
-  selection: Sel
-): Query<ProjectionResult<Sel>>;
+  selection: NonCallableSelection<Sel>
+): Query<ProjectionResult<DefinedProjectionShape<Sel>>>;
 
 export function map<TColumns extends QueryColumns, const Sel extends ProjectionShape>(
   selector: (cols: ColumnRefs<TColumns>) => Sel
-): QueryStep<TColumns, ProjectionResult<Sel>>;
-
-export function map<TColumns extends QueryColumns, const Sel extends ProjectionShape>(
-  selection: Sel
 ): QueryStep<TColumns, ProjectionResult<Sel>>;
 
 export function map(...args: unknown[]): unknown {
@@ -438,22 +453,22 @@ function _map<TColumns extends QueryColumns, const Sel extends ProjectionShape>(
   return buildMap(query, selector);
 }
 
+export function fold<const Sel extends DeferredProjectionShapeInput>(
+  selection: NonCallableSelection<Sel>
+): <TColumns extends QueryColumns>(query: Query<TColumns>) => Query<ProjectionResult<DefinedProjectionShape<Sel>>>;
+
 export function fold<TColumns extends QueryColumns, const Sel extends ProjectionShape>(
   query: Query<TColumns>,
   selector: (cols: ColumnRefs<TColumns>) => Sel
 ): Query<ProjectionResult<Sel>>;
 
-export function fold<TColumns extends QueryColumns, const Sel extends ProjectionShape>(
+export function fold<TColumns extends QueryColumns, const Sel extends DeferredProjectionShapeInput>(
   query: Query<TColumns>,
-  selection: Sel
-): Query<ProjectionResult<Sel>>;
+  selection: NonCallableSelection<Sel>
+): Query<ProjectionResult<DefinedProjectionShape<Sel>>>;
 
 export function fold<TColumns extends QueryColumns, const Sel extends ProjectionShape>(
   selector: (cols: ColumnRefs<TColumns>) => Sel
-): QueryStep<TColumns, ProjectionResult<Sel>>;
-
-export function fold<TColumns extends QueryColumns, const Sel extends ProjectionShape>(
-  selection: Sel
 ): QueryStep<TColumns, ProjectionResult<Sel>>;
 
 export function fold(...args: unknown[]): unknown {
@@ -469,20 +484,20 @@ function _fold<TColumns extends QueryColumns, const Sel extends ProjectionShape>
 
 export function filter<TColumns extends QueryColumns>(
   query: Query<TColumns>,
-  predicate: (cols: ColumnRefs<TColumns>) => ExprRef<boolean>
+  predicate: ExprRef<boolean>
 ): Query<TColumns>;
 
 export function filter<TColumns extends QueryColumns>(
   query: Query<TColumns>,
-  predicate: ExprRef<boolean>
+  predicate: (cols: ColumnRefs<TColumns>) => ExprRef<boolean>
 ): Query<TColumns>;
 
 export function filter<TColumns extends QueryColumns>(
-  predicate: (cols: ColumnRefs<TColumns>) => ExprRef<boolean>
+  predicate: ExprRef<boolean>
 ): QueryStep<TColumns, TColumns>;
 
 export function filter<TColumns extends QueryColumns>(
-  predicate: ExprRef<boolean>
+  predicate: (cols: ColumnRefs<TColumns>) => ExprRef<boolean>
 ): QueryStep<TColumns, TColumns>;
 
 export function filter(...args: unknown[]): unknown {
@@ -498,20 +513,20 @@ function _filter<TColumns extends QueryColumns>(
 
 export function sort<TColumns extends QueryColumns>(
   query: Query<TColumns>,
-  selector: (cols: ColumnRefs<TColumns>) => OrderItem | OrderItem[]
+  selector: OrderItem | OrderItem[]
 ): Query<TColumns>;
 
 export function sort<TColumns extends QueryColumns>(
   query: Query<TColumns>,
-  selector: OrderItem | OrderItem[]
+  selector: (cols: ColumnRefs<TColumns>) => OrderItem | OrderItem[]
 ): Query<TColumns>;
 
 export function sort<TColumns extends QueryColumns>(
-  selector: (cols: ColumnRefs<TColumns>) => OrderItem | OrderItem[]
+  selector: OrderItem | OrderItem[]
 ): QueryStep<TColumns, TColumns>;
 
 export function sort<TColumns extends QueryColumns>(
-  selector: OrderItem | OrderItem[]
+  selector: (cols: ColumnRefs<TColumns>) => OrderItem | OrderItem[]
 ): QueryStep<TColumns, TColumns>;
 
 export function sort(...args: unknown[]): unknown {
@@ -898,7 +913,7 @@ export function unnest<
   TOuter extends boolean | undefined = undefined,
 >(
   left: Query<TLeft>,
-  selector: ExprRef<TCollection>,
+  selector: DeferredExprInput<TCollection>,
   selection: UnnestSelection<TValueName, TOrdinalityName>,
   options?: UnnestOptions<TOuter>
 ): Query<
@@ -937,7 +952,7 @@ export function unnest<
   TOrdinalityName extends string | undefined = undefined,
   TOuter extends boolean | undefined = undefined,
 >(
-  selector: ExprRef<TCollection>,
+  selector: DeferredExprInput<TCollection>,
   selection: UnnestSelection<TValueName, TOrdinalityName>,
   options?: UnnestOptions<TOuter>
 ): QueryStep<
