@@ -1,6 +1,6 @@
 import { mapKeys, omit, pick, pipe } from "remeda";
 import type { ExprRef, SqlBigInt, SqlBytes, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlTimestamp, SqlUuid, } from "../mod.ts";
-import { filter, fullJoin, innerJoin, join, leftJoin, rightJoin, take, sort, param, map, table, t, fold, asc, desc, eq, gt, upper, add, coalesce, count, group, loop, sum, and, sub, caseWhen, when, mapShape, groupShape, lt, unnest, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, toString, toTimestamp } from "../mod.ts";
+import { filter, fullJoin, innerJoin, join, leftJoin, rightJoin, take, sort, param, map, table, t, fold, asc, desc, eq, gt, upper, add, coalesce, count, group, loop, sum, and, sub, caseWhen, when, mapShape, groupShape, lt, unnest, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, toString, toTimestamp, $left, $right } from "../mod.ts";
 type Equal<A, B> = ((<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false);
 type Expect<T extends true> = T;
 type ExprType<TExpr> = TExpr extends ExprRef<infer TValue> ? TValue : never;
@@ -261,6 +261,10 @@ leftJoin(users, profileRows, (user, profile) => eq(user.id, profile.id));
 rightJoin(users, profileRows, (user, profile) => eq(user.id, profile.id));
 // @ts-expect-error fullJoin without merge must reject overlapping output names
 fullJoin(users, profileRows, (user, profile) => eq(user.id, profile.id));
+// @ts-expect-error deferred no-merge joins with overlapping output names require an explicit merge strategy
+leftJoin(users, profileRows, eq($left.id, $right.id));
+// @ts-expect-error deferred join merge shapes must only contain expression refs
+leftJoin(users, orders, eq($left.id, $right.user_id), { user_id: 1 });
 // @ts-expect-error toTimestamp should reject arbitrary strings
 toTimestamp(rawTimestampRows.columns.raw_ts);
 const profileRowsWithUserId = values([

@@ -48,6 +48,7 @@ import type {
   JoinColumnMerger,
   JoinColumnMergerForType,
   JoinColumnsForType,
+  JoinNoMergeGuard,
   JoinOn,
   JoinOnNoMerge,
   JoinOptions,
@@ -127,6 +128,14 @@ type DefinedJoinSelection<TSelection extends Record<string, unknown>> = {
   [K in keyof TSelection]: Exclude<TSelection[K], undefined>;
 } & JoinSelection;
 
+type DeferredJoinSelection<TSelection extends Record<string, unknown>> = {
+  [K in keyof TSelection]: [NonNullable<TSelection[K]>] extends [never]
+    ? never
+    : NonNullable<TSelection[K]> extends ExprRef<unknown>
+      ? TSelection[K]
+      : never;
+};
+
 type PredicateInput<TColumns extends QueryColumns> =
   | ((cols: ColumnRefs<TColumns>) => ExprRef<boolean>)
   | ExprRef<boolean>;
@@ -158,7 +167,7 @@ type JoinOnInput<
 type JoinOnNoMergeInput<
   TLeft extends QueryColumns,
   TRight extends QueryColumns,
-> = JoinOnNoMerge<TLeft, TRight> | ExprRef<boolean>;
+> = JoinOnNoMerge<TLeft, TRight> | (ExprRef<boolean> & JoinNoMergeGuard<TLeft, TRight>);
 
 type JoinMergeInput<
   TLeft extends QueryColumns,
@@ -689,7 +698,7 @@ export function join<
   left: Query<TLeft>,
   right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
   on: JoinOnInput<TLeft, TRight>,
-  merge: Sel,
+  merge: DeferredJoinSelection<Sel>,
   options?: JoinOptions<TType>
 ): Query<JoinSelectionResult<TSelection>>;
 
@@ -729,7 +738,7 @@ export function join<
 >(
   right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
   on: JoinOnInput<TLeft, TRight>,
-  merge: Sel,
+  merge: DeferredJoinSelection<Sel>,
   options?: JoinOptions<TType>
 ): QueryStep<TLeft, JoinSelectionResult<TSelection>>;
 
@@ -788,7 +797,7 @@ export function innerJoin<
   left: Query<TLeft>,
   right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
   on: JoinOnInput<TLeft, TRight>,
-  merge: Sel,
+  merge: DeferredJoinSelection<Sel>,
   options?: FixedJoinOptions
 ): Query<JoinSelectionResult<TSelection>>;
 
@@ -821,7 +830,7 @@ export function innerJoin<
 >(
   right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
   on: JoinOnInput<TLeft, TRight>,
-  merge: Sel,
+  merge: DeferredJoinSelection<Sel>,
   options?: FixedJoinOptions
 ): QueryStep<TLeft, JoinSelectionResult<TSelection>>;
 
@@ -861,7 +870,7 @@ export function leftJoin<
   left: Query<TLeft>,
   right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
   on: JoinOnInput<TLeft, TRight>,
-  merge: Sel,
+  merge: DeferredJoinSelection<Sel>,
   options?: FixedJoinOptions
 ): Query<JoinSelectionResult<TSelection>>;
 
@@ -894,7 +903,7 @@ export function leftJoin<
 >(
   right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
   on: JoinOnInput<TLeft, TRight>,
-  merge: Sel,
+  merge: DeferredJoinSelection<Sel>,
   options?: FixedJoinOptions
 ): QueryStep<TLeft, JoinSelectionResult<TSelection>>;
 
@@ -934,7 +943,7 @@ export function rightJoin<
   left: Query<TLeft>,
   right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
   on: JoinOnInput<TLeft, TRight>,
-  merge: Sel,
+  merge: DeferredJoinSelection<Sel>,
   options?: FixedJoinOptions
 ): Query<JoinSelectionResult<TSelection>>;
 
@@ -967,7 +976,7 @@ export function rightJoin<
 >(
   right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
   on: JoinOnInput<TLeft, TRight>,
-  merge: Sel,
+  merge: DeferredJoinSelection<Sel>,
   options?: FixedJoinOptions
 ): QueryStep<TLeft, JoinSelectionResult<TSelection>>;
 
@@ -1007,7 +1016,7 @@ export function fullJoin<
   left: Query<TLeft>,
   right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
   on: JoinOnInput<TLeft, TRight>,
-  merge: Sel,
+  merge: DeferredJoinSelection<Sel>,
   options?: FixedJoinOptions
 ): Query<JoinSelectionResult<TSelection>>;
 
@@ -1040,7 +1049,7 @@ export function fullJoin<
 >(
   right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
   on: JoinOnInput<TLeft, TRight>,
-  merge: Sel,
+  merge: DeferredJoinSelection<Sel>,
   options?: FixedJoinOptions
 ): QueryStep<TLeft, JoinSelectionResult<TSelection>>;
 
@@ -1290,7 +1299,22 @@ function isJoinMergeShape(value: unknown, maybeOptions: unknown): boolean {
     return false;
   }
   if (maybeOptions !== undefined) return true;
-  return !("type" in value) && !("lateral" in value);
+  return !isJoinOptionsShape(value);
+}
+
+function isJoinOptionsShape(value: object): boolean {
+  let hasOption = false;
+
+  if ("type" in value) {
+    hasOption = true;
+    if (typeof value.type !== "string") return false;
+  }
+  if ("lateral" in value) {
+    hasOption = true;
+    if (typeof value.lateral !== "boolean") return false;
+  }
+
+  return hasOption;
 }
 
 function buildFixedJoinOverload(

@@ -16,6 +16,7 @@ import {
   group,
   gte,
   leftJoin,
+  join,
   map,
   pickCols,
   replace,
@@ -158,6 +159,36 @@ describe("deferred row proxy api", () => {
       {
         user_id: $left.id,
         order_total: $right.total,
+      }
+    );
+
+    expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
+      toSql(expected, { dialect: "postgresql", format: "compact" })
+    );
+  });
+
+  test("supports option-named deferred join merge output keys", () => {
+    const users = table("users", {
+      id: t.int(),
+      type: t.string(),
+    });
+    const orders = createOrdersTable();
+    const expected = join(
+      users,
+      orders,
+      (user, order) => eq(user.id, order.user_id),
+      (user, order) => ({
+        type: user.type,
+        lateral: order.total,
+      })
+    );
+    const actual = join(
+      users,
+      orders,
+      eq($left.id, $right.user_id),
+      {
+        type: $left.type,
+        lateral: $right.total,
       }
     );
 
