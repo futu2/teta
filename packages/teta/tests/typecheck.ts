@@ -37,97 +37,161 @@ const profiles = table("profiles", {
     avatar: t.nullable(t.bytes()),
     nickname: t.nullable(t.string()),
 });
-const leftJoined = leftJoin(users, orders, (user, order) => eq(user.id, order.user_id));
-const rightJoined = rightJoin(users, orders, (user, order) => eq(user.id, order.user_id));
-const fullJoined = fullJoin(users, orders, (user, order) => eq(user.id, order.user_id));
-const leftViaJoin = join(users, orders, (user, order) => eq(user.id, order.user_id), { type: "left" });
-const renamedJoin = innerJoin(users, orders, (user, order) => eq(user.id, order.user_id), (user, order) => ({
-    user_id: user.id,
-    order_total: order.total,
-}));
-const overlapPrefixedLeft = innerJoin(users, profileRows, (user, profile) => eq(user.id, profile.id), prefixOverlapLeft("user_"));
-const overlapPrefixedRight = innerJoin(users, profileRows, (user, profile) => eq(user.id, profile.id), prefixOverlapRight("profile_"));
-const allPrefixedLeft = innerJoin(users, profileRows, (user, profile) => eq(user.id, profile.id), prefixAllLeft("left_"));
-const allPrefixedRight = leftJoin(users, orders, (user, order) => eq(user.id, order.user_id), prefixAllRight("order_"));
-const allSuffixedLeft = rightJoin(users, orders, (user, order) => eq(user.id, order.user_id), suffixAllLeft("_user"));
-const allSuffixedRight = fullJoin(users, orders, (user, order) => eq(user.id, order.user_id), suffixAllRight("_order"));
-const droppedOverlapLeft = innerJoin(users, profileRows, (user, profile) => eq(user.id, profile.id), dropOverlapLeft());
-const droppedOverlapRight = innerJoin(users, profileRows, (user, profile) => eq(user.id, profile.id), dropOverlapRight());
-const usingJoin = join(users, profileRows, usingCols("id"), dropOverlapLeft());
-const mappedJoin = leftJoin(users, table("profiles_mapped", {
+const leftJoined = pipe(users, leftJoin(
+    orders,
+    (user, order) => eq(user.id, order.user_id)
+));
+const rightJoined = pipe(users, rightJoin(
+    orders,
+    (user, order) => eq(user.id, order.user_id)
+));
+const fullJoined = pipe(users, fullJoin(
+    orders,
+    (user, order) => eq(user.id, order.user_id)
+));
+const leftViaJoin = pipe(users, join(
+    orders,
+    (user, order) => eq(user.id, order.user_id),
+    { type: "left" }
+));
+const renamedJoin = pipe(users, innerJoin(
+    orders,
+    (user, order) => eq(user.id, order.user_id),
+    (user, order) => ({
+        user_id: user.id,
+        order_total: order.total,
+    })
+));
+const overlapPrefixedLeft = pipe(users, innerJoin(
+    profileRows,
+    (user, profile) => eq(user.id, profile.id),
+    prefixOverlapLeft("user_")
+));
+const overlapPrefixedRight = pipe(users, innerJoin(
+    profileRows,
+    (user, profile) => eq(user.id, profile.id),
+    prefixOverlapRight("profile_")
+));
+const allPrefixedLeft = pipe(users, innerJoin(
+    profileRows,
+    (user, profile) => eq(user.id, profile.id),
+    prefixAllLeft("left_")
+));
+const allPrefixedRight = pipe(users, leftJoin(
+    orders,
+    (user, order) => eq(user.id, order.user_id),
+    prefixAllRight("order_")
+));
+const allSuffixedLeft = pipe(users, rightJoin(
+    orders,
+    (user, order) => eq(user.id, order.user_id),
+    suffixAllLeft("_user")
+));
+const allSuffixedRight = pipe(users, fullJoin(
+    orders,
+    (user, order) => eq(user.id, order.user_id),
+    suffixAllRight("_order")
+));
+const droppedOverlapLeft = pipe(users, innerJoin(
+    profileRows,
+    (user, profile) => eq(user.id, profile.id),
+    dropOverlapLeft()
+));
+const droppedOverlapRight = pipe(users, innerJoin(
+    profileRows,
+    (user, profile) => eq(user.id, profile.id),
+    dropOverlapRight()
+));
+const usingJoin = pipe(users, join(
+    profileRows,
+    usingCols("id"),
+    dropOverlapLeft()
+));
+const mappedProfileRows = table("profiles_mapped", {
     id: t.int(),
     user_id: t.int(),
     bio: t.string(),
-}), onEq({ id: "user_id" }), prefixOverlapLeft("left_"));
-const filteredUsers = filter(users, (user: typeof users.columns) => gt(user.id, 0));
-const projectedUsers = map(filteredUsers, (user: typeof filteredUsers.columns) => ({
+});
+const mappedProfileOnEq: (user: typeof users.columns, profile: typeof mappedProfileRows.columns) => ExprRef<boolean> = onEq({ id: "user_id" });
+const mappedJoin = pipe(users, leftJoin(
+    mappedProfileRows,
+    mappedProfileOnEq,
+    prefixOverlapLeft("left_")
+));
+const filteredUsers = pipe(users, filter((user: typeof users.columns) => gt(user.id, 0)));
+const projectedUsers = pipe(filteredUsers, map((user: typeof filteredUsers.columns) => ({
     id: user.id,
     name: upper(user.name),
-}));
-const projectedUsersDeferred = map(filteredUsers, {
+})));
+const projectedUsersDeferred = pipe(filteredUsers, map({
     id: $.id,
     name: upper($.name),
-});
-const pickedUsers = map(users, pickCols("id", "name"));
+}));
+const pickedUsers = pipe(users, map(pickCols("id", "name")));
 // @ts-expect-error pickCols rejects unknown columns when applied to a typed query
-const invalidPickedUsers = map(users, pickCols("missing"));
+const invalidPickedUsers = pipe(users, map(pickCols("missing")));
 const curriedPipeline = pipe(users, filter((user: typeof users.columns) => gt(user.id, 0)), map((user) => ({
     id: user.id,
     name: upper(user.name),
 })), sort((row) => [asc(row.name), desc(row.id)]), take(5));
-const curriedJoin = pipe(users, leftJoin(orders, (user: typeof users.columns, order: typeof orders.columns) => eq(user.id, order.user_id)));
-const remedaPickedSelection = map(users, pick(["id"]));
-const remedaOmittedSelection = map(users, (user) => ({
+const curriedJoin = pipe(users, leftJoin(
+    orders,
+    (user: typeof users.columns, order: typeof orders.columns) => eq(user.id, order.user_id)
+));
+const remedaPickedSelection = pipe(users, map(pick<typeof users.columns, ["id"]>(["id"])));
+const remedaOmittedSelection = pipe(users, map((user) => ({
     ...omit(user, ["name"]),
     upper_name: upper(user.name),
-}));
-const remedaKeyMappedSelection = map(users, pipe(
+})));
+const remedaKeyMappedSelection = pipe(users, map((user) => pipe(
+    user,
     mapKeys((key) => "prefix1_" + key),
-));
-const remedaTemplateKeyMappedSelection = map(users, pipe(
+)));
+const remedaTemplateKeyMappedSelection = pipe(users, map((user) => pipe(
+    user,
     mapKeys((key) => `prefix1_${key}`),
-));
-const remedaTemplateKeyMappedUsage = map(remedaTemplateKeyMappedSelection, (user) => ({
+)));
+const remedaTemplateKeyMappedUsage = pipe(remedaTemplateKeyMappedSelection, map((user) => ({
     id: user.prefix1_id,
     name: user.prefix1_name,
-}));
-const remedaOmittedAggregate = fold(orders, (order) => omit({
+})));
+const remedaOmittedAggregate = pipe(orders, fold((order) => omit({
     user_id: group(order.user_id),
     order_count: count(order.order_id),
     total_spend: sum(order.total),
-}, ["order_count"]));
-const leftSelected = map(leftJoined, (row) => ({
+}, ["order_count"])));
+const leftSelected = pipe(leftJoined, map((row) => ({
     total: coalesce(row.total, 0),
     filtered: gt(row.total, 0),
     name: upper(row.name),
-}));
-const rightSelected = map(rightJoined, (row) => ({
+})));
+const rightSelected = pipe(rightJoined, map((row) => ({
     user_id: coalesce(row.id, 0),
     total: row.total,
-}));
-const fullSelected = map(fullJoined, (row) => ({
+})));
+const fullSelected = pipe(fullJoined, map((row) => ({
     id: coalesce(row.id, 0),
     total: coalesce(row.total, 0),
-}));
-const leftViaJoinSelected = map(leftViaJoin, (row) => ({
+})));
+const leftViaJoinSelected = pipe(leftViaJoin, map((row) => ({
     total: coalesce(row.total, 0),
-}));
+})));
 const explodedSessions = unnest(sessions, (session) => session.tags, { value: "tag", ordinality: "tag_index" });
 const outerExplodedSessions = unnest(sessions, (session) => session.tags, { value: "tag" }, { outer: true });
 const leftJoinTotal = coalesce(leftJoined.columns.total, 0);
 const leftJoinTotalRemaining = sub(leftJoinTotal, 1);
-const projectedWithQuotedKey = map(users, (user) => ({ ["User Id"]: user.id }));
-const aggregatedWithQuotedKey = fold(orders, (order) => ({
+const projectedWithQuotedKey = pipe(users, map((user) => ({ ["User Id"]: user.id })));
+const aggregatedWithQuotedKey = pipe(orders, fold((order) => ({
     ["User Id"]: group(order.user_id),
     ["Total Spend"]: sum(order.total),
-}));
-const aggregatedTotals = fold(orders, (order) => ({
+})));
+const aggregatedTotals = pipe(orders, fold((order) => ({
     user_id: group(order.user_id),
     totals: arrayAgg(order.total),
-}));
-const loopBase = map(users, (user) => ({ id: user.id }));
-const looped = loop(loopBase, (self) => filter(self, (row) => gt(row.id, 0)));
-const projectedWithCase = map(users, (user) => ({
+})));
+const loopBase = pipe(users, map((user) => ({ id: user.id })));
+const looped = loop(loopBase, (self) => pipe(self, filter((row) => gt(row.id, 0))));
+const projectedWithCase = pipe(users, map((user) => ({
     id: user.id,
     age_bucket: caseWhen([
         when(lt(user.id, 10), "small"),
@@ -136,23 +200,23 @@ const projectedWithCase = map(users, (user) => ({
     ...mapShape({
         bumped_id: user.id,
     }, (value) => add(value, 1)),
-}));
-const aggregatedWithGroupShape = fold(orders, (order) => ({
+})));
+const aggregatedWithGroupShape = pipe(orders, fold((order) => ({
     ...groupShape({
         user_id: order.user_id,
     }),
     total_spend: sum(order.total),
-}));
-const projectedProfiles = map(profiles, (profile) => ({
+})));
+const projectedProfiles = pipe(profiles, map((profile) => ({
     id: profile.id,
     external_id: add(profile.external_id, 1),
     credit_limit: coalesce(profile.credit_limit, 0),
     metadata: profile.metadata,
     avatar: profile.avatar,
     nickname: coalesce(profile.nickname, "anonymous"),
-}));
-const uuidFilteredProfiles = filter(profiles, (profile) => eq(profile.id, param("00000000-0000-0000-0000-000000000000")));
-const bigintFilteredProfiles = filter(profiles, (profile) => and(gt(profile.external_id, 0), eq(profile.external_id, 42n)));
+})));
+const uuidFilteredProfiles = pipe(profiles, filter((profile) => eq(profile.id, param("00000000-0000-0000-0000-000000000000"))));
+const bigintFilteredProfiles = pipe(profiles, filter((profile) => and(gt(profile.external_id, 0), eq(profile.external_id, 42n))));
 const stringifiedUserId = toString(users.columns.id);
 const stringifiedNullableNickname = toString(profiles.columns.nickname);
 const events = table("events", {
@@ -259,23 +323,48 @@ void uuidFilteredProfiles;
 void bigintFilteredProfiles;
 void invalidPickedUsers;
 // @ts-expect-error filter predicates must return boolean expressions
-filter(users, (user) => user.name);
-// @ts-expect-error join predicates must return boolean expressions
-join(users, orders, (user, order) => order.total);
-// @ts-expect-error default joins with overlapping output names require an explicit merge strategy
-join(users, profileRows, (user, profile) => eq(user.id, profile.id));
-// @ts-expect-error innerJoin without merge must reject overlapping output names
-innerJoin(users, profileRows, (user, profile) => eq(user.id, profile.id));
-// @ts-expect-error leftJoin without merge must reject overlapping output names
-leftJoin(users, profileRows, (user, profile) => eq(user.id, profile.id));
-// @ts-expect-error rightJoin without merge must reject overlapping output names
-rightJoin(users, profileRows, (user, profile) => eq(user.id, profile.id));
-// @ts-expect-error fullJoin without merge must reject overlapping output names
-fullJoin(users, profileRows, (user, profile) => eq(user.id, profile.id));
-// @ts-expect-error deferred no-merge joins with overlapping output names require an explicit merge strategy
-leftJoin(users, profileRows, eq($left.id, $right.id));
-// @ts-expect-error deferred join merge shapes must only contain expression refs
-leftJoin(users, orders, eq($left.id, $right.user_id), { user_id: 1 });
+pipe(users, filter((user) => user.name));
+pipe(users, join(
+    orders,
+    // @ts-expect-error join predicates must return boolean expressions
+    (user, order) => order.total
+));
+pipe(users, join(
+    profileRows,
+    // @ts-expect-error default joins with overlapping output names require an explicit merge strategy
+    (user, profile) => eq(user.id, profile.id)
+));
+pipe(users, innerJoin(
+    profileRows,
+    // @ts-expect-error innerJoin without merge must reject overlapping output names
+    (user, profile) => eq(user.id, profile.id)
+));
+pipe(users, leftJoin(
+    profileRows,
+    // @ts-expect-error leftJoin without merge must reject overlapping output names
+    (user, profile) => eq(user.id, profile.id)
+));
+pipe(users, rightJoin(
+    profileRows,
+    // @ts-expect-error rightJoin without merge must reject overlapping output names
+    (user, profile) => eq(user.id, profile.id)
+));
+pipe(users, fullJoin(
+    profileRows,
+    // @ts-expect-error fullJoin without merge must reject overlapping output names
+    (user, profile) => eq(user.id, profile.id)
+));
+pipe(users, leftJoin(
+    profileRows,
+    // @ts-expect-error deferred no-merge joins with overlapping output names require an explicit merge strategy
+    eq($left.id, $right.id)
+));
+pipe(users, leftJoin(
+    orders,
+    eq($left.id, $right.user_id),
+    // @ts-expect-error deferred join merge shapes must only contain expression refs
+    { user_id: 1 }
+));
 // @ts-expect-error toTimestamp should reject arbitrary strings
 toTimestamp(rawTimestampRows.columns.raw_ts);
 const profileRowsWithUserId = values([
@@ -283,7 +372,11 @@ const profileRowsWithUserId = values([
     { id: 2 as number, user_id: 2 as number, bio: "B" as string },
 ]);
 // @ts-expect-error prefixOverlapLeft can still collide with right-side keys after rename
-innerJoin(users, profileRowsWithUserId, (user, profile) => eq(user.id, profile.user_id), prefixOverlapLeft("user_"));
+pipe(users, innerJoin(
+    profileRowsWithUserId,
+    (user, profile) => eq(user.id, profile.user_id),
+    prefixOverlapLeft("user_")
+));
 const leftRowsWithUserId = values([
     { id: 1 as number, user_id: 11 as number, name: "Ada" as string },
     { id: 2 as number, user_id: 22 as number, name: "Grace" as string },
@@ -293,25 +386,33 @@ const rightRowsOverlappingId = values([
     { id: 2 as number, bio: "B" as string },
 ]);
 // @ts-expect-error prefixOverlapLeft must reject self-collision when renamed overlap key hits unchanged left key
-innerJoin(leftRowsWithUserId, rightRowsOverlappingId, (left, right) => eq(left.id, right.id), prefixOverlapLeft("user_"));
+pipe(leftRowsWithUserId, innerJoin(
+    rightRowsOverlappingId,
+    (left, right) => eq(left.id, right.id),
+    prefixOverlapLeft("user_")
+));
 const rightRowsWithUserId = values([
     { id: 1 as number, user_id: 11 as number, bio: "A" as string },
     { id: 2 as number, user_id: 22 as number, bio: "B" as string },
 ]);
 // @ts-expect-error prefixOverlapRight must reject self-collision when renamed overlap key hits unchanged right key
-innerJoin(users, rightRowsWithUserId, (user, right) => eq(user.id, right.id), prefixOverlapRight("user_"));
+pipe(users, innerJoin(
+    rightRowsWithUserId,
+    (user, right) => eq(user.id, right.id),
+    prefixOverlapRight("user_")
+));
 // @ts-expect-error legacy array selection syntax is removed
-map(users, (user) => [user.id]);
+pipe(users, map((user) => [user.id]));
 // @ts-expect-error legacy array fold syntax is removed
-fold(orders, (order) => [group(order.user_id)]);
+pipe(orders, fold((order) => [group(order.user_id)]));
 // @ts-expect-error map projections must reject undefined values
-map(users, { id: undefined });
+pipe(users, map({ id: undefined }));
 // @ts-expect-error unnest selectors must reject undefined
 unnest(sessions, undefined, { value: "tag" });
 // @ts-expect-error remeda mapKeys with widened string keys should not expose arbitrary renamed column refs
-map(remedaKeyMappedSelection, (user) => ({ broken: user.prefix1_na }));
+pipe(remedaKeyMappedSelection, map((user) => ({ broken: user.prefix1_na })));
 // @ts-expect-error template-literal mapKeys should still reject unknown renamed fields
-map(remedaTemplateKeyMappedSelection, (user) => ({ broken: user.prefix1_na }));
+pipe(remedaTemplateKeyMappedSelection, map((user) => ({ broken: user.prefix1_na })));
 // @ts-expect-error map is curried-only
 map(users, (user) => ({ id: user.id }));
 // @ts-expect-error filter is curried-only

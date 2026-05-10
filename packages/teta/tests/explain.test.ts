@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { pipe } from "remeda";
 import { explain, table, t, filter, map, eq, loop, take, isNotNull } from "../mod.ts";
 describe("explain api", () => {
     test("returns IR, AST, SQL, params, and stage metadata", () => {
@@ -6,7 +7,12 @@ describe("explain api", () => {
             id: t.int(),
             name: t.string(),
         });
-        const query = take(map(filter(users, (user) => eq(user.id, 42)), (user) => ({ id: user.id })), 1);
+        const query = pipe(
+            users,
+            filter((user) => eq(user.id, 42)),
+            map((user) => ({ id: user.id })),
+            take(1)
+        );
         const result = explain(query, {
             dialect: "postgresql",
             format: "compact",
@@ -35,10 +41,10 @@ describe("explain api", () => {
             id: t.int(),
             manager_id: t.nullable(t.int()),
         });
-        const query = loop(map(employees, (employee) => ({
+        const query = loop(pipe(employees, map((employee) => ({
             id: employee.id,
             manager_id: employee.manager_id,
-        })), (self) => filter(self, (row) => isNotNull(row.manager_id)));
+        }))), (self) => pipe(self, filter((row) => isNotNull(row.manager_id))));
         const result = explain(query, {
             dialect: "postgresql",
             format: "compact",

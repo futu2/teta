@@ -56,7 +56,8 @@ const orders = table("orders", {
 });
 
 export const renderBenchmarkQuery = pipe(
-  leftJoin(users, orders, (user, order) => eq(user.id, order.user_id), (user, order) => ({
+  users,
+  leftJoin(orders, (user, order) => eq(user.id, order.user_id), (user, order) => ({
     id: user.id,
     name: user.name,
     active: user.active,

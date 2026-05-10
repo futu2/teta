@@ -1,19 +1,20 @@
 import { employeeTable, metricsTable, rankTable } from "./live-language-spec-shared.ts";
 import type { LiveSpecCase } from "./live-language-spec-shared.ts";
+import { pipe } from "remeda";
 import { fold, filter, join, map, asc, avg, count, denseRank, desc, eq, group, isNull, lag, lead, max, min, ntile, sort, percentRank, rank, rowNumber, sum, sumOver, loop, over } from "../../mod.ts";
 export const LIVE_LANGUAGE_ANALYTIC_CASES: LiveSpecCase[] = [
     {
         name: "aggregates",
         build: () => {
             const metrics = metricsTable();
-            return sort(fold(metrics, ({ amount, grp }) => ({
+            return pipe(metrics, fold(({ amount, grp }) => ({
                 grp: group(grp),
                 count_v: count(amount),
                 sum_v: sum(amount),
                 avg_v: avg(amount),
                 min_v: min(amount),
                 max_v: max(amount),
-            })), ({ grp }) => asc(grp));
+            })), sort(({ grp }) => asc(grp)));
         },
         outcomes: {
             sqlite: {
@@ -34,7 +35,7 @@ export const LIVE_LANGUAGE_ANALYTIC_CASES: LiveSpecCase[] = [
         name: "window functions",
         build: () => {
             const ranks = rankTable();
-            return sort(map(ranks, ({ amount, seq }) => ({
+            return pipe(ranks, map(({ amount, seq }) => ({
                 seq,
                 amount,
                 rank_v: over(rank(amount), { orderBy: desc(amount) }),
@@ -45,7 +46,7 @@ export const LIVE_LANGUAGE_ANALYTIC_CASES: LiveSpecCase[] = [
                 percent_rank_v: over(percentRank(amount), { orderBy: desc(amount) }),
                 ntile_v: over(ntile(amount, 2), { orderBy: asc(seq) }),
                 sum_over_v: sumOver(amount, { orderBy: asc(seq) }),
-            })), ({ seq }) => asc(seq));
+            })), sort(({ seq }) => asc(seq)));
         },
         outcomes: {
             sqlite: {
@@ -158,16 +159,30 @@ export const LIVE_LANGUAGE_ANALYTIC_CASES: LiveSpecCase[] = [
         name: "recursive cte",
         build: () => {
             const employees = employeeTable();
-            const orgTree = loop(map(filter(employees, (employee) => isNull(employee.manager_id)), (employee) => ({
-                id: employee.id,
-                name: employee.name,
-                manager_id: employee.manager_id,
-            })), (self) => join(employees, self, (employee, current) => eq(employee.manager_id, current.id), (employee) => ({
-                id: employee.id,
-                name: employee.name,
-                manager_id: employee.manager_id,
-            })));
-            return sort(map(orgTree, (employee) => ({ id: employee.id, name: employee.name })), (employee) => asc(employee.id));
+            const orgTree = loop(
+                pipe(
+                    employees,
+                    filter((employee) => isNull(employee.manager_id)),
+                    map((employee) => ({
+                        id: employee.id,
+                        name: employee.name,
+                        manager_id: employee.manager_id,
+                    }))
+                ),
+                (self) => pipe(
+                    employees,
+                    join(
+                        self,
+                        (employee, current) => eq(employee.manager_id, current.id),
+                        (employee) => ({
+                            id: employee.id,
+                            name: employee.name,
+                            manager_id: employee.manager_id,
+                        })
+                    )
+                )
+            );
+            return pipe(orgTree, map((employee) => ({ id: employee.id, name: employee.name })), sort((employee) => asc(employee.id)));
         },
         outcomes: {
             sqlite: {

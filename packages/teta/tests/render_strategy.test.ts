@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { pipe } from "remeda";
 import { table, t, filter, eq, gt, map, take, toSql, innerJoin } from "../mod.ts";
 describe("render strategy", () => {
     test("optimized strategy keeps simple pipelines fused", () => {
@@ -6,7 +7,12 @@ describe("render strategy", () => {
             id: t.int(),
             active: t.boolean(),
         });
-        const sql = toSql(take(map(filter(users, (user) => eq(user.active, true)), (user) => ({ id: user.id })), 1), {
+        const sql = toSql(pipe(
+            users,
+            filter((user) => eq(user.active, true)),
+            map((user) => ({ id: user.id })),
+            take(1)
+        ), {
             dialect: "postgresql",
             format: "compact",
             renderStrategy: "optimized",
@@ -19,7 +25,12 @@ describe("render strategy", () => {
             id: t.int(),
             active: t.boolean(),
         });
-        const sql = toSql(take(map(filter(users, (user) => eq(user.active, true)), (user) => ({ id: user.id })), 1), {
+        const sql = toSql(pipe(
+            users,
+            filter((user) => eq(user.active, true)),
+            map((user) => ({ id: user.id })),
+            take(1)
+        ), {
             dialect: "postgresql",
             format: "compact",
             renderStrategy: "readable",
@@ -38,19 +49,37 @@ describe("render strategy", () => {
             user_id: t.int(),
             total: t.float(),
         });
-        const positiveOrders = map(filter(orders, (order) => gt(order.total, 0)), (order) => ({
-            user_id: order.user_id,
-            total: order.total,
-        }));
-        const joinedOnce = innerJoin(users, positiveOrders, (user, order) => eq(user.id, order.user_id), (user, order) => ({
-            id: user.id,
-            first_total: order.total,
-        }));
-        const query = innerJoin(joinedOnce, positiveOrders, (row, order) => eq(row.id, order.user_id), (row, order) => ({
-            id: row.id,
-            first_total: row.first_total,
-            second_total: order.total,
-        }));
+        const positiveOrders = pipe(
+            orders,
+            filter((order) => gt(order.total, 0)),
+            map((order) => ({
+                user_id: order.user_id,
+                total: order.total,
+            }))
+        );
+        const joinedOnce = pipe(
+            users,
+            innerJoin(
+                positiveOrders,
+                (user, order) => eq(user.id, order.user_id),
+                (user, order) => ({
+                    id: user.id,
+                    first_total: order.total,
+                })
+            )
+        );
+        const query = pipe(
+            joinedOnce,
+            innerJoin(
+                positiveOrders,
+                (row, order) => eq(row.id, order.user_id),
+                (row, order) => ({
+                    id: row.id,
+                    first_total: row.first_total,
+                    second_total: order.total,
+                })
+            )
+        );
         const sql = toSql(query, {
             dialect: "postgresql",
             format: "compact",

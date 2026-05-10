@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { pipe } from "remeda";
 import { fold, caseWhen, groupShape, lt, map, sum, table, t, toSql, when } from "../mod.ts";
 
 describe("functional expression builders", () => {
@@ -8,12 +9,12 @@ describe("functional expression builders", () => {
       age: t.int(),
     });
 
-    const query = map(users, (user) => ({
+    const query = pipe(users, map((user) => ({
       age_group: caseWhen([
         when(lt(user.age, 18), "minor"),
         when(lt(user.age, 65), "adult"),
       ], "senior"),
-    }));
+    })));
 
     const sql = toSql(query, { dialect: "postgresql", format: "compact" });
 
@@ -27,10 +28,10 @@ describe("functional expression builders", () => {
       total: t.float(),
     });
 
-    const query = fold(orders, (order) => ({
+    const query = pipe(orders, fold((order) => ({
       ...groupShape({ user_id: order.user_id }),
       total_spend: sum(order.total),
-    }));
+    })));
 
     const sql = toSql(query, { dialect: "postgresql", format: "compact" });
 

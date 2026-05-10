@@ -1,13 +1,19 @@
+import { pipe } from "remeda";
 import { param, table, t, filter, eq, map, and, take, trim, lower, toSqlResult } from "../mod.ts";
 const users = table("users", {
     id: t.int(),
     name: t.string(),
     active: t.boolean(),
 });
-const result = toSqlResult(take(map(filter(users, (user) => and(eq(user.id, param(42)), eq(user.active, true))), (user) => ({
-    id: user.id,
-    normalized_name: lower(trim(user.name)),
-})), 1), {
+const result = toSqlResult(pipe(
+    users,
+    filter((user) => and(eq(user.id, param(42)), eq(user.active, true))),
+    map((user) => ({
+        id: user.id,
+        normalized_name: lower(trim(user.name)),
+    })),
+    take(1)
+), {
     dialect: "postgresql",
     format: "compact",
 });

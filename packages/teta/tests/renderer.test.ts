@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { pipe } from "remeda";
 import { add, and, eq, filter, map, param, t, table, toSql, toSqlResult } from "../mod.ts";
 import {
   DIALECT_MATRIX_SQL,
@@ -39,9 +40,10 @@ describe("SQL render options API", () => {
       id: t.int(),
       name: t.string(),
     });
-    const query = map(
-      filter(users, (user) => and(eq(user.id, 42), eq(user.name, "Ada"))),
-      (user) => ({ id: user.id })
+    const query = pipe(
+      users,
+      filter((user) => and(eq(user.id, 42), eq(user.name, "Ada"))),
+      map((user) => ({ id: user.id }))
     );
 
     expect(toSqlResult(query, {
@@ -63,7 +65,11 @@ describe("SQL render options API", () => {
       name: t.string(),
     });
     const name = "SQL injection string ;)";
-    const query = map(filter(users, (user) => eq(user.name, param(name))), (user) => ({ id: user.id }));
+    const query = pipe(
+      users,
+      filter((user) => eq(user.name, param(name))),
+      map((user) => ({ id: user.id }))
+    );
 
     expect(toSqlResult(query, {
       dialect: "postgresql",
@@ -125,9 +131,10 @@ describe("SQL render options API", () => {
     const sessions = table("sessions", {
       session_id: t.bigint(),
     });
-    const query = map(
-      filter(sessions, (session) => eq(session.session_id, 42n)),
-      (session) => ({ session_id: session.session_id })
+    const query = pipe(
+      sessions,
+      filter((session) => eq(session.session_id, 42n)),
+      map((session) => ({ session_id: session.session_id }))
     );
 
     expect(toSql(query, {

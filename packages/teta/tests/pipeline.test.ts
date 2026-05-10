@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { pipe } from "remeda";
 import { table, t, map, replace } from "../mod.ts";
 import { renderPipelineAst } from "../src/edsl/sql/render/pipeline.ts";
 describe("pipeline render pipeline", () => {
@@ -10,12 +11,16 @@ describe("pipeline render pipeline", () => {
         const base = table("base_users", {
             id: t.int(),
         });
-        const filtered = map(map(users, (user) => ({
-            id: user.id,
-            normalized_name: replace(user.name, " ", "_"),
-        })), (row) => ({
-            id: row.id,
-        }));
+        const filtered = pipe(
+            users,
+            map((user) => ({
+                id: user.id,
+                normalized_name: replace(user.name, " ", "_"),
+            })),
+            map((row) => ({
+                id: row.id,
+            }))
+        );
         const ast = renderPipelineAst(filtered.source, filtered.stages, filtered.columnNames, filtered.sourceScopeId, {
             ctePrefix: "test_",
             baseCtes: [

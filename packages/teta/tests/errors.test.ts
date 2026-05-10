@@ -31,17 +31,31 @@ describe("error paths", () => {
     test("rejects unsupported join types through the query API", () => {
         const users = createUsersTable();
         const orders = createOrdersTable();
-        expect(() => pipe(users, join(orders, (user, order) => eq(user.id, order.user_id), { type: "cross" as never }))).toThrow(UNSUPPORTED_CROSS_JOIN_ERROR);
+        expect(() => pipe(
+            users,
+            join(
+                orders,
+                (user, order) => eq(user.id, order.user_id),
+                { type: "cross" as never }
+            )
+        )).toThrow(UNSUPPORTED_CROSS_JOIN_ERROR);
     });
     test("rejects legacy join merge options at runtime", () => {
         const users = createUsersTable();
         const orders = createOrdersTable();
-        expect(() => pipe(users, join(orders, (user, order) => eq(user.id, order.user_id), {
-            merge: (user: typeof users.columns, order: typeof orders.columns) => ({
-                id: user.id,
-                total: order.total,
-            }),
-        } as never))).toThrow(LEGACY_JOIN_MERGE_OPTION_ERROR);
+        expect(() => pipe(
+            users,
+            join(
+                orders,
+                (user, order) => eq(user.id, order.user_id),
+                {
+                    merge: (user: typeof users.columns, order: typeof orders.columns) => ({
+                        id: user.id,
+                        total: order.total,
+                    }),
+                } as never
+            )
+        )).toThrow(LEGACY_JOIN_MERGE_OPTION_ERROR);
     });
     test("rejects default joins with overlapping output columns", () => {
         const users = createUsersTable();

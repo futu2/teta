@@ -1,12 +1,13 @@
 import { SQLITE_UNSUPPORTED, currentDate, currentTimestamp, scalarTable, } from "./live-language-spec-shared.ts";
 import type { LiveSpecCase } from "./live-language-spec-shared.ts";
+import { pipe } from "remeda";
 import { isNotNull, map, abs, add, cast, ceil, coalesce, dateAdd, dateDiff, dateFormat, dateParse, dateTrunc, day, div, eq, extract, floor, greatest, gt, gte, hour, isIn, isNull, least, lt, lte, minute, mod, month, mul, ne, nullIf, pow, round, second, sqrt, sub, toDate, toInt, toString, trim, year, and, bitLength, charLength, characterLength, concat, fromUnixTime, left, like, lower, lpad, not, octetLength, or, overlay, position, regexExtract, regexLike, regexReplace, replace, reverse, right, rpad, substring, toFloat, upper, toUnixTime } from "../../mod.ts";
 export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
     {
         name: "math functions",
         build: () => {
             const scalar = scalarTable();
-            return map(scalar, ({ ceil_src, floor_src, i, j, k, neg_i, pow_base, pow_exp, round_src, sqrt_src, x, y }) => ({
+            return pipe(scalar, map(({ ceil_src, floor_src, i, j, k, neg_i, pow_base, pow_exp, round_src, sqrt_src, x, y }) => ({
                 add_v: add(i, j),
                 sub_v: sub(i, j),
                 mul_v: mul(i, j),
@@ -20,7 +21,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
                 round_v: round(round_src, 2),
                 greatest_v: greatest(i, j, k),
                 least_v: least(i, j, k),
-            }));
+            })));
         },
         outcomes: {
             sqlite: {
@@ -67,7 +68,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
         name: "core string functions",
         build: () => {
             const scalar = scalarTable();
-            return map(scalar, ({ txt, txt2 }) => {
+            return pipe(scalar, map(({ txt, txt2 }) => {
                 const trimmed = trim(txt);
                 return {
                     concat_v: concat(trimmed, txt2),
@@ -80,7 +81,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
                     bit_length_v: bitLength(trimmed),
                     replace_v: replace(trimmed, "World", "Duck"),
                 };
-            });
+            }));
         },
         outcomes: {
             sqlite: {
@@ -119,7 +120,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
         name: "octet length",
         build: () => {
             const scalar = scalarTable();
-            return map(scalar, ({ txt }) => ({ value: octetLength(trim(txt)) }));
+            return pipe(scalar, map(({ txt }) => ({ value: octetLength(trim(txt)) })));
         },
         outcomes: {
             sqlite: { rows: [{ value: 10 }] },
@@ -130,7 +131,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
         name: "position",
         build: () => {
             const scalar = scalarTable();
-            return map(scalar, ({ txt }) => ({ value: position(trim(txt), "World") }));
+            return pipe(scalar, map(({ txt }) => ({ value: position(trim(txt), "World") })));
         },
         outcomes: {
             sqlite: { rows: [{ value: 6 }] },
@@ -141,7 +142,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
         name: "overlay",
         build: () => {
             const scalar = scalarTable();
-            return map(scalar, ({ txt }) => ({ value: overlay(trim(txt), "Duck", 6, 5) }));
+            return pipe(scalar, map(({ txt }) => ({ value: overlay(trim(txt), "Duck", 6, 5) })));
         },
         outcomes: {
             sqlite: { error: SQLITE_UNSUPPORTED },
@@ -152,7 +153,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
         name: "reverse",
         build: () => {
             const scalar = scalarTable();
-            return map(scalar, ({ txt }) => ({ value: reverse(trim(txt)) }));
+            return pipe(scalar, map(({ txt }) => ({ value: reverse(trim(txt)) })));
         },
         outcomes: {
             sqlite: { error: SQLITE_UNSUPPORTED },
@@ -163,7 +164,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
         name: "left",
         build: () => {
             const scalar = scalarTable();
-            return map(scalar, ({ txt }) => ({ value: left(trim(txt), 5) }));
+            return pipe(scalar, map(({ txt }) => ({ value: left(trim(txt), 5) })));
         },
         outcomes: {
             sqlite: { error: SQLITE_UNSUPPORTED },
@@ -174,7 +175,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
         name: "right",
         build: () => {
             const scalar = scalarTable();
-            return map(scalar, ({ txt }) => ({ value: right(trim(txt), 5) }));
+            return pipe(scalar, map(({ txt }) => ({ value: right(trim(txt), 5) })));
         },
         outcomes: {
             sqlite: { error: SQLITE_UNSUPPORTED },
@@ -185,7 +186,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
         name: "lpad",
         build: () => {
             const scalar = scalarTable();
-            return map(scalar, ({ txt }) => ({ value: lpad(trim(txt), 12, "_") }));
+            return pipe(scalar, map(({ txt }) => ({ value: lpad(trim(txt), 12, "_") })));
         },
         outcomes: {
             sqlite: { error: SQLITE_UNSUPPORTED },
@@ -196,7 +197,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
         name: "rpad",
         build: () => {
             const scalar = scalarTable();
-            return map(scalar, ({ txt }) => ({ value: rpad(trim(txt), 12, "_") }));
+            return pipe(scalar, map(({ txt }) => ({ value: rpad(trim(txt), 12, "_") })));
         },
         outcomes: {
             sqlite: { error: SQLITE_UNSUPPORTED },
@@ -207,7 +208,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
         name: "regex like",
         build: () => {
             const scalar = scalarTable();
-            return map(scalar, ({ txt }) => ({ value: regexLike(trim(txt), "^Hello") }));
+            return pipe(scalar, map(({ txt }) => ({ value: regexLike(trim(txt), "^Hello") })));
         },
         outcomes: {
             sqlite: { error: SQLITE_UNSUPPORTED },
@@ -218,7 +219,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
         name: "regex replace",
         build: () => {
             const scalar = scalarTable();
-            return map(scalar, ({ txt }) => ({ value: regexReplace(trim(txt), "World", "Duck") }));
+            return pipe(scalar, map(({ txt }) => ({ value: regexReplace(trim(txt), "World", "Duck") })));
         },
         outcomes: {
             sqlite: { error: SQLITE_UNSUPPORTED },
@@ -229,7 +230,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
         name: "regex extract",
         build: () => {
             const scalar = scalarTable();
-            return map(scalar, ({ txt }) => ({ value: regexExtract(trim(txt), "Hello(.*)", 1) }));
+            return pipe(scalar, map(({ txt }) => ({ value: regexExtract(trim(txt), "Hello(.*)", 1) })));
         },
         outcomes: {
             sqlite: { error: SQLITE_UNSUPPORTED },
@@ -240,7 +241,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
         name: "logical operators",
         build: () => {
             const scalar = scalarTable();
-            return map(scalar, ({ i, j, txt, txt2 }) => ({
+            return pipe(scalar, map(({ i, j, txt, txt2 }) => ({
                 eq_v: eq(i, 5),
                 ne_v: ne(i, 4),
                 lt_v: lt(j, i),
@@ -252,7 +253,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
                 not_v: not(lt(i, j)),
                 like_v: like(trim(txt), "Hello%"),
                 in_v: isIn(txt2, ["Duck", "World"]),
-            }));
+            })));
         },
         outcomes: {
             sqlite: {
@@ -295,7 +296,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
         name: "date and time functions",
         build: () => {
             const scalar = scalarTable();
-            return map(scalar, ({ i, parse_txt, ts, ts_next }) => ({
+            return pipe(scalar, map(({ i, parse_txt, ts, ts_next }) => ({
                 current_date_ok: isNotNull(currentDate()),
                 current_ts_ok: isNotNull(currentTimestamp()),
                 date_trunc_v: dateFormat(dateTrunc(ts, "day"), "%Y-%m-%d %H:%M:%S"),
@@ -305,7 +306,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
                 date_format_v: dateFormat(ts, "%Y-%m-%d"),
                 to_unixtime_v: toInt(toUnixTime(fromUnixTime(sub(i, 5)))),
                 from_unixtime_v: dateFormat(fromUnixTime(sub(i, 5)), "%Y-%m-%d %H:%M:%S"),
-            }));
+            })));
         },
         outcomes: {
             sqlite: {
@@ -344,7 +345,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
         name: "extract and date part helpers",
         build: () => {
             const scalar = scalarTable();
-            return map(scalar, ({ ts }) => ({
+            return pipe(scalar, map(({ ts }) => ({
                 extract_year_v: extract(ts, "year"),
                 year_v: year(ts),
                 month_v: month(ts),
@@ -352,7 +353,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
                 hour_v: hour(ts),
                 minute_v: minute(ts),
                 second_v: second(ts),
-            }));
+            })));
         },
         outcomes: {
             sqlite: {
@@ -387,7 +388,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
         name: "type conversion and null handling",
         build: () => {
             const scalar = scalarTable();
-            return map(scalar, ({ i, nullable_txt, num_txt, ts, txt, txt2, x }) => ({
+            return pipe(scalar, map(({ i, nullable_txt, num_txt, ts, txt, txt2, x }) => ({
                 cast_v: cast(num_txt, "INTEGER"),
                 to_int_v: toInt(x),
                 to_float_v: toFloat(toInt(x)),
@@ -397,7 +398,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
                 nullif_is_null_v: isNull(nullIf(txt2, "World")),
                 is_null_v: isNull(nullable_txt),
                 is_not_null_v: isNotNull(txt),
-            }));
+            })));
         },
         outcomes: {
             sqlite: {

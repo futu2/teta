@@ -16,10 +16,17 @@ describe("function-first query api", () => {
     test("supports curried join with a built query", () => {
         const users = createUsersTable();
         const orders = createOrdersTable();
-        const query = pipe(users, leftJoin(orders, (user, order) => eq(user.id, order.user_id)), map((row) => ({
-            user_id: row.id,
-            total: row.total,
-        })));
+        const query = pipe(
+            users,
+            leftJoin(
+                orders,
+                (user, order) => eq(user.id, order.user_id)
+            ),
+            map((row) => ({
+                user_id: row.id,
+                total: row.total,
+            }))
+        );
         expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe(USERS_ORDERS_LEFT_JOIN_SELECT_POSTGRES_COMPACT);
     });
     test("supports leftJoin with onEq mapping in function-first pipeline", () => {
@@ -31,10 +38,18 @@ describe("function-first query api", () => {
             user_id: t.int(),
             bio: t.string(),
         });
-        const query = pipe(users, leftJoin(profiles, onEq({ id: "user_id" }), prefixOverlapLeft("left_")), map((row) => ({
-            left_id: row.left_id,
-            bio: row.bio,
-        })));
+        const query = pipe(
+            users,
+            leftJoin(
+                profiles,
+                onEq({ id: "user_id" }),
+                prefixOverlapLeft("left_")
+            ),
+            map((row) => ({
+                left_id: row.left_id,
+                bio: row.bio,
+            }))
+        );
         expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe("SELECT users_0.id AS left_id, profiles_1.bio AS bio FROM users AS users_0 LEFT JOIN profiles AS profiles_1 ON users_0.id = profiles_1.user_id");
     });
     test("supports curried 3-arg join when predicate uses default parameter", () => {

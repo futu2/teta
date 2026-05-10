@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { pipe } from "remeda";
 import { add, charLength, eq, filter, isNotNull, isNull, join, loop, map, not, t, table, toSql } from "../mod.ts";
 import { buildOrgTreeQuery, createEmployeesTable } from "./helpers/fixtures.ts";
 
@@ -7,11 +8,11 @@ describe("recursive loop queries", () => {
     const sqlOptions = { dialect: "postgresql", format: "compact" } as const;
 
     const sqlA = toSql(
-      map(buildOrgTreeQuery(), (employee) => ({ id: employee.id, name: employee.name })),
+      pipe(buildOrgTreeQuery(), map((employee) => ({ id: employee.id, name: employee.name }))),
       sqlOptions
     );
     const sqlB = toSql(
-      map(buildOrgTreeQuery(), (employee) => ({ id: employee.id, name: employee.name })),
+      pipe(buildOrgTreeQuery(), map((employee) => ({ id: employee.id, name: employee.name }))),
       sqlOptions
     );
 
@@ -20,7 +21,7 @@ describe("recursive loop queries", () => {
 
   test("renders a recursive employee tree CTE", () => {
     const sql = toSql(
-      map(buildOrgTreeQuery(), (employee) => ({ id: employee.id, name: employee.name })),
+      pipe(buildOrgTreeQuery(), map((employee) => ({ id: employee.id, name: employee.name }))),
       { dialect: "postgresql", format: "compact" }
     );
 
@@ -35,28 +36,34 @@ describe("recursive loop queries", () => {
 
   test("supports loop(base, step) as the recursive builder", () => {
     const employees = createEmployeesTable();
-    const base = map(filter(employees, (employee) => isNull(employee.manager_id)), (employee) => ({
-      id: employee.id,
-      name: employee.name,
-      manager_id: employee.manager_id,
-    }));
+    const base = pipe(
+      employees,
+      filter((employee) => isNull(employee.manager_id)),
+      map((employee) => ({
+        id: employee.id,
+        name: employee.name,
+        manager_id: employee.manager_id,
+      }))
+    );
 
     const sql = toSql(
-      map(
+      pipe(
         loop(
           base,
-          (self) => join(
+          (self) => pipe(
             employees,
-            self,
-            (employee, current) => eq(employee.manager_id, current.id),
-            (employee) => ({
-              id: employee.id,
-              name: employee.name,
-              manager_id: employee.manager_id,
-            })
+            join(
+              self,
+              (employee, current) => eq(employee.manager_id, current.id),
+              (employee) => ({
+                id: employee.id,
+                name: employee.name,
+                manager_id: employee.manager_id,
+              })
+            )
           )
         ),
-        (employee) => ({ id: employee.id, name: employee.name })
+        map((employee) => ({ id: employee.id, name: employee.name }))
       ),
       { dialect: "postgresql", format: "compact" }
     );
@@ -71,24 +78,30 @@ describe("recursive loop queries", () => {
       sup_orgId: t.nullable(t.int()),
     });
 
-    const directSup = map(filter(orgTree, (row) => isNotNull(row.sup_orgId)), (row) => ({
-      orgId: row.orgId,
-      sup_orgId: row.sup_orgId,
-      distance: 1,
-    }));
+    const directSup = pipe(
+      orgTree,
+      filter((row) => isNotNull(row.sup_orgId)),
+      map((row) => ({
+        orgId: row.orgId,
+        sup_orgId: row.sup_orgId,
+        distance: 1,
+      }))
+    );
 
     const sql = toSql(
       loop(
         directSup,
-        (self) => join(
+        (self) => pipe(
           self,
-          directSup,
-          (current, parent) => eq(current.sup_orgId, parent.orgId),
-          (current, parent) => ({
-            orgId: current.orgId,
-            sup_orgId: parent.sup_orgId,
-            distance: add(current.distance, 1),
-          })
+          join(
+            directSup,
+            (current, parent) => eq(current.sup_orgId, parent.orgId),
+            (current, parent) => ({
+              orgId: current.orgId,
+              sup_orgId: parent.sup_orgId,
+              distance: add(current.distance, 1),
+            })
+          )
         )
       ),
       { dialect: "postgresql", format: "compact" }
@@ -105,28 +118,34 @@ describe("recursive loop queries", () => {
       sup_stru: t.string(),
     });
 
-    const orgInfo = filter(
-      map(
-        map(orgTree, (row) => ({
+    const orgInfo = pipe(
+      orgTree,
+      map((row) => ({
           stru_id: row.stru_id,
           sup_stru: row.sup_stru,
         })),
-        (row) => ({
+      map((row) => ({
           ...row,
           distance: 1,
-        })
-      ),
-      (row) => not(eq(charLength(row.sup_stru), 0))
+        })),
+      filter((row) => not(eq(charLength(row.sup_stru), 0)))
     );
 
     const sql = toSql(
       loop(
         orgInfo,
-        (self) => join(self, orgInfo, (u, o) => eq(u.sup_stru, o.stru_id), (u, o) => ({
-            stru_id: u.stru_id,
-            sup_stru: o.sup_stru,
-            distance: add(o.distance, 1),
-          }))
+        (self) => pipe(
+          self,
+          join(
+            orgInfo,
+            (u, o) => eq(u.sup_stru, o.stru_id),
+            (u, o) => ({
+              stru_id: u.stru_id,
+              sup_stru: o.sup_stru,
+              distance: add(o.distance, 1),
+            })
+          )
+        )
       ),
       { dialect: "hetu", format: "compact" }
     );

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { pipe } from "remeda";
 
 import {
   eq,
@@ -26,12 +27,12 @@ describe("values(query root)", () => {
   });
 
   test("supports filtering inline rows", () => {
-    const query = filter(
+    const query = pipe(
       values([
         { id: 1, name: "Ada" },
         { id: 2, name: "Grace" },
       ]),
-      (row) => gt(row.id, 1)
+      filter((row) => gt(row.id, 1))
     );
 
     expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe(
@@ -50,13 +51,17 @@ describe("values(query root)", () => {
       { user_id: 2, label: "staff" },
     ]);
 
-    const query = map(
-      join(users, labels, (user, labelRow) => eq(user.id, labelRow.user_id)),
-      (row) => ({
+    const query = pipe(
+      users,
+      join(
+        labels,
+        (user, labelRow) => eq(user.id, labelRow.user_id)
+      ),
+      map((row) => ({
         id: row.id,
         name: row.name,
         label: row.label,
-      })
+      }))
     );
 
     expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe(
