@@ -45,7 +45,16 @@ export type ExprNode<T> = (
   | CastNode
   | WindowNode
   | CaseNode
+  | DeferredColumnNode
 ) & ExprNodeResult<T>;
+
+export type DeferredColumnScope = "current" | "left" | "right";
+
+export type DeferredColumnNode = {
+  kind: "deferred_column";
+  scope: DeferredColumnScope;
+  name: string;
+};
 
 export type ColumnNode = {
   kind: "column";

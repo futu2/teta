@@ -127,6 +127,18 @@ export type ExprRef<T> = import("./src/edsl/expr.ts").ExprRef<T>;
 /** Builds an equality predicate. */
 export const eq: typeof import("./src/edsl/expr.ts").eq = expr.eq;
 
+/** Deferred reference to a column on the current query row. */
+export const $: typeof import("./src/edsl/expr.ts").$ = expr.$;
+
+/** Deferred reference to a column on the left side of a join. */
+export const $left: typeof import("./src/edsl/expr.ts").$left = expr.$left;
+
+/** Deferred reference to a column on the right side of a join. */
+export const $right: typeof import("./src/edsl/expr.ts").$right = expr.$right;
+
+/** Builds a same-name projection selector. */
+export const pickCols: typeof import("./src/edsl/expr.ts").pickCols = expr.pickCols;
+
 /** Builds an inequality predicate. */
 export const ne: typeof import("./src/edsl/expr.ts").ne = expr.ne;
 
