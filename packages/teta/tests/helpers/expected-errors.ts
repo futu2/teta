@@ -30,6 +30,18 @@ export const JOIN_OVERLAPPING_COLUMNS_ERROR =
 export const JOIN_MERGE_CONFLICT_ERROR =
   "join merge helper still overlaps after renaming: user_id";
 
+export const DEFERRED_CURRENT_COLUMN_UNKNOWN_ERROR =
+  "Unknown current row column 'missing'. Available columns: id, name";
+
+export const DEFERRED_LEFT_COLUMN_UNKNOWN_ERROR =
+  "Unknown join left column 'missing'. Available columns: id, name";
+
+export const DEFERRED_RIGHT_COLUMN_UNKNOWN_ERROR =
+  "Unknown join right column 'missing'. Available columns: order_id, user_id, total";
+
+export const DEFERRED_LEFT_SCOPE_ERROR =
+  "Join left column 'id' cannot be resolved in this query helper";
+
 export function missingQueryExportError(path: string): string {
   return `Export 'query' not found in ${path}`;
 }

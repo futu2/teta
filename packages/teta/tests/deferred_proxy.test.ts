@@ -33,6 +33,12 @@ import {
   createUsersPipelineTable,
   createUsersTable,
 } from "./helpers/fixtures.ts";
+import {
+  DEFERRED_CURRENT_COLUMN_UNKNOWN_ERROR,
+  DEFERRED_LEFT_COLUMN_UNKNOWN_ERROR,
+  DEFERRED_LEFT_SCOPE_ERROR,
+  DEFERRED_RIGHT_COLUMN_UNKNOWN_ERROR,
+} from "./helpers/expected-errors.ts";
 
 describe("deferred row proxy api", () => {
   test("exports deferred row proxies that compose through expression helpers", () => {
@@ -195,5 +201,33 @@ describe("deferred row proxy api", () => {
     expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
       toSql(expected, { dialect: "postgresql", format: "compact" })
     );
+  });
+
+  test("reports missing current-row deferred columns", () => {
+    const users = createUsersTable();
+    expect(() => map(users, { missing: $.missing })).toThrow(
+      DEFERRED_CURRENT_COLUMN_UNKNOWN_ERROR
+    );
+  });
+
+  test("reports missing deferred join-left columns", () => {
+    const users = createUsersTable();
+    const orders = createOrdersTable();
+    expect(() => leftJoin(users, orders, eq($left.missing, $right.user_id))).toThrow(
+      DEFERRED_LEFT_COLUMN_UNKNOWN_ERROR
+    );
+  });
+
+  test("reports missing deferred join-right columns", () => {
+    const users = createUsersTable();
+    const orders = createOrdersTable();
+    expect(() => leftJoin(users, orders, eq($left.id, $right.missing))).toThrow(
+      DEFERRED_RIGHT_COLUMN_UNKNOWN_ERROR
+    );
+  });
+
+  test("reports join-side deferred refs outside join helpers", () => {
+    const users = createUsersTable();
+    expect(() => filter(users, eq($left.id, 1))).toThrow(DEFERRED_LEFT_SCOPE_ERROR);
   });
 });
