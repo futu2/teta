@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { pipe } from "remeda";
-import { TetaUserError, count, eq, filter, fold, fullJoin, group, innerJoin, join, leftJoin, loop, map, prefixOverlapLeft, rightJoin, sort, take, toSql, values } from "../mod.ts";
+import { $left, $right, TetaUserError, count, eq, filter, fold, fullJoin, group, innerJoin, join, leftJoin, loop, map, prefixOverlapLeft, rightJoin, sort, take, toSql, values } from "../mod.ts";
 import { FILTER_CURRIED_ONLY_ERROR, FOLD_CURRIED_ONLY_ERROR, FULL_JOIN_CURRIED_ONLY_ERROR, GROUP_INSIDE_AGGREGATE_FUNCTION_ERROR, GROUP_OUTSIDE_AGGREGATE_ERROR, INNER_JOIN_CURRIED_ONLY_ERROR, JOIN_CURRIED_ONLY_ERROR, JOIN_MERGE_CONFLICT_ERROR, JOIN_OVERLAPPING_COLUMNS_ERROR, LEFT_JOIN_CURRIED_ONLY_ERROR, LEGACY_JOIN_MERGE_OPTION_ERROR, LEGACY_SELECTION_ARRAY_ERROR, LOOP_COLUMN_MISMATCH_ERROR, MAP_CURRIED_ONLY_ERROR, NON_CANONICAL_POSTGRES_DIALECT_ERROR, RIGHT_JOIN_CURRIED_ONLY_ERROR, SORT_CURRIED_ONLY_ERROR, TAKE_CURRIED_ONLY_ERROR, UNSUPPORTED_CROSS_JOIN_ERROR, VALUES_COLUMN_MISMATCH_ERROR, VALUES_EMPTY_ERROR } from "./helpers/expected-errors.ts";
 import { createOrdersTable, createUsersTable } from "./helpers/fixtures.ts";
 describe("error paths", () => {
@@ -144,6 +144,40 @@ describe("error paths", () => {
             ),
             "QUERY_HELPER_CURRIED_ONLY",
             JOIN_CURRIED_ONLY_ERROR
+        );
+    });
+    test("rejects removed data-first lateral join with deferred on expression at runtime", () => {
+        const users = createUsersTable();
+        const orders = createOrdersTable();
+        expectUserError(
+            () => (join as any)(
+                users,
+                (user: typeof users.columns) =>
+                    pipe(
+                        orders,
+                        filter((order: typeof orders.columns) => eq(order.user_id, user.id))
+                    ),
+                eq($left.id, $right.user_id)
+            ),
+            "QUERY_HELPER_CURRIED_ONLY",
+            JOIN_CURRIED_ONLY_ERROR
+        );
+    });
+    test("rejects removed fixed data-first lateral join with deferred on expression at runtime", () => {
+        const users = createUsersTable();
+        const orders = createOrdersTable();
+        expectUserError(
+            () => (leftJoin as any)(
+                users,
+                (user: typeof users.columns) =>
+                    pipe(
+                        orders,
+                        filter((order: typeof orders.columns) => eq(order.user_id, user.id))
+                    ),
+                eq($left.id, $right.user_id)
+            ),
+            "QUERY_HELPER_CURRIED_ONLY",
+            LEFT_JOIN_CURRIED_ONLY_ERROR
         );
     });
     test("rejects loop steps with mismatched column names", () => {
