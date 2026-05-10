@@ -181,7 +181,10 @@ export function resolveJoinQuery<
   const resolvedMergeColumns =
     typeof mergeColumns === "function" || mergeColumns === undefined
       ? mergeColumns
-      : (() => resolveDeferredProjectionShape(mergeColumns, joinScope));
+      : (() => resolveDeferredProjectionShape(mergeColumns, joinScope, {
+          requireExprValues: true,
+          label: "join merge",
+        }));
   const { mergedColumns, nextNames } = resolveJoinColumns(
     leftQuery.columns,
     rightColumns,

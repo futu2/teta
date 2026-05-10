@@ -5,6 +5,8 @@ import {
   $left,
   $right,
   ExprRef,
+  TetaInternalError,
+  TetaUserError,
   and,
   asc,
   coalesce,
@@ -39,6 +41,17 @@ import {
   DEFERRED_LEFT_SCOPE_ERROR,
   DEFERRED_RIGHT_COLUMN_UNKNOWN_ERROR,
 } from "./helpers/expected-errors.ts";
+
+function expectTetaUserError(fn: () => unknown, code: string): void {
+  try {
+    fn();
+    throw new Error("Expected TetaUserError");
+  } catch (error) {
+    expect(error).toBeInstanceOf(TetaUserError);
+    expect((error as TetaUserError).kind).toBe("user");
+    expect((error as TetaUserError).code).toBe(code);
+  }
+}
 
 describe("deferred row proxy api", () => {
   test("exports deferred row proxies that compose through expression helpers", () => {
@@ -229,5 +242,39 @@ describe("deferred row proxy api", () => {
   test("reports join-side deferred refs outside join helpers", () => {
     const users = createUsersTable();
     expect(() => filter(users, eq($left.id, 1))).toThrow(DEFERRED_LEFT_SCOPE_ERROR);
+  });
+
+  test("reports undefined deferred helper inputs as user errors", () => {
+    const users = createUsersTable();
+    const sessions = table("sessions", {
+      id: t.int(),
+      tags: t.array(t.string()),
+    });
+    const orders = createOrdersTable();
+
+    expectTetaUserError(() => filter(users, undefined as never), "DEFERRED_INPUT_INVALID");
+    expectTetaUserError(() => sort(users, undefined as never), "DEFERRED_INPUT_INVALID");
+    expectTetaUserError(
+      () => unnest(sessions, undefined as never, { value: "tag" }),
+      "DEFERRED_INPUT_INVALID"
+    );
+    expectTetaUserError(
+      () => join(users, orders, undefined as never),
+      "DEFERRED_INPUT_INVALID"
+    );
+  });
+
+  test("reports invalid deferred join merge values as user errors", () => {
+    const users = createUsersTable();
+    const orders = createOrdersTable();
+
+    expectTetaUserError(
+      () => join(users, orders, eq($left.id, $right.user_id), { bad: 1 } as never),
+      "DEFERRED_PROJECTION_INVALID"
+    );
+  });
+
+  test("guards direct rendering of unresolved deferred refs", () => {
+    expect(() => toSql($.id as ExprRef<unknown>)).toThrow(TetaInternalError);
   });
 });

@@ -18,6 +18,11 @@ type DeferredResolutionTarget = {
   columnNames: readonly string[];
 };
 
+type DeferredProjectionOptions = {
+  requireExprValues?: boolean;
+  label?: string;
+};
+
 export type DeferredResolutionScope = {
   current?: DeferredResolutionTarget;
   left?: DeferredResolutionTarget;
@@ -55,6 +60,9 @@ export function resolveDeferredExpr<T>(
   expr: ExprRef<T>,
   scope: DeferredResolutionScope
 ): ExprRef<T> {
+  if (!(expr instanceof ExprRef)) {
+    invalidDeferredInput("expression", expr);
+  }
   return new ExprRef<T>(resolveDeferredExprNode(expr.node, scope) as ExprNode<T>);
 }
 
@@ -62,6 +70,9 @@ export function resolveDeferredOrderItem(
   item: OrderItem,
   scope: DeferredResolutionScope
 ): OrderItem {
+  if (!isOrderItem(item)) {
+    invalidDeferredInput("sort item", item);
+  }
   return {
     ...item,
     expr: resolveDeferredExprNode(item.expr, scope),
@@ -70,12 +81,29 @@ export function resolveDeferredOrderItem(
 
 export function resolveDeferredProjectionShape<TSelection extends ProjectionShape>(
   selection: TSelection,
-  scope: DeferredResolutionScope
+  scope: DeferredResolutionScope,
+  options: DeferredProjectionOptions = {}
 ): TSelection {
+  if (selection === null || typeof selection !== "object") {
+    invalidDeferredInput(`${options.label ?? "projection"} shape`, selection);
+  }
+  if (Array.isArray(selection)) {
+    return selection;
+  }
+
   const resolved: Record<string, ProjectionValue> = {};
   for (const key of Object.keys(selection)) {
     const value = selection[key] as ProjectionValue;
-    resolved[key] = value instanceof ExprRef ? resolveDeferredExpr(value, scope) : value;
+    if (value instanceof ExprRef) {
+      resolved[key] = resolveDeferredExpr(value, scope);
+    } else if (options.requireExprValues) {
+      userError(
+        "DEFERRED_PROJECTION_INVALID",
+        `${options.label ?? "Projection"} value '${key}' must be an expression`
+      );
+    } else {
+      resolved[key] = value;
+    }
   }
   return resolved as TSelection;
 }
@@ -105,6 +133,10 @@ function resolveDeferredExprNode<T>(
   node: ExprNode<T>,
   scope: DeferredResolutionScope
 ): ExprNode<T> {
+  if (!isExprNode(node)) {
+    invalidDeferredInput("expression", node);
+  }
+
   switch (node.kind) {
     case "deferred_column":
       return resolveDeferredColumnNode(node, scope) as ExprNode<T>;
@@ -177,6 +209,23 @@ function resolveDeferredExprNode<T>(
   }
 }
 
+function isExprNode(value: unknown): value is ExprNode<unknown> {
+  return value !== null && typeof value === "object" && typeof (value as { kind?: unknown }).kind === "string";
+}
+
+function isOrderItem(value: unknown): value is OrderItem {
+  if (value === null || typeof value !== "object") return false;
+  const item = value as { direction?: unknown; expr?: unknown };
+  return (item.direction === "ASC" || item.direction === "DESC") && isExprNode(item.expr);
+}
+
+function invalidDeferredInput(label: string, value: unknown): never {
+  userError(
+    "DEFERRED_INPUT_INVALID",
+    `Invalid deferred ${label}: ${formatInvalidDeferredValue(value)}`
+  );
+}
+
 function resolveDeferredColumnNode(
   node: DeferredColumnNode,
   scope: DeferredResolutionScope
@@ -219,4 +268,15 @@ function deferredScopeLabel(scope: DeferredColumnScope): string {
 
 function formatColumnNames(columnNames: readonly string[]): string {
   return columnNames.length ? columnNames.join(", ") : "(none)";
+}
+
+function formatInvalidDeferredValue(value: unknown): string {
+  if (value === undefined) return "undefined";
+  if (value === null) return "null";
+  const type = typeof value;
+  if (type === "string") return JSON.stringify(value);
+  if (type === "number" || type === "boolean" || type === "bigint") return String(value);
+  if (type === "function") return "function";
+  if (Array.isArray(value)) return "array";
+  return "object";
 }
