@@ -8,7 +8,7 @@ or `pipe(users, map(fn))`. In practice, the examples here prefer Remeda's `pipe(
 ```ts
 import { pick, pipe } from "remeda";
 
-import { add, and, arrayAppend, arrayContains, arrayJoin, arrayLength, arrayPosition, arraySlice, asc, avg, bitLength, cast, charLength, characterLength, coalesce, concat, count, currentDate, currentTimestamp, dateAdd, dateDiff, dateFormat, dateLiteral, dateParse, dateTrunc, day, desc, dropOverlapLeft, dropOverlapRight, eq, explain, ExprRef, f, filter, fn, fold, fromUnixTime, fullJoin, group, gt, gte, hour, innerJoin, isIn, isNotNull, isNull, join, lag, lead, left, leftJoin, like, loop, lower, lt, lte, map, max, min, minute, mod, month, mul, ne, not, ntile, nullIf, octetLength, onEq, over, overlay, param, percentRank, position, pow, prefixAllLeft, prefixAllRight, prefixOverlapLeft, prefixOverlapRight, Query, rank, regexExtract, regexLike, regexReplace, replace, reverse, right, rightJoin, round, rowNumber, rpad, shape, sort, sqrt, sub, substring, suffixAllLeft, suffixAllRight, sum, sumOver, t, table, take, timestampLiteral, toAst, toDate, toFloat, toInt, toIR, toSql, toSqlResult, toUnixTime, trim, union, unionAll, unnest, upper, usingCols, values, when, windowFn, year } from "@teta/teta";
+import { $, $left, $right, add, and, arrayAppend, arrayContains, arrayJoin, arrayLength, arrayPosition, arraySlice, asc, avg, bitLength, cast, charLength, characterLength, coalesce, concat, count, currentDate, currentTimestamp, dateAdd, dateDiff, dateFormat, dateLiteral, dateParse, dateTrunc, day, desc, dropOverlapLeft, dropOverlapRight, eq, explain, ExprRef, f, filter, fn, fold, fromUnixTime, fullJoin, group, gt, gte, hour, innerJoin, isIn, isNotNull, isNull, join, lag, lead, left, leftJoin, like, loop, lower, lt, lte, map, max, min, minute, mod, month, mul, ne, not, ntile, nullIf, octetLength, onEq, over, overlay, param, percentRank, pickCols, position, pow, prefixAllLeft, prefixAllRight, prefixOverlapLeft, prefixOverlapRight, Query, rank, regexExtract, regexLike, regexReplace, replace, reverse, right, rightJoin, round, rowNumber, rpad, shape, sort, sqrt, sub, substring, suffixAllLeft, suffixAllRight, sum, sumOver, t, table, take, timestampLiteral, toAst, toDate, toFloat, toInt, toIR, toSql, toSqlResult, toUnixTime, trim, union, unionAll, unnest, upper, usingCols, values, when, windowFn, year } from "@teta/teta";
 
 ```
 
@@ -51,6 +51,38 @@ const q = pipe(
   take(10)
 );
 ```
+
+### Deferred row shorthand
+
+Use `$` when a callback only exists to access current-row columns:
+
+```ts
+const q = pipe(
+  users,
+  filter(and(eq($.active, true), gte($.age, 18))),
+  map({ id: $.id, name: upper($.name) }),
+  sort(asc($.name))
+);
+```
+
+Use `pickCols(...)` for same-name projections:
+
+```ts
+const compactUsers = map(users, pickCols("id", "name"));
+```
+
+Use `$left` and `$right` in join predicates and merge shapes:
+
+```ts
+const joined = leftJoin(
+  users,
+  orders,
+  eq($left.id, $right.user_id),
+  { user_id: $left.id, order_total: $right.total }
+);
+```
+
+Callback selectors remain the strictest typed form because the row parameter carries the current query shape.
 
 ### Dual-mode helpers
 Every query helper can be used data-first or data-last.

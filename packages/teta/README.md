@@ -49,6 +49,21 @@ const query = pipe(
 console.log(toSql(query, { dialect: "postgresql", format: "pretty" }));
 ```
 
+The callback form gives the strongest autocomplete and compile-time column checks. For compact query code, Teta also exports deferred row proxies:
+
+```ts
+import { $, and, asc, eq, filter, gte, map, pickCols, sort } from "@teta/teta";
+
+const compact = pipe(
+  users,
+  filter(and(eq($.active, true), gte($.age, 18))),
+  map(pickCols("id", "email")),
+  sort(asc($.email))
+);
+```
+
+Use callback selectors when you want `row.` autocomplete and immediate TypeScript errors for unknown columns. Use `$` when you prefer the shortest expression form and are comfortable with unknown columns being reported when the query helper resolves the expression.
+
 More docs:
 
 - [Tutorial](https://github.com/futu2/teta/blob/master/doc/TUTORIAL.md)
