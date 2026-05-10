@@ -10,6 +10,8 @@ import {
   createColumnRefs,
   dedupeExprs,
   projectAllItems,
+  resolveDeferredExpr,
+  resolveDeferredProjectionShape,
 } from "../expr.ts";
 import type {
   ColumnRefs,
@@ -43,6 +45,19 @@ import type {
   QueryState,
 } from "./state.ts";
 import { toQuerySpec } from "./state.ts";
+
+type JoinOnInput<
+  TLeft extends Record<string, any>,
+  TRight extends Record<string, any>,
+> =
+  | ((left: ColumnRefs<TLeft>, right: ColumnRefs<TRight>) => ExprRef<boolean>)
+  | ExprRef<boolean>;
+
+type JoinMergeInput<
+  TSelection extends JoinSelection,
+> =
+  | JoinColumnMerger<Record<string, any>, Record<string, any>, TSelection>
+  | TSelection;
 
 export function resolveMapQuery<
   TColumns extends Record<string, any>,
@@ -138,23 +153,42 @@ export function resolveJoinQuery<
 >(
   leftQuery: QueryState<TLeft>,
   rightQuery: QueryState<TRight>,
-  on: (left: ColumnRefs<TLeft>, right: ColumnRefs<TRight>) => ExprRef<boolean>,
+  on: JoinOnInput<TLeft, TRight>,
   lateral: boolean,
   joinType: JoinTypeInput,
-  mergeColumns?: JoinColumnMerger<Record<string, any>, Record<string, any>, TSelection>
+  mergeColumns?: JoinMergeInput<TSelection>
 ): QueryDeriveInit<JoinSelectionResult<TSelection>> {
   const normalizedJoinType = normalizeJoinType(joinType);
   const alias = autoAlias(sourceAliasBase(rightQuery.source), leftQuery.stages);
   const rightKeys = [...rightQuery.columnNames];
   const rightColumns = createColumnRefs<TRight>(rightQuery.scopeId, rightKeys);
-  const predicate = on(leftQuery.columns, rightColumns).node;
+  const joinScope = {
+    left: {
+      label: "join left",
+      columns: leftQuery.columns as ColumnRefs<Record<string, any>>,
+      columnNames: leftQuery.columnNames,
+    },
+    right: {
+      label: "join right",
+      columns: rightColumns as ColumnRefs<Record<string, any>>,
+      columnNames: rightKeys,
+    },
+  };
+  const predicate =
+    typeof on === "function"
+      ? on(leftQuery.columns, rightColumns).node
+      : resolveDeferredExpr(on, joinScope).node;
+  const resolvedMergeColumns =
+    typeof mergeColumns === "function" || mergeColumns === undefined
+      ? mergeColumns
+      : (() => resolveDeferredProjectionShape(mergeColumns, joinScope));
   const { mergedColumns, nextNames } = resolveJoinColumns(
     leftQuery.columns,
     rightColumns,
     leftQuery.columnNames,
     rightKeys,
     normalizedJoinType,
-    mergeColumns
+    resolvedMergeColumns
   );
   const outputScopeId = freshScopeId();
   const nextColumns = createColumnRefs<JoinSelectionResult<TSelection>>(outputScopeId, nextNames);

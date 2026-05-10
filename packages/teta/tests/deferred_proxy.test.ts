@@ -15,6 +15,7 @@ import {
   fold,
   group,
   gte,
+  leftJoin,
   map,
   pickCols,
   replace,
@@ -107,6 +108,58 @@ describe("deferred row proxy api", () => {
     });
     const expected = unnest(sessions, (session) => session.tags, { value: "tag" });
     const actual = unnest(sessions, $.tags, { value: "tag" });
+
+    expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
+      toSql(expected, { dialect: "postgresql", format: "compact" })
+    );
+  });
+
+  test("matches callback SQL for join predicates", () => {
+    const users = createUsersTable();
+    const orders = createOrdersTable();
+    const expected = pipe(
+      users,
+      leftJoin(orders, (user, order) => eq(user.id, order.user_id)),
+      map((row) => ({
+        user_id: row.id,
+        total: row.total,
+      }))
+    );
+    const actual = pipe(
+      users,
+      leftJoin(orders, eq($left.id, $right.user_id)),
+      map({
+        user_id: $.id,
+        total: $.total,
+      })
+    );
+
+    expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
+      toSql(expected, { dialect: "postgresql", format: "compact" })
+    );
+  });
+
+  test("supports deferred join merge shapes", () => {
+    const users = createUsersTable();
+    const orders = createOrdersTable();
+    const expected = leftJoin(
+      users,
+      orders,
+      (user, order) => eq(user.id, order.user_id),
+      (user, order) => ({
+        user_id: user.id,
+        order_total: order.total,
+      })
+    );
+    const actual = leftJoin(
+      users,
+      orders,
+      eq($left.id, $right.user_id),
+      {
+        user_id: $left.id,
+        order_total: $right.total,
+      }
+    );
 
     expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
       toSql(expected, { dialect: "postgresql", format: "compact" })
