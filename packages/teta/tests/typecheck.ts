@@ -289,6 +289,10 @@ innerJoin(users, rightRowsWithUserId, (user, right) => eq(user.id, right.id), pr
 map(users, (user) => [user.id]);
 // @ts-expect-error legacy array fold syntax is removed
 fold(orders, (order) => [group(order.user_id)]);
+// @ts-expect-error map projections must reject undefined values
+map(users, { id: undefined });
+// @ts-expect-error unnest selectors must reject undefined
+unnest(sessions, undefined, { value: "tag" });
 // @ts-expect-error remeda mapKeys with widened string keys should not expose arbitrary renamed column refs
 map(remedaKeyMappedSelection, (user) => ({ broken: user.prefix1_na }));
 // @ts-expect-error template-literal mapKeys should still reject unknown renamed fields

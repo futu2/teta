@@ -9,7 +9,7 @@ import { ColumnRef, ExprRef, type ColumnRefs } from "./runtime.ts";
 import type { ProjectionShape, ProjectionValue } from "./projection_types.ts";
 
 type DeferredRowProxy = {
-  readonly [columnName: string]: ExprRef<any>;
+  readonly [K in string]: ExprRef<any>;
 };
 
 type DeferredResolutionTarget = {

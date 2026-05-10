@@ -111,9 +111,15 @@ type NonCallableSelection<TSelection> = TSelection & {
   readonly call?: never;
 };
 
-type DeferredProjectionShapeInput = Record<string, ProjectionValue | undefined>;
+type DeferredProjectionShapeInput<TSelection extends Record<string, unknown>> = {
+  [K in keyof TSelection]: [NonNullable<TSelection[K]>] extends [never]
+    ? never
+    : NonNullable<TSelection[K]> extends ProjectionValue
+      ? TSelection[K]
+      : never;
+};
 
-type DefinedProjectionShape<TSelection extends DeferredProjectionShapeInput> = {
+type DefinedProjectionShape<TSelection extends Record<string, unknown>> = {
   [K in keyof TSelection]: Exclude<TSelection[K], undefined>;
 } & ProjectionShape;
 
@@ -121,7 +127,14 @@ type PredicateInput<TColumns extends QueryColumns> =
   | ((cols: ColumnRefs<TColumns>) => ExprRef<boolean>)
   | ExprRef<boolean>;
 
-type DeferredExprInput<T> = ExprRef<T> | undefined;
+type DeferredExprInput<TExpr> = [NonNullable<TExpr>] extends [never]
+  ? never
+  : NonNullable<TExpr> extends ExprRef<unknown>
+    ? TExpr
+    : never;
+
+type DeferredExprValue<TExpr> =
+  NonNullable<TExpr> extends ExprRef<infer TValue> ? TValue : never;
 
 type SortInput<TColumns extends QueryColumns> =
   | ((cols: ColumnRefs<TColumns>) => OrderItem | OrderItem[])
@@ -131,7 +144,7 @@ type SortInput<TColumns extends QueryColumns> =
 type UnnestSelectorInput<
   TLeft extends QueryColumns,
   TCollection extends readonly unknown[] | unknown[] | null,
-> = ((cols: ColumnRefs<TLeft>) => ExprRef<TCollection>) | DeferredExprInput<TCollection>;
+> = ((cols: ColumnRefs<TLeft>) => ExprRef<TCollection>) | ExprRef<TCollection>;
 
 function currentDeferredScope<TColumns extends QueryColumns>(query: Query<TColumns>) {
   return {
@@ -293,7 +306,7 @@ function buildUnnest<
   const collection =
     typeof selector === "function"
       ? selector(left.columns)
-      : resolveDeferredExpr(selector as ExprRef<TCollection>, currentDeferredScope(left));
+      : resolveDeferredExpr(selector, currentDeferredScope(left));
   return deriveQuery(
     left,
     resolveUnnestQuery<TLeft, TGenerated>(
@@ -424,8 +437,8 @@ function buildLoop<TColumns extends QueryColumns>(
   });
 }
 
-export function map<const Sel extends DeferredProjectionShapeInput>(
-  selection: NonCallableSelection<Sel>
+export function map<const Sel extends Record<string, unknown>>(
+  selection: NonCallableSelection<Sel> & DeferredProjectionShapeInput<Sel>
 ): <TColumns extends QueryColumns>(query: Query<TColumns>) => Query<ProjectionResult<DefinedProjectionShape<Sel>>>;
 
 export function map<TColumns extends QueryColumns, const Sel extends ProjectionShape>(
@@ -433,9 +446,9 @@ export function map<TColumns extends QueryColumns, const Sel extends ProjectionS
   selector: (cols: ColumnRefs<TColumns>) => Sel
 ): Query<ProjectionResult<Sel>>;
 
-export function map<TColumns extends QueryColumns, const Sel extends DeferredProjectionShapeInput>(
+export function map<TColumns extends QueryColumns, const Sel extends Record<string, unknown>>(
   query: Query<TColumns>,
-  selection: NonCallableSelection<Sel>
+  selection: NonCallableSelection<Sel> & DeferredProjectionShapeInput<Sel>
 ): Query<ProjectionResult<DefinedProjectionShape<Sel>>>;
 
 export function map<TColumns extends QueryColumns, const Sel extends ProjectionShape>(
@@ -453,8 +466,8 @@ function _map<TColumns extends QueryColumns, const Sel extends ProjectionShape>(
   return buildMap(query, selector);
 }
 
-export function fold<const Sel extends DeferredProjectionShapeInput>(
-  selection: NonCallableSelection<Sel>
+export function fold<const Sel extends Record<string, unknown>>(
+  selection: NonCallableSelection<Sel> & DeferredProjectionShapeInput<Sel>
 ): <TColumns extends QueryColumns>(query: Query<TColumns>) => Query<ProjectionResult<DefinedProjectionShape<Sel>>>;
 
 export function fold<TColumns extends QueryColumns, const Sel extends ProjectionShape>(
@@ -462,9 +475,9 @@ export function fold<TColumns extends QueryColumns, const Sel extends Projection
   selector: (cols: ColumnRefs<TColumns>) => Sel
 ): Query<ProjectionResult<Sel>>;
 
-export function fold<TColumns extends QueryColumns, const Sel extends DeferredProjectionShapeInput>(
+export function fold<TColumns extends QueryColumns, const Sel extends Record<string, unknown>>(
   query: Query<TColumns>,
-  selection: NonCallableSelection<Sel>
+  selection: NonCallableSelection<Sel> & DeferredProjectionShapeInput<Sel>
 ): Query<ProjectionResult<DefinedProjectionShape<Sel>>>;
 
 export function fold<TColumns extends QueryColumns, const Sel extends ProjectionShape>(
@@ -907,18 +920,18 @@ export function unnest<
 
 export function unnest<
   TLeft extends QueryColumns,
-  TCollection extends readonly unknown[] | unknown[] | null,
+  TSelector,
   TValueName extends string,
   TOrdinalityName extends string | undefined = undefined,
   TOuter extends boolean | undefined = undefined,
 >(
   left: Query<TLeft>,
-  selector: DeferredExprInput<TCollection>,
+  selector: DeferredExprInput<TSelector>,
   selection: UnnestSelection<TValueName, TOrdinalityName>,
   options?: UnnestOptions<TOuter>
 ): Query<
   TLeft & UnnestGeneratedColumns<
-    CollectionItem<TCollection>,
+    CollectionItem<DeferredExprValue<TSelector>>,
     TValueName,
     TOrdinalityName,
     TOuter
@@ -947,18 +960,18 @@ export function unnest<
 
 export function unnest<
   TLeft extends QueryColumns,
-  TCollection extends readonly unknown[] | unknown[] | null,
+  TSelector,
   TValueName extends string,
   TOrdinalityName extends string | undefined = undefined,
   TOuter extends boolean | undefined = undefined,
 >(
-  selector: DeferredExprInput<TCollection>,
+  selector: DeferredExprInput<TSelector>,
   selection: UnnestSelection<TValueName, TOrdinalityName>,
   options?: UnnestOptions<TOuter>
 ): QueryStep<
   TLeft,
   TLeft & UnnestGeneratedColumns<
-    CollectionItem<TCollection>,
+    CollectionItem<DeferredExprValue<TSelector>>,
     TValueName,
     TOrdinalityName,
     TOuter
