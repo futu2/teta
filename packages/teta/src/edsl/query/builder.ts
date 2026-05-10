@@ -121,8 +121,10 @@ type DeferredProjectionShapeInput<TSelection extends Record<string, unknown>> = 
 };
 
 type DefinedProjectionShape<TSelection extends Record<string, unknown>> = {
-  [K in keyof TSelection]: Exclude<TSelection[K], undefined>;
-} & ProjectionShape;
+  [K in keyof TSelection]: Exclude<TSelection[K], undefined> extends ProjectionValue
+    ? Exclude<TSelection[K], undefined>
+    : never;
+};
 
 type DefinedJoinSelection<TSelection extends Record<string, unknown>> = {
   [K in keyof TSelection]: Exclude<TSelection[K], undefined>;

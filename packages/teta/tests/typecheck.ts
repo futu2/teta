@@ -1,6 +1,6 @@
 import { mapKeys, omit, pick, pipe } from "remeda";
 import type { ExprRef, SqlBigInt, SqlBytes, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlTimestamp, SqlUuid, } from "../mod.ts";
-import { filter, fullJoin, innerJoin, join, leftJoin, rightJoin, take, sort, param, map, table, t, fold, asc, desc, eq, gt, upper, add, coalesce, count, group, loop, sum, and, sub, caseWhen, when, mapShape, groupShape, lt, unnest, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, toString, toTimestamp, $left, $right } from "../mod.ts";
+import { filter, fullJoin, innerJoin, join, leftJoin, rightJoin, take, sort, param, map, table, t, fold, asc, desc, eq, gt, upper, add, coalesce, count, group, loop, sum, and, sub, caseWhen, when, mapShape, groupShape, lt, unnest, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, toString, toTimestamp, $, $left, $right, pickCols } from "../mod.ts";
 type Equal<A, B> = ((<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false);
 type Expect<T extends true> = T;
 type ExprType<TExpr> = TExpr extends ExprRef<infer TValue> ? TValue : never;
@@ -64,6 +64,13 @@ const projectedUsers = map(filteredUsers, (user: typeof filteredUsers.columns) =
     id: user.id,
     name: upper(user.name),
 }));
+const projectedUsersDeferred = map(filteredUsers, {
+    id: $.id,
+    name: upper($.name),
+});
+const pickedUsers = map(users, pickCols("id", "name"));
+// @ts-expect-error pickCols rejects unknown columns when applied to a typed query
+const invalidPickedUsers = map(users, pickCols("missing"));
 const curriedPipeline = pipe(users, filter((user: typeof users.columns) => gt(user.id, 0)), map((user) => ({
     id: user.id,
     name: upper(user.name),
@@ -166,6 +173,9 @@ type _FullJoinTotal = Expect<Equal<ExprType<typeof fullJoined.columns.total>, Sq
 type _LeftViaJoinTotal = Expect<Equal<ExprType<typeof leftViaJoin.columns.total>, SqlFloat | null>>;
 type _ProjectedUsersId = Expect<Equal<ExprType<typeof projectedUsers.columns.id>, SqlInt>>;
 type _ProjectedUsersName = Expect<Equal<ExprType<typeof projectedUsers.columns.name>, string>>;
+type _ProjectedUsersDeferredKeys = Expect<Equal<keyof typeof projectedUsersDeferred.columns, "id" | "name">>;
+type _PickedUsersId = Expect<Equal<ExprType<typeof pickedUsers.columns.id>, SqlInt>>;
+type _PickedUsersName = Expect<Equal<ExprType<typeof pickedUsers.columns.name>, string>>;
 type _InlineRowsId = Expect<Equal<ExprType<typeof inlineRows.columns.id>, number>>;
 type _InlineRowsName = Expect<Equal<ExprType<typeof inlineRows.columns.name>, string>>;
 type _ProfileRowsBio = Expect<Equal<ExprType<typeof profileRows.columns.bio>, string>>;
@@ -247,6 +257,7 @@ void aggregatedWithGroupShape;
 void projectedProfiles;
 void uuidFilteredProfiles;
 void bigintFilteredProfiles;
+void invalidPickedUsers;
 // @ts-expect-error filter predicates must return boolean expressions
 filter(users, (user) => user.name);
 // @ts-expect-error join predicates must return boolean expressions
