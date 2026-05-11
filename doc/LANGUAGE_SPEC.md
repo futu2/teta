@@ -21,7 +21,7 @@ Dialect columns in this file:
 Function-first policy:
 
 - Expression entry points are plain functions such as `add(left, right)` and `dateTrunc(value, unit)`
-- Query entry points are plain functions such as `map(query, selector)` or `pipe(query, map(selector))`
+- Query helpers are curried query steps used with `pipe(query, map(selector))`
 - Runtime literals and constants stay as functions like `currentDate()`, `currentTimestamp()`, and `dateLiteral(...)`
 
 ## 1) Math (basic arithmetic)
@@ -150,7 +150,7 @@ Convenience date-part helpers over `extract(...)`:
 
 | Spec item | Preferred functional entry | PostgreSQL | MySQL | SQLite | HetuEngine DQL | Other built-ins |
 |---|---|---|---|---|---|---|
-| `LATERAL_JOIN` | `join(left, right, on, { lateral: true })` or `pipe(left, join(right, on, { lateral: true }))` | Direct (`LATERAL` kept) | Direct (MySQL 8+, engine-dependent) | Keyword removed when unsupported | Direct | Direct |
+| `LATERAL_JOIN` | `pipe(left, join(right, on, { lateral: true }))` | Direct (`LATERAL` kept) | Direct (MySQL 8+, engine-dependent) | Keyword removed when unsupported | Direct | Direct |
 | `RECURSIVE_CTE` | `loop(base, step)` or `pipe(base, loop(step))` | Direct | Direct (MySQL 8+) | Direct | Direct | Direct |
 
 If `dialect.features.recursiveCte = false`, SQL rendering throws an explicit error.

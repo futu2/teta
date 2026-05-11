@@ -80,9 +80,10 @@ These keep the same `TColumns`:
 - `take(...)`
 
 ```ts
+import { pipe } from "remeda";
 import { eq, filter } from "@teta/teta";
 
-const activeUsers = filter(users, (user) => eq(user.active, true));
+const activeUsers = pipe(users, filter((user) => eq(user.active, true)));
 // still Query<{ id, email, age, active, created_at, deleted_at, tags, profile }>
 ```
 
@@ -94,24 +95,32 @@ These create a new `TColumns` from the object you return:
 - `fold(...)`
 
 ```ts
+import { pipe } from "remeda";
 import { map } from "@teta/teta";
 
-const publicUsers = map(users, (user) => ({
-  id: user.id,
-  email: user.email,
-}));
+const publicUsers = pipe(
+  users,
+  map((user) => ({
+    id: user.id,
+    email: user.email,
+  }))
+);
 // Query<{ id: SqlInt; email: string }>
 ```
 
 With `fold(...)`, the returned object also becomes the new row shape, but it is meant for grouped or aggregated output.
 
 ```ts
+import { pipe } from "remeda";
 import { count, fold, group } from "@teta/teta";
 
-const userCounts = fold(users, (user) => ({
-  active: group(user.active),
-  total: count(user.id),
-}));
+const userCounts = pipe(
+  users,
+  fold((user) => ({
+    active: group(user.active),
+    total: count(user.id),
+  }))
+);
 ```
 
 ### Shape-merging helpers
@@ -204,9 +213,10 @@ function isAdult(age: ExprRef<SqlInt>) {
 Then use it in a query:
 
 ```ts
+import { pipe } from "remeda";
 import { filter } from "@teta/teta";
 
-const adults = filter(users, (user) => isAdult(user.age));
+const adults = pipe(users, filter((user) => isAdult(user.age)));
 ```
 
 The important idea is that Teta tracks the SQL value type carried by an expression, and TypeScript keeps that information all the way through your query pipeline.

@@ -8,8 +8,7 @@ qualified column references.
 
 Keep EDSL queries dialect-neutral. Choose the dialect by passing SQL options at render time.
 
-Most multi-stage examples below use Remeda's `pipe(...)` with named imports. Query helpers are dual-mode,
-so `map(users, ...)` and `pipe(users, map(...))` are both valid, but `pipe(...)` usually reads best. This function-first style is intentional: it keeps query stages easy to compose, extract, reuse, and test as ordinary values.
+Most multi-stage examples below use Remeda's `pipe(...)` with named imports. Row-transforming query helpers are curried query steps, so `pipe(query, map(...))` is the standard shape. This function-first style is intentional: it keeps query stages easy to compose, extract, reuse, and test as ordinary values.
 
 All rendering examples below pass plain `SqlOptions` objects into `toSql(...)` or `toSqlResult(...)`.
 
@@ -102,6 +101,7 @@ GROUP BY cte_0_0.id
 ### 3) String concat with template helper
 
 ```ts
+import { pipe } from "remeda";
 import { f, map, table, t, toSql } from "@teta/teta";
 
 const names = table("names", {
@@ -112,9 +112,12 @@ const names = table("names", {
   suffix: t.string(),
 });
 
-const q = map(names, (name) => ({
-  title: f`${name.prefix} ${name.first} ${name.last} ${name.suffix}`,
-}));
+const q = pipe(
+  names,
+  map((name) => ({
+    title: f`${name.prefix} ${name.first} ${name.last} ${name.suffix}`,
+  }))
+);
 
 console.log(toSql(q, { dialect: "postgresql", format: "pretty" }));
 ```
@@ -154,12 +157,16 @@ const users = table("users", {
 ### `map(...)` changes the row shape
 
 ```ts
+import { pipe } from "remeda";
 import { map } from "@teta/teta";
 
-const labels = map(users, (user) => ({
-  user_id: user.id,
-  label: user.name,
-}));
+const labels = pipe(
+  users,
+  map((user) => ({
+    user_id: user.id,
+    label: user.name,
+  }))
+);
 
 // Query<{
 //   user_id: SqlInt;
@@ -335,19 +342,25 @@ const users = table("users", {
   active: t.boolean(),
 });
 
-const compact = map(users, pipe(
-  pick(["id", "name", "age"] as const),
-  (base) => merge(base, {
-    normalized_name: upper(replace(base.name, " ", "_")),
-  })
-));
+const compact = pipe(
+  users,
+  map(pipe(
+    pick(["id", "name", "age"] as const),
+    (base) => merge(base, {
+      normalized_name: upper(replace(base.name, " ", "_")),
+    })
+  ))
+);
 
-const publicUsers = map(users, omit(["active"] as const));
+const publicUsers = pipe(users, map(omit(["active"] as const)));
 
-const namespacedUsers = map(users, pipe(
-  pick(["id", "name"] as const),
-  mapKeys((key) => "user_" + key)
-));
+const namespacedUsers = pipe(
+  users,
+  map(pipe(
+    pick(["id", "name"] as const),
+    mapKeys((key) => "user_" + key)
+  ))
+);
 ```
 
 Typical patterns:
@@ -364,10 +377,13 @@ If a reshaping helper widens keys to a plain `string` type, Teta will not expose
 For `mapKeys(...)`, prefer template literals when you want exact renamed keys:
 
 ```ts
-const prefixed = map(users, pipe(
-  pick(["id", "name"] as const),
-  mapKeys((key) => `user_${key}`)
-));
+const prefixed = pipe(
+  users,
+  map(pipe(
+    pick(["id", "name"] as const),
+    mapKeys((key) => `user_${key}`)
+  ))
+);
 ```
 
 Using string concatenation like `"user_" + key` usually widens to `string`, so downstream code will not see concrete properties such as `user_id`.
@@ -451,6 +467,7 @@ For `sqlite`, the keyword is omitted during SQL rendering because correlated sub
 Use a custom dialect config when runtime dialect and parser dialect differ:
 
 ```ts
+import { pipe } from "remeda";
 import { map, table, t, toSql } from "@teta/teta";
 
 const users = table("users", {
@@ -458,7 +475,7 @@ const users = table("users", {
   name: t.string(),
 });
 
-console.log(toSql(map(users, (u) => ({ id: u.id })), {
+console.log(toSql(pipe(users, map((u) => ({ id: u.id }))), {
   dialect: {
     name: "presto",
     parserDialect: "Trino",
@@ -499,6 +516,7 @@ Teta language spec categories:
 The expression API is function-first, so query code stays friendly to pipelines and ordinary function composition.
 
 ```ts
+import { pipe } from "remeda";
 import { arrayContains, arrayJoin, arrayLength, cast, dateDiff, dateFormat, dateParse, dateTrunc, regexLike, regexReplace, map, table, t, toSql, toUnixTime } from "@teta/teta";
 
 const sessions = table("sessions", {
@@ -508,19 +526,22 @@ const sessions = table("sessions", {
   tags: t.string(),
 });
 
-const q = map(sessions, (s) => ({
-  id: s.id,
-  started_day: dateTrunc(s.started_at, "day"),
-  started_fmt: dateFormat(s.started_at, "%Y-%m-%d"),
-  duration_sec: dateDiff(s.started_at, "second", s.ended_at),
-  started_epoch: toUnixTime(s.started_at),
-  parsed_start: dateParse(cast<string>(s.started_at, "TEXT"), "%Y-%m-%d %H:%M:%S"),
-  has_prod: arrayContains(s.tags, "prod"),
-  tag_count: arrayLength(s.tags),
-  tag_label: arrayJoin(s.tags, "|"),
-  normalized_tag: regexReplace(s.tags, "[^a-zA-Z0-9_]+", "_"),
-  has_uuid: regexLike(s.tags, "^[0-9a-fA-F-]{36}$"),
-}));
+const q = pipe(
+  sessions,
+  map((s) => ({
+    id: s.id,
+    started_day: dateTrunc(s.started_at, "day"),
+    started_fmt: dateFormat(s.started_at, "%Y-%m-%d"),
+    duration_sec: dateDiff(s.started_at, "second", s.ended_at),
+    started_epoch: toUnixTime(s.started_at),
+    parsed_start: dateParse(cast<string>(s.started_at, "TEXT"), "%Y-%m-%d %H:%M:%S"),
+    has_prod: arrayContains(s.tags, "prod"),
+    tag_count: arrayLength(s.tags),
+    tag_label: arrayJoin(s.tags, "|"),
+    normalized_tag: regexReplace(s.tags, "[^a-zA-Z0-9_]+", "_"),
+    has_uuid: regexLike(s.tags, "^[0-9a-fA-F-]{36}$"),
+  }))
+);
 
 console.log(toSql(q, { dialect: "postgresql", format: "pretty" }));
 ```
@@ -528,6 +549,7 @@ console.log(toSql(q, { dialect: "postgresql", format: "pretty" }));
 You can customize a dialect so unsupported direct functions map to equivalents or fallbacks:
 
 ```ts
+import { pipe } from "remeda";
 import { bitLength, dateFormat, map, table, t, toSql } from "@teta/teta";
 
 const users = table("users", {
@@ -536,11 +558,14 @@ const users = table("users", {
   created_at: t.timestamp(),
 });
 
-const q = map(users, (u) => ({
-  id: u.id,
-  created_fmt: dateFormat(u.created_at, "%Y-%m-%d"),
-  bits: bitLength(u.name),
-}));
+const q = pipe(
+  users,
+  map((u) => ({
+    id: u.id,
+    created_fmt: dateFormat(u.created_at, "%Y-%m-%d"),
+    bits: bitLength(u.name),
+  }))
+);
 
 console.log(toSql(q, {
   dialect: {
@@ -592,6 +617,7 @@ console.log(toSql(q, {}));
 ### Window function
 
 ```ts
+import { pipe } from "remeda";
 import { asc, desc, lag, lead, ntile, over, rank, rowNumber, map, sumOver, table, t, toSql } from "@teta/teta";
 
 const orders = table("orders", {
@@ -601,22 +627,25 @@ const orders = table("orders", {
   created_at: t.timestamp(),
 });
 
-const q = map(orders, (o) => ({
-  id: o.id,
-  user_id: o.user_id,
-  running_total: sumOver(o.total, { orderBy: asc(o.created_at) }),
-  rank_in_time: over(rank(), { orderBy: desc(o.created_at) }),
-  row_num: over(rowNumber(), { orderBy: asc(o.created_at) }),
-  prev_total: over(lag(o.total, 1, 0), {
-    partitionBy: o.user_id,
-    orderBy: asc(o.created_at),
-  }),
-  next_total: over(lead(o.total, 1, 0), {
-    partitionBy: o.user_id,
-    orderBy: asc(o.created_at),
-  }),
-  bucket: over(ntile(4), { orderBy: desc(o.total) }),
-}));
+const q = pipe(
+  orders,
+  map((o) => ({
+    id: o.id,
+    user_id: o.user_id,
+    running_total: sumOver(o.total, { orderBy: asc(o.created_at) }),
+    rank_in_time: over(rank(), { orderBy: desc(o.created_at) }),
+    row_num: over(rowNumber(), { orderBy: asc(o.created_at) }),
+    prev_total: over(lag(o.total, 1, 0), {
+      partitionBy: o.user_id,
+      orderBy: asc(o.created_at),
+    }),
+    next_total: over(lead(o.total, 1, 0), {
+      partitionBy: o.user_id,
+      orderBy: asc(o.created_at),
+    }),
+    bucket: over(ntile(4), { orderBy: desc(o.total) }),
+  }))
+);
 
 console.log(toSql(q, { dialect: "postgresql", format: "pretty" }));
 ```
@@ -624,6 +653,7 @@ console.log(toSql(q, { dialect: "postgresql", format: "pretty" }));
 ### Custom SQL functions (UDF)
 
 ```ts
+import { pipe } from "remeda";
 import { desc, fn, over, map, table, t, toSql, windowFn } from "@teta/teta";
 
 const users = table("users", {
@@ -631,11 +661,14 @@ const users = table("users", {
   name: t.string(),
 });
 
-const q = map(users, (u) => ({
-  id: u.id,
-  name_hash: fn<string>("my_hash_udf", u.name),
-  score_rank: over(windowFn<number>("percent_rank"), { orderBy: desc(u.id) }),
-}));
+const q = pipe(
+  users,
+  map((u) => ({
+    id: u.id,
+    name_hash: fn<string>("my_hash_udf", u.name),
+    score_rank: over(windowFn<number>("percent_rank"), { orderBy: desc(u.id) }),
+  }))
+);
 
 console.log(toSql(q, { dialect: "postgresql", format: "pretty" }));
 ```
@@ -643,6 +676,7 @@ console.log(toSql(q, { dialect: "postgresql", format: "pretty" }));
 ### SQL92 string helpers
 
 ```ts
+import { pipe } from "remeda";
 import { charLength, lower, position, regexExtract, regexLike, regexReplace, map, substring, table, t, toSql, trim, upper } from "@teta/teta";
 
 const users = table("users", {
@@ -650,18 +684,21 @@ const users = table("users", {
   name: t.string(),
 });
 
-const q = map(users, (u) => ({
-  id: u.id,
-  name_lower: lower(u.name),
-  name_upper: upper(u.name),
-  name_trim: trim(u.name),
-  name_prefix: substring(u.name, 1, 3),
-  name_pos: position(u.name, "a"),
-  name_len: charLength(u.name),
-  name_clean: regexReplace(u.name, "\\s+", "_"),
-  has_digits: regexLike(u.name, ".*\\d+.*"),
-  first_digits: regexExtract(u.name, "(\\d+)", 1),
-}));
+const q = pipe(
+  users,
+  map((u) => ({
+    id: u.id,
+    name_lower: lower(u.name),
+    name_upper: upper(u.name),
+    name_trim: trim(u.name),
+    name_prefix: substring(u.name, 1, 3),
+    name_pos: position(u.name, "a"),
+    name_len: charLength(u.name),
+    name_clean: regexReplace(u.name, "\\s+", "_"),
+    has_digits: regexLike(u.name, ".*\\d+.*"),
+    first_digits: regexExtract(u.name, "(\\d+)", 1),
+  }))
+);
 
 console.log(toSql(q, { dialect: "postgresql", format: "pretty" }));
 ```
@@ -669,6 +706,7 @@ console.log(toSql(q, { dialect: "postgresql", format: "pretty" }));
 ### Array helpers
 
 ```ts
+import { pipe } from "remeda";
 import { arrayAppend, arrayContains, arrayJoin, arrayLength, arrayPosition, arraySlice, map, table, t, toSql } from "@teta/teta";
 
 const sessions = table("sessions", {
@@ -676,15 +714,18 @@ const sessions = table("sessions", {
   tags: t.string(),
 });
 
-const q = map(sessions, (s) => ({
-  id: s.id,
-  tag_count: arrayLength(s.tags),
-  has_prod: arrayContains(s.tags, "prod"),
-  prod_pos: arrayPosition(s.tags, "prod"),
-  first_two: arraySlice(s.tags, 1, 2),
-  tag_csv: arrayJoin(s.tags, ","),
-  with_debug: arrayAppend(s.tags, "debug"),
-}));
+const q = pipe(
+  sessions,
+  map((s) => ({
+    id: s.id,
+    tag_count: arrayLength(s.tags),
+    has_prod: arrayContains(s.tags, "prod"),
+    prod_pos: arrayPosition(s.tags, "prod"),
+    first_two: arraySlice(s.tags, 1, 2),
+    tag_csv: arrayJoin(s.tags, ","),
+    with_debug: arrayAppend(s.tags, "debug"),
+  }))
+);
 
 console.log(toSql(q, { dialect: "postgresql", format: "pretty" }));
 ```
@@ -710,6 +751,7 @@ const q = pipe(
 ### SQL standard date/time helpers
 
 ```ts
+import { pipe } from "remeda";
 import { currentDate, currentTimestamp, dateAdd, dateDiff, dateFormat, dateLiteral, dateParse, dateTrunc, month, map, table, t, timestampLiteral, toUnixTime, year } from "@teta/teta";
 
 const posts = table("posts", {
@@ -719,20 +761,23 @@ const posts = table("posts", {
   event_text: t.string(),
 });
 
-const q = map(posts, (p) => ({
-  today: currentDate(),
-  now: currentTimestamp(),
-  go_live: dateLiteral("2024-02-03"),
-  pinned_at: timestampLiteral("2024-02-03 12:34:56"),
-  created_day: dateTrunc(p.created_at, "day"),
-  created_fmt: dateFormat(p.created_at, "%Y-%m-%d"),
-  next_week: dateAdd(p.created_at, "day", 7),
-  age_days: dateDiff(p.published_on, "day", currentDate()),
-  created_epoch: toUnixTime(p.created_at),
-  parsed_event_ts: dateParse(p.event_text, "%Y-%m-%d %H:%M:%S"),
-  created_year: year(p.created_at),
-  created_month: month(p.created_at),
-}));
+const q = pipe(
+  posts,
+  map((p) => ({
+    today: currentDate(),
+    now: currentTimestamp(),
+    go_live: dateLiteral("2024-02-03"),
+    pinned_at: timestampLiteral("2024-02-03 12:34:56"),
+    created_day: dateTrunc(p.created_at, "day"),
+    created_fmt: dateFormat(p.created_at, "%Y-%m-%d"),
+    next_week: dateAdd(p.created_at, "day", 7),
+    age_days: dateDiff(p.published_on, "day", currentDate()),
+    created_epoch: toUnixTime(p.created_at),
+    parsed_event_ts: dateParse(p.event_text, "%Y-%m-%d %H:%M:%S"),
+    created_year: year(p.created_at),
+    created_month: month(p.created_at),
+  }))
+);
 ```
 
 ### CAST helpers
@@ -741,6 +786,7 @@ Use `cast(expr, type)` to emit `CAST(expr AS type)`.
 Use `toDate(expr)` as a convenience when you want `CAST(expr AS DATE)`.
 
 ```ts
+import { pipe } from "remeda";
 import { cast, map, table, t, toDate } from "@teta/teta";
 
 const orders = table("orders", {
@@ -749,10 +795,13 @@ const orders = table("orders", {
   created_at: t.timestamp(),
 });
 
-const q = map(orders, (o) => ({
-  total_text: cast<string>(o.total, "TEXT"),
-  created_date: toDate(o.created_at),
-}));
+const q = pipe(
+  orders,
+  map((o) => ({
+    total_text: cast<string>(o.total, "TEXT"),
+    created_date: toDate(o.created_at),
+  }))
+);
 ```
 
 ```ts
@@ -779,6 +828,7 @@ const q = pipe(
 ### CASE WHEN
 
 ```ts
+import { pipe } from "remeda";
 import { caseWhen, lt, map, table, t, when } from "@teta/teta";
 
 const users = table("users", {
@@ -786,13 +836,16 @@ const users = table("users", {
   age: t.int(),
 });
 
-const q = map(users, (u) => ({
-  id: u.id,
-  age_group: caseWhen([
-    when(lt(u.age, 18), "minor"),
-    when(lt(u.age, 65), "adult"),
-  ], "senior"),
-}));
+const q = pipe(
+  users,
+  map((u) => ({
+    id: u.id,
+    age_group: caseWhen([
+      when(lt(u.age, 18), "minor"),
+      when(lt(u.age, 65), "adult"),
+    ], "senior"),
+  }))
+);
 ```
 
 ### UNION / UNION ALL
@@ -853,5 +906,5 @@ const orgTree = pipe(
   ))
 );
 
-const q = map(orgTree, pick(["id", "name"] as const));
+const q = pipe(orgTree, map(pick(["id", "name"] as const)));
 ```
