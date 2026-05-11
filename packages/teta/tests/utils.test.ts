@@ -10,7 +10,7 @@ describe("query helpers", () => {
   test("normalizes supported join types", () => {
     expect(normalizeJoinType("left")).toBe("LEFT");
     expect(normalizeJoinType("inner")).toBe("INNER");
-    expect(() => normalizeJoinType("cross" as never)).toThrow(
+    expect(() => normalizeJoinType("cross")).toThrow(
       UNSUPPORTED_CROSS_JOIN_ERROR
     );
   });
