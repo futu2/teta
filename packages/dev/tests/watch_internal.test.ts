@@ -1,4 +1,7 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { TetaUserError } from "@teta/teta";
 
 import {
@@ -6,12 +9,23 @@ import {
   resolveWatchQuerySourceOptions,
 } from "../src/watch_shared.ts";
 
+const createdDirs: string[] = [];
+
 function uniqueSuffix(): string {
   return `?test=${Date.now()}-${Math.random()}`;
 }
 
-afterEach(() => {
+async function writeTempModule(contents: string): Promise<string> {
+  const directory = await mkdtemp(join(tmpdir(), "teta-dev-watch-test-"));
+  createdDirs.push(directory);
+  const file = join(directory, "query.ts");
+  await writeFile(file, contents, "utf8");
+  return file;
+}
+
+afterEach(async () => {
   mock.restore();
+  await Promise.all(createdDirs.splice(0).map((directory) => rm(directory, { recursive: true, force: true })));
 });
 
 describe("watch option normalization", () => {
@@ -61,7 +75,7 @@ describe("watch clipboard flow", () => {
   test("routes clipboard load failures to onError during queued runs", async () => {
     const errors: unknown[] = [];
     const logs: string[] = [];
-    const watchRenderSpecifier = new URL("../src/watch_render.ts", import.meta.url).href;
+    const file = await writeTempModule('export const query = "SELECT 1";');
     let resolveOnError!: () => void;
     const onErrorCalled = new Promise<void>((resolve) => {
       resolveOnError = resolve;
@@ -70,22 +84,13 @@ describe("watch clipboard flow", () => {
     mock.module("@mariozechner/clipboard", () => {
       throw new Error("native load failed");
     });
-    mock.module("node:fs", () => ({
-      watch: () => ({
-        close: () => {},
-      }),
-    }));
-    mock.module(watchRenderSpecifier, () => ({
-      renderSqlFromSource: async () => "SELECT 1",
-      renderSqlFromSourceIsolated: () => "SELECT 1",
-    }));
 
     const { watchQuerySourceToClipboard } = await import(
       new URL(`../src/watch.ts${uniqueSuffix()}`, import.meta.url).href
     );
 
     const controller = await watchQuerySourceToClipboard({
-      source: "queries/user.ts",
+      source: file,
       runImmediately: true,
       onError: (error: unknown) => {
         errors.push(error);
