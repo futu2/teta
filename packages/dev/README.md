@@ -2,7 +2,7 @@
 
 Developer utilities for working with Teta query modules in Node and Bun.
 
-This package depends on `@teta/teta` and uses Node APIs plus native clipboard support, so it is not intended for Deno.
+This package depends on `@teta/teta` for the frontend `toSql(...)` convenience path. It does not depend on the backend package directly. It uses Node APIs plus native clipboard support, so it is not intended for Deno.
 
 ## Install
 

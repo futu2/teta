@@ -7,6 +7,7 @@ import {
 } from "./render_source_shared.ts";
 
 export type { QueryLike } from "./render_source_shared.ts";
+export { isQueryLike } from "./render_source_shared.ts";
 export {
   isolatedRenderRuntimeArgs,
   parseIsolatedRenderPayload,

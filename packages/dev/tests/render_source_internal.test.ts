@@ -5,6 +5,7 @@ import { join } from "node:path";
 
 import { TetaUserError } from "@teta/teta";
 import {
+  isQueryLike,
   parseIsolatedRenderPayload,
   renderSqlFromSourceIsolated,
   serializeRendererOptions,
@@ -52,6 +53,10 @@ describe("render source internals", () => {
   test("renderSqlFromSourceIsolated returns direct SQL string exports", async () => {
     const file = await writeTempModule('export const query = "SELECT 42";');
     expect(renderSqlFromSourceIsolated(file)).toBe("SELECT 42");
+  });
+
+  test("isQueryLike rejects expression-only render targets", () => {
+    expect(isQueryLike({ node: { kind: "literal", value: 1 } })).toBe(false);
   });
 
   test("renderSqlFromSourceIsolated preserves missing export user errors", async () => {

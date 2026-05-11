@@ -58,7 +58,14 @@ export const RENDER_SQL_EVAL_SCRIPT = String.raw`(async () => {
       respond({ ok: true, sql: target });
       return;
     }
-    if (!target || typeof target !== "object") {
+    if (
+      !target
+      || typeof target !== "object"
+      || !("source" in target)
+      || !("stages" in target)
+      || !("columnNames" in target)
+      || !("sourceScopeId" in target)
+    ) {
       throw new teta.TetaUserError(
         "INVALID_TABLE_SOURCE",
         "Export '" + exportName + "' must be a SQL string, Query-like object, or a function returning one"

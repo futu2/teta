@@ -4,17 +4,17 @@ This guide explains the internal structure of the EDSL and how data flows from a
 
 ## Mental model
 
-Teta is split into a few clean layers:
+Teta is split into frontend and backend packages:
 
-1. **EDSL construction**
+1. **Frontend EDSL (`@teta/teta`)**
    - User code builds `ExprRef` trees and `Query` pipelines.
-   - This layer is dialect-neutral.
+   - This layer is dialect-neutral and owns row-proxy ergonomics.
 
-2. **Neutral IR**
+2. **Backend IR (`@teta/sql`)**
    - Expressions are stored as `ExprNode` trees.
-   - Queries are stored as `source + stages + withs`.
+   - Queries are stored as `source + stages + withs + column metadata`.
 
-3. **Rendering**
+3. **Backend rendering (`@teta/sql`)**
    - `SqlOptions` are resolved into internal render state.
    - Expressions are rewritten for dialect language differences.
    - Query stages are lowered into a parser-compatible SQL AST.
@@ -26,72 +26,69 @@ Teta is split into a few clean layers:
 In short:
 
 ```text
-ExprRef / Query
-  -> neutral IR
-  -> dialect-aware render pass
-  -> node-sql-parser AST
-  -> SQL string
+@teta/teta frontend
+  -> @teta/sql IR
+  -> @teta/sql SQL backend
   -> SqlResult
 ```
 
 ## Important files
 
-### Core IR
+### Backend IR
 
-- `src/edsl/core/types.ts`
+- `packages/sql/src/ir/types.ts`
   - Defines the neutral data model:
     - `ExprNode`
     - `Stage`
     - `QueryIR`
     - `CteSpec`
     - `Source`
-- `src/edsl/core/expr/core.ts`
+- `packages/teta/src/edsl/core/expr/core.ts`
   - Defines `ExprRef`, `ColumnRef`, and low-level expression constructors.
-- `src/edsl/core/expr.ts`
+- `packages/teta/src/edsl/core/expr.ts`
   - Re-exports core expression utilities.
 
 ### User-facing EDSL
 
-- `src/edsl/query.ts`
+- `packages/teta/src/edsl/query.ts`
   - Defines `Query` and the immutable query-building API.
-  - Also defines `table(...)`, `loop(...)`, and `toIR()`, `toAst()`, `toSql(...)`.
-- `src/edsl/expr.ts`
+   - Also defines `table(...)`, `loop(...)`, and `toIR()`, `toAst()`, `toSql(...)`.
+- `packages/teta/src/edsl/expr.ts`
   - Loads expression methods and re-exports the public expression API.
-- `src/edsl/sql/expr/*`
+- `packages/teta/src/edsl/sql/expr/*`
   - Higher-level expression operations like math, string, date, fold, array.
 
 ### Rendering
 
-- `src/edsl/sql/renderer.ts`
-  - Main render entrypoint.
-  - Exposes `renderSql(...)` and `renderSqlResult(...)`, both driven by plain `SqlOptions`.
-- `src/edsl/sql/render/pipeline.ts`
+- `packages/sql/src/renderer.ts`
+  - Backend render entrypoints such as `irToSql(...)`, `irToSqlResult(...)`, `exprToSql(...)`, and `explainIR(...)`.
+- `packages/sql/src/render/pipeline.ts`
   - Turns a query pipeline into a parser AST.
-- `src/edsl/sql/render/build.ts`
+- `packages/sql/src/render/build.ts`
   - Builds the staged CTE pipeline.
-- `src/edsl/sql/render/stage.ts`
+- `packages/sql/src/render/stage.ts`
   - Lowers a single `Stage` into a `SELECT` AST.
-- `src/edsl/sql/render/render.ts`
+- `packages/sql/src/render/render.ts`
   - Lowers `ExprNode` values into parser expression AST nodes.
-- `src/edsl/sql/render/recursive.ts`
+- `packages/sql/src/render/recursive.ts`
   - Materializes recursive CTEs for `loop(...)`.
-- `src/edsl/sql/render/union.ts`
+- `packages/sql/src/render/union.ts`
   - Handles `UNION` / `UNION ALL` lowering.
 
 ### Dialect handling
 
-- `src/edsl/sql/dialect/resolve.ts`
+- `packages/sql/src/dialect/resolve.ts`
   - Resolves SQL options into a concrete `QueryDialect`.
-- `src/edsl/sql/language.ts`
+- `packages/sql/src/language.ts`
   - Applies dialect language rewrites + validation.
-- `src/edsl/sql/language/rewrite.ts`
+- `packages/sql/src/language/rewrite.ts`
   - Function renames and fallback rewrites.
 
 ## Core data structures
 
 ### `ExprNode`
 
-`ExprNode` in `src/edsl/core/types.ts` is the canonical expression IR.
+`ExprNode` in `@teta/sql` is the canonical expression IR.
 
 It includes nodes like:
 
@@ -112,7 +109,7 @@ It includes nodes like:
 
 ### `Query`
 
-A `Query<TColumns>` in `src/edsl/query.ts` stores:
+A `Query<TColumns>` in `packages/teta/src/edsl/query.ts` stores:
 
 - `source`
 - `stages`
@@ -120,7 +117,7 @@ A `Query<TColumns>` in `src/edsl/query.ts` stores:
 - `columnNames`
 - `withs`
 
-The important part is that query-building is **immutable**: each helper function returns a new `Query` with another stage appended or merged.
+The important part is that query-building is **immutable**: each helper function returns a new `Query` with another stage appended or merged. `toIR(query)` lowers that frontend object into the backend `QueryIR` shape consumed by `@teta/sql`.
 
 ### `Stage`
 
@@ -153,7 +150,7 @@ For example:
 
 - function helpers from `src/edsl/sql/expr/ops/*`
 - builders from `src/edsl/sql/expr/builders.ts`
-- low-level constructors in `src/edsl/core/expr/core.ts`
+- low-level constructors in `packages/teta/src/edsl/core/expr/core.ts`
 
 Eventually everything becomes an `ExprRef` containing an `ExprNode` tree.
 
@@ -162,15 +159,15 @@ Eventually everything becomes an `ExprRef` containing an `ExprNode` tree.
 Rendering stays function-first:
 
 ```text
-expr -> toSql(expr, options) -> renderSql(expr, options)
-expr -> toSqlResult(expr, options) -> renderSqlResult(expr, options)
+expr -> toSql(expr, options) -> @teta/sql exprToSql(expr, options)
+expr -> toSqlResult(expr, options) -> @teta/sql exprToSqlResult(expr, options)
 ```
 
 The expression object itself does not render anything.
 
 ### 3) Render state setup
 
-`renderSql(...)` and `renderSqlResult(...)` in `src/edsl/sql/renderer.ts`:
+`exprToSql(...)` and `exprToSqlResult(...)` in `packages/sql/src/renderer.ts`:
 
 - resolve dialect options through `buildSqlOptions(...)`
 - build internal state with:
@@ -181,7 +178,7 @@ The expression object itself does not render anything.
 
 ### 4) Dialect language rewrite
 
-For expressions, the render path calls `applyDialectLanguage(...)` from `src/edsl/sql/language.ts`.
+For expressions, the render path calls `applyDialectLanguage(...)` from `packages/sql/src/language.ts`.
 
 That step:
 
@@ -196,7 +193,7 @@ Examples:
 
 ### 5) Expression AST lowering
 
-`exprToAst(...)` in `src/edsl/sql/render/render.ts` converts `ExprNode` into the AST shape expected by `node-sql-parser`.
+`exprToAst(...)` in `packages/sql/src/render/render.ts` converts `ExprNode` into the AST shape expected by `node-sql-parser`.
 
 Examples:
 
@@ -247,7 +244,7 @@ const result = toSql(q, { dialect: "postgresql", format: "pretty" })
 
 ### 1) `table(...)` creates the base query
 
-`table(...)` in `src/edsl/query.ts`:
+`table(...)` in `packages/teta/src/edsl/query.ts`:
 
 - parses the table name
 - creates column proxies with `createColumnRefs(...)`
@@ -287,9 +284,9 @@ At this point no SQL text exists yet.
 
 Useful checkpoints:
 
-- `toIR(query)` returns the neutral query representation:
-  - `{ source, stages }`
-- `toAst(query)` calls `renderPipelineAst(...)`
+- `toIR(query)` returns the backend-renderable query representation:
+  - `{ source, stages, scopeId, columnNames, columnIdentifiers, withs }`
+- `toAst(query)` delegates to `@teta/sql irToAst(...)`
   - this gives the parser AST before final SQL stringification
 - `explain(query, ...)` bundles IR, AST, SQL, params, stage metadata, and CTE metadata in one snapshot
 
@@ -300,15 +297,15 @@ In practice, `explain(query, ...)` is usually the fastest debugging entrypoint, 
 Like expressions, query rendering stays function-first:
 
 ```text
-query -> toSql(query, options) -> renderSql(query, options)
-query -> toSqlResult(query, options) -> renderSqlResult(query, options)
+query -> toSql(query, options) -> irToSql(toIR(query), options)
+query -> toSqlResult(query, options) -> irToSqlResult(toIR(query), options)
 ```
 
-The real lowering happens in `src/edsl/sql/renderer.ts`.
+The real lowering happens in `packages/sql/src/renderer.ts`.
 
 ### 5) Query pipeline rendering
 
-`renderQueryTarget(...)` calls `renderPipelineAst(...)` in `src/edsl/sql/render/pipeline.ts`.
+`renderQueryIRTarget(...)` calls `renderPipelineAst(...)` in `packages/sql/src/render/pipeline.ts`.
 
 That function:
 
@@ -318,7 +315,7 @@ That function:
 
 ### 6) Building the staged CTE pipeline
 
-`buildPipelineAst(...)` in `src/edsl/sql/render/build.ts` is the central query-lowering step.
+`buildPipelineAst(...)` in `packages/sql/src/render/build.ts` is the central query-lowering step.
 
 Behavior:
 
@@ -352,7 +349,7 @@ This is why the same logical query may render as a flat `SELECT`, a staged `WITH
 
 ### 7) Lowering each stage
 
-`compileStageAst(...)` in `src/edsl/sql/render/stage.ts` turns one `Stage` into one `SELECT` AST.
+`compileStageAst(...)` in `packages/sql/src/render/stage.ts` turns one `Stage` into one `SELECT` AST.
 
 Per stage kind:
 
@@ -370,13 +367,13 @@ Per stage kind:
   - handles lateral joins
   - handles subquery joins
 - `union`
-  - handled elsewhere by `renderPipelineAst(...)` + `src/edsl/sql/render/union.ts`
+  - handled elsewhere by `renderPipelineAst(...)` + `packages/sql/src/render/union.ts`
 
 ### 8) Expression qualification inside queries
 
 Before expressions become AST, the render layer normalizes column references.
 
-`qualifyForBase(...)` in `src/edsl/sql/render/render.ts` does three things:
+Scope binding in `packages/sql/src/render/render_scope.ts` does three things:
 
 1. strips table refs when safe
 2. fills in missing table refs with the current base alias
@@ -388,18 +385,18 @@ This is the key bridge between neutral expression IR and query-local SQL names.
 
 #### Join subqueries
 
-`hoistJoinSubquery(...)` in `src/edsl/sql/render/source.ts` can hoist a non-lateral join subquery into a CTE before rendering the join.
+`hoistJoinSubquery(...)` in `packages/sql/src/render/source_join.ts` can hoist a non-lateral join subquery into a CTE before rendering the join.
 
 #### Unions
 
-`src/edsl/sql/render/union.ts` builds left and right sides separately, then attaches them with `UNION` / `UNION ALL`.
+`packages/sql/src/render/union.ts` builds left and right sides separately, then attaches them with `UNION` / `UNION ALL`.
 
 #### Recursive CTEs
 
-`loop(...)` in `src/edsl/query.ts` does not emit SQL directly.
+`loop(...)` in `packages/teta/src/edsl/query.ts` does not emit SQL directly.
 It creates a deferred recursive `CteSpec`.
 
-Later, `materializeCte(...)` and `buildRecursiveCte(...)` in `src/edsl/sql/render/recursive.ts` turn that into a recursive `WITH` entry.
+Later, `materializeCte(...)` and `buildRecursiveCte(...)` in `packages/sql/src/render/recursive_cte.ts` turn that into a recursive `WITH` entry.
 
 ### 10) Final AST fixes and stringification
 
@@ -418,7 +415,7 @@ Dialect data is resolved once per render call.
 
 ### Resolution
 
-`buildSqlOptions(...)` in `src/edsl/sql/dialect/resolve.ts` turns SQL options into:
+`buildSqlOptions(...)` in `packages/sql/src/dialect/resolve_options.ts` turns SQL options into:
 
 - `QueryDialect`
 - parser options
@@ -445,7 +442,7 @@ When something looks wrong, inspect from top to bottom:
    - are the stages right?
 3. `toAst(query)`
    - did the stage lowering produce the right parser AST?
-4. `renderPipelineAst(...)`
+4. `irToAst(toIR(query), options)` or `@teta/sql` renderer internals
    - is the CTE pipeline shaped correctly?
 5. `applyDialectLanguage(...)`
    - is a function being renamed or expanded unexpectedly?
@@ -472,27 +469,26 @@ Interpret the differences like this:
 
 Usually touch:
 
-- `src/edsl/sql/expr/ops/*`
-- maybe `src/edsl/sql/expr/methods/*`
-- if needed, `src/edsl/core/types.ts` for a new node kind
-- `src/edsl/sql/render/render.ts` to lower that node kind
-- `src/edsl/sql/language/rewrite.ts` if dialect mapping/fallback is needed
+- `packages/teta/src/edsl/sql/expr/ops/*`
+- if needed, `packages/sql/src/ir/types_expr.ts` for a new node kind
+- `packages/sql/src/render/expr_ast.ts` to lower that node kind
+- `packages/sql/src/language/rewrite.ts` if dialect mapping/fallback is needed
 
 ### Add a new query operation
 
 Usually touch:
 
-- `src/edsl/core/types.ts` to add a new `Stage`
-- `src/edsl/query.ts` to build that stage
-- `src/edsl/sql/render/stage.ts` and/or `src/edsl/sql/render/build.ts` to lower it
+- `packages/sql/src/ir/types_query.ts` to add a new `Stage`
+- `packages/teta/src/edsl/query.ts` to build that stage
+- `packages/sql/src/render/stage.ts` and/or `packages/sql/src/render/build.ts` to lower it
 
 ### Add dialect behavior
 
 Usually touch:
 
-- `src/edsl/sql/dialect/*`
-- `src/edsl/sql/language/config.ts`
-- `src/edsl/sql/language/rewrite.ts`
+- `packages/sql/src/dialect/*`
+- `packages/sql/src/language/config.ts`
+- `packages/sql/src/language/rewrite.ts`
 
 ## Short summary
 
@@ -504,11 +500,11 @@ The most important idea is:
 So the main flow is:
 
 ```text
-ExprRef / Query
-  -> ExprNode / Stage[] / CteSpec[]
-  -> buildSqlOptions(...) + internal render state
-  -> dialect rewrite + qualification
-  -> parser AST
+@teta/teta ExprRef / Query
+  -> @teta/sql ExprNode / QueryIR
+  -> @teta/sql buildSqlOptions(...) + internal render state
+  -> @teta/sql dialect rewrite + qualification
+  -> node-sql-parser AST
   -> sqlify / exprToSQL
   -> SqlResult
 ```

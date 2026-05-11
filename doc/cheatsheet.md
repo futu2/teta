@@ -225,14 +225,18 @@ result.params;
 ### Lowering helpers
 
 ```ts
+import { irToSql } from "@teta/sql";
+
 const ir = toIR(q);
 const ast = toAst(q, { dialect: "postgresql" });
 const info = explain(q, { dialect: "postgresql", renderStrategy: "readable" });
+const explicitSql = irToSql(ir, { dialect: "postgresql" });
 ```
 
 ### Lowering tips
 
 - `explain(query, ...)` is the fastest way to inspect `stages`, `ctes`, `sql`, and `params`
+- `toSql(query, ...)` is a frontend convenience wrapper around `@teta/sql` rendering
 - `optimized` may fuse stages into one `SELECT`
 - `readable` preserves stage boundaries as `cte_0`, `cte_1`, ...
 - a nested derived table usually means the compiler needed a scope barrier

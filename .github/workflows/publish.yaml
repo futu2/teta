@@ -10,6 +10,7 @@ jobs:
     permissions:
       contents: read
     outputs:
+      sql: ${{ steps.detect.outputs.sql }}
       teta: ${{ steps.detect.outputs.teta }}
       dev: ${{ steps.detect.outputs.dev }}
     steps:
@@ -21,6 +22,12 @@ jobs:
           before="${{ github.event.before }}"
           if [ "$before" = "0000000000000000000000000000000000000000" ]; then
             before="$(git rev-list --max-parents=0 HEAD)"
+          fi
+
+          if git diff --quiet "$before" "$GITHUB_SHA" -- packages/sql/package.json packages/sql/jsr.json; then
+            echo "sql=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "sql=true" >> "$GITHUB_OUTPUT"
           fi
 
           if git diff --quiet "$before" "$GITHUB_SHA" -- packages/teta/package.json packages/teta/jsr.json; then
@@ -35,9 +42,34 @@ jobs:
             echo "dev=true" >> "$GITHUB_OUTPUT"
           fi
 
-  publish-teta:
+  publish-sql:
     needs: detect-release-changes
-    if: needs.detect-release-changes.outputs.teta == 'true'
+    if: needs.detect-release-changes.outputs.sql == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        working-directory: packages/sql
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Install deps
+        run: bun install --frozen-lockfile
+      - name: Publish @teta/sql
+        run: bunx jsr publish
+
+  publish-teta:
+    needs:
+      - detect-release-changes
+      - publish-sql
+    if: always() && needs.detect-release-changes.outputs.teta == 'true' && (needs.publish-sql.result == 'success' || needs.publish-sql.result == 'skipped')
     runs-on: ubuntu-latest
     permissions:
       contents: read

@@ -301,8 +301,11 @@ These types matter once you leave the query-building layer:
 - `QueryIR<TColumns>` is the lowered logical query representation returned by `toIR(...)`
 - `QueryExplainResult<TColumns>` is the structured debug output returned by `explain(...)`
 
+`SqlOptions`, `SqlResult`, `ExprNode`, `Stage`, and the raw backend `QueryIR` contract are owned by `@teta/sql`. `@teta/teta` re-exports the common SQL types and adds the typed frontend `QueryIR<TColumns>` returned by `toIR(...)`.
+
 ```ts
 import { explain, toSqlResult } from "@teta/teta";
+import type { ExprNode, SqlOptions, SqlResult, Stage } from "@teta/sql";
 
 const result = toSqlResult(publicUsers, {
   dialect: "postgresql",
@@ -339,4 +342,4 @@ The most important public types for EDSL users are:
 - `QueryIR`, `QueryExplainResult`
 - `BuiltinDialect`, `Dialect`, `DialectSpec`, `QueryDialect`
 
-If you need deeper compiler types such as `ExprNode`, `Stage`, `Source`, or `CteSpec`, they exist in the codebase but are mainly useful when working on Teta itself. For that layer, use `doc/DEV_GUIDE.md`.
+If you need deeper compiler types such as `ExprNode`, `Stage`, `Source`, or `CteSpec`, import them from `@teta/sql`. For that layer, use `doc/DEV_GUIDE.md`.

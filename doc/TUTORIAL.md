@@ -10,7 +10,15 @@ Keep EDSL queries dialect-neutral. Choose the dialect by passing SQL options at 
 
 Most multi-stage examples below use Remeda's `pipe(...)` with named imports. Row-transforming query helpers are curried query steps, so `pipe(query, map(...))` is the standard shape. This function-first style is intentional: it keeps query stages easy to compose, extract, reuse, and test as ordinary values.
 
-All rendering examples below pass plain `SqlOptions` objects into `toSql(...)` or `toSqlResult(...)`.
+All rendering examples below pass plain `SqlOptions` objects into `toSql(...)` or `toSqlResult(...)`. `@teta/teta` is the EDSL frontend; `@teta/sql` is the reusable backend. You can use the direct helper, or lower explicitly through IR:
+
+```ts
+import { irToSql } from "@teta/sql";
+import { toIR, toSql } from "@teta/teta";
+
+const direct = toSql(q, { dialect: "postgresql" });
+const explicit = irToSql(toIR(q), { dialect: "postgresql" });
+```
 
 ## Basics
 

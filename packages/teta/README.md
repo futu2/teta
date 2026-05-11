@@ -1,6 +1,8 @@
 # @teta/teta
 
-Type-safe SQL EDSL and SQL compiler for TypeScript.
+Type-safe SQL EDSL frontend for TypeScript.
+
+`@teta/teta` builds typed query IR and keeps direct convenience helpers such as `toSql(...)`. The reusable SQL backend lives in `@teta/sql`.
 
 ## Install
 
@@ -44,6 +46,16 @@ const activeUsers = pipe(
 );
 
 console.log(toSql(activeUsers, { dialect: "postgresql", format: "pretty" }));
+```
+
+For explicit frontend/backend use, lower the query to IR and render it through `@teta/sql`:
+
+```ts
+import { irToSql } from "@teta/sql";
+import { toIR, toSql } from "@teta/teta";
+
+const direct = toSql(activeUsers, { dialect: "postgresql" });
+const explicit = irToSql(toIR(activeUsers), { dialect: "postgresql" });
 ```
 
 The callback form gives the strongest autocomplete and compile-time column checks. For compact query code, Teta also exports deferred row proxies:

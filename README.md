@@ -1,12 +1,14 @@
 # Teta Monorepo
 
-This repository publishes two JSR packages:
+This repository publishes three JSR packages:
 
-- `@teta/teta`: the core SQL EDSL, renderer, and public error/types surface
+- `@teta/sql`: reusable SQL IR, dialects, and rendering backend
+- `@teta/teta`: the TypeScript SQL EDSL frontend with direct `toSql(...)` helpers
 - `@teta/dev`: Node and Bun developer helpers for loading query modules, watching files, and clipboard workflows
 
 Package guides:
 
+- [SQL backend package README](packages/sql/README.md)
 - [Core package README](packages/teta/README.md)
 - [Dev package README](packages/dev/README.md)
 

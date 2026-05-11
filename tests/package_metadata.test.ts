@@ -70,3 +70,23 @@ test("teta jsr manifest maps workspace dependencies to jsr packages", () => {
   expect(tetaPackage.dependencies?.["@teta/sql"]).toEqual("workspace:*");
   expect(tetaJsr.imports?.["@teta/sql"]).toEqual("jsr:@teta/sql@^0.1.0");
 });
+
+test("ci workflow checks and validates the sql package", () => {
+  const ci = readFileSync(new URL("../.github/workflows/ci.yaml", import.meta.url), "utf8");
+
+  expect(ci).toContain("bun run check:sql && bun run check:teta && bun run check:dev");
+  expect(ci).toContain("jsr-dry-run-sql:");
+  expect(ci).toContain("working-directory: packages/sql");
+  expect(ci).toContain("Validate @teta/sql publish bundle");
+});
+
+test("publish workflow detects and publishes the sql package before teta", () => {
+  const publish = readFileSync(new URL("../.github/workflows/publish.yaml", import.meta.url), "utf8");
+
+  expect(publish).toContain("sql: ${{ steps.detect.outputs.sql }}");
+  expect(publish).toContain("packages/sql/package.json packages/sql/jsr.json");
+  expect(publish).toContain("publish-sql:");
+  expect(publish).toContain("working-directory: packages/sql");
+  expect(publish).toContain("Publish @teta/sql");
+  expect(publish).toContain("needs.publish-sql.result == 'success' || needs.publish-sql.result == 'skipped'");
+});
