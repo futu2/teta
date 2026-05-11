@@ -2,8 +2,7 @@
 
 Quick reference for the public API exported from `@teta/teta`.
 
-Teta is function-first. Query helpers are dual-mode, so you can write either `map(users, fn)`
-or `pipe(users, map(fn))`. In practice, the examples here prefer Remeda's `pipe(...)`.
+Teta is function-first. Row-transforming query helpers are curried query steps used with `pipe(...)`.
 
 ```ts
 import { pick, pipe } from "remeda";
@@ -68,45 +67,49 @@ const q = pipe(
 Use `pickCols(...)` for same-name projections:
 
 ```ts
-const compactUsers = map(users, pickCols("id", "name"));
+const compactUsers = pipe(users, map(pickCols("id", "name")));
 ```
 
 Use `$left` and `$right` in join predicates and merge shapes:
 
 ```ts
-const joined = leftJoin(
+const joined = pipe(
   users,
-  orders,
-  eq($left.id, $right.user_id),
-  { user_id: $left.id, order_total: $right.total }
+  leftJoin(
+    orders,
+    eq($left.id, $right.user_id),
+    { user_id: $left.id, order_total: $right.total }
+  )
 );
 ```
 
 Callback selectors remain the strictest typed form because the row parameter carries the current query shape.
 
-### Dual-mode helpers
-Every query helper can be used data-first or data-last.
+### Curried helpers
+Row-transforming query helpers are query steps used with `pipe(...)`.
 
 ```ts
-const q1 = map(users, (u) => ({ id: u.id }));
-const q2 = pipe(users, map((u) => ({ id: u.id })));
+const q = pipe(users, map((u) => ({ id: u.id })));
 ```
 
 ### `loop(step)`
 Build a recursive CTE from a base query plus a recursive step.
 
 ```ts
-const base = map(table("seed", { n: t.int() }), (s) => ({ n: s.n }));
-const q = loop(base, (self) => map(self, (s) => ({ n: add(s.n, 1) })));
+const base = pipe(table("seed", { n: t.int() }), map((s) => ({ n: s.n })));
+const q = loop(base, (self) => pipe(self, map((s) => ({ n: add(s.n, 1) }))));
 ```
 
-### `join(rightOrBuilder, on, merge?, { type?, lateral? })`
+### `join(...)`
 Join queries with `inner`, `left`, `right`, or `full` behavior.
 
 ```ts
 const usersWithOrders = pipe(
   users,
-  leftJoin(orders, onEq({ id: "user_id" })),
+  leftJoin(
+    orders,
+    onEq({ id: "user_id" })
+  ),
   map((row) => ({
     user_id: row.id,
     user_name: row.name,
@@ -115,9 +118,21 @@ const usersWithOrders = pipe(
 );
 ```
 
-Legacy `join(..., { merge })` is no longer supported. Pass the merge helper positionally before the options object, for example `join(right, on, dropOverlapLeft(), { type: "left" })`.
+Legacy `join(..., { merge })` is no longer supported. Pass the merge helper positionally before the options object:
 
-### `innerJoin(...)`, `leftJoin(...)`, `rightJoin(...)`, `fullJoin(...)`
+```ts
+const q = pipe(
+  left,
+  join(
+    right,
+    on,
+    dropOverlapLeft(),
+    { type: "left" }
+  )
+);
+```
+
+### Join-kind helpers
 Fixed join-kind helpers with the same `on` and optional merge-helper arguments as `join(...)`.
 
 ### `fold(selector)`
@@ -161,11 +176,11 @@ const uniqueUsers = union(activeUsers, inactiveUsers);
 - `filter(predicate)`
 - `sort(selector)`
 - `take(count)`
-- `join(rightOrBuilder, on, merge?, { type?, lateral? })`
-- `innerJoin(rightOrBuilder, on, merge?, { lateral? })`
-- `leftJoin(rightOrBuilder, on, merge?, { lateral? })`
-- `rightJoin(rightOrBuilder, on, merge?, { lateral? })`
-- `fullJoin(rightOrBuilder, on, merge?, { lateral? })`
+- `join(...)` with `rightOrBuilder`, `on`, optional `merge`, and optional `{ type?, lateral? }`
+- `innerJoin(...)` with `rightOrBuilder`, `on`, optional `merge`, and optional `{ lateral? }`
+- `leftJoin(...)` with `rightOrBuilder`, `on`, optional `merge`, and optional `{ lateral? }`
+- `rightJoin(...)` with `rightOrBuilder`, `on`, optional `merge`, and optional `{ lateral? }`
+- `fullJoin(...)` with `rightOrBuilder`, `on`, optional `merge`, and optional `{ lateral? }`
 - `usingCols(name | names)`
 - `onEq({ leftName: rightName })`
 - `dropOverlapLeft()`
@@ -383,16 +398,22 @@ const info = explain(q, { dialect: "postgresql", renderStrategy: "readable" });
 ```ts
 import { merge, omit, pick, pipe } from "remeda";
 
-const compactUsers = map(users, pipe(
-  pick(["id", "name"] as const),
-  (base) => merge(base, { name_upper: upper(base.name) })
-));
+const compactUsers = pipe(
+  users,
+  map(pipe(
+    pick(["id", "name"] as const),
+    (base) => merge(base, { name_upper: upper(base.name) })
+  ))
+);
 
-const publicUsers = map(users, omit(["created_at"] as const));
+const publicUsers = pipe(users, map(omit(["created_at"] as const)));
 
-const groupedUsers = fold(users, (user) => ({
-  ...groupShape({ id: user.id }),
-}));
+const groupedUsers = pipe(
+  users,
+  fold((user) => ({
+    ...groupShape({ id: user.id }),
+  }))
+);
 ```
 
 ## 7) Dev package

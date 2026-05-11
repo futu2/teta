@@ -1,4 +1,5 @@
-import { eq, filter, map, table, t, toSql } from "jsr:@teta/teta";
+import { pipe } from "remeda";
+import { eq, filter, map, table, t, toSqlResult } from "jsr:@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -7,18 +8,20 @@ const users = table("users", {
   active: t.boolean(),
 });
 
-const query = map(
-  filter(users, (user) => eq(user.active, true)),
-  (user) => ({
-    id: user.id,
-    email: user.email,
-    tenant_id: user.tenant_id,
-  })
+const result = toSqlResult(
+  pipe(
+    users,
+    filter((user) => eq(user.active, true)),
+    map((user) => ({
+      id: user.id,
+      email: user.email,
+      tenant_id: user.tenant_id,
+    }))
+  ),
+  {
+    dialect: "postgresql",
+    format: "compact",
+  }
 );
 
-const sql = toSql(query, {
-  dialect: "postgresql",
-  format: "compact",
-});
-
-console.log(sql);
+console.log(result.sql);

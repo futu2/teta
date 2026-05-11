@@ -57,16 +57,20 @@ const orders = table("orders", {
 
 export const renderBenchmarkQuery = pipe(
   users,
-  leftJoin(orders, (user, order) => eq(user.id, order.user_id), (user, order) => ({
-    id: user.id,
-    name: user.name,
-    active: user.active,
-    tenant_id: user.tenant_id,
-    spend_cents: user.spend_cents,
-    status: order.status,
-    total_cents: order.total_cents,
-    created_at: order.created_at,
-  })),
+  leftJoin(
+    orders,
+    (user, order) => eq(user.id, order.user_id),
+    (user, order) => ({
+      id: user.id,
+      name: user.name,
+      active: user.active,
+      tenant_id: user.tenant_id,
+      spend_cents: user.spend_cents,
+      status: order.status,
+      total_cents: order.total_cents,
+      created_at: order.created_at,
+    })
+  ),
   filter((row) => and(eq(row.active, true), eq(row.status, "paid"))),
   map((row) => ({
     id: row.id,

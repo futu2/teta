@@ -36,9 +36,10 @@ describe("dev package public api", () => {
     const file = await writeTempModule(`
 import { map, table, t } from ${JSON.stringify(coreModPath)};
 
+const pipe = (value, ...steps) => steps.reduce((current, step) => step(current), value);
 const users = table("users", { id: t.int() });
 
-export const query = map(users, (user) => ({ id: user.id }));
+export const query = pipe(users, map((user) => ({ id: user.id })));
 `);
 
     expect(await renderSqlFromSource(file)).toBe(

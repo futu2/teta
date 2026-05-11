@@ -1,3 +1,4 @@
+import { pipe } from "remeda";
 import {
   bitLength,
   characterLength,
@@ -33,11 +34,14 @@ const customSqliteRenderer: SqlOptions = {
   format: "pretty",
 };
 
-const report = map(users, (user) => ({
-  id: user.id,
-  name_chars: characterLength(user.name),
-  name_bits: bitLength(user.name),
-  created_fmt: dateFormat(user.created_at, "%Y-%m-%d"),
-}));
+const report = pipe(
+  users,
+  map((user) => ({
+    id: user.id,
+    name_chars: characterLength(user.name),
+    name_bits: bitLength(user.name),
+    created_fmt: dateFormat(user.created_at, "%Y-%m-%d"),
+  }))
+);
 
 console.log(toSql(report, customSqliteRenderer));
