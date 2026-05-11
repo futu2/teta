@@ -32,14 +32,16 @@ import type {
   ProjectionValue,
 } from "../expr.ts";
 import {
-  buildSqlOptions,
   createDeferredRecursiveCte,
-  renderPipelineAst,
+  explainIR,
+  irToAst,
+  irToSql,
+  irToSqlResult,
   renderSql,
   renderSqlResult,
   resolveDialect,
 } from "../sql.ts";
-import type { SqlCompilable } from "../sql.ts";
+import type { QueryIRSqlTarget, SqlCompilable } from "../sql.ts";
 import { freshInternalCteName, freshScopeId } from "./planner.ts";
 import { toQuerySpec } from "./state.ts";
 import { assertLoopColumns, normalizeIdentifier, qualifyOuterColumns } from "./utils.ts";
@@ -83,10 +85,8 @@ export type QueryStep<
   TOutputColumns extends QueryColumns,
 > = (query: Query<TInputColumns>) => Query<TOutputColumns>;
 
-export type QueryIR<TColumns extends QueryColumns> = {
-  source: Query<TColumns>["source"];
-  stages: Query<TColumns>["stages"];
-  scopeId: Query<TColumns>["sourceScopeId"];
+export type QueryIR<TColumns extends QueryColumns> = QueryIRSqlTarget & {
+  columnNames: readonly (keyof TColumns & string)[];
 };
 
 export type QueryExplainStage = {
@@ -1129,6 +1129,9 @@ export function toIR<TColumns extends QueryColumns>(query: Query<TColumns>): Que
     source: query.source,
     stages: query.stages,
     scopeId: query.sourceScopeId,
+    columnNames: query.columnNames,
+    columnIdentifiers: query.columnIdentifiers,
+    withs: query.withs,
   };
 }
 
@@ -1136,67 +1139,48 @@ export function toAst<TColumns extends QueryColumns>(
   query: Query<TColumns>,
   options?: { dialect?: Dialect; renderStrategy?: SqlRenderStrategy }
 ): AST {
-  return renderPipelineAst(
-    query.source,
-    query.stages,
-    query.columnNames,
-    query.sourceScopeId,
-    {
-      baseCtes: query.withs,
-      dialect: options?.dialect ? resolveDialect(options.dialect) : undefined,
-      renderStrategy: options?.renderStrategy,
-    }
-  );
+  return irToAst(toIR(query), {
+    dialect: options?.dialect ? resolveDialect(options.dialect) : undefined,
+    renderStrategy: options?.renderStrategy,
+  });
 }
 
 export function toSql<TTarget extends SqlCompilable>(
   query: TTarget,
   options: SqlOptions = {}
 ): string {
-  return renderSql(query, options);
+  return isQuery(query) ? irToSql(toIR(query), options) : renderSql(query, options);
 }
 
 export function toSqlResult<TTarget extends SqlCompilable>(
   query: TTarget,
   options: SqlOptions = {}
 ): SqlResult {
-  return renderSqlResult(query, options);
+  return isQuery(query) ? irToSqlResult(toIR(query), options) : renderSqlResult(query, options);
 }
 
 export function explain<TColumns extends QueryColumns>(
   query: Query<TColumns>,
   options: SqlOptions = {}
 ): QueryExplainResult<TColumns> {
-  const resolved = buildSqlOptions(options);
-  const sqlResult = renderSqlResult(query, options);
+  const result = explainIR(toIR(query), options);
 
   return {
-    ir: toIR(query),
-    ast: renderPipelineAst(
-      query.source,
-      query.stages,
-      query.columnNames,
-      query.sourceScopeId,
-      {
-        baseCtes: query.withs,
-        dialect: resolved.dialect,
-      }
-    ),
-    sql: sqlResult.sql,
-    params: sqlResult.params,
-    columnNames: query.columnNames,
-    stages: query.stages.map((stage, index) => ({
-      index,
-      kind: stage.kind,
-    })),
-    ctes: query.withs.map((cte) => ({
-      name: cte.name,
-      kind: cte.kind,
-    })),
-    dialect: resolved.dialect,
-    format: resolved.sqlFormat,
-    renderStrategy: resolved.renderStrategy,
-    parameterMode: resolved.parameterMode,
-    parameterPrefix: resolved.parameterPrefix,
+    ir: result.ir,
+    ast: result.ast,
+    sql: result.sql,
+    params: result.params,
+    columnNames: result.columnNames,
+    stages: result.stages,
+    ctes: result.ctes,
+    dialect: result.dialect,
+    format: result.format,
+    renderStrategy: result.renderStrategy,
+    parameterMode: result.parameterMode,
+    parameterPrefix: result.parameterPrefix,
   };
+}
+
+function isQuery(value: unknown): value is Query<QueryColumns> {
+  return value instanceof Query;
 }

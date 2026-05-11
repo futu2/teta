@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { pipe } from "remeda";
-import { explain, table, t, filter, map, eq, loop, take, isNotNull } from "../mod.ts";
+import { explain, table, t, filter, map, eq, loop, take, isNotNull, toIR } from "../mod.ts";
+import { irToSql } from "@teta/sql";
 describe("explain api", () => {
     test("returns IR, AST, SQL, params, and stage metadata", () => {
         const users = table("users", {
@@ -52,5 +53,15 @@ describe("explain api", () => {
         expect(result.ctes).toHaveLength(1);
         expect(result.ctes[0]?.kind).toBe("recursive");
         expect(result.ctes[0]?.name).toContain("__teta_cte_loop_");
+    });
+    test("toIR returns backend-renderable query IR", () => {
+        const users = table("users", {
+            "user-id": t.int(),
+        });
+        const ir = toIR(users);
+        expect(ir.columnNames).toEqual(["user-id"]);
+        expect(ir.columnIdentifiers["user-id"]).toEqual({ name: "user-id", quoted: true });
+        expect(ir.withs).toEqual([]);
+        expect(irToSql(ir, { dialect: "postgresql", format: "compact" })).toBe("SELECT users_0.\"user-id\" AS \"user-id\" FROM users AS users_0");
     });
 });
