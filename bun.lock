@@ -11,7 +11,7 @@
     },
     "packages/dev": {
       "name": "@teta/dev",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "dependencies": {
         "@mariozechner/clipboard": "^0.3.2",
         "@teta/teta": "workspace:*",
@@ -21,9 +21,20 @@
         "typescript": "^5.9.3",
       },
     },
+    "packages/sql": {
+      "name": "@teta/sql",
+      "version": "0.1.0",
+      "dependencies": {
+        "node-sql-parser": "^5.4.0",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+        "typescript": "^5.9.3",
+      },
+    },
     "packages/teta": {
       "name": "@teta/teta",
-      "version": "0.4.0",
+      "version": "0.4.3",
       "dependencies": {
         "node-sql-parser": "^5.4.0",
         "remeda": "^2.33.6",
@@ -76,6 +87,8 @@
 
     "@teta/dev": ["@teta/dev@workspace:packages/dev"],
 
+    "@teta/sql": ["@teta/sql@workspace:packages/sql"],
+
     "@teta/teta": ["@teta/teta@workspace:packages/teta"],
 
     "@types/bun": ["@types/bun@1.3.11", "", { "dependencies": { "bun-types": "1.3.11" } }, "sha512-5vPne5QvtpjGpsGYXiFyycfpDF2ECyPcTSsFBMa0fraoxiQyMJ3SmuQIGhzPg2WJuWxVBoxWJ2kClYTcw/4fAg=="],
@@ -95,5 +108,9 @@
     "typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
 
     "undici-types": ["undici-types@7.16.0", "", {}, "sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw=="],
+
+    "@teta/sql/@types/bun": ["@types/bun@1.3.13", "", { "dependencies": { "bun-types": "1.3.13" } }, "sha512-9fqXWk5YIHGGnUau9TEi+qdlTYDAnOj+xLCmSTwXfAIqXr2x4tytJb43E9uCvt09zJURKXwAtkoH4nLQfzeTXw=="],
+
+    "@teta/sql/@types/bun/bun-types": ["bun-types@1.3.13", "", { "dependencies": { "@types/node": "*" } }, "sha512-QXKeHLlOLqQX9LgYaHJfzdBaV21T63HhFJnvuRCcjZiaUDpbs5ED1MgxbMra71CsryN/1dAoXuJJJwIv/2drVA=="],
   }
 }

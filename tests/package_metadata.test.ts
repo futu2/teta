@@ -5,6 +5,21 @@ const readJson = <T>(path: string): T =>
   JSON.parse(readFileSync(new URL(`../${path}`, import.meta.url), "utf8")) as T;
 
 test("package metadata stays in sync across publish manifests", () => {
+  const sqlPackage = readJson<{
+    name: string;
+    version: string;
+    exports: Record<string, string>;
+  }>("packages/sql/package.json");
+  const sqlJsr = readJson<{
+    name: string;
+    version: string;
+    exports: Record<string, string>;
+  }>("packages/sql/jsr.json");
+
+  expect(sqlPackage.name).toEqual(sqlJsr.name);
+  expect(sqlPackage.version).toEqual(sqlJsr.version);
+  expect(sqlPackage.exports).toEqual(sqlJsr.exports);
+
   const tetaPackage = readJson<{
     name: string;
     version: string;

@@ -3,8 +3,10 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
+      "@teta/sql": ["packages/sql/mod.ts"],
       "@teta/teta": ["packages/teta/mod.ts"],
       "@teta/dev": ["packages/dev/mod.ts"],
+      "jsr:@teta/sql": ["packages/sql/mod.ts"],
       "jsr:@teta/teta": ["packages/teta/mod.ts"]
     }
   },

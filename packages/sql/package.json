@@ -1,0 +1,23 @@
+{
+  "name": "@teta/sql",
+  "module": "./mod.ts",
+  "version": "0.1.0",
+  "exports": {
+    ".": "./mod.ts"
+  },
+  "types": "./mod.ts",
+  "type": "module",
+  "scripts": {
+    "test": "bun test tests --pass-with-no-tests",
+    "test:all": "bun test",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "check": "bun run test && bun run typecheck"
+  },
+  "dependencies": {
+    "node-sql-parser": "^5.4.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.9.3"
+  }
+}
