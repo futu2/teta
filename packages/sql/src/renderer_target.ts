@@ -1,0 +1,54 @@
+import { applyDialectLanguage } from "./language.ts";
+import { applyDialectFixes } from "./render/fixes.ts";
+import { renderPipelineAst } from "./render/pipeline.ts";
+import { withSqlRenderContext } from "./render/render.ts";
+import { createRenderContext, renderAst, renderExprNode } from "./renderer_output.ts";
+import type {
+  ExprSqlTarget,
+  QueryIRSqlTarget,
+  RendererState,
+} from "./renderer_types.ts";
+import type { ExprNode } from "./ir/types.ts";
+import type { SqlResult } from "./types.ts";
+
+export function renderQueryIRTarget(
+  target: QueryIRSqlTarget,
+  state: RendererState
+): SqlResult {
+  const renderContext = createRenderContext(state);
+  const ast = withSqlRenderContext(renderContext, () =>
+    applyDialectFixes(
+      renderPipelineAst(target.source, target.stages, target.columnNames, target.scopeId, {
+        baseCtes: target.withs ?? [],
+        dialect: state.dialect,
+        renderStrategy: state.renderStrategy,
+      }),
+      state.dialect
+    )
+  );
+
+  return {
+    sql: renderAst(ast, state, renderContext),
+    params: renderContext.params,
+  };
+}
+
+export function renderExprTarget(
+  target: ExprSqlTarget,
+  state: RendererState
+): SqlResult {
+  const renderContext = createRenderContext(state);
+  const node = unwrapExprTarget(target);
+  const expr = applyDialectLanguage(node, state.dialect);
+
+  return {
+    sql: withSqlRenderContext(renderContext, () =>
+      renderExprNode(expr, state, renderContext)
+    ),
+    params: renderContext.params,
+  };
+}
+
+function unwrapExprTarget(target: ExprSqlTarget): ExprNode<unknown> {
+  return "node" in target ? target.node : target;
+}

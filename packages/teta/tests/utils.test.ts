@@ -4,7 +4,7 @@ import {
   UNSUPPORTED_CROSS_JOIN_ERROR,
 } from "./helpers/expected-errors.ts";
 import { normalizeJoinType } from "../src/edsl/query/utils.ts";
-import { suggestCanonicalBuiltin } from "../src/edsl/sql/dialect/lookup.ts";
+import { suggestCanonicalBuiltin } from "@teta/sql";
 
 describe("query helpers", () => {
   test("normalizes supported join types", () => {

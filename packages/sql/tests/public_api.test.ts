@@ -52,10 +52,10 @@ describe("sql backend public api", () => {
         : []),
     ];
     const forbiddenImports = [
-      "@teta/teta",
-      "../teta",
-      "../../teta",
-      "packages/teta",
+      `@teta/${"teta"}`,
+      `../${"teta"}`,
+      `../../${"teta"}`,
+      `packages/${"teta"}`,
     ];
 
     for (const path of sourcePaths) {

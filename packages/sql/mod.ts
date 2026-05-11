@@ -3,31 +3,25 @@ export * from "./src/ir/types.ts";
 export * from "./src/ir/utils.ts";
 export { validateQueryIR } from "./src/ir/validate.ts";
 export * as ir from "./src/ir/builders.ts";
-
-function backendNotMigrated(name: string): never {
-  throw new Error(`${name} is not migrated yet`);
-}
-
-export function irToAst(): never {
-  backendNotMigrated("irToAst");
-}
-
-export function irToSql(): never {
-  backendNotMigrated("irToSql");
-}
-
-export function irToSqlResult(): never {
-  backendNotMigrated("irToSqlResult");
-}
-
-export function exprToSql(): never {
-  backendNotMigrated("exprToSql");
-}
-
-export function exprToSqlResult(): never {
-  backendNotMigrated("exprToSqlResult");
-}
-
-export function explainIR(): never {
-  backendNotMigrated("explainIR");
-}
+export * from "./src/types.ts";
+export * from "./src/dialect.ts";
+export * from "./src/language.ts";
+export {
+  exprToSql,
+  exprToSqlResult,
+  explainIR,
+  irToAst,
+  irToSql,
+  irToSqlResult,
+} from "./src/renderer.ts";
+export type {
+  ExprSqlTarget,
+  QueryIRSqlTarget,
+} from "./src/renderer_types.ts";
+export {
+  buildRecursiveCte,
+  createDeferredRecursiveCte,
+  renderPipelineAst,
+} from "./src/render/pipeline.ts";
+export { applyDialectFixes } from "./src/render/fixes.ts";
+export { formatSqlPretty, stripRedundantQuotes } from "./src/render/format.ts";

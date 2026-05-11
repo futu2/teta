@@ -1,20 +1,7 @@
-import type { ExprNode } from "../core/types.ts";
-import type { QueryDialect } from "./types.ts";
-import { rewriteDialectExpr, validateDialectExpr } from "./language/rewrite.ts";
-
 export {
   LANGUAGE_SPEC,
+  applyDialectLanguage,
   getLanguageSpec,
-  type LanguageCategory,
-} from "./language/spec.ts";
-
-export { resolveDialectLanguage } from "./language/config.ts";
-
-export function applyDialectLanguage(
-  expr: ExprNode<any>,
-  dialect: QueryDialect
-): ExprNode<any> {
-  const normalized = rewriteDialectExpr(expr, dialect.language);
-  validateDialectExpr(normalized, dialect.language);
-  return normalized;
-}
+  resolveDialectLanguage,
+} from "@teta/sql";
+export type { LanguageCategory } from "@teta/sql";
