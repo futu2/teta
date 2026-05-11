@@ -1,12 +1,11 @@
+export * from "./src/errors.ts";
+export * from "./src/ir/types.ts";
+export { validateQueryIR } from "./src/ir/validate.ts";
+export * as ir from "./src/ir/builders.ts";
+
 function backendNotMigrated(name: string): never {
   throw new Error(`${name} is not migrated yet`);
 }
-
-export const ir = {
-  validateQueryIR: (_value: unknown): never => {
-    backendNotMigrated("validateQueryIR");
-  },
-};
 
 export function irToAst(): never {
   backendNotMigrated("irToAst");

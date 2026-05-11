@@ -24,6 +24,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@teta/sql": "workspace:*",
     "node-sql-parser": "^5.4.0",
     "remeda": "^2.33.6"
   }

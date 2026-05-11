@@ -6,7 +6,7 @@
 import * as query from "./src/edsl/query.ts";
 import * as expr from "./src/edsl/expr.ts";
 import * as language from "./src/edsl/sql/language.ts";
-import * as errors from "./src/edsl/errors.ts";
+import * as sql from "@teta/sql";
 
 /** Query builder class returned by query roots and stage helpers. */
 export const Query: typeof import("./src/edsl/query.ts").Query = query.Query;
@@ -560,22 +560,22 @@ export type IdentifierInput = import("./src/edsl/types.ts").IdentifierInput;
 export type SqlIdentifier = import("./src/edsl/types.ts").SqlIdentifier;
 
 /** Base class for public Teta errors. */
-export const TetaError: typeof import("./src/edsl/errors.ts").TetaError = errors.TetaError;
-export type TetaError = import("./src/edsl/errors.ts").TetaError;
+export const TetaError: typeof import("@teta/sql").TetaError = sql.TetaError;
+export type TetaError = import("@teta/sql").TetaError;
 
 /** Error raised when Teta detects an internal compiler failure. */
-export const TetaInternalError: typeof import("./src/edsl/errors.ts").TetaInternalError = errors.TetaInternalError;
-export type TetaInternalError = import("./src/edsl/errors.ts").TetaInternalError;
+export const TetaInternalError: typeof import("@teta/sql").TetaInternalError = sql.TetaInternalError;
+export type TetaInternalError = import("@teta/sql").TetaInternalError;
 
 /** Error raised for invalid user input or unsupported queries. */
-export const TetaUserError: typeof import("./src/edsl/errors.ts").TetaUserError = errors.TetaUserError;
-export type TetaUserError = import("./src/edsl/errors.ts").TetaUserError;
+export const TetaUserError: typeof import("@teta/sql").TetaUserError = sql.TetaUserError;
+export type TetaUserError = import("@teta/sql").TetaUserError;
 
 /** Checks whether a value is one of Teta's public error types. */
-export const isTetaError: typeof import("./src/edsl/errors.ts").isTetaError = errors.isTetaError;
+export const isTetaError: typeof import("@teta/sql").isTetaError = sql.isTetaError;
 
 /** String code identifying a specific Teta error condition. */
-export type TetaErrorCode = import("./src/edsl/errors.ts").TetaErrorCode;
+export type TetaErrorCode = import("@teta/sql").TetaErrorCode;
 
 /** High-level category assigned to a Teta error. */
-export type TetaErrorKind = import("./src/edsl/errors.ts").TetaErrorKind;
+export type TetaErrorKind = import("@teta/sql").TetaErrorKind;
