@@ -21,6 +21,12 @@ describe("sql backend public api", () => {
     expect(typeof sql.ir.validateQueryIR).toBe("function");
   });
 
+  test("temporary validateQueryIR placeholder throws for objects", () => {
+    expect(() => sql.ir.validateQueryIR({})).toThrow(
+      "validateQueryIR is not migrated yet",
+    );
+  });
+
   test("public backend entrypoint does not import the frontend package", () => {
     const source = readFileSync(MOD_PATH, "utf8");
     expect(source.includes("@teta/teta")).toBe(false);

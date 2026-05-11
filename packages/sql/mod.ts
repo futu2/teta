@@ -3,10 +3,8 @@ function backendNotMigrated(name: string): never {
 }
 
 export const ir = {
-  validateQueryIR: (value: unknown): void => {
-    if (typeof value !== "object" || value === null) {
-      backendNotMigrated("validateQueryIR");
-    }
+  validateQueryIR: (_value: unknown): never => {
+    backendNotMigrated("validateQueryIR");
   },
 };
 
