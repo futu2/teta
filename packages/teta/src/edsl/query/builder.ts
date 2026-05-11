@@ -1039,6 +1039,8 @@ function assertNotDataFirstJoinInvocation(
     curriedOnlyError(helper, usage);
   }
 
+  if (args.length < 3) return;
+
   if (typeof second === "function") {
     try {
       const probed = (second as (outer: ColumnRefs<QueryColumns>) => unknown)(

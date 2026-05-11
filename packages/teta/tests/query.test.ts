@@ -73,7 +73,24 @@ describe("toSql(query, options)", () => {
         expect(sql).toContain("JOIN LATERAL (");
         expect(sql).toContain("WHERE orders_0.user_id = users_0.id");
     });
-    test("keeps function-right 3-arg joins as lateral data-first joins", () => {
+    test("does not invoke built-query join predicates before applying the query step", () => {
+        const users = table("users", {
+            id: t.int(),
+        });
+        const orders = table("orders", {
+            user_id: t.int(),
+        });
+        let predicateCalls = 0;
+        const step = join(orders, () => {
+            predicateCalls += 1;
+            return lit(true);
+        });
+        expect(predicateCalls).toBe(0);
+        const query = pipe(users, step);
+        expect(predicateCalls).toBe(1);
+        expect(toSql(query, { dialect: "postgresql", format: "compact" })).toContain("INNER JOIN orders AS");
+    });
+    test("keeps function-right curried joins as lateral joins", () => {
         const users = table("users", {
             id: t.int(),
             name: t.string(),
