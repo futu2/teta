@@ -6,6 +6,9 @@
   "exports": {
     ".": "./mod.ts"
   },
+  "imports": {
+    "@teta/sql": "jsr:@teta/sql@^0.1.0"
+  },
   "compatibility": {
     "deno": true,
     "node": true,

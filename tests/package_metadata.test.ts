@@ -58,3 +58,15 @@ test("package metadata stays in sync across publish manifests", () => {
   expect(devPackage.version).toEqual(devDeno.version);
   expect(devPackage.exports["."]).toEqual(devDeno.exports);
 });
+
+test("teta jsr manifest maps workspace dependencies to jsr packages", () => {
+  const tetaPackage = readJson<{
+    dependencies?: Record<string, string>;
+  }>("packages/teta/package.json");
+  const tetaJsr = readJson<{
+    imports?: Record<string, string>;
+  }>("packages/teta/jsr.json");
+
+  expect(tetaPackage.dependencies?.["@teta/sql"]).toEqual("workspace:*");
+  expect(tetaJsr.imports?.["@teta/sql"]).toEqual("jsr:@teta/sql@^0.1.0");
+});
