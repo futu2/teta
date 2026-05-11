@@ -54,4 +54,31 @@ describe("sql backend renderer", () => {
       params: [],
     });
   });
+
+  test("renders query IR with physical column identifiers", () => {
+    const userIdIR = {
+      source: {
+        db: null,
+        schema: null,
+        table: { name: "users", quoted: false },
+        as: null,
+      },
+      stages: [],
+      scopeId: "__teta_scope_user" as QueryIR["scopeId"],
+      columnNames: ["userId"],
+      columnIdentifiers: {
+        userId: { name: "user_id", quoted: false },
+      },
+      withs: [],
+    } satisfies QueryIR & {
+      columnNames: readonly string[];
+      columnIdentifiers: Record<string, { name: string; quoted: boolean }>;
+      withs: [];
+    };
+
+    ir.validateQueryIR(userIdIR);
+    expect(irToSql(userIdIR, { dialect: "postgresql", format: "compact" })).toBe(
+      "SELECT users_0.user_id FROM users AS users_0"
+    );
+  });
 });

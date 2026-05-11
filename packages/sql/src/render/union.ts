@@ -51,6 +51,7 @@ export function compileUnionStage(
     stage.right.scopeId,
     {
       ctePrefix: rightPrefix,
+      columnIdentifiers: stage.right.columnIdentifiers,
       scopeBindings: inheritedBindings,
       dialect,
     }

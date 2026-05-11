@@ -42,7 +42,8 @@ export function registerColumnIdentifierBinding(
   dialect: QueryDialect,
   renderContext: SqlRenderContext | null
 ): void {
-  if (!tableAlias || !bindingName || !identifier.quoted || !renderContext) return;
+  if (!tableAlias || !bindingName || !renderContext) return;
+  if (!identifier.quoted && identifier.name === bindingName) return;
   const rendered = renderIdentifier(identifier, dialect, renderContext);
   if (!rendered) return;
   renderContext.columnIdentifierBindings[`${tableAlias}.${bindingName}`] = rendered;

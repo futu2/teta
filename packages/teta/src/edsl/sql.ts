@@ -1,13 +1,18 @@
 import {
+  columnNamesToIdentifierMap,
   exprToSql,
   exprToSqlResult,
   irToSql,
   irToSqlResult,
+  type CteSpec,
   type ExprSqlTarget,
   type QueryIRSqlTarget,
   type ScopeId,
+  type Source,
   type SqlOptions,
+  type SqlIdentifier,
   type SqlResult,
+  type Stage,
 } from "@teta/sql";
 
 export * from "@teta/sql";
@@ -18,8 +23,14 @@ export {
 
 export type SqlCompilable = QuerySqlTarget | ExprSqlTarget;
 
-export type QuerySqlTarget = QueryIRSqlTarget & {
+export type QuerySqlTarget = {
+  source: Source;
+  stages: Stage[];
+  columnNames: readonly string[];
   sourceScopeId?: ScopeId;
+  scopeId?: ScopeId;
+  withs?: CteSpec[];
+  columnIdentifiers?: Readonly<Record<string, SqlIdentifier>>;
 };
 
 export function renderSql<TTarget extends SqlCompilable>(
@@ -58,5 +69,6 @@ function toBackendTarget(target: QuerySqlTarget): QueryIRSqlTarget {
   return {
     ...target,
     scopeId,
+    columnIdentifiers: target.columnIdentifiers ?? columnNamesToIdentifierMap(target.columnNames),
   };
 }

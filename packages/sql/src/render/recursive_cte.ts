@@ -45,6 +45,7 @@ export function materializeCte(cte: CteSpec, dialect: QueryDialect): With {
         cte.query.scopeId,
         {
           ctePrefix: `${renderedName}_`,
+          columnIdentifiers: cte.query.columnIdentifiers,
           dialect,
         }
       );

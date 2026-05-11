@@ -55,6 +55,7 @@ export function compileJoinSource(
     source.query.scopeId,
     {
       ctePrefix,
+      columnIdentifiers: source.query.columnIdentifiers,
       scopeBindings: source.inheritedBindings ?? undefined,
       dialect,
       allowJoinSubqueryHoist,

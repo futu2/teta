@@ -20,6 +20,7 @@ export function renderQueryIRTarget(
     applyDialectFixes(
       renderPipelineAst(target.source, target.stages, target.columnNames, target.scopeId, {
         baseCtes: target.withs ?? [],
+        columnIdentifiers: target.columnIdentifiers,
         dialect: state.dialect,
         renderStrategy: state.renderStrategy,
       }),

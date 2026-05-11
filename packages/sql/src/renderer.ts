@@ -65,6 +65,7 @@ export function irToAst(
       target.scopeId,
       {
         baseCtes: target.withs ?? [],
+        columnIdentifiers: target.columnIdentifiers,
         dialect: resolved.dialect,
         renderStrategy: resolved.renderStrategy,
       }

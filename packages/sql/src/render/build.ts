@@ -25,6 +25,7 @@ export type BuildPipelineOptions = {
   renderStrategy?: SqlRenderStrategy;
   allowJoinSubqueryHoist?: boolean;
   allowIntermediateCtes?: boolean;
+  columnIdentifiers?: Readonly<Record<string, SqlIdentifier>>;
 };
 
 export function buildPipelineAst(
@@ -40,7 +41,7 @@ export function buildPipelineAst(
   const renderStrategy = options?.renderStrategy ?? "optimized";
   const allowJoinSubqueryHoist = options?.allowJoinSubqueryHoist ?? true;
   const allowIntermediateCtes = options?.allowIntermediateCtes ?? true;
-  const columnIdentifiers = columnNamesToIdentifierMap(columnNames);
+  const columnIdentifiers = options?.columnIdentifiers ?? columnNamesToIdentifierMap(columnNames);
   const baseSource = compileSourceRef(source, columnIdentifiers, dialect);
 
   if (stages.length === 0) {

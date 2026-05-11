@@ -1,5 +1,5 @@
 import type { AST } from "node-sql-parser";
-import type { CteSpec, ScopeId, Source, Stage } from "../ir/types.ts";
+import type { CteSpec, ScopeId, Source, SqlIdentifier, Stage } from "../ir/types.ts";
 import type { QueryDialect, SqlRenderStrategy } from "../types.ts";
 import type { ScopeBindings } from "./types.ts";
 import { buildPipelineAst } from "./build.ts";
@@ -16,6 +16,7 @@ export type RenderPipelineOptions = {
   scopeBindings?: ScopeBindings;
   dialect?: QueryDialect;
   renderStrategy?: SqlRenderStrategy;
+  columnIdentifiers?: Readonly<Record<string, SqlIdentifier>>;
 };
 
 export function renderPipelineAst(
