@@ -80,6 +80,20 @@ test("ci workflow checks and validates the sql package", () => {
   expect(ci).toContain("Validate @teta/sql publish bundle");
 });
 
+test("node runtime smoke avoids unstable native TypeScript flags", () => {
+  const tetaPackage = readJson<{
+    devDependencies?: Record<string, string>;
+    scripts?: Record<string, string>;
+  }>("packages/teta/package.json");
+  const ci = readFileSync(new URL("../.github/workflows/ci.yaml", import.meta.url), "utf8");
+
+  expect(tetaPackage.devDependencies?.tsx).toBeDefined();
+  expect(tetaPackage.scripts?.["test:runtime:node"]).toEqual("tsx tests/runtime_smoke.ts");
+  expect(tetaPackage.scripts?.["test:runtime:node"]).not.toContain("--experimental-transform-types");
+  expect(ci).toContain("node-version: lts/*");
+  expect(ci).not.toContain("node-version: current");
+});
+
 test("publish workflow detects and publishes the sql package before teta", () => {
   const publish = readFileSync(new URL("../.github/workflows/publish.yaml", import.meta.url), "utf8");
 

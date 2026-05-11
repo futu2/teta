@@ -43,7 +43,7 @@ jobs:
       - if: matrix.runtime == 'node'
         uses: actions/setup-node@v4
         with:
-          node-version: current
+          node-version: lts/*
       - if: matrix.runtime == 'deno'
         uses: denoland/setup-deno@v2
         with:

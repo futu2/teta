@@ -11,7 +11,7 @@
     "test": "bun test tests",
     "test:all": "bun test",
     "test:runtime:bun": "bun run tests/runtime_smoke.ts",
-    "test:runtime:node": "node --experimental-transform-types tests/runtime_smoke.ts",
+    "test:runtime:node": "tsx tests/runtime_smoke.ts",
     "test:runtime:deno": "deno run --node-modules-dir=auto tests/runtime_smoke.ts",
     "bench:render": "bun run ../../benchmarks/render.ts",
     "bench:render:check": "bun run ../../benchmarks/render_regression.ts",
@@ -21,6 +21,7 @@
   "devDependencies": {
     "@duckdb/node-api": "^1.4.4-r.3",
     "@types/bun": "latest",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   },
   "dependencies": {
