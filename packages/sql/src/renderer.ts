@@ -13,7 +13,16 @@ import type {
   QueryIRSqlTarget,
   RendererState,
 } from "./renderer_types.ts";
-import type { SqlOptions, SqlResult } from "./types.ts";
+import type {
+  QueryDialect,
+  SqlFormat,
+  SqlOptions,
+  SqlParameterMode,
+  SqlParameterPrefix,
+  SqlRenderStrategy,
+  SqlResult,
+} from "./types.ts";
+import type { CteSpec, Stage } from "./ir/types.ts";
 
 const { Parser } = nodeSqlParser;
 
@@ -21,6 +30,21 @@ export type {
   ExprSqlTarget,
   QueryIRSqlTarget,
 } from "./renderer_types.ts";
+
+export type ExplainIRResult = {
+  ir: QueryIRSqlTarget;
+  ast: AST;
+  sql: string;
+  params: SqlResult["params"];
+  columnNames: readonly string[];
+  stages: Array<{ index: number; kind: Stage["kind"] }>;
+  ctes: Array<{ name: string; kind: CteSpec["kind"] }>;
+  dialect: QueryDialect;
+  format: SqlFormat;
+  renderStrategy: SqlRenderStrategy;
+  parameterMode: SqlParameterMode;
+  parameterPrefix: SqlParameterPrefix;
+};
 
 export function irToSqlResult<TResult extends SqlResult = SqlResult>(
   target: QueryIRSqlTarget,
@@ -77,7 +101,7 @@ export function irToAst(
 export function explainIR(
   target: QueryIRSqlTarget,
   options: SqlOptions = {}
-) {
+): ExplainIRResult {
   const resolved = buildSqlOptions(options);
   const sqlResult = irToSqlResult(target, options);
   return {

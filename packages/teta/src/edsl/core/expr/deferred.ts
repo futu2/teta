@@ -29,9 +29,9 @@ export type DeferredResolutionScope = {
   right?: DeferredResolutionTarget;
 };
 
-export const $ = createDeferredRowProxy("current");
-export const $left = createDeferredRowProxy("left");
-export const $right = createDeferredRowProxy("right");
+export const $: DeferredRowProxy = createDeferredRowProxy("current");
+export const $left: DeferredRowProxy = createDeferredRowProxy("left");
+export const $right: DeferredRowProxy = createDeferredRowProxy("right");
 
 export function pickCols<const TNames extends readonly [string, ...string[]]>(
   ...names: TNames
