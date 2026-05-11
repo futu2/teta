@@ -57,6 +57,34 @@ describe("sql ir utilities", () => {
     });
   });
 
+  test("preserves caller-supplied quoted table source identifiers", () => {
+    expect(normalizeTableSource({
+      db: { name: "warehouse", quoted: true },
+      schema: { name: "analytics", quoted: true },
+      table: { name: "events", quoted: true },
+      as: { name: "e", quoted: true },
+    })).toEqual({
+      db: { name: "warehouse", quoted: true },
+      schema: { name: "analytics", quoted: true },
+      table: { name: "events", quoted: true },
+      as: { name: "e", quoted: true },
+    });
+
+    expect(normalizeTableSource({
+      path: [
+        { name: "warehouse", quoted: true },
+        { name: "analytics", quoted: true },
+        { name: "events", quoted: true },
+      ],
+      as: { name: "e", quoted: true },
+    })).toEqual({
+      db: { name: "warehouse", quoted: true },
+      schema: { name: "analytics", quoted: true },
+      table: { name: "events", quoted: true },
+      as: { name: "e", quoted: true },
+    });
+  });
+
   test("rejects empty structured source parts", () => {
     expect(() => normalizeTableSource({ table: "   " })).toThrow(
       "table source table must be non-empty"
