@@ -1,5 +1,6 @@
 export * from "./src/errors.ts";
 export * from "./src/ir/types.ts";
+export * from "./src/ir/utils.ts";
 export { validateQueryIR } from "./src/ir/validate.ts";
 export * as ir from "./src/ir/builders.ts";
 
