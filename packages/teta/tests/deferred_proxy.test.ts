@@ -10,6 +10,7 @@ import {
   and,
   asc,
   coalesce,
+  col,
   count,
   desc,
   eq,
@@ -18,10 +19,12 @@ import {
   group,
   gte,
   leftJoin,
+  leftCol,
   join,
   map,
   pickCols,
   replace,
+  rightCol,
   sort,
   sum,
   t,
@@ -93,6 +96,36 @@ describe("deferred row proxy api", () => {
     );
   });
 
+  test("matches callback SQL for typed col filter, map, sort, and take", () => {
+    const users = createUsersPipelineTable();
+    const expected = pipe(
+      users,
+      filter((user) => and(eq(user.active, true), gte(user.age, 18))),
+      map((user) => ({
+        id: user.id,
+        name: coalesce(replace(user.name, " ", "_"), "unknown"),
+        age: user.age,
+      })),
+      sort((row) => [asc(row.name), desc(row.id)]),
+      take(20)
+    );
+    const actual = pipe(
+      users,
+      filter(and(eq(col("active"), true), gte(col("age"), 18))),
+      map({
+        id: col("id"),
+        name: coalesce(replace(col("name"), " ", "_"), "unknown"),
+        age: col("age"),
+      }),
+      sort([asc(col("name")), desc(col("id"))]),
+      take(20)
+    );
+
+    expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
+      toSql(expected, { dialect: "postgresql", format: "compact" })
+    );
+  });
+
   test("supports pickCols for same-name projection", () => {
     const users = createUsersTable();
     const expected = pipe(users, map((user) => ({ id: user.id, name: user.name })));
@@ -121,6 +154,24 @@ describe("deferred row proxy api", () => {
     );
   });
 
+  test("matches callback SQL for typed col fold aggregations", () => {
+    const orders = createOrdersTable();
+    const expected = pipe(orders, fold((order) => ({
+      user_id: group(order.user_id),
+      order_count: count(order.order_id),
+      total_spend: sum(order.total),
+    })));
+    const actual = pipe(orders, fold({
+      user_id: group(col("user_id")),
+      order_count: count(col("order_id")),
+      total_spend: sum(col("total")),
+    }));
+
+    expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
+      toSql(expected, { dialect: "postgresql", format: "compact" })
+    );
+  });
+
   test("matches callback SQL for unnest", () => {
     const sessions = table("sessions", {
       id: t.int(),
@@ -128,6 +179,19 @@ describe("deferred row proxy api", () => {
     });
     const expected = unnest(sessions, (session) => session.tags, { value: "tag" });
     const actual = unnest(sessions, $.tags, { value: "tag" });
+
+    expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
+      toSql(expected, { dialect: "postgresql", format: "compact" })
+    );
+  });
+
+  test("matches callback SQL for typed col unnest", () => {
+    const sessions = table("sessions", {
+      id: t.int(),
+      tags: t.array(t.string()),
+    });
+    const expected = unnest(sessions, (session) => session.tags, { value: "tag" });
+    const actual = unnest(sessions, col("tags"), { value: "tag" });
 
     expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
       toSql(expected, { dialect: "postgresql", format: "compact" })
@@ -187,6 +251,37 @@ describe("deferred row proxy api", () => {
         {
           user_id: $left.id,
           order_total: $right.total,
+        }
+      )
+    );
+
+    expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
+      toSql(expected, { dialect: "postgresql", format: "compact" })
+    );
+  });
+
+  test("matches callback SQL for typed join column refs", () => {
+    const users = createUsersTable();
+    const orders = createOrdersTable();
+    const expected = pipe(
+      users,
+      leftJoin(
+        orders,
+        (user, order) => eq(user.id, order.user_id),
+        (user, order) => ({
+          user_id: user.id,
+          order_total: order.total,
+        })
+      )
+    );
+    const actual = pipe(
+      users,
+      leftJoin(
+        orders,
+        eq(leftCol("id"), rightCol("user_id")),
+        {
+          user_id: leftCol("id"),
+          order_total: rightCol("total"),
         }
       )
     );

@@ -5,12 +5,17 @@ import type {
   OrderItem,
 } from "../types.ts";
 import { userError } from "../../errors.ts";
-import { ColumnRef, ExprRef, type ColumnRefs } from "./runtime.ts";
+import { ColumnRef, ExprRef, type ColumnRefs, type DeferredExprDepScope } from "./runtime.ts";
 import type { ProjectionShape, ProjectionValue } from "./projection_types.ts";
 
-type DeferredRowProxy = {
-  readonly [K in string]: ExprRef<any>;
+type DeferredColumnDeps<
+  TScope extends DeferredExprDepScope,
+  TName extends string,
+> = {
+  [K in TScope]: Record<TName, unknown>;
 };
+
+type DeferredRowProxy = any;
 
 type DeferredResolutionTarget = {
   label: string;
@@ -32,6 +37,24 @@ export type DeferredResolutionScope = {
 export const $: DeferredRowProxy = createDeferredRowProxy("current");
 export const $left: DeferredRowProxy = createDeferredRowProxy("left");
 export const $right: DeferredRowProxy = createDeferredRowProxy("right");
+
+export function col<const TName extends string>(
+  name: TName
+): ExprRef<never, DeferredColumnDeps<"current", TName>> {
+  return deferredColumn("current", name) as ExprRef<never, DeferredColumnDeps<"current", TName>>;
+}
+
+export function leftCol<const TName extends string>(
+  name: TName
+): ExprRef<never, DeferredColumnDeps<"left", TName>> {
+  return deferredColumn("left", name) as ExprRef<never, DeferredColumnDeps<"left", TName>>;
+}
+
+export function rightCol<const TName extends string>(
+  name: TName
+): ExprRef<never, DeferredColumnDeps<"right", TName>> {
+  return deferredColumn("right", name) as ExprRef<never, DeferredColumnDeps<"right", TName>>;
+}
 
 export function pickCols<const TNames extends readonly [string, ...string[]]>(
   ...names: TNames
@@ -121,8 +144,11 @@ function createDeferredRowProxy(scope: DeferredColumnScope): DeferredRowProxy {
   ) as DeferredRowProxy;
 }
 
-function deferredColumn(scope: DeferredColumnScope, name: string): ExprRef<any> {
-  return new ExprRef<any>({
+function deferredColumn<TScope extends DeferredColumnScope, TName extends string>(
+  scope: TScope,
+  name: TName
+): ExprRef<any, DeferredColumnDeps<TScope, TName>> {
+  return new ExprRef<any, DeferredColumnDeps<TScope, TName>>({
     kind: "deferred_column",
     scope,
     name,

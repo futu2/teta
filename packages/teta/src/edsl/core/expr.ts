@@ -21,8 +21,15 @@ export {
   toExprNodeList,
   toOrderItems,
   type ColumnRefs,
+  type DeferredOrderItem,
+  type DeferredExprDeps,
+  type DeferredExprDepsForArgs,
+  type DeferredExprDepsOf,
+  type DeferredExprDepScope,
+  type EmptyDeferredExprDeps,
   type ExprInput,
   type ExprInputTuple,
+  type ExprInputValue,
   type ExprRefs,
   type NonNull,
   type PropagateNull,
@@ -30,6 +37,7 @@ export {
   type ProjectionSelection,
   type ProjectionShape,
   type ProjectionValue,
+  type ProjectionValueResult,
   type WindowSpecInput,
 } from "./expr/core.ts";
 export { createColumnRefs, mergeColumnRefs, mergeColumnNames, projectAllItems } from "./expr/columns.ts";

@@ -5,7 +5,9 @@ import {
   over,
   toExprNode,
   windowExpr,
+  type DeferredExprDepsForArgs,
   type ExprInput,
+  type ExprInputValue,
   type PropagateNull,
   type WindowBuilder,
   type WindowSpecInput,
@@ -13,32 +15,49 @@ import {
 
 type NullableSqlNumber = SqlNumber | null;
 
-export function group<T>(value: ExprInput<T>): ExprRef<T> {
-  return new ExprRef<T>({ kind: "group", expr: toExprNode(value) as any });
+export function group<TInput extends ExprInput<unknown>>(
+  value: TInput
+): ExprRef<ExprInputValue<TInput>, DeferredExprDepsForArgs<[TInput]>> {
+  return new ExprRef<ExprInputValue<TInput>, DeferredExprDepsForArgs<[TInput]>>({
+    kind: "group",
+    expr: toExprNode(value as ExprInput<unknown>) as any,
+  });
 }
 
-export function count(value: ExprInput<unknown>): ExprRef<SqlInt> {
-  return aggregateExpr<SqlInt>("COUNT", value);
+export function count<TInput extends ExprInput<unknown>>(
+  value: TInput
+): ExprRef<SqlInt, DeferredExprDepsForArgs<[TInput]>> {
+  return aggregateExpr<SqlInt, TInput>("COUNT", value);
 }
 
-export function sum<TValue extends NullableSqlNumber>(value: ExprInput<TValue>): ExprRef<TValue> {
-  return aggregateExpr<TValue>("SUM", value);
+export function sum<TInput extends ExprInput<NullableSqlNumber>>(
+  value: TInput
+): ExprRef<ExprInputValue<TInput>, DeferredExprDepsForArgs<[TInput]>> {
+  return aggregateExpr<ExprInputValue<TInput>, TInput>("SUM", value);
 }
 
-export function avg<TValue extends NullableSqlNumber>(value: ExprInput<TValue>): ExprRef<PropagateNull<TValue, SqlFloat>> {
-  return aggregateExpr<PropagateNull<TValue, SqlFloat>>("AVG", value);
+export function avg<TInput extends ExprInput<NullableSqlNumber>>(
+  value: TInput
+): ExprRef<PropagateNull<ExprInputValue<TInput>, SqlFloat>, DeferredExprDepsForArgs<[TInput]>> {
+  return aggregateExpr<PropagateNull<ExprInputValue<TInput>, SqlFloat>, TInput>("AVG", value);
 }
 
-export function min<T>(value: ExprInput<T>): ExprRef<T> {
-  return aggregateExpr<T>("MIN", value);
+export function min<TInput extends ExprInput<unknown>>(
+  value: TInput
+): ExprRef<ExprInputValue<TInput>, DeferredExprDepsForArgs<[TInput]>> {
+  return aggregateExpr<ExprInputValue<TInput>, TInput>("MIN", value);
 }
 
-export function max<T>(value: ExprInput<T>): ExprRef<T> {
-  return aggregateExpr<T>("MAX", value);
+export function max<TInput extends ExprInput<unknown>>(
+  value: TInput
+): ExprRef<ExprInputValue<TInput>, DeferredExprDepsForArgs<[TInput]>> {
+  return aggregateExpr<ExprInputValue<TInput>, TInput>("MAX", value);
 }
 
-export function arrayAgg<T>(value: ExprInput<T>): ExprRef<T[]> {
-  return aggregateExpr<T[]>("ARRAY_AGG", value);
+export function arrayAgg<TInput extends ExprInput<unknown>>(
+  value: TInput
+): ExprRef<ExprInputValue<TInput>[], DeferredExprDepsForArgs<[TInput]>> {
+  return aggregateExpr<ExprInputValue<TInput>[], TInput>("ARRAY_AGG", value);
 }
 
 export function rank(_value?: ExprInput<unknown>): WindowBuilder<SqlInt> {

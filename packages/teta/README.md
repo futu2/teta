@@ -58,21 +58,21 @@ const direct = toSql(activeUsers, { dialect: "postgresql" });
 const explicit = irToSql(toIR(activeUsers), { dialect: "postgresql" });
 ```
 
-The callback form gives the strongest autocomplete and compile-time column checks. For compact query code, Teta also exports deferred row proxies:
+The callback form gives the strongest autocomplete and compile-time column checks. For compact query code, Teta also exports typed deferred column refs:
 
 ```ts
 import { pipe } from "remeda";
-import { $, and, asc, eq, filter, gte, map, pickCols, sort } from "@teta/teta";
+import { and, asc, col, eq, filter, gte, map, pickCols, sort } from "@teta/teta";
 
 const activeUsers = pipe(
   users,
-  filter(and(eq($.active, true), gte($.age, 18))),
+  filter(and(eq(col("active"), true), gte(col("age"), 18))),
   map(pickCols("id", "email")),
-  sort(asc($.email))
+  sort(asc(col("email")))
 );
 ```
 
-Use callback selectors when you want `row.` autocomplete and immediate TypeScript errors for unknown columns. Use `$` when you prefer the shortest expression form and are comfortable with unknown columns being reported when the query helper resolves the expression.
+Use `col("name")`, `leftCol("name")`, and `rightCol("name")` for no-callback column refs that can be checked by TypeScript in query context. `$`, `$left`, and `$right` remain available as runtime-checked shorthand.
 
 More docs:
 

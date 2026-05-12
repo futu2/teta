@@ -1,6 +1,6 @@
 import { mapKeys, omit, pick, pipe } from "remeda";
 import type { ExprRef, SqlBigInt, SqlBytes, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlTimestamp, SqlUuid, } from "../mod.ts";
-import { filter, fullJoin, innerJoin, join, leftJoin, rightJoin, take, sort, param, map, table, t, fold, asc, desc, eq, gt, upper, add, coalesce, count, group, loop, sum, and, sub, caseWhen, when, mapShape, groupShape, lt, unnest, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, toString, toTimestamp, $, $left, $right, pickCols } from "../mod.ts";
+import { filter, fullJoin, innerJoin, join, leftJoin, rightJoin, take, sort, param, map, table, t, fold, asc, desc, eq, gt, upper, add, coalesce, count, group, loop, sum, and, sub, caseWhen, when, mapShape, groupShape, lt, unnest, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, toString, toTimestamp, $, $left, $right, col, leftCol, rightCol, pickCols } from "../mod.ts";
 type Equal<A, B> = ((<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false);
 type Expect<T extends true> = T;
 type ExprType<TExpr> = TExpr extends ExprRef<infer TValue> ? TValue : never;
@@ -118,6 +118,14 @@ const mappedJoin = pipe(users, leftJoin(
     mappedProfileOnEq,
     prefixOverlapLeft("left_")
 ));
+const colMappedJoin = pipe(users, leftJoin(
+    orders,
+    eq(leftCol("id"), rightCol("user_id")),
+    {
+        user_id: leftCol("id"),
+        total: rightCol("total"),
+    }
+));
 const filteredUsers = pipe(users, filter((user: typeof users.columns) => gt(user.id, 0)));
 const projectedUsers = pipe(filteredUsers, map((user: typeof filteredUsers.columns) => ({
     id: user.id,
@@ -127,7 +135,18 @@ const projectedUsersDeferred = pipe(filteredUsers, map({
     id: $.id,
     name: upper($.name),
 }));
+const projectedUsersCol = pipe(filteredUsers, map({
+    id: col("id"),
+    name: upper(col("name")),
+}));
 const pickedUsers = pipe(users, map(pickCols("id", "name")));
+const colFilteredUsers = pipe(users, filter(eq(col("id"), 1)));
+const colSortedUsers = pipe(users, sort([asc(col("name")), desc(col("id"))]));
+const colAggregatedOrders = pipe(orders, fold({
+    user_id: group(col("user_id")),
+    total_spend: sum(col("total")),
+}));
+const colExplodedSessions = unnest(sessions, col("tags"), { value: "tag" });
 // @ts-expect-error pickCols rejects unknown columns when applied to a typed query
 const invalidPickedUsers = pipe(users, map(pickCols("missing")));
 const curriedPipeline = pipe(users, filter((user: typeof users.columns) => gt(user.id, 0)), map((user) => ({
@@ -238,6 +257,15 @@ type _LeftViaJoinTotal = Expect<Equal<ExprType<typeof leftViaJoin.columns.total>
 type _ProjectedUsersId = Expect<Equal<ExprType<typeof projectedUsers.columns.id>, SqlInt>>;
 type _ProjectedUsersName = Expect<Equal<ExprType<typeof projectedUsers.columns.name>, string>>;
 type _ProjectedUsersDeferredKeys = Expect<Equal<keyof typeof projectedUsersDeferred.columns, "id" | "name">>;
+type _ProjectedUsersColKeys = Expect<Equal<keyof typeof projectedUsersCol.columns, "id" | "name">>;
+type _ProjectedUsersColId = Expect<Equal<ExprType<typeof projectedUsersCol.columns.id>, SqlInt>>;
+type _ProjectedUsersColName = Expect<Equal<ExprType<typeof projectedUsersCol.columns.name>, string>>;
+type _ColFilteredUsersId = Expect<Equal<ExprType<typeof colFilteredUsers.columns.id>, SqlInt>>;
+type _ColSortedUsersName = Expect<Equal<ExprType<typeof colSortedUsers.columns.name>, string>>;
+type _ColAggregatedOrdersTotalSpend = Expect<Equal<ExprType<typeof colAggregatedOrders.columns.total_spend>, SqlFloat>>;
+type _ColExplodedSessionsTag = Expect<Equal<ExprType<typeof colExplodedSessions.columns.tag>, string>>;
+type _ColMappedJoinUserId = Expect<Equal<ExprType<typeof colMappedJoin.columns.user_id>, SqlInt>>;
+type _ColMappedJoinTotal = Expect<Equal<ExprType<typeof colMappedJoin.columns.total>, SqlFloat | null>>;
 type _PickedUsersId = Expect<Equal<ExprType<typeof pickedUsers.columns.id>, SqlInt>>;
 type _PickedUsersName = Expect<Equal<ExprType<typeof pickedUsers.columns.name>, string>>;
 type _InlineRowsId = Expect<Equal<ExprType<typeof inlineRows.columns.id>, number>>;
@@ -312,6 +340,12 @@ void droppedOverlapLeft;
 void droppedOverlapRight;
 void usingJoin;
 void mappedJoin;
+void projectedUsersCol;
+void colFilteredUsers;
+void colSortedUsers;
+void colAggregatedOrders;
+void colExplodedSessions;
+void colMappedJoin;
 void projectedWithQuotedKey;
 void aggregatedWithQuotedKey;
 void aggregatedTotals;
@@ -365,6 +399,64 @@ pipe(users, leftJoin(
     // @ts-expect-error deferred join merge shapes must only contain expression refs
     { user_id: 1 }
 ));
+// @ts-expect-error col rejects unknown current-row columns in filter context
+pipe(users, filter(
+    eq(col("missing"), 1)
+));
+// @ts-expect-error col rejects unknown current-row columns in map context
+pipe(users, map({
+    missing: col("missing"),
+}));
+// @ts-expect-error col rejects unknown current-row columns in fold context
+pipe(orders, fold({
+    total: sum(col("missing")),
+}));
+// @ts-expect-error col rejects unknown current-row columns in sort context
+pipe(users, sort(
+    asc(col("missing"))
+));
+// @ts-expect-error col rejects unknown current-row columns in unnest context
+unnest(sessions, col("missing"), { value: "tag" });
+// @ts-expect-error leftCol rejects unknown join-left columns
+pipe(users, leftJoin(
+    orders,
+    // @ts-expect-error leftCol rejects unknown join-left columns
+    eq(leftCol("missing"), rightCol("user_id"))
+));
+// @ts-expect-error rightCol rejects unknown join-right columns
+pipe(users, leftJoin(
+    orders,
+    // @ts-expect-error rightCol rejects unknown join-right columns
+    eq(leftCol("id"), rightCol("missing"))
+));
+pipe(users,
+    // @ts-expect-error leftCol rejects unknown join-left columns in merge shapes
+    leftJoin(
+        orders,
+        eq(leftCol("id"), rightCol("user_id")),
+        {
+            user_id: leftCol("missing"),
+        }
+    )
+);
+pipe(users,
+    // @ts-expect-error rightCol rejects unknown join-right columns in merge shapes
+    leftJoin(
+        orders,
+        eq(leftCol("id"), rightCol("user_id")),
+        {
+            total: rightCol("missing"),
+        }
+    )
+);
+// @ts-expect-error col rejects unknown current-row columns when applying filter step directly
+filter(eq(col("missing"), 1))(users);
+// @ts-expect-error col rejects unknown current-row columns when applying sort step directly
+sort(asc(col("missing")))(users);
+// @ts-expect-error leftCol is invalid in current-row filter context
+filter(eq(leftCol("id"), 1))(users);
+// @ts-expect-error col is invalid in join predicate context
+leftJoin(orders, eq(col("id"), rightCol("user_id")))(users);
 // @ts-expect-error toTimestamp should reject arbitrary strings
 toTimestamp(rawTimestampRows.columns.raw_ts);
 const profileRowsWithUserId = values([

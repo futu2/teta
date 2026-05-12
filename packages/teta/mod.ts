@@ -122,7 +122,15 @@ export type QueryStep<TInputColumns extends Record<string, any>, TOutputColumns 
 
 /** Typed SQL expression reference used throughout the query DSL. */
 export const ExprRef: typeof import("./src/edsl/expr.ts").ExprRef = expr.ExprRef;
-export type ExprRef<T> = import("./src/edsl/expr.ts").ExprRef<T>;
+export type ExprRef<
+  T,
+  TDeps extends import("./src/edsl/expr.ts").DeferredExprDeps = import("./src/edsl/expr.ts").EmptyDeferredExprDeps,
+> = import("./src/edsl/expr.ts").ExprRef<T, TDeps>;
+export type DeferredExprDeps = import("./src/edsl/expr.ts").DeferredExprDeps;
+export type DeferredExprDepsForArgs<TItems extends readonly unknown[]> = import("./src/edsl/expr.ts").DeferredExprDepsForArgs<TItems>;
+export type DeferredExprDepsOf<TExpr> = import("./src/edsl/expr.ts").DeferredExprDepsOf<TExpr>;
+export type DeferredExprDepScope = import("./src/edsl/expr.ts").DeferredExprDepScope;
+export type EmptyDeferredExprDeps = import("./src/edsl/expr.ts").EmptyDeferredExprDeps;
 
 /** Builds an equality predicate. */
 export const eq: typeof import("./src/edsl/expr.ts").eq = expr.eq;
@@ -135,6 +143,15 @@ export const $left: typeof import("./src/edsl/expr.ts").$left = expr.$left;
 
 /** Deferred reference to a column on the right side of a join. */
 export const $right: typeof import("./src/edsl/expr.ts").$right = expr.$right;
+
+/** Deferred reference to a named column on the current query row. */
+export const col: typeof import("./src/edsl/expr.ts").col = expr.col;
+
+/** Deferred reference to a named column on the left side of a join. */
+export const leftCol: typeof import("./src/edsl/expr.ts").leftCol = expr.leftCol;
+
+/** Deferred reference to a named column on the right side of a join. */
+export const rightCol: typeof import("./src/edsl/expr.ts").rightCol = expr.rightCol;
 
 /** Builds a same-name projection selector. */
 export const pickCols: typeof import("./src/edsl/expr.ts").pickCols = expr.pickCols;
