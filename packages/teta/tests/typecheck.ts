@@ -1,6 +1,5 @@
-import { mapKeys, omit, pick, pipe } from "remeda";
 import type { ExprRef, SqlBigInt, SqlBytes, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlTimestamp, SqlUuid, } from "../mod.ts";
-import { filter, fullJoin, innerJoin, join, leftJoin, rightJoin, take, sort, param, map, table, t, fold, asc, desc, eq, gt, upper, add, coalesce, count, group, loop, sum, and, sub, caseWhen, when, mapShape, groupShape, lt, unnest, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, toString, toTimestamp, $, $left, $right, col, leftCol, rightCol, pickCols } from "../mod.ts";
+import { filter, fullJoin, innerJoin, join, leftJoin, rightJoin, take, sort, param, map, mapCols, pipe, table, t, fold, asc, desc, eq, gt, upper, add, coalesce, count, group, loop, sum, and, sub, caseWhen, when, mapShape, groupShape, lt, unnest, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, toString, toTimestamp, $, $left, $right, col, leftCol, rightCol, pickCols } from "../mod.ts";
 type Equal<A, B> = ((<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false);
 type Expect<T extends true> = T;
 type ExprType<TExpr> = TExpr extends ExprRef<infer TValue> ? TValue : never;
@@ -157,28 +156,23 @@ const curriedJoin = pipe(users, leftJoin(
     orders,
     (user: typeof users.columns, order: typeof orders.columns) => eq(user.id, order.user_id)
 ));
-const remedaPickedSelection = pipe(users, map(pick<typeof users.columns, ["id"]>(["id"])));
-const remedaOmittedSelection = pipe(users, map((user) => ({
-    ...omit(user, ["name"]),
-    upper_name: upper(user.name),
-})));
-const remedaKeyMappedSelection = pipe(users, map((user) => pipe(
-    user,
-    mapKeys((key) => "prefix1_" + key),
-)));
-const remedaTemplateKeyMappedSelection = pipe(users, map((user) => pipe(
-    user,
-    mapKeys((key) => `prefix1_${key}`),
-)));
-const remedaTemplateKeyMappedUsage = pipe(remedaTemplateKeyMappedSelection, map((user) => ({
+const directPickedSelection = pipe(users, pickCols("id"));
+const selectorPickedSelection = pipe(profiles, map(pickCols("id", "external_id")));
+const directKeyMappedSelection = pipe(users, mapCols((key) => `prefix1_${key}`));
+const selectorKeyMappedSelection = pipe(users, map(mapCols((key) => `prefix2_${key}`)));
+const directKeyMappedUsage = pipe(directKeyMappedSelection, map((user) => ({
     id: user.prefix1_id,
     name: user.prefix1_name,
 })));
-const remedaOmittedAggregate = pipe(orders, fold((order) => omit({
+const selectorKeyMappedUsage = pipe(selectorKeyMappedSelection, map((user) => ({
+    id: user.prefix2_id,
+    name: user.prefix2_name,
+})));
+const manualOmittedAggregate = pipe(orders, fold((order) => ({
     user_id: group(order.user_id),
     order_count: count(order.order_id),
     total_spend: sum(order.total),
-}, ["order_count"])));
+})));
 const leftSelected = pipe(leftJoined, map((row) => ({
     total: coalesce(row.total, 0),
     filtered: gt(row.total, 0),
@@ -272,11 +266,18 @@ type _InlineRowsId = Expect<Equal<ExprType<typeof inlineRows.columns.id>, number
 type _InlineRowsName = Expect<Equal<ExprType<typeof inlineRows.columns.name>, string>>;
 type _ProfileRowsBio = Expect<Equal<ExprType<typeof profileRows.columns.bio>, string>>;
 type _CurriedJoinTotal = Expect<Equal<ExprType<typeof curriedJoin.columns.total>, SqlFloat | null>>;
-type _RemedaPickedId = Expect<Equal<ExprType<typeof remedaPickedSelection.columns.id>, SqlInt>>;
-type _RemedaOmittedId = Expect<Equal<ExprType<typeof remedaOmittedSelection.columns.id>, SqlInt>>;
-type _RemedaOmittedUpperName = Expect<Equal<ExprType<typeof remedaOmittedSelection.columns.upper_name>, string>>;
-type _RemedaOmittedAggregateUserId = Expect<Equal<ExprType<typeof remedaOmittedAggregate.columns.user_id>, SqlInt>>;
-type _RemedaOmittedAggregateTotalSpend = Expect<Equal<ExprType<typeof remedaOmittedAggregate.columns.total_spend>, SqlFloat>>;
+type _DirectPickedKeys = Expect<Equal<keyof typeof directPickedSelection.columns, "id">>;
+type _DirectPickedId = Expect<Equal<ExprType<typeof directPickedSelection.columns.id>, SqlInt>>;
+type _SelectorPickedKeys = Expect<Equal<keyof typeof selectorPickedSelection.columns, "id" | "external_id">>;
+type _SelectorPickedId = Expect<Equal<ExprType<typeof selectorPickedSelection.columns.id>, SqlUuid>>;
+type _SelectorPickedExternalId = Expect<Equal<ExprType<typeof selectorPickedSelection.columns.external_id>, SqlBigInt>>;
+type _DirectKeyMappedId = Expect<Equal<ExprType<typeof directKeyMappedSelection.columns.prefix1_id>, SqlInt>>;
+type _DirectKeyMappedName = Expect<Equal<ExprType<typeof directKeyMappedSelection.columns.prefix1_name>, string>>;
+type _SelectorKeyMappedId = Expect<Equal<ExprType<typeof selectorKeyMappedSelection.columns.prefix2_id>, SqlInt>>;
+type _SelectorKeyMappedName = Expect<Equal<ExprType<typeof selectorKeyMappedSelection.columns.prefix2_name>, string>>;
+type _ManualOmittedAggregateUserId = Expect<Equal<ExprType<typeof manualOmittedAggregate.columns.user_id>, SqlInt>>;
+type _ManualOmittedAggregateOrderCount = Expect<Equal<ExprType<typeof manualOmittedAggregate.columns.order_count>, SqlInt>>;
+type _ManualOmittedAggregateTotalSpend = Expect<Equal<ExprType<typeof manualOmittedAggregate.columns.total_spend>, SqlFloat>>;
 type _LeftJoinCoalescedTotal = Expect<Equal<ExprType<typeof leftJoinTotal>, SqlFloat>>;
 type _LeftJoinCoalescedSub = Expect<Equal<ExprType<typeof leftJoinTotalRemaining>, SqlFloat>>;
 type _RenamedJoinUserId = Expect<Equal<ExprType<typeof renamedJoin.columns.user_id>, SqlInt>>;
@@ -323,12 +324,13 @@ void curriedPipeline;
 void curriedJoin;
 void inlineRows;
 void profileRows;
-void remedaPickedSelection;
-void remedaOmittedSelection;
-void remedaKeyMappedSelection;
-void remedaTemplateKeyMappedSelection;
-void remedaTemplateKeyMappedUsage;
-void remedaOmittedAggregate;
+void directPickedSelection;
+void selectorPickedSelection;
+void directKeyMappedSelection;
+void selectorKeyMappedSelection;
+void directKeyMappedUsage;
+void selectorKeyMappedUsage;
+void manualOmittedAggregate;
 void leftViaJoinSelected;
 void overlapPrefixedLeft;
 void overlapPrefixedRight;
@@ -501,10 +503,10 @@ pipe(orders, fold((order) => [group(order.user_id)]));
 pipe(users, map({ id: undefined }));
 // @ts-expect-error unnest selectors must reject undefined
 unnest(sessions, undefined, { value: "tag" });
-// @ts-expect-error remeda mapKeys with widened string keys should not expose arbitrary renamed column refs
-pipe(remedaKeyMappedSelection, map((user) => ({ broken: user.prefix1_na })));
-// @ts-expect-error template-literal mapKeys should still reject unknown renamed fields
-pipe(remedaTemplateKeyMappedSelection, map((user) => ({ broken: user.prefix1_na })));
+// @ts-expect-error mapCols should reject unknown direct renamed fields
+pipe(directKeyMappedSelection, map((user) => ({ broken: user.prefix1_na })));
+// @ts-expect-error mapCols should reject unknown selector renamed fields
+pipe(selectorKeyMappedSelection, map((user) => ({ broken: user.prefix2_na })));
 // @ts-expect-error map is curried-only
 map(users, (user) => ({ id: user.id }));
 // @ts-expect-error filter is curried-only
