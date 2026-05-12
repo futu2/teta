@@ -1,5 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import { pipe } from "remeda";
 import {
   $,
   $left,
@@ -22,7 +21,9 @@ import {
   leftCol,
   join,
   map,
+  mapCols,
   pickCols,
+  pipe,
   replace,
   rightCol,
   sort,
@@ -130,6 +131,46 @@ describe("deferred row proxy api", () => {
     const users = createUsersTable();
     const expected = pipe(users, map((user) => ({ id: user.id, name: user.name })));
     const actual = pipe(users, map(pickCols("id", "name")));
+
+    expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
+      toSql(expected, { dialect: "postgresql", format: "compact" })
+    );
+  });
+
+  test("supports pickCols as a direct query step", () => {
+    const users = createUsersTable();
+    const expected = pipe(users, map((user) => ({ id: user.id, name: user.name })));
+    const actual = pipe(users, pickCols("id", "name"));
+
+    expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
+      toSql(expected, { dialect: "postgresql", format: "compact" })
+    );
+  });
+
+  test("supports mapCols as a direct query step", () => {
+    const users = createUsersPipelineTable();
+    const expected = pipe(users, map((user) => ({
+      user_id: user.id,
+      user_name: user.name,
+      user_age: user.age,
+      user_active: user.active,
+    })));
+    const actual = pipe(users, mapCols((key) => `user_${key}`));
+
+    expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
+      toSql(expected, { dialect: "postgresql", format: "compact" })
+    );
+  });
+
+  test("supports mapCols as a row selector", () => {
+    const users = createUsersPipelineTable();
+    const expected = pipe(users, map((user) => ({
+      selected_id: user.id,
+      selected_name: user.name,
+      selected_age: user.age,
+      selected_active: user.active,
+    })));
+    const actual = pipe(users, map(mapCols((key) => `selected_${key}`)));
 
     expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
       toSql(expected, { dialect: "postgresql", format: "compact" })
