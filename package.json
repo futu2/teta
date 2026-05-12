@@ -27,7 +27,7 @@
     "bench:render:check": "bun run --cwd packages/teta bench:render:check"
   },
   "devDependencies": {
-    "remeda": "^2.33.6",
+    "remeda": "^2.34.0",
     "typescript": "^5.9.3"
   }
 }
