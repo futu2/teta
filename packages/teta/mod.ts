@@ -5,6 +5,7 @@
  */
 import * as query from "./src/edsl/query.ts";
 import * as expr from "./src/edsl/expr.ts";
+import * as pipeModule from "./src/edsl/pipe.ts";
 import * as language from "./src/edsl/sql/language.ts";
 import * as sql from "@teta/sql";
 
@@ -14,6 +15,9 @@ export type Query<TColumns extends Record<string, any>> = import("./src/edsl/que
 
 /** Explains a query's lowered stages, CTEs, and rendered SQL. */
 export const explain: typeof import("./src/edsl/query.ts").explain = query.explain;
+
+/** Applies unary steps to a value from left to right. */
+export const pipe: typeof import("./src/edsl/pipe.ts").pipe = pipeModule.pipe;
 
 /** Builds an aggregate projection over the current query. */
 export const fold: typeof import("./src/edsl/query.ts").fold = query.fold;
