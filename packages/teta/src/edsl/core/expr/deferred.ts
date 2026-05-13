@@ -5,7 +5,7 @@ import type {
   OrderItem,
 } from "../types.ts";
 import { userError } from "../../errors.ts";
-import { ColumnRef, ExprRef, type ColumnRefs, type DeferredExprDepScope } from "./runtime.ts";
+import { ExprRef, type ColumnRefs, type DeferredExprDepScope } from "./runtime.ts";
 import type { ProjectionShape, ProjectionValue } from "./projection_types.ts";
 
 type DeferredColumnDeps<
@@ -54,29 +54,6 @@ export function rightCol<const TName extends string>(
   name: TName
 ): ExprRef<never, DeferredColumnDeps<"right", TName>> {
   return deferredColumn("right", name) as ExprRef<never, DeferredColumnDeps<"right", TName>>;
-}
-
-export function pickCols<const TNames extends readonly [string, ...string[]]>(
-  ...names: TNames
-): <TColumns extends Record<TNames[number], any>>(
-  cols: ColumnRefs<TColumns>
-) => { [K in TNames[number]]: ColumnRef<TColumns[K], K> } {
-  return function pickSelectedColumns<TColumns extends Record<TNames[number], any>>(
-    cols: ColumnRefs<TColumns>
-  ): { [K in TNames[number]]: ColumnRef<TColumns[K], K> } {
-    const result: Partial<{ [K in TNames[number]]: ColumnRef<TColumns[K], K> }> = {};
-    for (const name of names) {
-      const key = name as TNames[number];
-      if (!(name in cols)) {
-        userError(
-          "DEFERRED_COLUMN_UNKNOWN",
-          `Unknown current row column '${name}'. Available columns: ${Object.keys(cols).join(", ")}`
-        );
-      }
-      result[key] = Reflect.get(cols, name) as ColumnRef<TColumns[typeof key], typeof key>;
-    }
-    return result as { [K in TNames[number]]: ColumnRef<TColumns[K], K> };
-  };
 }
 
 export function resolveDeferredExpr<T>(
