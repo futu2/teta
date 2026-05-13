@@ -1,5 +1,5 @@
 import type { ExprRef, SqlBigInt, SqlBytes, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlTimestamp, SqlUuid, } from "../mod.ts";
-import { filter, fullJoin, innerJoin, join, leftJoin, rightJoin, take, sort, param, map, rename, pipe, table, t, fold, asc, desc, eq, gt, upper, add, coalesce, count, group, loop, sum, and, sub, caseWhen, when, mapShape, groupShape, lt, unnest, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, toString, toTimestamp, $, $left, $right, col, leftCol, rightCol, pick } from "../mod.ts";
+import { filter, fullJoin, innerJoin, join, leftJoin, rightJoin, take, sort, param, map, rename, pipe, table, t, fold, asc, desc, eq, gt, upper, add, coalesce, count, group, loop, sum, and, sub, caseWhen, when, mapShape, groupShape, lt, unnest, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, toString, toTimestamp, $, $left, $right, col, leftCol, rightCol, pick, drop } from "../mod.ts";
 type Equal<A, B> = ((<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false);
 type Expect<T extends true> = T;
 type ExprType<TExpr> = TExpr extends ExprRef<infer TValue> ? TValue : never;
@@ -138,7 +138,7 @@ const projectedUsersCol = pipe(filteredUsers, map({
     id: col("id"),
     name: upper(col("name")),
 }));
-const pickedUsers = pipe(users, map(pick("id", "name")));
+const pickedUsers = pipe(users, pick("id", "name"));
 const colFilteredUsers = pipe(users, filter(eq(col("id"), 1)));
 const colSortedUsers = pipe(users, sort([asc(col("name")), desc(col("id"))]));
 const colAggregatedOrders = pipe(orders, fold({
@@ -147,7 +147,7 @@ const colAggregatedOrders = pipe(orders, fold({
 }));
 const colExplodedSessions = unnest(sessions, col("tags"), { value: "tag" });
 // @ts-expect-error pick rejects unknown columns when applied to a typed query
-const invalidPickedUsers = pipe(users, map(pick("missing")));
+const invalidPickedUsers = pipe(users, pick("missing"));
 const curriedPipeline = pipe(users, filter((user: typeof users.columns) => gt(user.id, 0)), map((user) => ({
     id: user.id,
     name: upper(user.name),
@@ -157,16 +157,15 @@ const curriedJoin = pipe(users, leftJoin(
     (user: typeof users.columns, order: typeof orders.columns) => eq(user.id, order.user_id)
 ));
 const directPickedSelection = pipe(users, pick("id"));
-const selectorPickedSelection = pipe(profiles, map(pick("id", "external_id")));
 const directKeyMappedSelection = pipe(users, rename((key) => `prefix1_${key}`));
-const selectorKeyMappedSelection = pipe(users, map(rename((key) => `prefix2_${key}`)));
+const droppedUsers = pipe(users, drop("name"));
+const directDroppedProfiles = pipe(profiles, drop("avatar", "metadata"));
 const directKeyMappedUsage = pipe(directKeyMappedSelection, map((user) => ({
     id: user.prefix1_id,
     name: user.prefix1_name,
 })));
-const selectorKeyMappedUsage = pipe(selectorKeyMappedSelection, map((user) => ({
-    id: user.prefix2_id,
-    name: user.prefix2_name,
+const droppedUsersUsage = pipe(droppedUsers, map((user) => ({
+    id: user.id,
 })));
 const manualOmittedAggregate = pipe(orders, fold((order) => ({
     user_id: group(order.user_id),
@@ -268,13 +267,14 @@ type _ProfileRowsBio = Expect<Equal<ExprType<typeof profileRows.columns.bio>, st
 type _CurriedJoinTotal = Expect<Equal<ExprType<typeof curriedJoin.columns.total>, SqlFloat | null>>;
 type _DirectPickedKeys = Expect<Equal<keyof typeof directPickedSelection.columns, "id">>;
 type _DirectPickedId = Expect<Equal<ExprType<typeof directPickedSelection.columns.id>, SqlInt>>;
-type _SelectorPickedKeys = Expect<Equal<keyof typeof selectorPickedSelection.columns, "id" | "external_id">>;
-type _SelectorPickedId = Expect<Equal<ExprType<typeof selectorPickedSelection.columns.id>, SqlUuid>>;
-type _SelectorPickedExternalId = Expect<Equal<ExprType<typeof selectorPickedSelection.columns.external_id>, SqlBigInt>>;
+type _DroppedUsersKeys = Expect<Equal<keyof typeof droppedUsers.columns, "id">>;
+type _DroppedUsersId = Expect<Equal<ExprType<typeof droppedUsers.columns.id>, SqlInt>>;
+type _DirectDroppedProfilesKeys = Expect<Equal<keyof typeof directDroppedProfiles.columns, "id" | "external_id" | "credit_limit" | "nickname">>;
+type _DirectDroppedProfilesId = Expect<Equal<ExprType<typeof directDroppedProfiles.columns.id>, SqlUuid>>;
+type _DirectDroppedProfilesExternalId = Expect<Equal<ExprType<typeof directDroppedProfiles.columns.external_id>, SqlBigInt>>;
 type _DirectKeyMappedId = Expect<Equal<ExprType<typeof directKeyMappedSelection.columns.prefix1_id>, SqlInt>>;
 type _DirectKeyMappedName = Expect<Equal<ExprType<typeof directKeyMappedSelection.columns.prefix1_name>, string>>;
-type _SelectorKeyMappedId = Expect<Equal<ExprType<typeof selectorKeyMappedSelection.columns.prefix2_id>, SqlInt>>;
-type _SelectorKeyMappedName = Expect<Equal<ExprType<typeof selectorKeyMappedSelection.columns.prefix2_name>, string>>;
+type _DroppedUsersUsageId = Expect<Equal<ExprType<typeof droppedUsersUsage.columns.id>, SqlInt>>;
 type _ManualOmittedAggregateUserId = Expect<Equal<ExprType<typeof manualOmittedAggregate.columns.user_id>, SqlInt>>;
 type _ManualOmittedAggregateOrderCount = Expect<Equal<ExprType<typeof manualOmittedAggregate.columns.order_count>, SqlInt>>;
 type _ManualOmittedAggregateTotalSpend = Expect<Equal<ExprType<typeof manualOmittedAggregate.columns.total_spend>, SqlFloat>>;
@@ -325,11 +325,11 @@ void curriedJoin;
 void inlineRows;
 void profileRows;
 void directPickedSelection;
-void selectorPickedSelection;
 void directKeyMappedSelection;
-void selectorKeyMappedSelection;
+void droppedUsers;
+void directDroppedProfiles;
 void directKeyMappedUsage;
-void selectorKeyMappedUsage;
+void droppedUsersUsage;
 void manualOmittedAggregate;
 void leftViaJoinSelected;
 void overlapPrefixedLeft;
@@ -505,8 +505,14 @@ pipe(users, map({ id: undefined }));
 unnest(sessions, undefined, { value: "tag" });
 // @ts-expect-error rename should reject unknown direct renamed fields
 pipe(directKeyMappedSelection, map((user) => ({ broken: user.prefix1_na })));
-// @ts-expect-error rename should reject unknown selector renamed fields
-pipe(selectorKeyMappedSelection, map((user) => ({ broken: user.prefix2_na })));
+// @ts-expect-error drop rejects unknown columns when applied to a typed query
+pipe(users, drop("missing"));
+// @ts-expect-error pick is a query step, not a map selector
+pipe(users, map(pick("id")));
+// @ts-expect-error drop is a query step, not a map selector
+pipe(users, map(drop("name")));
+// @ts-expect-error rename is a query step, not a map selector
+pipe(users, map(rename((key) => `prefix2_${key}`)));
 // @ts-expect-error map is curried-only
 map(users, (user) => ({ id: user.id }));
 // @ts-expect-error filter is curried-only
