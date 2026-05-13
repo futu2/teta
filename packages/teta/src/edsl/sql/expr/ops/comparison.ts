@@ -3,6 +3,7 @@ import {
   ExprRef,
   binaryExpr,
   toExprNode,
+  wrapExpr,
   type DeferredOrderItem,
   type DeferredExprDepsForArgs,
   type ExprInput,
@@ -101,26 +102,43 @@ export function isIn<T, TValue extends ExprInput<T>, const TValues extends reado
   }) as ExprRef<boolean, DeferredExprDepsForArgs<[TValue, ...TValues]>>;
 }
 
-export function and<TLeft extends ExprInput<boolean | null>, TRight extends ExprInput<boolean | null>>(
-  left: TLeft,
-  right: TRight
-): ExprRef<boolean, DeferredExprDepsForArgs<[TLeft, TRight]>> {
-  return binaryExpr<DeferredExprDepsForArgs<[TLeft, TRight]>>(
-    "AND",
-    toExprNode(left as ExprInput<boolean | null>),
-    toExprNode(right as ExprInput<boolean | null>)
-  ) as ExprRef<boolean, DeferredExprDepsForArgs<[TLeft, TRight]>>;
+type BooleanInput = ExprInput<boolean | null>;
+type NonEmptyBooleanInputs = readonly [BooleanInput, ...BooleanInput[]];
+
+export function and<const TValues extends NonEmptyBooleanInputs>(
+  ...values: TValues
+): ExprRef<boolean, DeferredExprDepsForArgs<TValues>> {
+  return booleanChain("AND", "and", values) as ExprRef<boolean, DeferredExprDepsForArgs<TValues>>;
 }
 
-export function or<TLeft extends ExprInput<boolean | null>, TRight extends ExprInput<boolean | null>>(
-  left: TLeft,
-  right: TRight
-): ExprRef<boolean, DeferredExprDepsForArgs<[TLeft, TRight]>> {
-  return binaryExpr<DeferredExprDepsForArgs<[TLeft, TRight]>>(
-    "OR",
-    toExprNode(left as ExprInput<boolean | null>),
-    toExprNode(right as ExprInput<boolean | null>)
-  ) as ExprRef<boolean, DeferredExprDepsForArgs<[TLeft, TRight]>>;
+export function or<const TValues extends NonEmptyBooleanInputs>(
+  ...values: TValues
+): ExprRef<boolean, DeferredExprDepsForArgs<TValues>> {
+  return booleanChain("OR", "or", values) as ExprRef<boolean, DeferredExprDepsForArgs<TValues>>;
+}
+
+function booleanChain(
+  op: "AND" | "OR",
+  name: "and" | "or",
+  values: readonly BooleanInput[]
+): ExprRef<boolean> {
+  if (values.length === 0) {
+    userError("INVALID_FUNCTION_NAME", `${name} requires at least one expression`);
+  }
+  if (values.length === 1) {
+    return wrapExpr(values[0] as BooleanInput) as ExprRef<boolean>;
+  }
+
+  let current = toExprNode(values[0] as BooleanInput) as ReturnType<typeof toExprNode<boolean>>;
+  for (const value of values.slice(1)) {
+    current = {
+      kind: "binary",
+      op,
+      left: current,
+      right: toExprNode(value as BooleanInput),
+    };
+  }
+  return new ExprRef<boolean>(current);
 }
 
 export function not<TValue extends ExprInput<boolean | null>>(
