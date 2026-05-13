@@ -57,6 +57,15 @@ export const RIGHT_JOIN_CURRIED_ONLY_ERROR =
 export const FULL_JOIN_CURRIED_ONLY_ERROR =
   "fullJoin() is curried-only. Use pipe(query, fullJoin(right, on, merge?, options?)).";
 
+export const SELECT_DUPLICATE_COLUMN_ERROR =
+  "Duplicate selected column name: id";
+
+export const SELECT_ALIAS_EMPTY_ERROR =
+  "alias name cannot be empty";
+
+export const SELECT_INVALID_SELECTION_ERROR =
+  "select() items must be expressions";
+
 export const JOIN_OVERLAPPING_COLUMNS_ERROR =
   "join() requires an explicit merge strategy for overlapping columns: id";
 

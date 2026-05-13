@@ -648,6 +648,16 @@ describe("deferred row proxy api", () => {
     expect(() => pipe(users, filter(eq($left.id, 1)))).toThrow(DEFERRED_LEFT_SCOPE_ERROR);
   });
 
+  test("reports join-side deferred refs outside select", () => {
+    const users = createUsersPipelineTable();
+
+    expectTetaUserError(
+      // @ts-expect-error exercising runtime validation for invalid current-row select scope
+      () => pipe(users, select([leftCol("id")])),
+      "DEFERRED_COLUMN_SCOPE"
+    );
+  });
+
   test("reports undefined deferred helper inputs as user errors", () => {
     const users = createUsersTable();
     const sessions = table("sessions", {

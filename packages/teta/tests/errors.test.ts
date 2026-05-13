@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { $left, $right, TetaUserError, count, eq, extend, filter, fold, fullJoin, group, innerJoin, join, leftJoin, loop, map, prefixOverlapLeft, rightJoin, sort, take, toSql, values, pipe } from "../mod.ts";
-import { EXTEND_CURRIED_ONLY_ERROR, FILTER_CURRIED_ONLY_ERROR, FOLD_CURRIED_ONLY_ERROR, FULL_JOIN_CURRIED_ONLY_ERROR, GROUP_INSIDE_AGGREGATE_FUNCTION_ERROR, GROUP_OUTSIDE_AGGREGATE_ERROR, INNER_JOIN_CURRIED_ONLY_ERROR, JOIN_CURRIED_ONLY_ERROR, JOIN_MERGE_CONFLICT_ERROR, JOIN_OVERLAPPING_COLUMNS_ERROR, LEFT_JOIN_CURRIED_ONLY_ERROR, LEGACY_JOIN_MERGE_OPTION_ERROR, LEGACY_SELECTION_ARRAY_ERROR, LOOP_COLUMN_MISMATCH_ERROR, MAP_CURRIED_ONLY_ERROR, NON_CANONICAL_POSTGRES_DIALECT_ERROR, RIGHT_JOIN_CURRIED_ONLY_ERROR, SORT_CURRIED_ONLY_ERROR, TAKE_CURRIED_ONLY_ERROR, UNSUPPORTED_CROSS_JOIN_ERROR, VALUES_COLUMN_MISMATCH_ERROR, VALUES_EMPTY_ERROR } from "./helpers/expected-errors.ts";
+import { $left, $right, TetaUserError, alias, count, eq, extend, filter, fold, fullJoin, group, innerJoin, join, leftJoin, loop, map, prefixOverlapLeft, rightJoin, select, sort, take, toSql, values, pipe } from "../mod.ts";
+import { EXTEND_CURRIED_ONLY_ERROR, FILTER_CURRIED_ONLY_ERROR, FOLD_CURRIED_ONLY_ERROR, FULL_JOIN_CURRIED_ONLY_ERROR, GROUP_INSIDE_AGGREGATE_FUNCTION_ERROR, GROUP_OUTSIDE_AGGREGATE_ERROR, INNER_JOIN_CURRIED_ONLY_ERROR, JOIN_CURRIED_ONLY_ERROR, JOIN_MERGE_CONFLICT_ERROR, JOIN_OVERLAPPING_COLUMNS_ERROR, LEFT_JOIN_CURRIED_ONLY_ERROR, LEGACY_JOIN_MERGE_OPTION_ERROR, LEGACY_SELECTION_ARRAY_ERROR, LOOP_COLUMN_MISMATCH_ERROR, MAP_CURRIED_ONLY_ERROR, NON_CANONICAL_POSTGRES_DIALECT_ERROR, RIGHT_JOIN_CURRIED_ONLY_ERROR, SELECT_ALIAS_EMPTY_ERROR, SELECT_DUPLICATE_COLUMN_ERROR, SELECT_INVALID_SELECTION_ERROR, SORT_CURRIED_ONLY_ERROR, TAKE_CURRIED_ONLY_ERROR, UNSUPPORTED_CROSS_JOIN_ERROR, VALUES_COLUMN_MISMATCH_ERROR, VALUES_EMPTY_ERROR } from "./helpers/expected-errors.ts";
 import { createOrdersTable, createUsersTable } from "./helpers/fixtures.ts";
 describe("error paths", () => {
     function expectUserError(fn: () => unknown, code: string, message: string): void {
@@ -210,6 +210,17 @@ describe("error paths", () => {
     test("rejects legacy array selection syntax at runtime", () => {
         const users = createUsersTable();
         expect(() => pipe(users, map((user) => ([user.id] as never)))).toThrow(LEGACY_SELECTION_ARRAY_ERROR);
+    });
+    test("rejects invalid select helper usage", () => {
+        const users = createUsersTable();
+        expect(() => pipe(users, select((user) => [
+            user.id,
+            pipe(user.name, alias("id")),
+        ]))).toThrow(SELECT_DUPLICATE_COLUMN_ERROR);
+        expect(() => alias("")).toThrow(SELECT_ALIAS_EMPTY_ERROR);
+        expect(() => pipe(users, select([
+            alias("bad") as never,
+        ]))).toThrow(SELECT_INVALID_SELECTION_ERROR);
     });
     test("rejects non-canonical built-in dialect names", () => {
         const users = createUsersTable();
