@@ -1,5 +1,4 @@
 import type { AST } from "node-sql-parser";
-import { purry } from "remeda";
 import type {
   CteSpec,
   JoinTypeInput,
@@ -777,7 +776,13 @@ export function unionAll<TColumns extends QueryColumns>(
 export function unionAll<TColumns extends QueryColumns>(right: Query<TColumns>): QueryStep<TColumns, TColumns>;
 
 export function unionAll(...args: unknown[]): unknown {
-  return purry(_unionAll, args);
+  assertCurriedBinaryArity(args);
+  if (args.length === 1) {
+    const [right] = args;
+    return (left: Query<QueryColumns>) => _unionAll(left, right as Query<QueryColumns>);
+  }
+  const [left, right] = args;
+  return _unionAll(left as Query<QueryColumns>, right as Query<QueryColumns>);
 }
 
 function _unionAll<TColumns extends QueryColumns>(
@@ -795,7 +800,13 @@ export function union<TColumns extends QueryColumns>(
 export function union<TColumns extends QueryColumns>(right: Query<TColumns>): QueryStep<TColumns, TColumns>;
 
 export function union(...args: unknown[]): unknown {
-  return purry(_union, args);
+  assertCurriedBinaryArity(args);
+  if (args.length === 1) {
+    const [right] = args;
+    return (left: Query<QueryColumns>) => _union(left, right as Query<QueryColumns>);
+  }
+  const [left, right] = args;
+  return _union(left as Query<QueryColumns>, right as Query<QueryColumns>);
 }
 
 function _union<TColumns extends QueryColumns>(
@@ -815,7 +826,17 @@ export function loop<TColumns extends QueryColumns>(
 ): QueryStep<TColumns, TColumns>;
 
 export function loop(...args: unknown[]): unknown {
-  return purry(_loop, args);
+  assertCurriedBinaryArity(args);
+  if (args.length === 1) {
+    const [step] = args;
+    return (base: Query<QueryColumns>) =>
+      _loop(base, step as (self: Query<QueryColumns>) => Query<QueryColumns>);
+  }
+  const [base, step] = args;
+  return _loop(
+    base as Query<QueryColumns>,
+    step as (self: Query<QueryColumns>) => Query<QueryColumns>
+  );
 }
 
 function _loop<TColumns extends QueryColumns>(
@@ -1218,6 +1239,12 @@ function curriedOnlyError(helper: string, usage: string): never {
 function assertNotDataFirstQueryHelper(helper: string, usage: string, args: unknown[]): void {
   if (args[0] instanceof Query) {
     curriedOnlyError(helper, usage);
+  }
+}
+
+function assertCurriedBinaryArity(args: unknown[]): void {
+  if (args.length !== 1 && args.length !== 2) {
+    throw new Error("Wrong number of arguments");
   }
 }
 

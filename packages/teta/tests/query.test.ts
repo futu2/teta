@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { Parser } from "node-sql-parser";
-import { omit, pick, pipe } from "remeda";
-import { lit, table, t, filter, innerJoin, join, leftJoin, map, toAst, toSql, asc, bitLength, characterLength, dateAdd, eq, gt, replace, rowNumber, upper, sort, over, and, take, not, or, group, unnest, dropOverlapLeft, usingCols, toString, toTimestamp } from "../mod.ts";
+import { omit, pick } from "remeda";
+import { lit, table, t, filter, innerJoin, join, leftJoin, map, toAst, toSql, asc, bitLength, characterLength, dateAdd, eq, gt, replace, rowNumber, upper, sort, over, and, take, not, or, group, unnest, dropOverlapLeft, usingCols, toString, toTimestamp, pipe, loop, union, unionAll } from "../mod.ts";
 import { USER_PIPELINE_POSTGRES_COMPACT, USER_PIPELINE_POSTGRES_PRETTY, USERS_NAME_LENGTH_SQLITE_COMPACT, EMPLOYEES_SELF_JOIN_POSTGRES_COMPACT, USERS_ORDERS_LEFT_JOIN_SELECT_POSTGRES_COMPACT, USERS_SELECT_FILTER_POSTGRES_COMPACT, ANALYTICS_EVENTS_SELECT_POSTGRES_COMPACT, QUOTED_ANALYTICS_EVENTS_SELECT_POSTGRES_COMPACT, QUOTED_ANALYTICS_EVENTS_SELECT_BIGQUERY_COMPACT, QUOTED_USERS_ALIAS_SELECT_POSTGRES_COMPACT, QUOTED_USERS_PROJECTED_ALIAS_BIGQUERY_COMPACT, QUOTED_ROW_NUMBER_ALIAS_FILTER_POSTGRES_COMPACT, ORDERS_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT, ORDERS_ROW_NUMBER_FILTER_POSTGRES_COMPACT, ORDERS_ROW_NUMBER_FILTER_ORDER_LIMIT_POSTGRES_COMPACT, ORDERS_TOTAL_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT, ORDERS_TOTAL_ROW_NUMBER_FILTER_POSTGRES_COMPACT, ORDERS_TOTAL_SHARED_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT, ORDERS_TOTAL_SHARED_ROW_NUMBER_FILTER_POSTGRES_COMPACT, ORDERS_TOTAL_NOT_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT, ORDERS_TOTAL_NOT_ROW_NUMBER_FILTER_POSTGRES_COMPACT, ORDERS_SHARED_DISJUNCTION_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT } from "./helpers/expected-sql.ts";
 import { buildUserPipelineQuery, createOrdersTable, createUsersTable } from "./helpers/fixtures.ts";
 describe("toSql(query, options)", () => {
@@ -298,6 +298,56 @@ describe("toSql(query, options)", () => {
     test("renders a pretty postgres pipeline", () => {
         const query = buildUserPipelineQuery();
         expect(toSql(query, { dialect: "postgresql", format: "pretty" })).toBe(USER_PIPELINE_POSTGRES_PRETTY);
+    });
+    test("supports curried union helpers without Remeda purry", () => {
+        const users = table("users", {
+            id: t.int(),
+            name: t.string(),
+        });
+        const archivedUsers = table("archived_users", {
+            id: t.int(),
+            name: t.string(),
+        });
+        const unioned = pipe(users, union(archivedUsers));
+        const unionedAll = pipe(users, unionAll(archivedUsers));
+        expect(toSql(unioned, { dialect: "postgresql", format: "compact" })).toContain(" UNION ");
+        expect(toSql(unionedAll, { dialect: "postgresql", format: "compact" })).toContain(" UNION ALL ");
+    });
+    test("preserves purry arity errors for union helpers", () => {
+        const users = table("users", {
+            id: t.int(),
+            name: t.string(),
+        });
+        const archivedUsers = table("archived_users", {
+            id: t.int(),
+            name: t.string(),
+        });
+
+        expect(() => (union as any)()).toThrow("Wrong number of arguments");
+        expect(() => (union as any)(users, archivedUsers, archivedUsers)).toThrow("Wrong number of arguments");
+        expect(() => (unionAll as any)()).toThrow("Wrong number of arguments");
+        expect(() => (unionAll as any)(users, archivedUsers, archivedUsers)).toThrow("Wrong number of arguments");
+    });
+    test("supports curried loop helper without Remeda purry", () => {
+        const seed = pipe(
+            table("seed", { n: t.int() }),
+            map((row) => ({ n: row.n }))
+        );
+        const recursive = pipe(
+            seed,
+            loop((self) => pipe(self, filter((row) => gt(row.n, 0))))
+        );
+        expect(toSql(recursive, { dialect: "postgresql", format: "compact" })).toContain("WITH RECURSIVE");
+    });
+    test("preserves purry arity errors for loop helper", () => {
+        const seed = pipe(
+            table("seed", { n: t.int() }),
+            map((row) => ({ n: row.n }))
+        );
+        const step = (self: typeof seed) => pipe(self, filter((row) => gt(row.n, 0)));
+
+        expect(() => (loop as any)()).toThrow("Wrong number of arguments");
+        expect(() => (loop as any)(seed, step, step)).toThrow("Wrong number of arguments");
     });
     test("renders structured schema-qualified sources", () => {
         const events = table({ schema: "analytics", table: "events" }, { id: t.int() });
