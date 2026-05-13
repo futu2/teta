@@ -1,5 +1,5 @@
 import type { ExprRef, SqlBigInt, SqlBytes, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlTimestamp, SqlUuid, } from "../mod.ts";
-import { filter, filterEq, filterNe, filterGt, filterGte, filterLt, filterLte, fullJoin, innerJoin, join, leftJoin, rightJoin, take, sort, param, map, rename, pipe, flow, table, t, fold, asc, desc, eq, gt, upper, add, mul, coalesce, count, group, loop, sum, and, or, isNotNull, sub, caseWhen, when, mapShape, groupShape, lt, unnest, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, toString, toTimestamp, $, $left, $right, col, leftCol, rightCol, pick, drop, extend } from "../mod.ts";
+import { filter, filterEq, filterNe, filterGt, filterGte, filterLt, filterLte, fullJoin, innerJoin, join, leftJoin, rightJoin, take, sort, param, map, rename, pipe, flow, table, t, fold, asc, desc, eq, gt, upper, add, mul, coalesce, count, group, loop, sum, and, or, isNotNull, sub, caseWhen, when, mapShape, groupShape, lt, unnest, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, toString, toTimestamp, $, $left, $right, col, leftCol, rightCol, pick, drop, extend, select, alias } from "../mod.ts";
 type Equal<A, B> = ((<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false);
 type Expect<T extends true> = T;
 type ExprType<TExpr> = TExpr extends ExprRef<infer TValue> ? TValue : never;
@@ -138,6 +138,22 @@ const projectedUsersCol = pipe(filteredUsers, map({
     id: col("id"),
     name: upper(col("name")),
 }));
+const selectedUsers = pipe(users, select((user) => [user.id, user.name]));
+const deferredSelectedUsers = pipe(users, select([col("id"), col("name")]));
+const aliasedSelectedUsers = pipe(users, select((user) => [
+    pipe(user.id, alias("old_id")),
+    pipe(upper(user.name), alias("name_upper")),
+]));
+const generatedSelectedUsers = pipe(users, select((user) => [
+    user.id,
+    add(user.id, 1),
+    user.name,
+    add(user.id, 2),
+]));
+const deferredGeneratedSelectedUsers = pipe(users, select([
+    col("id"),
+    add(col("id"), 1),
+]));
 const extendedUsers = pipe(users, extend((user) => ({
     name_upper: upper(user.name),
 })));
@@ -286,6 +302,19 @@ type _ProjectedUsersDeferredKeys = Expect<Equal<keyof typeof projectedUsersDefer
 type _ProjectedUsersColKeys = Expect<Equal<keyof typeof projectedUsersCol.columns, "id" | "name">>;
 type _ProjectedUsersColId = Expect<Equal<ExprType<typeof projectedUsersCol.columns.id>, SqlInt>>;
 type _ProjectedUsersColName = Expect<Equal<ExprType<typeof projectedUsersCol.columns.name>, string>>;
+type _SelectedUsersKeys = Expect<Equal<keyof typeof selectedUsers.columns, "id" | "name">>;
+type _SelectedUsersId = Expect<Equal<ExprType<typeof selectedUsers.columns.id>, SqlInt>>;
+type _SelectedUsersName = Expect<Equal<ExprType<typeof selectedUsers.columns.name>, string>>;
+type _DeferredSelectedUsersKeys = Expect<Equal<keyof typeof deferredSelectedUsers.columns, "id" | "name">>;
+type _DeferredSelectedUsersId = Expect<Equal<ExprType<typeof deferredSelectedUsers.columns.id>, SqlInt>>;
+type _AliasedSelectedUsersKeys = Expect<Equal<keyof typeof aliasedSelectedUsers.columns, "old_id" | "name_upper">>;
+type _AliasedSelectedUsersOldId = Expect<Equal<ExprType<typeof aliasedSelectedUsers.columns.old_id>, SqlInt>>;
+type _AliasedSelectedUsersNameUpper = Expect<Equal<ExprType<typeof aliasedSelectedUsers.columns.name_upper>, string>>;
+type _GeneratedSelectedUsersKeys = Expect<Equal<keyof typeof generatedSelectedUsers.columns, "id" | "col_1" | "name" | "col_2">>;
+type _GeneratedSelectedUsersCol1 = Expect<Equal<ExprType<typeof generatedSelectedUsers.columns.col_1>, SqlInt>>;
+type _GeneratedSelectedUsersCol2 = Expect<Equal<ExprType<typeof generatedSelectedUsers.columns.col_2>, SqlInt>>;
+type _DeferredGeneratedSelectedUsersKeys = Expect<Equal<keyof typeof deferredGeneratedSelectedUsers.columns, "id" | "col_1">>;
+type _DeferredGeneratedSelectedUsersCol1 = Expect<Equal<ExprType<typeof deferredGeneratedSelectedUsers.columns.col_1>, SqlInt>>;
 type _ExtendedUsersKeys = Expect<Equal<keyof typeof extendedUsers.columns, "id" | "name" | "name_upper">>;
 type _ExtendedUsersNameUpper = Expect<Equal<ExprType<typeof extendedUsers.columns.name_upper>, string>>;
 type _DeferredExtendedUsersKeys = Expect<Equal<keyof typeof deferredExtendedUsers.columns, "id" | "name" | "name_upper">>;
@@ -404,6 +433,11 @@ void droppedOverlapRight;
 void usingJoin;
 void mappedJoin;
 void projectedUsersCol;
+void selectedUsers;
+void deferredSelectedUsers;
+void aliasedSelectedUsers;
+void generatedSelectedUsers;
+void deferredGeneratedSelectedUsers;
 void extendedUsers;
 void deferredExtendedUsers;
 void replacedExtendedUsers;
@@ -516,6 +550,14 @@ pipe(users, extend({ broken: col("missing") }));
 pipe(users, extend({ broken: leftCol("id") }));
 // @ts-expect-error rightCol is invalid in current-row extend context
 pipe(users, extend({ broken: rightCol("user_id") }));
+// @ts-expect-error select rejects unknown deferred current columns
+pipe(users, select([col("missing")]));
+// @ts-expect-error leftCol is invalid in current-row select context
+pipe(users, select([leftCol("id")]));
+// @ts-expect-error rightCol is invalid in current-row select context
+pipe(users, select([rightCol("user_id")]));
+// @ts-expect-error alias must wrap a select expression item through pipe
+pipe(users, select((user) => [alias("bad")]));
 // @ts-expect-error col rejects unknown current-row columns in fold context
 pipe(orders, fold({
     total: sum(col("missing")),
