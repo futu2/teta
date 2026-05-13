@@ -7,6 +7,7 @@ import {
   TetaInternalError,
   TetaUserError,
   add,
+  alias,
   and,
   asc,
   caseWhen,
@@ -43,6 +44,7 @@ import {
   rename,
   replace,
   rightCol,
+  select,
   sort,
   sum,
   t,
@@ -247,6 +249,61 @@ describe("deferred row proxy api", () => {
 
     expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
       toSql(expected, { dialect: "postgresql", format: "compact" })
+    );
+  });
+
+  test("supports select with callback column lists", () => {
+    const users = createUsersPipelineTable();
+    const expected = pipe(users, map((user) => ({
+      id: user.id,
+      name: user.name,
+    })));
+    const actual = pipe(users, select((user) => [user.id, user.name]));
+
+    expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
+      toSql(expected, { dialect: "postgresql", format: "compact" })
+    );
+  });
+
+  test("supports select with deferred column lists", () => {
+    const users = createUsersPipelineTable();
+    const expected = pipe(users, map({
+      id: $.id,
+      name: $.name,
+    }));
+    const actual = pipe(users, select([$.id, $.name]));
+
+    expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
+      toSql(expected, { dialect: "postgresql", format: "compact" })
+    );
+  });
+
+  test("supports select aliases and generated names", () => {
+    const users = createUsersPipelineTable();
+    const expected = pipe(users, map((user) => ({
+      old_id: user.id,
+      col_1: add(user.age, 1),
+      name: user.name,
+      col_2: add(user.age, 2),
+    })));
+    const actual = pipe(users, select((user) => [
+      pipe(user.id, alias("old_id")),
+      add(user.age, 1),
+      user.name,
+      add(user.age, 2),
+    ]));
+
+    expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
+      toSql(expected, { dialect: "postgresql", format: "compact" })
+    );
+  });
+
+  test("rejects duplicate select output names", () => {
+    const users = createUsersPipelineTable();
+
+    expectTetaUserError(
+      () => pipe(users, select((user) => [user.id, pipe(user.name, alias("id"))])),
+      "SELECT_DUPLICATE_COLUMN"
     );
   });
 
