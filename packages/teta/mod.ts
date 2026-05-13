@@ -19,6 +19,9 @@ export const explain: typeof import("./src/edsl/query.ts").explain = query.expla
 /** Applies unary steps to a value from left to right. */
 export const pipe: typeof import("./src/edsl/pipe.ts").pipe = pipeModule.pipe;
 
+/** Composes unary steps from left to right into a reusable function. */
+export const flow: typeof import("./src/edsl/pipe.ts").flow = pipeModule.flow;
+
 /** Builds an aggregate projection over the current query. */
 export const fold: typeof import("./src/edsl/query.ts").fold = query.fold;
 
