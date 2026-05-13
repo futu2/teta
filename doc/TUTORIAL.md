@@ -333,7 +333,7 @@ Quick rule of thumb:
 Teta includes projection helpers for common object-shaped `map(...)` and `fold(...)` callbacks.
 
 ```ts
-import { drop, map, rename, pick, pipe, replace, table, t, upper } from "@teta/teta";
+import { col, drop, extend, filterEq, flow, map, rename, pick, pipe, replace, table, t, upper } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -385,6 +385,22 @@ const prefixed = pipe(
 ```
 
 Downstream code can then access concrete properties such as `user_id` and `user_name`.
+
+### Reusable pipelines and computed columns
+
+`flow(...)` composes query steps without immediately applying them:
+
+```ts
+const publicActiveUsers = flow(
+  filterEq(col("active"), true),
+  extend((user) => ({ name_upper: upper(user.name) })),
+  pick("id", "name_upper")
+);
+
+const q = publicActiveUsers(users);
+```
+
+Comparison filter helpers accept literals, expressions, and row callbacks on either side. Bare strings are string literals, not column names.
 
 ### Join (auto alias)
 

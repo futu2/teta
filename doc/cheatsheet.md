@@ -5,7 +5,7 @@ Quick reference for the public API exported from `@teta/teta`.
 Teta is function-first. Row-transforming query helpers are curried query steps used with `pipe(...)`.
 
 ```ts
-import { $, $left, $right, add, and, arrayAppend, arrayContains, arrayJoin, arrayLength, arrayPosition, arraySlice, asc, avg, bitLength, cast, charLength, characterLength, coalesce, col, concat, count, currentDate, currentTimestamp, dateAdd, dateDiff, dateFormat, dateLiteral, dateParse, dateTrunc, day, desc, drop, dropOverlapLeft, dropOverlapRight, eq, explain, ExprRef, f, filter, fn, fold, fromUnixTime, fullJoin, group, gt, gte, hour, innerJoin, isIn, isNotNull, isNull, join, lag, lead, left, leftCol, leftJoin, like, loop, lower, lt, lte, map, rename, max, min, minute, mod, month, mul, ne, not, ntile, nullIf, octetLength, onEq, over, overlay, param, percentRank, pick, pipe, position, pow, prefixAllLeft, prefixAllRight, prefixOverlapLeft, prefixOverlapRight, Query, rank, regexExtract, regexLike, regexReplace, replace, reverse, right, rightCol, rightJoin, round, rowNumber, rpad, shape, sort, sqrt, sub, substring, suffixAllLeft, suffixAllRight, sum, sumOver, t, table, take, timestampLiteral, toAst, toDate, toFloat, toInt, toIR, toSql, toSqlResult, toUnixTime, trim, union, unionAll, unnest, upper, usingCols, values, when, windowFn, year } from "@teta/teta";
+import { $, $left, $right, add, and, arrayAppend, arrayContains, arrayJoin, arrayLength, arrayPosition, arraySlice, asc, avg, bitLength, cast, charLength, characterLength, coalesce, col, concat, count, currentDate, currentTimestamp, dateAdd, dateDiff, dateFormat, dateLiteral, dateParse, dateTrunc, day, desc, drop, dropOverlapLeft, dropOverlapRight, eq, explain, ExprRef, extend, f, filter, filterEq, flow, fn, fold, fromUnixTime, fullJoin, group, gt, gte, hour, innerJoin, isIn, isNotNull, isNull, join, lag, lead, left, leftCol, leftJoin, like, loop, lower, lt, lte, map, rename, max, min, minute, mod, month, mul, ne, not, ntile, nullIf, octetLength, onEq, over, overlay, param, percentRank, pick, pipe, position, pow, prefixAllLeft, prefixAllRight, prefixOverlapLeft, prefixOverlapRight, Query, rank, regexExtract, regexLike, regexReplace, replace, reverse, right, rightCol, rightJoin, round, rowNumber, rpad, shape, sort, sqrt, sub, substring, suffixAllLeft, suffixAllRight, sum, sumOver, t, table, take, timestampLiteral, toAst, toDate, toFloat, toInt, toIR, toSql, toSqlResult, toUnixTime, trim, union, unionAll, unnest, upper, usingCols, values, when, windowFn, year } from "@teta/teta";
 ```
 
 ## 1) Query roots and composition
@@ -45,6 +45,15 @@ const q = pipe(
   map((u) => ({ id: u.id, name: upper(u.name) })),
   sort((u) => asc(u.name)),
   take(10)
+);
+```
+
+Use `flow(...)` to save reusable pipelines:
+
+```ts
+const activePublicUsers = flow(
+  filterEq(col("active"), true),
+  pick("id", "name")
 );
 ```
 
@@ -299,11 +308,13 @@ const explicitSql = irToSql(ir, { dialect: "postgresql" });
 - `lte(left, right)`
 - `like(value, pattern)`
 - `isIn(value, values)`
-- `and(left, right)`
-- `or(left, right)`
+- `and(...conditions)`
+- `or(...conditions)`
 - `not(value)`
 - `isNull(value)`
 - `isNotNull(value)`
+
+`and(...)` and `or(...)` accept one or more conditions.
 
 ### Arithmetic and numeric
 
@@ -427,10 +438,14 @@ const explicitSql = irToSql(ir, { dialect: "postgresql" });
 - `groupShape(obj)` -> apply `group(...)` to each expression in a shape
 - ``f`prefix ${expr} suffix` ``
 
+```ts
+filter(and(eq(col("active"), true), gte(col("age"), 18), isNotNull(col("email"))))
+```
+
 ### Projection helpers
 
 ```ts
-import { drop, fold, groupShape, map, rename, pick, pipe, upper } from "@teta/teta";
+import { drop, extend, fold, groupShape, map, rename, pick, pipe, upper } from "@teta/teta";
 
 const compactUsers = pipe(
   users,
@@ -442,6 +457,10 @@ const compactUsers = pipe(
 );
 
 const publicUsers = pipe(users, pick("id", "name"));
+
+const enrichedUsers = pipe(users, extend((user) => ({
+  name_upper: upper(user.name),
+})));
 
 const internalUsers = pipe(users, drop("password_hash"));
 

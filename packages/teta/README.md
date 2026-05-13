@@ -47,6 +47,22 @@ const activeUsers = pipe(
 console.log(toSql(activeUsers, { dialect: "postgresql", format: "pretty" }));
 ```
 
+Reusable functional pipelines can be saved with `flow(...)`, and `extend(...)` keeps existing columns while adding computed ones:
+
+```ts
+import { col, extend, filterEq, flow, lower, pick } from "@teta/teta";
+
+const activePublicUsers = flow(
+  filterEq(col("active"), true),
+  extend((user) => ({
+    normalized_email: lower(user.email),
+  })),
+  pick("id", "normalized_email")
+);
+```
+
+Bare strings in comparison filter helpers are literals; use `col("name")` or a row callback for columns.
+
 For explicit frontend/backend use, lower the query to IR and render it through `@teta/sql`:
 
 ```ts
