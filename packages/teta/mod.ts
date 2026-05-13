@@ -28,6 +28,24 @@ export const fold: typeof import("./src/edsl/query.ts").fold = query.fold;
 /** Filters rows with a predicate expression. */
 export const filter: typeof import("./src/edsl/query.ts").filter = query.filter;
 
+/** Filters rows where two operands are equal. */
+export const filterEq: typeof import("./src/edsl/query.ts").filterEq = query.filterEq;
+
+/** Filters rows where two operands are not equal. */
+export const filterNe: typeof import("./src/edsl/query.ts").filterNe = query.filterNe;
+
+/** Filters rows where the left operand is greater than the right operand. */
+export const filterGt: typeof import("./src/edsl/query.ts").filterGt = query.filterGt;
+
+/** Filters rows where the left operand is greater than or equal to the right operand. */
+export const filterGte: typeof import("./src/edsl/query.ts").filterGte = query.filterGte;
+
+/** Filters rows where the left operand is less than the right operand. */
+export const filterLt: typeof import("./src/edsl/query.ts").filterLt = query.filterLt;
+
+/** Filters rows where the left operand is less than or equal to the right operand. */
+export const filterLte: typeof import("./src/edsl/query.ts").filterLte = query.filterLte;
+
 /** Joins two query inputs as an inner join. */
 export const innerJoin: typeof import("./src/edsl/query.ts").innerJoin = query.innerJoin;
 

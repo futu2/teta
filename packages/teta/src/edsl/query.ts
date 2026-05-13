@@ -21,6 +21,14 @@ export {
 } from "./query/builder.ts";
 export type { QueryExplainResult, QueryIR, QueryStageKind, QueryStep } from "./query/builder.ts";
 export { extend } from "./query/extend.ts";
+export {
+  filterEq,
+  filterNe,
+  filterGt,
+  filterGte,
+  filterLt,
+  filterLte,
+} from "./query/filter_comparison.ts";
 export { drop, pick, rename } from "./query/projection_helpers.ts";
 export {
   dropOverlapLeft,

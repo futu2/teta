@@ -259,6 +259,9 @@ const projectedProfiles = pipe(profiles, map((profile) => ({
 })));
 const uuidFilteredProfiles = pipe(profiles, filter((profile) => eq(profile.id, param("00000000-0000-0000-0000-000000000000"))));
 const bigintFilteredProfiles = pipe(profiles, filter((profile) => and(gt(profile.external_id, 0), eq(profile.external_id, 42n))));
+const nullableFilterGtCallbackUsers = pipe(profiles, filterGt((profile) => profile.credit_limit, 0));
+const nullableFilterGtColUsers = pipe(profiles, filterGt(col("credit_limit"), 0));
+const nullableFilterGtRightCallbackUsers = pipe(profiles, filterGt(0, (profile) => profile.credit_limit));
 const stringifiedUserId = toString(users.columns.id);
 const stringifiedNullableNickname = toString(profiles.columns.nickname);
 const events = table("events", {
@@ -362,6 +365,9 @@ type _ProjectedProfileCreditLimit = Expect<Equal<ExprType<typeof projectedProfil
 type _ProjectedProfileMetadata = Expect<Equal<ExprType<typeof projectedProfiles.columns.metadata>, SqlJson<ProfileMeta>>>;
 type _ProjectedProfileAvatar = Expect<Equal<ExprType<typeof projectedProfiles.columns.avatar>, SqlBytes | null>>;
 type _ProjectedProfileNickname = Expect<Equal<ExprType<typeof projectedProfiles.columns.nickname>, string>>;
+type _NullableFilterGtCallbackUsersCreditLimit = Expect<Equal<ExprType<typeof nullableFilterGtCallbackUsers.columns.credit_limit>, SqlDecimal | null>>;
+type _NullableFilterGtColUsersCreditLimit = Expect<Equal<ExprType<typeof nullableFilterGtColUsers.columns.credit_limit>, SqlDecimal | null>>;
+type _NullableFilterGtRightCallbackUsersCreditLimit = Expect<Equal<ExprType<typeof nullableFilterGtRightCallbackUsers.columns.credit_limit>, SqlDecimal | null>>;
 type _FlowNumberToString = Expect<Equal<ReturnType<typeof flowNumberToString>, string>>;
 type _FlowPipelineKeys = Expect<Equal<keyof typeof flowPipelineResult.columns, "id">>;
 type _FlowPipelineId = Expect<Equal<ExprType<typeof flowPipelineResult.columns.id>, SqlInt>>;
@@ -427,6 +433,9 @@ void aggregatedWithGroupShape;
 void projectedProfiles;
 void uuidFilteredProfiles;
 void bigintFilteredProfiles;
+void nullableFilterGtCallbackUsers;
+void nullableFilterGtColUsers;
+void nullableFilterGtRightCallbackUsers;
 void invalidPickedUsers;
 // @ts-expect-error filter predicates must return boolean expressions
 pipe(users, filter((user) => user.name));
@@ -481,6 +490,20 @@ pipe(users, filter(
 ));
 // @ts-expect-error filterEq rejects unknown deferred columns when applied to a typed query
 pipe(users, filterEq(col("missing"), 1));
+// @ts-expect-error filterEq rejects mismatched direct operand types
+pipe(users, filterEq(col("name"), 1));
+// @ts-expect-error filterEq rejects mismatched literal operand types
+pipe(users, filterEq("name", 1));
+// @ts-expect-error filterGt rejects non-comparable string direct operands
+pipe(users, filterGt(col("name"), "Ada"));
+// @ts-expect-error filterGt rejects mismatched direct operand types
+pipe(users, filterGt(col("name"), 1));
+// @ts-expect-error filterGte rejects mismatched mixed callback/direct operands
+pipe(users, filterGte((user) => user.id, "1"));
+// @ts-expect-error filterEq rejects invalid left deferred scope in mixed direct/callback current context
+pipe(users, filterEq(leftCol("id"), (user) => user.id));
+// @ts-expect-error filterEq rejects invalid right deferred scope in mixed direct/callback current context
+pipe(users, filterEq((user) => user.id, rightCol("user_id")));
 // @ts-expect-error filterEq callback operands must be valid expressions
 pipe(users, filterEq((user) => user.name, (user) => user.id));
 // @ts-expect-error col rejects unknown current-row columns in map context
