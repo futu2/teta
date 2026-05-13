@@ -21,9 +21,10 @@ import {
   leftCol,
   join,
   map,
-  rename,
+  drop,
   pick,
   pipe,
+  rename,
   replace,
   rightCol,
   sort,
@@ -63,8 +64,10 @@ describe("deferred row proxy api", () => {
     expect(eq($left.id, $right.user_id)).toBeInstanceOf(ExprRef);
   });
 
-  test("exports pick as a selector helper", () => {
+  test("exports projection helpers as query steps", () => {
     expect(typeof pick("id")).toBe("function");
+    expect(typeof drop("id")).toBe("function");
+    expect(typeof rename((key) => key)).toBe("function");
   });
 
   test("matches callback SQL for filter, map, sort, and take", () => {
@@ -127,13 +130,35 @@ describe("deferred row proxy api", () => {
     );
   });
 
-  test("supports pick for same-name projection", () => {
-    const users = createUsersTable();
-    const expected = pipe(users, map((user) => ({ id: user.id, name: user.name })));
-    const actual = pipe(users, map(pick("id", "name")));
+  test("supports drop as a direct query step", () => {
+    const users = createUsersPipelineTable();
+    const expected = pipe(users, map((user) => ({
+      id: user.id,
+      name: user.name,
+      active: user.active,
+    })));
+    const actual = pipe(users, drop("age"));
 
     expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
       toSql(expected, { dialect: "postgresql", format: "compact" })
+    );
+  });
+
+  test("reports missing picked columns", () => {
+    const users = createUsersTable();
+
+    expectTetaUserError(
+      () => pipe(users, pick("missing")),
+      "DEFERRED_COLUMN_UNKNOWN"
+    );
+  });
+
+  test("reports missing dropped columns", () => {
+    const users = createUsersTable();
+
+    expectTetaUserError(
+      () => pipe(users, drop("missing")),
+      "DEFERRED_COLUMN_UNKNOWN"
     );
   });
 
@@ -156,21 +181,6 @@ describe("deferred row proxy api", () => {
       user_active: user.active,
     })));
     const actual = pipe(users, rename((key) => `user_${key}`));
-
-    expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
-      toSql(expected, { dialect: "postgresql", format: "compact" })
-    );
-  });
-
-  test("supports rename as a row selector", () => {
-    const users = createUsersPipelineTable();
-    const expected = pipe(users, map((user) => ({
-      selected_id: user.id,
-      selected_name: user.name,
-      selected_age: user.age,
-      selected_active: user.active,
-    })));
-    const actual = pipe(users, map(rename((key) => `selected_${key}`)));
 
     expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
       toSql(expected, { dialect: "postgresql", format: "compact" })
