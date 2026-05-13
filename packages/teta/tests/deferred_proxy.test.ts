@@ -6,6 +6,7 @@ import {
   ExprRef,
   TetaInternalError,
   TetaUserError,
+  add,
   and,
   asc,
   caseWhen,
@@ -16,14 +17,25 @@ import {
   eq,
   extend,
   filter,
+  filterEq,
+  filterGt,
+  filterGte,
+  filterLt,
+  filterLte,
+  filterNe,
   fold,
+  gt,
   group,
   gte,
   isNotNull,
   leftJoin,
   leftCol,
   join,
+  lt,
+  lte,
   map,
+  mul,
+  ne,
   or,
   drop,
   pick,
@@ -135,6 +147,77 @@ describe("deferred row proxy api", () => {
     expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
       toSql(expected, { dialect: "postgresql", format: "compact" })
     );
+  });
+
+  test("supports filterEq with deferred expression operands", () => {
+    const users = createUsersPipelineTable();
+    const expected = pipe(users, filter(eq(col("active"), true)));
+    const actual = pipe(users, filterEq(col("active"), true));
+
+    expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
+      toSql(expected, { dialect: "postgresql", format: "compact" })
+    );
+  });
+
+  test("supports filterGte with computed callback operands", () => {
+    const users = createUsersPipelineTable();
+    const expected = pipe(users, filter((user) => gte(add(mul(user.age, 2), 1), 37)));
+    const actual = pipe(users, filterGte((user) => add(mul(user.age, 2), 1), 37));
+
+    expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
+      toSql(expected, { dialect: "postgresql", format: "compact" })
+    );
+  });
+
+  test("supports filterEq with callbacks on both operands", () => {
+    const users = table("users", {
+      age: t.int(),
+      expected_age: t.int(),
+    });
+    const expected = pipe(users, filter((user) => eq(user.age, user.expected_age)));
+    const actual = pipe(users, filterEq((user) => user.age, (user) => user.expected_age));
+
+    expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
+      toSql(expected, { dialect: "postgresql", format: "compact" })
+    );
+  });
+
+  test("treats bare strings in filterEq as SQL literals", () => {
+    const users = table("users", {
+      status: t.string(),
+    });
+    const expected = pipe(users, filter(eq("status", col("status"))));
+    const actual = pipe(users, filterEq("status", col("status")));
+
+    expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
+      toSql(expected, { dialect: "postgresql", format: "compact" })
+    );
+  });
+
+  test("supports filterGt with callback on the right operand", () => {
+    const users = createUsersPipelineTable();
+    const expected = pipe(users, filter((user) => gt(18, user.age)));
+    const actual = pipe(users, filterGt(18, (user) => user.age));
+
+    expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
+      toSql(expected, { dialect: "postgresql", format: "compact" })
+    );
+  });
+
+  test("supports comparison filter helpers for remaining operators", () => {
+    const users = createUsersPipelineTable();
+    const cases = [
+      [pipe(users, filter(ne(col("name"), "deleted"))), pipe(users, filterNe(col("name"), "deleted"))],
+      [pipe(users, filter(gt(col("age"), 18))), pipe(users, filterGt(col("age"), 18))],
+      [pipe(users, filter(lt(col("age"), 65))), pipe(users, filterLt(col("age"), 65))],
+      [pipe(users, filter(lte(col("age"), 65))), pipe(users, filterLte(col("age"), 65))],
+    ] as const;
+
+    for (const [expected, actual] of cases) {
+      expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
+        toSql(expected, { dialect: "postgresql", format: "compact" })
+      );
+    }
   });
 
   test("matches callback SQL for typed col filter, map, sort, and take", () => {

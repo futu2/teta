@@ -1,5 +1,5 @@
 import type { ExprRef, SqlBigInt, SqlBytes, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlTimestamp, SqlUuid, } from "../mod.ts";
-import { filter, fullJoin, innerJoin, join, leftJoin, rightJoin, take, sort, param, map, rename, pipe, flow, table, t, fold, asc, desc, eq, gt, upper, add, coalesce, count, group, loop, sum, and, or, isNotNull, sub, caseWhen, when, mapShape, groupShape, lt, unnest, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, toString, toTimestamp, $, $left, $right, col, leftCol, rightCol, pick, drop, extend } from "../mod.ts";
+import { filter, filterEq, filterNe, filterGt, filterGte, filterLt, filterLte, fullJoin, innerJoin, join, leftJoin, rightJoin, take, sort, param, map, rename, pipe, flow, table, t, fold, asc, desc, eq, gt, upper, add, mul, coalesce, count, group, loop, sum, and, or, isNotNull, sub, caseWhen, when, mapShape, groupShape, lt, unnest, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, toString, toTimestamp, $, $left, $right, col, leftCol, rightCol, pick, drop, extend } from "../mod.ts";
 type Equal<A, B> = ((<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false);
 type Expect<T extends true> = T;
 type ExprType<TExpr> = TExpr extends ExprRef<infer TValue> ? TValue : never;
@@ -149,6 +149,14 @@ const replacedExtendedUsers = pipe(users, extend((user) => ({
 })));
 const pickedUsers = pipe(users, pick("id", "name"));
 const colFilteredUsers = pipe(users, filter(eq(col("id"), 1)));
+const filterEqColUsers = pipe(users, filterEq(col("name"), "Ada"));
+const filterGteComputedUsers = pipe(users, filterGte((user) => add(mul(user.id, 2), 1), 3));
+const filterEqCallbackUsers = pipe(users, filterEq((user) => user.id, (user) => user.id));
+const filterNeUsers = pipe(users, filterNe((user) => user.name, "deleted"));
+const filterGtUsers = pipe(users, filterGt((user) => user.id, 0));
+const filterLtUsers = pipe(users, filterLt((user) => user.id, 100));
+const filterLteUsers = pipe(users, filterLte((user) => user.id, 100));
+const literalStringFilter = pipe(users, filterEq("status", "active"));
 const variadicAndFilteredUsers = pipe(users, filter(and(eq(col("id"), 1), gt(col("id"), 0), isNotNull(col("name")))));
 const variadicOrFilteredUsers = pipe(users, filter(or(eq(col("name"), "Ada"), eq(col("name"), "Grace"), eq(col("name"), "Linus"))));
 const singleAndExpr = and(eq(col("id"), 1));
@@ -283,6 +291,14 @@ type _ReplacedExtendedUsersKeys = Expect<Equal<keyof typeof replacedExtendedUser
 type _ReplacedExtendedUsersId = Expect<Equal<ExprType<typeof replacedExtendedUsers.columns.id>, string>>;
 type _ReplacedExtendedUsersName = Expect<Equal<ExprType<typeof replacedExtendedUsers.columns.name>, string>>;
 type _ColFilteredUsersId = Expect<Equal<ExprType<typeof colFilteredUsers.columns.id>, SqlInt>>;
+type _FilterEqColUsersName = Expect<Equal<ExprType<typeof filterEqColUsers.columns.name>, string>>;
+type _FilterGteComputedUsersId = Expect<Equal<ExprType<typeof filterGteComputedUsers.columns.id>, SqlInt>>;
+type _FilterEqCallbackUsersId = Expect<Equal<ExprType<typeof filterEqCallbackUsers.columns.id>, SqlInt>>;
+type _FilterNeUsersName = Expect<Equal<ExprType<typeof filterNeUsers.columns.name>, string>>;
+type _FilterGtUsersId = Expect<Equal<ExprType<typeof filterGtUsers.columns.id>, SqlInt>>;
+type _FilterLtUsersId = Expect<Equal<ExprType<typeof filterLtUsers.columns.id>, SqlInt>>;
+type _FilterLteUsersId = Expect<Equal<ExprType<typeof filterLteUsers.columns.id>, SqlInt>>;
+type _LiteralStringFilterName = Expect<Equal<ExprType<typeof literalStringFilter.columns.name>, string>>;
 type _ColSortedUsersName = Expect<Equal<ExprType<typeof colSortedUsers.columns.name>, string>>;
 type _ColAggregatedOrdersTotalSpend = Expect<Equal<ExprType<typeof colAggregatedOrders.columns.total_spend>, SqlFloat>>;
 type _ColExplodedSessionsTag = Expect<Equal<ExprType<typeof colExplodedSessions.columns.tag>, string>>;
@@ -386,6 +402,14 @@ void extendedUsers;
 void deferredExtendedUsers;
 void replacedExtendedUsers;
 void colFilteredUsers;
+void filterEqColUsers;
+void filterGteComputedUsers;
+void filterEqCallbackUsers;
+void filterNeUsers;
+void filterGtUsers;
+void filterLtUsers;
+void filterLteUsers;
+void literalStringFilter;
 void variadicAndFilteredUsers;
 void variadicOrFilteredUsers;
 void singleAndExpr;
@@ -455,6 +479,10 @@ pipe(users, leftJoin(
 pipe(users, filter(
     eq(col("missing"), 1)
 ));
+// @ts-expect-error filterEq rejects unknown deferred columns when applied to a typed query
+pipe(users, filterEq(col("missing"), 1));
+// @ts-expect-error filterEq callback operands must be valid expressions
+pipe(users, filterEq((user) => user.name, (user) => user.id));
 // @ts-expect-error col rejects unknown current-row columns in map context
 pipe(users, map({
     missing: col("missing"),
