@@ -30,6 +30,7 @@ export {
   filterLte,
 } from "./query/filter_comparison.ts";
 export { drop, pick, rename } from "./query/projection_helpers.ts";
+export { alias, select } from "./query/select.ts";
 export {
   dropOverlapLeft,
   dropOverlapRight,

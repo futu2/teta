@@ -106,6 +106,12 @@ export const sort: typeof import("./src/edsl/query.ts").sort = query.sort;
 /** Projects each row into a new selected shape. */
 export const map: typeof import("./src/edsl/query.ts").map = query.map;
 
+/** Projects a query from a list of expressions. */
+export const select: typeof import("./src/edsl/query.ts").select = query.select;
+
+/** Names an expression inside `select(...)`. */
+export const alias: typeof import("./src/edsl/query.ts").alias = query.alias;
+
 /** Adds or replaces columns while preserving existing query columns. */
 export const extend: typeof import("./src/edsl/query.ts").extend = query.extend;
 
