@@ -27,6 +27,9 @@ export const LEGACY_JOIN_MERGE_OPTION_ERROR =
 export const MAP_CURRIED_ONLY_ERROR =
   "map() is curried-only. Use pipe(query, map(selector)).";
 
+export const EXTEND_CURRIED_ONLY_ERROR =
+  "extend() is curried-only. Use pipe(query, extend(selector)).";
+
 export const FILTER_CURRIED_ONLY_ERROR =
   "filter() is curried-only. Use pipe(query, filter(predicate)).";
 

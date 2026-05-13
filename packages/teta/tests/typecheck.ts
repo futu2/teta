@@ -461,6 +461,10 @@ pipe(users, map({
 }));
 // @ts-expect-error extend rejects unknown deferred columns when applied to a typed query
 pipe(users, extend({ broken: col("missing") }));
+// @ts-expect-error leftCol is invalid in current-row extend context
+pipe(users, extend({ broken: leftCol("id") }));
+// @ts-expect-error rightCol is invalid in current-row extend context
+pipe(users, extend({ broken: rightCol("user_id") }));
 // @ts-expect-error col rejects unknown current-row columns in fold context
 pipe(orders, fold({
     total: sum(col("missing")),

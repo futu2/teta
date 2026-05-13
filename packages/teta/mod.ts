@@ -88,6 +88,9 @@ export const sort: typeof import("./src/edsl/query.ts").sort = query.sort;
 /** Projects each row into a new selected shape. */
 export const map: typeof import("./src/edsl/query.ts").map = query.map;
 
+/** Adds or replaces columns while preserving existing query columns. */
+export const extend: typeof import("./src/edsl/query.ts").extend = query.extend;
+
 /** Schema type helpers used when declaring tables. */
 export const t: typeof import("./src/edsl/query.ts").t = query.t;
 

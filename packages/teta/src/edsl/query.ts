@@ -20,6 +20,7 @@ export {
   unionAll,
 } from "./query/builder.ts";
 export type { QueryExplainResult, QueryIR, QueryStageKind, QueryStep } from "./query/builder.ts";
+export { extend } from "./query/extend.ts";
 export { drop, pick, rename } from "./query/projection_helpers.ts";
 export {
   dropOverlapLeft,
