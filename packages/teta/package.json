@@ -26,7 +26,6 @@
   },
   "dependencies": {
     "@teta/sql": "workspace:*",
-    "node-sql-parser": "^5.4.0",
-    "remeda": "^2.33.6"
+    "node-sql-parser": "^5.4.0"
   }
 }
