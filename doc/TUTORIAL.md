@@ -367,9 +367,19 @@ Typical patterns:
 
 - `pick(...)` for reusable column subsets
 - `drop(...)` when it is easier to name columns to remove
+- `select(...)` for list-style projections where plain column refs keep their names
 - explicit object literals when you want to reshape columns and add computed fields
 - `rename(...)` for systematic renaming like prefixes or namespaces
 - `pipe(...)` when the reshaping reads better as query steps
+
+`select(...)` projects from an expression list. Plain column refs keep their source names, and `alias(...)` names computed expressions:
+
+```ts
+const q = pipe(users, select((user) => [
+  user.id,
+  pipe(upper(user.name), alias("name_upper")),
+]));
+```
 
 Type note:
 `rename(...)` works best with template literals because TypeScript can keep exact renamed keys.

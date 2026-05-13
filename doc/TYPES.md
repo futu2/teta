@@ -92,6 +92,7 @@ These create a new `TColumns` from the object you return:
 
 - `map(...)`
 - `fold(...)`
+- `select(...)`
 
 ```ts
 import { map, pipe } from "@teta/teta";
@@ -107,6 +108,8 @@ const publicUsers = pipe(
 ```
 
 With `fold(...)`, the returned object also becomes the new row shape, but it is meant for grouped or aggregated output.
+
+`select(...)` creates a new row shape from an expression list. Plain column refs keep their names, `alias("name")` names an expression, and unnamed computed expressions get generated keys such as `col_1`.
 
 ```ts
 import { count, fold, group, pipe } from "@teta/teta";
@@ -262,6 +265,7 @@ Inside that pipeline, `filter((user) => eq(user.active, true))` and `take(10)` a
 
 - `filter(...)` returns `QueryStep<T, T>`
 - `map(...)` returns `QueryStep<TIn, TOut>` with a new output shape
+- `select(...)` returns `QueryStep<TIn, TOut>` from an expression list
 - `take(...)` returns `QueryStep<T, T>`
 - `flow(...)` composes query steps and preserves each intermediate type.
 - `extend(...)` keeps existing columns and adds or replaces the extension keys.

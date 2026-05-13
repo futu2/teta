@@ -63,6 +63,20 @@ const activePublicUsers = flow(
 
 Bare strings in comparison filter helpers are literals; use `col("name")` or a row callback for columns.
 
+Use `select(...)` for list-style projections. Plain column refs keep their names, and `alias(...)` names computed outputs:
+
+```ts
+import { alias, select, upper } from "@teta/teta";
+
+const publicUsers = pipe(
+  users,
+  select((user) => [
+    user.id,
+    pipe(upper(user.email), alias("email_upper")),
+  ])
+);
+```
+
 For explicit frontend/backend use, lower the query to IR and render it through `@teta/sql`:
 
 ```ts
