@@ -333,7 +333,7 @@ Quick rule of thumb:
 Teta includes projection helpers for common object-shaped `map(...)` and `fold(...)` callbacks.
 
 ```ts
-import { map, rename, pick, pipe, replace, table, t, upper } from "@teta/teta";
+import { drop, map, rename, pick, pipe, replace, table, t, upper } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -356,15 +356,18 @@ const publicUsers = pipe(users, pick("id", "name", "age"));
 
 const namespacedUsers = pipe(
   users,
-  map(pick("id", "name")),
+  pick("id", "name"),
   rename((key) => `user_${key}`)
 );
+
+const publicAuditUsers = pipe(users, drop("internal_notes"));
 ```
 
 Typical patterns:
 
 - `pick(...)` for reusable column subsets
-- explicit object literals when you want to drop a few columns and add computed fields
+- `drop(...)` when it is easier to name columns to remove
+- explicit object literals when you want to reshape columns and add computed fields
 - `rename(...)` for systematic renaming like prefixes or namespaces
 - `pipe(...)` when the reshaping reads better as query steps
 
@@ -376,7 +379,7 @@ For example:
 ```ts
 const prefixed = pipe(
   users,
-  map(pick("id", "name")),
+  pick("id", "name"),
   rename((key) => `user_${key}`)
 );
 ```
