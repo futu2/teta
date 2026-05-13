@@ -1,4 +1,3 @@
-import { pipe } from "remeda";
 import {
   and,
   asc,
@@ -16,6 +15,7 @@ import {
   take,
   toSql,
   trim,
+  pipe,
 } from "../packages/teta/mod.ts";
 import type { SqlOptions } from "../packages/teta/mod.ts";
 

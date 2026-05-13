@@ -1,6 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { pipe } from "remeda";
-import { table, t, filter, eq, gt, map, take, toSql, innerJoin } from "../mod.ts";
+import { table, t, filter, eq, gt, map, take, toSql, innerJoin, pipe } from "../mod.ts";
 describe("render strategy", () => {
     test("optimized strategy keeps simple pipelines fused", () => {
         const users = table("users", {

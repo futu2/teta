@@ -80,8 +80,7 @@ These keep the same `TColumns`:
 - `take(...)`
 
 ```ts
-import { pipe } from "remeda";
-import { eq, filter } from "@teta/teta";
+import { eq, filter, pipe } from "@teta/teta";
 
 const activeUsers = pipe(users, filter((user) => eq(user.active, true)));
 // still Query<{ id, email, age, active, created_at, deleted_at, tags, profile }>
@@ -95,8 +94,7 @@ These create a new `TColumns` from the object you return:
 - `fold(...)`
 
 ```ts
-import { pipe } from "remeda";
-import { map } from "@teta/teta";
+import { map, pipe } from "@teta/teta";
 
 const publicUsers = pipe(
   users,
@@ -111,8 +109,7 @@ const publicUsers = pipe(
 With `fold(...)`, the returned object also becomes the new row shape, but it is meant for grouped or aggregated output.
 
 ```ts
-import { pipe } from "remeda";
-import { count, fold, group } from "@teta/teta";
+import { count, fold, group, pipe } from "@teta/teta";
 
 const userCounts = pipe(
   users,
@@ -133,7 +130,6 @@ const userCounts = pipe(
 - `full` join makes both sides nullable
 
 ```ts
-import { pipe } from "remeda";
 import {
   dropOverlapLeft,
   leftJoin,
@@ -141,6 +137,7 @@ import {
   prefixOverlapLeft,
   table,
   t,
+  pipe,
 } from "@teta/teta";
 
 const orders = table("orders", {
@@ -213,8 +210,7 @@ function isAdult(age: ExprRef<SqlInt>) {
 Then use it in a query:
 
 ```ts
-import { pipe } from "remeda";
-import { filter } from "@teta/teta";
+import { filter, pipe } from "@teta/teta";
 
 const adults = pipe(users, filter((user) => isAdult(user.age)));
 ```
@@ -253,8 +249,7 @@ Teta also smooths over normal usage: raw numeric literals are normalized in nume
 When you call a query helper in data-last form, Teta returns a reusable pipeline step.
 
 ```ts
-import { pipe } from "remeda";
-import { eq, filter, take } from "@teta/teta";
+import { eq, filter, take, pipe } from "@teta/teta";
 
 const top10ActiveUsers = pipe(
   users,

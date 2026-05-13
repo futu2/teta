@@ -1,5 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import { pipe } from "remeda";
 
 import {
   eq,
@@ -11,6 +10,7 @@ import {
   table,
   toSql,
   values,
+  pipe,
 } from "../mod.ts";
 
 describe("values(query root)", () => {

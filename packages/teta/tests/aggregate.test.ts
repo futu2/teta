@@ -1,6 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { omit, pipe } from "remeda";
-import { fold, filter, leftJoin, count, eq, group, gt, sum, lt, toSql, and, or, arrayAgg } from "../mod.ts";
+import { fold, filter, leftJoin, count, eq, group, gt, sum, lt, toSql, and, or, arrayAgg, pipe } from "../mod.ts";
 import { ORDERS_GROUPED_ARRAY_AGG_HETU_COMPACT, ORDERS_GROUPED_ARRAY_AGG_HIVE_COMPACT, ORDERS_GROUPED_ARRAY_AGG_POSTGRES_COMPACT, ORDERS_GROUPED_ARRAY_AGG_SQLITE_COMPACT, ORDERS_GROUPED_TOTALS_POSTGRES_COMPACT, ORDERS_GROUPED_TOTALS_HAVING_POSTGRES_COMPACT, ORDERS_GROUPED_TOTALS_WHERE_HAVING_POSTGRES_COMPACT, ORDERS_GROUPED_TOTALS_WHERE_HAVING_OR_POSTGRES_COMPACT, ORDERS_GROUPED_USER_RANGE_HAVING_OR_POSTGRES_COMPACT, USERS_ORDERS_LEFT_JOIN_AGG_POSTGRES_COMPACT, QUOTED_TOTAL_SPEND_AGG_LIST_POSTGRES_COMPACT } from "./helpers/expected-sql.ts";
 import { createOrdersTable, createUsersTable } from "./helpers/fixtures.ts";
 describe("joins and aggregates", () => {
@@ -102,13 +101,12 @@ describe("joins and aggregates", () => {
         })), filter((row) => gt(row["Total Spend"], 100)));
         expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe(QUOTED_TOTAL_SPEND_AGG_LIST_POSTGRES_COMPACT);
     });
-    test("supports remeda omit() inside fold shaping", () => {
+    test("supports explicit omission inside fold shaping", () => {
         const orders = createOrdersTable();
-        const query = pipe(orders, fold((order) => omit({
+        const query = pipe(orders, fold((order) => ({
             user_id: group(order.user_id),
-            order_count: count(order.order_id),
             total_spend: sum(order.total),
-        }, ["order_count"])), filter((row) => gt(row.total_spend, 100)));
+        })), filter((row) => gt(row.total_spend, 100)));
         expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe(ORDERS_GROUPED_TOTALS_HAVING_POSTGRES_COMPACT);
     });
 });

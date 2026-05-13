@@ -3,7 +3,7 @@
 These examples are small application-style entrypoints that show how Teta fits into
 Node, Bun, and Deno projects.
 
-Most multi-stage examples use Remeda's `pipe(...)` with named imports instead of a custom composition helper.
+Most multi-stage examples use Teta's `pipe(...)` with named imports from `@teta/teta`.
 
 - `examples/node/tenant_orders.ts` builds `{ text, values }` for a typical database client.
 - `examples/node/api_orders.ts` shows a request/session-driven API handler with bound SQL params.

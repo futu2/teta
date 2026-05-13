@@ -1,5 +1,4 @@
-import { pipe } from "remeda";
-import { dateTrunc, desc, take, sort, map, table, t, toSql } from "@teta/teta";
+import { dateTrunc, desc, take, sort, map, table, t, toSql, pipe } from "@teta/teta";
 
 const events = table("events", {
   id: t.int(),

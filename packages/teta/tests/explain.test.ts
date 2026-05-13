@@ -1,6 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { pipe } from "remeda";
-import { explain, table, t, filter, map, eq, loop, take, isNotNull, toIR } from "../mod.ts";
+import { explain, table, t, filter, map, eq, loop, take, isNotNull, toIR, pipe } from "../mod.ts";
 import { irToSql } from "@teta/sql";
 describe("explain api", () => {
     test("returns IR, AST, SQL, params, and stage metadata", () => {

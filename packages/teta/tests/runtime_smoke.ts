@@ -1,5 +1,4 @@
-import { pipe } from "remeda";
-import { param, table, t, filter, eq, map, and, take, trim, lower, toSqlResult } from "../mod.ts";
+import { param, table, t, filter, eq, map, and, take, trim, lower, toSqlResult, pipe } from "../mod.ts";
 const users = table("users", {
     id: t.int(),
     name: t.string(),

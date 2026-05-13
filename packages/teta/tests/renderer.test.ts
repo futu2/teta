@@ -1,6 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { pipe } from "remeda";
-import { add, and, eq, filter, map, param, t, table, toSql, toSqlResult } from "../mod.ts";
+import { add, and, eq, filter, map, param, t, table, toSql, toSqlResult, pipe } from "../mod.ts";
 import {
   DIALECT_MATRIX_SQL,
   EXPLICIT_PARAM_EXPR_POSTGRES_COMPACT,

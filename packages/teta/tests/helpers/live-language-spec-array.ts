@@ -1,7 +1,6 @@
 import { SQLITE_UNSUPPORTED, arrayTable } from "./live-language-spec-shared.ts";
 import type { LiveSpecCase } from "./live-language-spec-shared.ts";
-import { pipe } from "remeda";
-import { map, arrayAppend, arrayConcat, arrayContains, arrayDistinct, arrayJoin, arrayLength, arrayPosition, arrayPrepend, arraySlice } from "../../mod.ts";
+import { map, arrayAppend, arrayConcat, arrayContains, arrayDistinct, arrayJoin, arrayLength, arrayPosition, arrayPrepend, arraySlice, pipe } from "../../mod.ts";
 export const LIVE_LANGUAGE_ARRAY_CASES: LiveSpecCase[] = [
     {
         name: "array core functions",

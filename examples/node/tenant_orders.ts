@@ -1,5 +1,4 @@
-import { pipe } from "remeda";
-import { desc, eq, filter, take, sort, param, map, t, table, toSqlResult } from "@teta/teta";
+import { desc, eq, filter, take, sort, param, map, t, table, toSqlResult, pipe } from "@teta/teta";
 
 const orders = table("orders", {
   id: t.bigint(),

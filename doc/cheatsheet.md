@@ -5,10 +5,7 @@ Quick reference for the public API exported from `@teta/teta`.
 Teta is function-first. Row-transforming query helpers are curried query steps used with `pipe(...)`.
 
 ```ts
-import { pick, pipe } from "remeda";
-
-import { $, $left, $right, add, and, arrayAppend, arrayContains, arrayJoin, arrayLength, arrayPosition, arraySlice, asc, avg, bitLength, cast, charLength, characterLength, coalesce, col, concat, count, currentDate, currentTimestamp, dateAdd, dateDiff, dateFormat, dateLiteral, dateParse, dateTrunc, day, desc, dropOverlapLeft, dropOverlapRight, eq, explain, ExprRef, f, filter, fn, fold, fromUnixTime, fullJoin, group, gt, gte, hour, innerJoin, isIn, isNotNull, isNull, join, lag, lead, left, leftCol, leftJoin, like, loop, lower, lt, lte, map, max, min, minute, mod, month, mul, ne, not, ntile, nullIf, octetLength, onEq, over, overlay, param, percentRank, pickCols, position, pow, prefixAllLeft, prefixAllRight, prefixOverlapLeft, prefixOverlapRight, Query, rank, regexExtract, regexLike, regexReplace, replace, reverse, right, rightCol, rightJoin, round, rowNumber, rpad, shape, sort, sqrt, sub, substring, suffixAllLeft, suffixAllRight, sum, sumOver, t, table, take, timestampLiteral, toAst, toDate, toFloat, toInt, toIR, toSql, toSqlResult, toUnixTime, trim, union, unionAll, unnest, upper, usingCols, values, when, windowFn, year } from "@teta/teta";
-
+import { $, $left, $right, add, and, arrayAppend, arrayContains, arrayJoin, arrayLength, arrayPosition, arraySlice, asc, avg, bitLength, cast, charLength, characterLength, coalesce, col, concat, count, currentDate, currentTimestamp, dateAdd, dateDiff, dateFormat, dateLiteral, dateParse, dateTrunc, day, desc, dropOverlapLeft, dropOverlapRight, eq, explain, ExprRef, f, filter, fn, fold, fromUnixTime, fullJoin, group, gt, gte, hour, innerJoin, isIn, isNotNull, isNull, join, lag, lead, left, leftCol, leftJoin, like, loop, lower, lt, lte, map, mapCols, max, min, minute, mod, month, mul, ne, not, ntile, nullIf, octetLength, onEq, over, overlay, param, percentRank, pickCols, pipe, position, pow, prefixAllLeft, prefixAllRight, prefixOverlapLeft, prefixOverlapRight, Query, rank, regexExtract, regexLike, regexReplace, replace, reverse, right, rightCol, rightJoin, round, rowNumber, rpad, shape, sort, sqrt, sub, substring, suffixAllLeft, suffixAllRight, sum, sumOver, t, table, take, timestampLiteral, toAst, toDate, toFloat, toInt, toIR, toSql, toSqlResult, toUnixTime, trim, union, unionAll, unnest, upper, usingCols, values, when, windowFn, year } from "@teta/teta";
 ```
 
 ## 1) Query roots and composition
@@ -39,7 +36,7 @@ const seed = values([
 `values(...)` requires at least one row, every row must have the same columns, and values must be SQL literals supported by `lit(...)`.
 
 ### Multi-stage pipelines
-Use Remeda's `pipe(...)` to compose query stages.
+Use Teta's `pipe(...)` to compose query stages.
 
 ```ts
 const q = pipe(
@@ -429,20 +426,23 @@ const explicitSql = irToSql(ir, { dialect: "postgresql" });
 - `groupShape(obj)` -> apply `group(...)` to each expression in a shape
 - ``f`prefix ${expr} suffix` ``
 
-### Remeda-friendly projection helpers
+### Projection helpers
 
 ```ts
-import { merge, omit, pick, pipe } from "remeda";
+import { fold, groupShape, map, mapCols, pickCols, pipe, upper } from "@teta/teta";
 
 const compactUsers = pipe(
   users,
-  map(pipe(
-    pick(["id", "name"] as const),
-    (base) => merge(base, { name_upper: upper(base.name) })
-  ))
+  map((user) => ({
+    id: user.id,
+    name: user.name,
+    name_upper: upper(user.name),
+  }))
 );
 
-const publicUsers = pipe(users, map(omit(["created_at"] as const)));
+const publicUsers = pipe(users, pickCols("id", "name"));
+
+const prefixedUsers = pipe(users, mapCols((key) => `user_${key}`));
 
 const groupedUsers = pipe(
   users,
@@ -491,8 +491,7 @@ For a guided explanation of how these fit together in the EDSL, see [TYPES.md](.
 ## 9) End-to-end mini example
 
 ```ts
-import { pipe } from "remeda";
-import { asc, desc, currentTimestamp, dateTrunc, eq, filter, take, sort, map, table, t, toSql, trim, upper } from "@teta/teta";
+import { asc, desc, currentTimestamp, dateTrunc, eq, filter, take, sort, map, table, t, toSql, trim, upper, pipe } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),

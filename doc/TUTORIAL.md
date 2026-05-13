@@ -8,7 +8,7 @@ qualified column references.
 
 Keep EDSL queries dialect-neutral. Choose the dialect by passing SQL options at render time.
 
-Most multi-stage examples below use Remeda's `pipe(...)` with named imports. Row-transforming query helpers are curried query steps, so `pipe(query, map(...))` is the standard shape. This function-first style is intentional: it keeps query stages easy to compose, extract, reuse, and test as ordinary values.
+Most multi-stage examples below use Teta's `pipe(...)` with named imports. Row-transforming query helpers are curried query steps, so `pipe(query, map(...))` is the standard shape. This function-first style is intentional: it keeps query stages easy to compose, extract, reuse, and test as ordinary values.
 
 All rendering examples below pass plain `SqlOptions` objects into `toSql(...)` or `toSqlResult(...)`. `@teta/teta` is the EDSL frontend; `@teta/sql` is the reusable backend. You can use the direct helper, or lower explicitly through IR:
 
@@ -25,8 +25,7 @@ const explicit = irToSql(toIR(q), { dialect: "postgresql" });
 ### 1) Filter + map + sort + take
 
 ```ts
-import { pipe } from "remeda";
-import { and, asc, desc, eq, filter, gte, take, sort, map, table, t, toSql } from "@teta/teta";
+import { and, asc, desc, eq, filter, gte, take, sort, map, table, t, toSql, pipe } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -66,8 +65,7 @@ LIMIT 5
 ### 2) Join + fold with group()
 
 ```ts
-import { pipe } from "remeda";
-import { count, fold, group, leftJoin, onEq, sum, table, t, toSql } from "@teta/teta";
+import { count, fold, group, leftJoin, onEq, sum, table, t, toSql, pipe } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -109,8 +107,7 @@ GROUP BY cte_0_0.id
 ### 3) String concat with template helper
 
 ```ts
-import { pipe } from "remeda";
-import { f, map, table, t, toSql } from "@teta/teta";
+import { f, map, table, t, toSql, pipe } from "@teta/teta";
 
 const names = table("names", {
   id: t.int(),
@@ -165,8 +162,7 @@ const users = table("users", {
 ### `map(...)` changes the row shape
 
 ```ts
-import { pipe } from "remeda";
-import { map } from "@teta/teta";
+import { map, pipe } from "@teta/teta";
 
 const labels = pipe(
   users,
@@ -185,8 +181,7 @@ const labels = pipe(
 ### `join(...)` and `unnest(...)` refine types
 
 ```ts
-import { pipe } from "remeda";
-import { leftJoin, onEq, prefixOverlapLeft, table, t } from "@teta/teta";
+import { leftJoin, onEq, prefixOverlapLeft, table, t, pipe } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -209,8 +204,7 @@ If both sides expose the same output column name, Teta now requires an explicit 
 Legacy `join(..., { merge })` is no longer supported. Pass the merge helper positionally before the options object, for example `join(right, on, dropOverlapLeft(), { type: "left" })`.
 
 ```ts
-import { pipe } from "remeda";
-import { join, leftJoin, onEq, prefixOverlapLeft, table, t, unnest } from "@teta/teta";
+import { join, leftJoin, onEq, prefixOverlapLeft, table, t, unnest, pipe } from "@teta/teta";
 
 const orders = table("orders", {
   order_id: t.int(),
@@ -286,8 +280,7 @@ Use `renderStrategy: "readable"` when you want SQL that tracks the query pipelin
 more literally with staged CTEs.
 
 ```ts
-import { pipe } from "remeda";
-import { add, filter, gt, map, table, t, toSql } from "@teta/teta";
+import { add, filter, gt, map, table, t, toSql, pipe } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -335,13 +328,12 @@ Quick rule of thumb:
 - `readable` preserves stage boundaries as `cte_0`, `cte_1`, ...
 - nested subqueries usually mean the compiler introduced a deliberate scope barrier
 
-### Optional: Remeda for projection shaping
+### Projection shaping helpers
 
-If you already use `remeda` in your app, it pairs nicely with Teta's object-shaped `map(...)` and `fold(...)` callbacks.
+Teta includes projection helpers for common object-shaped `map(...)` and `fold(...)` callbacks.
 
 ```ts
-import { mapKeys, merge, omit, pick, pipe } from "remeda";
-import { replace, map, table, t, upper } from "@teta/teta";
+import { map, mapCols, pickCols, pipe, replace, table, t, upper } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -352,55 +344,49 @@ const users = table("users", {
 
 const compact = pipe(
   users,
-  map(pipe(
-    pick(["id", "name", "age"] as const),
-    (base) => merge(base, {
-      normalized_name: upper(replace(base.name, " ", "_")),
-    })
-  ))
+  map((user) => ({
+    id: user.id,
+    name: user.name,
+    age: user.age,
+    normalized_name: upper(replace(user.name, " ", "_")),
+  }))
 );
 
-const publicUsers = pipe(users, map(omit(["active"] as const)));
+const publicUsers = pipe(users, pickCols("id", "name", "age"));
 
 const namespacedUsers = pipe(
   users,
-  map(pipe(
-    pick(["id", "name"] as const),
-    mapKeys((key) => "user_" + key)
-  ))
+  map(pickCols("id", "name")),
+  mapCols((key) => `user_${key}`)
 );
 ```
 
 Typical patterns:
 
-- `pick(...)` for reusable column subsets
-- `omit(...)` to keep most columns but drop a few
-- `merge(...)` for "base shape + computed fields"
-- `pipe(...)` when the reshaping reads better as a small pipeline
-- `mapKeys(...)` for systematic renaming like prefixes or namespaces
+- `pickCols(...)` for reusable column subsets
+- explicit object literals when you want to drop a few columns and add computed fields
+- `mapCols(...)` for systematic renaming like prefixes or namespaces
+- `pipe(...)` when the reshaping reads better as query steps
 
 Type note:
-If a reshaping helper widens keys to a plain `string` type, Teta will not expose arbitrary downstream column property access for that stage. That keeps follow-up pipelines safe: TypeScript only lets you access renamed columns when their names stay statically known.
+`mapCols(...)` works best with template literals because TypeScript can keep exact renamed keys.
 
-For `mapKeys(...)`, prefer template literals when you want exact renamed keys:
+For example:
 
 ```ts
 const prefixed = pipe(
   users,
-  map(pipe(
-    pick(["id", "name"] as const),
-    mapKeys((key) => `user_${key}`)
-  ))
+  map(pickCols("id", "name")),
+  mapCols((key) => `user_${key}`)
 );
 ```
 
-Using string concatenation like `"user_" + key` usually widens to `string`, so downstream code will not see concrete properties such as `user_id`.
+Downstream code can then access concrete properties such as `user_id` and `user_name`.
 
 ### Join (auto alias)
 
 ```ts
-import { pipe } from "remeda";
-import { leftJoin, map, onEq, table, t, toSql } from "@teta/teta";
+import { leftJoin, map, onEq, table, t, toSql, pipe } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -434,8 +420,7 @@ Use `leftJoin(...)`, `rightJoin(...)`, `fullJoin(...)`, or the generic `join(...
 Use `join(..., { lateral: true })` when the right-hand query needs to reference columns from the left side.
 
 ```ts
-import { pipe } from "remeda";
-import { eq, filter, join, lit, map, table, t, toSql } from "@teta/teta";
+import { eq, filter, join, lit, map, table, t, toSql, pipe } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -475,8 +460,7 @@ For `sqlite`, the keyword is omitted during SQL rendering because correlated sub
 Use a custom dialect config when runtime dialect and parser dialect differ:
 
 ```ts
-import { pipe } from "remeda";
-import { map, table, t, toSql } from "@teta/teta";
+import { map, table, t, toSql, pipe } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -524,8 +508,7 @@ Teta language spec categories:
 The expression API is function-first, so query code stays friendly to pipelines and ordinary function composition.
 
 ```ts
-import { pipe } from "remeda";
-import { arrayContains, arrayJoin, arrayLength, cast, dateDiff, dateFormat, dateParse, dateTrunc, regexLike, regexReplace, map, table, t, toSql, toUnixTime } from "@teta/teta";
+import { arrayContains, arrayJoin, arrayLength, cast, dateDiff, dateFormat, dateParse, dateTrunc, regexLike, regexReplace, map, table, t, toSql, toUnixTime, pipe } from "@teta/teta";
 
 const sessions = table("sessions", {
   id: t.int(),
@@ -557,8 +540,7 @@ console.log(toSql(q, { dialect: "postgresql", format: "pretty" }));
 You can customize a dialect so unsupported direct functions map to equivalents or fallbacks:
 
 ```ts
-import { pipe } from "remeda";
-import { bitLength, dateFormat, map, table, t, toSql } from "@teta/teta";
+import { bitLength, dateFormat, map, table, t, toSql, pipe } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -600,8 +582,7 @@ Grouping is expressed with `group(expr)` inside `fold(...)`.
 There is no separate `groupBy` stage.
 
 ```ts
-import { pipe } from "remeda";
-import { fold, count, filter, group, gt, sum, table, t, toSql } from "@teta/teta";
+import { fold, count, filter, group, gt, sum, table, t, toSql, pipe } from "@teta/teta";
 
 const orders = table("orders", {
   id: t.int(),
@@ -625,8 +606,7 @@ console.log(toSql(q, {}));
 ### Window function
 
 ```ts
-import { pipe } from "remeda";
-import { asc, desc, lag, lead, ntile, over, rank, rowNumber, map, sumOver, table, t, toSql } from "@teta/teta";
+import { asc, desc, lag, lead, ntile, over, rank, rowNumber, map, sumOver, table, t, toSql, pipe } from "@teta/teta";
 
 const orders = table("orders", {
   id: t.int(),
@@ -661,8 +641,7 @@ console.log(toSql(q, { dialect: "postgresql", format: "pretty" }));
 ### Custom SQL functions (UDF)
 
 ```ts
-import { pipe } from "remeda";
-import { desc, fn, over, map, table, t, toSql, windowFn } from "@teta/teta";
+import { desc, fn, over, map, table, t, toSql, windowFn, pipe } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -684,8 +663,7 @@ console.log(toSql(q, { dialect: "postgresql", format: "pretty" }));
 ### SQL92 string helpers
 
 ```ts
-import { pipe } from "remeda";
-import { charLength, lower, position, regexExtract, regexLike, regexReplace, map, substring, table, t, toSql, trim, upper } from "@teta/teta";
+import { charLength, lower, position, regexExtract, regexLike, regexReplace, map, substring, table, t, toSql, trim, upper, pipe } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -714,8 +692,7 @@ console.log(toSql(q, { dialect: "postgresql", format: "pretty" }));
 ### Array helpers
 
 ```ts
-import { pipe } from "remeda";
-import { arrayAppend, arrayContains, arrayJoin, arrayLength, arrayPosition, arraySlice, map, table, t, toSql } from "@teta/teta";
+import { arrayAppend, arrayContains, arrayJoin, arrayLength, arrayPosition, arraySlice, map, table, t, toSql, pipe } from "@teta/teta";
 
 const sessions = table("sessions", {
   id: t.int(),
@@ -741,8 +718,7 @@ console.log(toSql(q, { dialect: "postgresql", format: "pretty" }));
 ### IN operator
 
 ```ts
-import { pipe } from "remeda";
-import { filter, isIn, map, table, t } from "@teta/teta";
+import { filter, isIn, map, table, t, pipe } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -759,8 +735,7 @@ const q = pipe(
 ### SQL standard date/time helpers
 
 ```ts
-import { pipe } from "remeda";
-import { currentDate, currentTimestamp, dateAdd, dateDiff, dateFormat, dateLiteral, dateParse, dateTrunc, month, map, table, t, timestampLiteral, toUnixTime, year } from "@teta/teta";
+import { currentDate, currentTimestamp, dateAdd, dateDiff, dateFormat, dateLiteral, dateParse, dateTrunc, month, map, table, t, timestampLiteral, toUnixTime, year, pipe } from "@teta/teta";
 
 const posts = table("posts", {
   id: t.int(),
@@ -794,8 +769,7 @@ Use `cast(expr, type)` to emit `CAST(expr AS type)`.
 Use `toDate(expr)` as a convenience when you want `CAST(expr AS DATE)`.
 
 ```ts
-import { pipe } from "remeda";
-import { cast, map, table, t, toDate } from "@teta/teta";
+import { cast, map, table, t, toDate, pipe } from "@teta/teta";
 
 const orders = table("orders", {
   id: t.int(),
@@ -813,8 +787,7 @@ const q = pipe(
 ```
 
 ```ts
-import { pipe } from "remeda";
-import { cast, filter, gt, map, table, t } from "@teta/teta";
+import { cast, filter, gt, map, table, t, pipe } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -836,8 +809,7 @@ const q = pipe(
 ### CASE WHEN
 
 ```ts
-import { pipe } from "remeda";
-import { caseWhen, lt, map, table, t, when } from "@teta/teta";
+import { caseWhen, lt, map, table, t, when, pipe } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -859,8 +831,7 @@ const q = pipe(
 ### UNION / UNION ALL
 
 ```ts
-import { pipe } from "remeda";
-import { eq, filter, map, table, t, unionAll } from "@teta/teta";
+import { eq, filter, map, table, t, unionAll, pipe } from "@teta/teta";
 
 const activeUsers = pipe(
   table("users", {
@@ -888,10 +859,7 @@ const allUsers = unionAll(activeUsers, inactiveUsers);
 ### Recursive loop (WITH RECURSIVE)
 
 ```ts
-import { pick, pipe } from "remeda";
-import { eq, filter, isNull, join, loop, map, table, t } from "@teta/teta";
-
-const treeCols = ["id", "name", "manager_id"] as const;
+import { eq, filter, isNull, join, loop, pickCols, pipe, table, t } from "@teta/teta";
 
 const employees = table("employees", {
   id: t.int(),
@@ -902,7 +870,7 @@ const employees = table("employees", {
 const base = pipe(
   employees,
   filter((e) => isNull(e.manager_id)),
-  map(pick(treeCols))
+  pickCols("id", "name", "manager_id")
 );
 
 const orgTree = pipe(
@@ -910,9 +878,9 @@ const orgTree = pipe(
   loop((self) => pipe(
     employees,
     join(self, (e, s) => eq(e.manager_id, s.id)),
-    map(pick(treeCols))
+    pickCols("id", "name", "manager_id")
   ))
 );
 
-const q = pipe(orgTree, map(pick(["id", "name"] as const)));
+const q = pipe(orgTree, pickCols("id", "name"));
 ```

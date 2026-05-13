@@ -1,4 +1,3 @@
-import { pipe } from "remeda";
 import {
   bitLength,
   characterLength,
@@ -7,6 +6,7 @@ import {
   table,
   t,
   toSql,
+  pipe,
   type SqlOptions,
 } from "@teta/teta";
 

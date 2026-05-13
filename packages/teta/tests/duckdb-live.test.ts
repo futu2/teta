@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { pipe } from "remeda";
-import { dateFormat, map, table, t, toSql, toTimestamp } from "../mod.ts";
+import { dateFormat, map, table, t, toSql, toTimestamp, pipe } from "../mod.ts";
 import { buildLiveDialectQuery } from "./helpers/fixtures.ts";
 let DuckDBConnection: (typeof import("@duckdb/node-api"))["DuckDBConnection"] | null = null;
 try {

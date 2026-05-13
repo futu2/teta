@@ -1,5 +1,4 @@
-import { pipe } from "remeda";
-import { eq, filter, map, table, t, toSqlResult } from "jsr:@teta/teta";
+import { eq, filter, map, table, t, toSqlResult, pipe } from "jsr:@teta/teta";
 
 const users = table("users", {
   id: t.int(),

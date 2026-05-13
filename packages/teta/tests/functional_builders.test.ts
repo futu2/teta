@@ -1,6 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { pipe } from "remeda";
-import { fold, caseWhen, groupShape, lt, map, sum, table, t, toSql, when } from "../mod.ts";
+import { fold, caseWhen, groupShape, lt, map, sum, table, t, toSql, when, pipe } from "../mod.ts";
 
 describe("functional expression builders", () => {
   test("renders caseWhen from plain branch data", () => {

@@ -1,7 +1,6 @@
 import { SQLITE_UNSUPPORTED, currentDate, currentTimestamp, scalarTable, } from "./live-language-spec-shared.ts";
 import type { LiveSpecCase } from "./live-language-spec-shared.ts";
-import { pipe } from "remeda";
-import { isNotNull, map, abs, add, cast, ceil, coalesce, dateAdd, dateDiff, dateFormat, dateParse, dateTrunc, day, div, eq, extract, floor, greatest, gt, gte, hour, isIn, isNull, least, lt, lte, minute, mod, month, mul, ne, nullIf, pow, round, second, sqrt, sub, toDate, toInt, toString, trim, year, and, bitLength, charLength, characterLength, concat, fromUnixTime, left, like, lower, lpad, not, octetLength, or, overlay, position, regexExtract, regexLike, regexReplace, replace, reverse, right, rpad, substring, toFloat, upper, toUnixTime } from "../../mod.ts";
+import { isNotNull, map, abs, add, cast, ceil, coalesce, dateAdd, dateDiff, dateFormat, dateParse, dateTrunc, day, div, eq, extract, floor, greatest, gt, gte, hour, isIn, isNull, least, lt, lte, minute, mod, month, mul, ne, nullIf, pow, round, second, sqrt, sub, toDate, toInt, toString, trim, year, and, bitLength, charLength, characterLength, concat, fromUnixTime, left, like, lower, lpad, not, octetLength, or, overlay, position, regexExtract, regexLike, regexReplace, replace, reverse, right, rpad, substring, toFloat, upper, toUnixTime, pipe } from "../../mod.ts";
 export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
     {
         name: "math functions",

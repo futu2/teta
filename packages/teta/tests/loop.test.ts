@@ -1,6 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { pipe } from "remeda";
-import { add, charLength, eq, filter, isNotNull, isNull, join, loop, map, not, t, table, toSql } from "../mod.ts";
+import { add, charLength, eq, filter, isNotNull, isNull, join, loop, map, not, t, table, toSql, pipe } from "../mod.ts";
 import { buildOrgTreeQuery, createEmployeesTable } from "./helpers/fixtures.ts";
 
 describe("recursive loop queries", () => {
