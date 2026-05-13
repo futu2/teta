@@ -1,5 +1,5 @@
 import type { ExprRef, SqlBigInt, SqlBytes, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlTimestamp, SqlUuid, } from "../mod.ts";
-import { filter, fullJoin, innerJoin, join, leftJoin, rightJoin, take, sort, param, map, rename, pipe, flow, table, t, fold, asc, desc, eq, gt, upper, add, coalesce, count, group, loop, sum, and, sub, caseWhen, when, mapShape, groupShape, lt, unnest, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, toString, toTimestamp, $, $left, $right, col, leftCol, rightCol, pick, drop } from "../mod.ts";
+import { filter, fullJoin, innerJoin, join, leftJoin, rightJoin, take, sort, param, map, rename, pipe, flow, table, t, fold, asc, desc, eq, gt, upper, add, coalesce, count, group, loop, sum, and, or, isNotNull, sub, caseWhen, when, mapShape, groupShape, lt, unnest, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, toString, toTimestamp, $, $left, $right, col, leftCol, rightCol, pick, drop } from "../mod.ts";
 type Equal<A, B> = ((<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false);
 type Expect<T extends true> = T;
 type ExprType<TExpr> = TExpr extends ExprRef<infer TValue> ? TValue : never;
@@ -140,6 +140,10 @@ const projectedUsersCol = pipe(filteredUsers, map({
 }));
 const pickedUsers = pipe(users, pick("id", "name"));
 const colFilteredUsers = pipe(users, filter(eq(col("id"), 1)));
+const variadicAndFilteredUsers = pipe(users, filter(and(eq(col("id"), 1), gt(col("id"), 0), isNotNull(col("name")))));
+const variadicOrFilteredUsers = pipe(users, filter(or(eq(col("name"), "Ada"), eq(col("name"), "Grace"), eq(col("name"), "Linus"))));
+const singleAndExpr = and(eq(col("id"), 1));
+const singleOrExpr = or(eq(col("id"), 1));
 const colSortedUsers = pipe(users, sort([asc(col("name")), desc(col("id"))]));
 const colAggregatedOrders = pipe(orders, fold({
     user_id: group(col("user_id")),
@@ -268,6 +272,10 @@ type _ColAggregatedOrdersTotalSpend = Expect<Equal<ExprType<typeof colAggregated
 type _ColExplodedSessionsTag = Expect<Equal<ExprType<typeof colExplodedSessions.columns.tag>, string>>;
 type _ColMappedJoinUserId = Expect<Equal<ExprType<typeof colMappedJoin.columns.user_id>, SqlInt>>;
 type _ColMappedJoinTotal = Expect<Equal<ExprType<typeof colMappedJoin.columns.total>, SqlFloat | null>>;
+type _VariadicAndFilteredUsersId = Expect<Equal<ExprType<typeof variadicAndFilteredUsers.columns.id>, SqlInt>>;
+type _VariadicOrFilteredUsersName = Expect<Equal<ExprType<typeof variadicOrFilteredUsers.columns.name>, string>>;
+type _SingleAndExpr = Expect<Equal<ExprType<typeof singleAndExpr>, boolean>>;
+type _SingleOrExpr = Expect<Equal<ExprType<typeof singleOrExpr>, boolean>>;
 type _PickedUsersId = Expect<Equal<ExprType<typeof pickedUsers.columns.id>, SqlInt>>;
 type _PickedUsersName = Expect<Equal<ExprType<typeof pickedUsers.columns.name>, string>>;
 type _InlineRowsId = Expect<Equal<ExprType<typeof inlineRows.columns.id>, number>>;
@@ -359,6 +367,10 @@ void usingJoin;
 void mappedJoin;
 void projectedUsersCol;
 void colFilteredUsers;
+void variadicAndFilteredUsers;
+void variadicOrFilteredUsers;
+void singleAndExpr;
+void singleOrExpr;
 void colSortedUsers;
 void colAggregatedOrders;
 void colExplodedSessions;
@@ -375,6 +387,10 @@ void bigintFilteredProfiles;
 void invalidPickedUsers;
 // @ts-expect-error filter predicates must return boolean expressions
 pipe(users, filter((user) => user.name));
+// @ts-expect-error and requires at least one expression
+and();
+// @ts-expect-error or requires at least one expression
+or();
 pipe(users, join(
     orders,
     // @ts-expect-error join predicates must return boolean expressions

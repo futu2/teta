@@ -17,10 +17,12 @@ import {
   fold,
   group,
   gte,
+  isNotNull,
   leftJoin,
   leftCol,
   join,
   map,
+  or,
   drop,
   pick,
   pipe,
@@ -93,6 +95,38 @@ describe("deferred row proxy api", () => {
       }),
       sort([asc($.name), desc($.id)]),
       take(20)
+    );
+
+    expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
+      toSql(expected, { dialect: "postgresql", format: "compact" })
+    );
+  });
+
+  test("supports variadic and for deferred filters", () => {
+    const users = createUsersPipelineTable();
+    const expected = pipe(
+      users,
+      filter(and(and(eq($.active, true), gte($.age, 18)), isNotNull($.name)))
+    );
+    const actual = pipe(
+      users,
+      filter(and(eq($.active, true), gte($.age, 18), isNotNull($.name)))
+    );
+
+    expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
+      toSql(expected, { dialect: "postgresql", format: "compact" })
+    );
+  });
+
+  test("supports variadic or for deferred filters", () => {
+    const users = createUsersPipelineTable();
+    const expected = pipe(
+      users,
+      filter(or(or(eq($.name, "Ada"), eq($.name, "Grace")), eq($.name, "Linus")))
+    );
+    const actual = pipe(
+      users,
+      filter(or(eq($.name, "Ada"), eq($.name, "Grace"), eq($.name, "Linus")))
     );
 
     expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
