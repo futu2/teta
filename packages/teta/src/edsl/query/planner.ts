@@ -21,6 +21,13 @@ type ResolvedProjection = {
   items: Array<{ expr: ExprNode<any>; as: SqlIdentifier | null }>;
 };
 
+export type SelectProjectionItem = {
+  expr: ExprNode<any>;
+  alias: string | null;
+};
+
+export type SelectProjection = readonly SelectProjectionItem[];
+
 type ResolvedAggregateProjection = ResolvedProjection & {
   groupBy: ExprNode<any>[];
 };
@@ -47,6 +54,37 @@ export function resolveProjection(selection: ProjectionShape): ResolvedProjectio
       return resolved;
     }),
   };
+}
+
+export function resolveSelectProjection(selection: SelectProjection): ResolvedProjection {
+  const keys: string[] = [];
+  const items: Array<{ expr: ExprNode<any>; as: SqlIdentifier | null }> = [];
+  let generatedCount = 0;
+
+  for (const item of selection) {
+    const expr = item.expr;
+    if (containsGroup(expr)) {
+      userError("GROUP_OUTSIDE_AGGREGATE", "group() is only valid inside fold()");
+    }
+
+    const key = item.alias ?? selectProjectionKey(expr, generatedCount + 1);
+    if (item.alias === null && expr.kind !== "column") {
+      generatedCount++;
+    }
+    if (keys.includes(key)) {
+      userError("SELECT_DUPLICATE_COLUMN", `Duplicate selected column name: ${key}`);
+    }
+
+    keys.push(key);
+    items.push({
+      expr,
+      as: shouldAlias(expr, key)
+        ? normalizeIdentifier(key, "select alias")
+        : null,
+    });
+  }
+
+  return { keys, items };
 }
 
 export function resolveFoldProjection(
@@ -92,6 +130,13 @@ function resolveProjectionExpr(key: string, value: ProjectionValue): {
       ? normalizeIdentifier(key, "map alias")
       : null,
   };
+}
+
+function selectProjectionKey(expr: ExprNode<any>, generatedIndex: number): string {
+  if (expr.kind === "column") {
+    return expr.name;
+  }
+  return `col_${generatedIndex}`;
 }
 
 function projectionEntries(selection: ProjectionShape): Array<{ key: string; value: ProjectionValue }> {

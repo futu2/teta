@@ -32,6 +32,8 @@ import {
   freshScopeId,
   resolveFoldProjection,
   resolveProjection,
+  resolveSelectProjection,
+  type SelectProjection,
 } from "./planner.ts";
 import { userError } from "../errors.ts";
 import {
@@ -68,6 +70,20 @@ export function resolveMapQuery<
 ): QueryDeriveInit<ProjectionResult<TSelection>> {
   const { keys, items } = resolveProjection(selection);
   return resolveProjectedQuery<ProjectionResult<TSelection>>(query, {
+    kind: "map",
+    items,
+    keys,
+    groupBy: null,
+    outputScopeId: freshScopeId(),
+  });
+}
+
+export function resolveSelectQuery<TSelectedColumns extends Record<string, any>>(
+  query: QueryState<Record<string, any>>,
+  selection: SelectProjection
+): QueryDeriveInit<TSelectedColumns> {
+  const { keys, items } = resolveSelectProjection(selection);
+  return resolveProjectedQuery<TSelectedColumns>(query, {
     kind: "map",
     items,
     keys,
