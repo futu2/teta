@@ -21,8 +21,8 @@ import {
   leftCol,
   join,
   map,
-  mapCols,
-  pickCols,
+  rename,
+  pick,
   pipe,
   replace,
   rightCol,
@@ -63,8 +63,8 @@ describe("deferred row proxy api", () => {
     expect(eq($left.id, $right.user_id)).toBeInstanceOf(ExprRef);
   });
 
-  test("exports pickCols as a selector helper", () => {
-    expect(typeof pickCols("id")).toBe("function");
+  test("exports pick as a selector helper", () => {
+    expect(typeof pick("id")).toBe("function");
   });
 
   test("matches callback SQL for filter, map, sort, and take", () => {
@@ -127,27 +127,27 @@ describe("deferred row proxy api", () => {
     );
   });
 
-  test("supports pickCols for same-name projection", () => {
+  test("supports pick for same-name projection", () => {
     const users = createUsersTable();
     const expected = pipe(users, map((user) => ({ id: user.id, name: user.name })));
-    const actual = pipe(users, map(pickCols("id", "name")));
+    const actual = pipe(users, map(pick("id", "name")));
 
     expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
       toSql(expected, { dialect: "postgresql", format: "compact" })
     );
   });
 
-  test("supports pickCols as a direct query step", () => {
+  test("supports pick as a direct query step", () => {
     const users = createUsersTable();
     const expected = pipe(users, map((user) => ({ id: user.id, name: user.name })));
-    const actual = pipe(users, pickCols("id", "name"));
+    const actual = pipe(users, pick("id", "name"));
 
     expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
       toSql(expected, { dialect: "postgresql", format: "compact" })
     );
   });
 
-  test("supports mapCols as a direct query step", () => {
+  test("supports rename as a direct query step", () => {
     const users = createUsersPipelineTable();
     const expected = pipe(users, map((user) => ({
       user_id: user.id,
@@ -155,14 +155,14 @@ describe("deferred row proxy api", () => {
       user_age: user.age,
       user_active: user.active,
     })));
-    const actual = pipe(users, mapCols((key) => `user_${key}`));
+    const actual = pipe(users, rename((key) => `user_${key}`));
 
     expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
       toSql(expected, { dialect: "postgresql", format: "compact" })
     );
   });
 
-  test("supports mapCols as a row selector", () => {
+  test("supports rename as a row selector", () => {
     const users = createUsersPipelineTable();
     const expected = pipe(users, map((user) => ({
       selected_id: user.id,
@@ -170,7 +170,7 @@ describe("deferred row proxy api", () => {
       selected_age: user.age,
       selected_active: user.active,
     })));
-    const actual = pipe(users, map(mapCols((key) => `selected_${key}`)));
+    const actual = pipe(users, map(rename((key) => `selected_${key}`)));
 
     expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
       toSql(expected, { dialect: "postgresql", format: "compact" })

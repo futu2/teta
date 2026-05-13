@@ -1,5 +1,5 @@
 import type { ExprRef, SqlBigInt, SqlBytes, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlTimestamp, SqlUuid, } from "../mod.ts";
-import { filter, fullJoin, innerJoin, join, leftJoin, rightJoin, take, sort, param, map, mapCols, pipe, table, t, fold, asc, desc, eq, gt, upper, add, coalesce, count, group, loop, sum, and, sub, caseWhen, when, mapShape, groupShape, lt, unnest, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, toString, toTimestamp, $, $left, $right, col, leftCol, rightCol, pickCols } from "../mod.ts";
+import { filter, fullJoin, innerJoin, join, leftJoin, rightJoin, take, sort, param, map, rename, pipe, table, t, fold, asc, desc, eq, gt, upper, add, coalesce, count, group, loop, sum, and, sub, caseWhen, when, mapShape, groupShape, lt, unnest, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, toString, toTimestamp, $, $left, $right, col, leftCol, rightCol, pick } from "../mod.ts";
 type Equal<A, B> = ((<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false);
 type Expect<T extends true> = T;
 type ExprType<TExpr> = TExpr extends ExprRef<infer TValue> ? TValue : never;
@@ -138,7 +138,7 @@ const projectedUsersCol = pipe(filteredUsers, map({
     id: col("id"),
     name: upper(col("name")),
 }));
-const pickedUsers = pipe(users, map(pickCols("id", "name")));
+const pickedUsers = pipe(users, map(pick("id", "name")));
 const colFilteredUsers = pipe(users, filter(eq(col("id"), 1)));
 const colSortedUsers = pipe(users, sort([asc(col("name")), desc(col("id"))]));
 const colAggregatedOrders = pipe(orders, fold({
@@ -146,8 +146,8 @@ const colAggregatedOrders = pipe(orders, fold({
     total_spend: sum(col("total")),
 }));
 const colExplodedSessions = unnest(sessions, col("tags"), { value: "tag" });
-// @ts-expect-error pickCols rejects unknown columns when applied to a typed query
-const invalidPickedUsers = pipe(users, map(pickCols("missing")));
+// @ts-expect-error pick rejects unknown columns when applied to a typed query
+const invalidPickedUsers = pipe(users, map(pick("missing")));
 const curriedPipeline = pipe(users, filter((user: typeof users.columns) => gt(user.id, 0)), map((user) => ({
     id: user.id,
     name: upper(user.name),
@@ -156,10 +156,10 @@ const curriedJoin = pipe(users, leftJoin(
     orders,
     (user: typeof users.columns, order: typeof orders.columns) => eq(user.id, order.user_id)
 ));
-const directPickedSelection = pipe(users, pickCols("id"));
-const selectorPickedSelection = pipe(profiles, map(pickCols("id", "external_id")));
-const directKeyMappedSelection = pipe(users, mapCols((key) => `prefix1_${key}`));
-const selectorKeyMappedSelection = pipe(users, map(mapCols((key) => `prefix2_${key}`)));
+const directPickedSelection = pipe(users, pick("id"));
+const selectorPickedSelection = pipe(profiles, map(pick("id", "external_id")));
+const directKeyMappedSelection = pipe(users, rename((key) => `prefix1_${key}`));
+const selectorKeyMappedSelection = pipe(users, map(rename((key) => `prefix2_${key}`)));
 const directKeyMappedUsage = pipe(directKeyMappedSelection, map((user) => ({
     id: user.prefix1_id,
     name: user.prefix1_name,
@@ -503,9 +503,9 @@ pipe(orders, fold((order) => [group(order.user_id)]));
 pipe(users, map({ id: undefined }));
 // @ts-expect-error unnest selectors must reject undefined
 unnest(sessions, undefined, { value: "tag" });
-// @ts-expect-error mapCols should reject unknown direct renamed fields
+// @ts-expect-error rename should reject unknown direct renamed fields
 pipe(directKeyMappedSelection, map((user) => ({ broken: user.prefix1_na })));
-// @ts-expect-error mapCols should reject unknown selector renamed fields
+// @ts-expect-error rename should reject unknown selector renamed fields
 pipe(selectorKeyMappedSelection, map((user) => ({ broken: user.prefix2_na })));
 // @ts-expect-error map is curried-only
 map(users, (user) => ({ id: user.id }));

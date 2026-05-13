@@ -27,7 +27,7 @@ npx jsr add @teta/teta
 ## Quick start
 
 ```ts
-import { and, asc, eq, filter, gte, map, pickCols, sort, table, t, take, toSql, pipe } from "@teta/teta";
+import { and, asc, eq, filter, gte, map, pick, sort, table, t, take, toSql, pipe } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -39,7 +39,7 @@ const users = table("users", {
 const activeUsers = pipe(
   users,
   filter((user) => and(eq(user.active, true), gte(user.age, 18))),
-  map(pickCols("id", "email")),
+  map(pick("id", "email")),
   sort((user) => asc(user.email)),
   take(10)
 );
@@ -60,12 +60,12 @@ const explicit = irToSql(toIR(activeUsers), { dialect: "postgresql" });
 The callback form gives the strongest autocomplete and compile-time column checks. For compact query code, Teta also exports typed deferred column refs:
 
 ```ts
-import { and, asc, col, eq, filter, gte, map, pickCols, sort, pipe } from "@teta/teta";
+import { and, asc, col, eq, filter, gte, map, pick, sort, pipe } from "@teta/teta";
 
 const activeUsers = pipe(
   users,
   filter(and(eq(col("active"), true), gte(col("age"), 18))),
-  map(pickCols("id", "email")),
+  map(pick("id", "email")),
   sort(asc(col("email")))
 );
 ```

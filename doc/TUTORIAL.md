@@ -333,7 +333,7 @@ Quick rule of thumb:
 Teta includes projection helpers for common object-shaped `map(...)` and `fold(...)` callbacks.
 
 ```ts
-import { map, mapCols, pickCols, pipe, replace, table, t, upper } from "@teta/teta";
+import { map, rename, pick, pipe, replace, table, t, upper } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -352,32 +352,32 @@ const compact = pipe(
   }))
 );
 
-const publicUsers = pipe(users, pickCols("id", "name", "age"));
+const publicUsers = pipe(users, pick("id", "name", "age"));
 
 const namespacedUsers = pipe(
   users,
-  map(pickCols("id", "name")),
-  mapCols((key) => `user_${key}`)
+  map(pick("id", "name")),
+  rename((key) => `user_${key}`)
 );
 ```
 
 Typical patterns:
 
-- `pickCols(...)` for reusable column subsets
+- `pick(...)` for reusable column subsets
 - explicit object literals when you want to drop a few columns and add computed fields
-- `mapCols(...)` for systematic renaming like prefixes or namespaces
+- `rename(...)` for systematic renaming like prefixes or namespaces
 - `pipe(...)` when the reshaping reads better as query steps
 
 Type note:
-`mapCols(...)` works best with template literals because TypeScript can keep exact renamed keys.
+`rename(...)` works best with template literals because TypeScript can keep exact renamed keys.
 
 For example:
 
 ```ts
 const prefixed = pipe(
   users,
-  map(pickCols("id", "name")),
-  mapCols((key) => `user_${key}`)
+  map(pick("id", "name")),
+  rename((key) => `user_${key}`)
 );
 ```
 
@@ -859,7 +859,7 @@ const allUsers = unionAll(activeUsers, inactiveUsers);
 ### Recursive loop (WITH RECURSIVE)
 
 ```ts
-import { eq, filter, isNull, join, loop, pickCols, pipe, table, t } from "@teta/teta";
+import { eq, filter, isNull, join, loop, pick, pipe, table, t } from "@teta/teta";
 
 const employees = table("employees", {
   id: t.int(),
@@ -870,7 +870,7 @@ const employees = table("employees", {
 const base = pipe(
   employees,
   filter((e) => isNull(e.manager_id)),
-  pickCols("id", "name", "manager_id")
+  pick("id", "name", "manager_id")
 );
 
 const orgTree = pipe(
@@ -878,9 +878,9 @@ const orgTree = pipe(
   loop((self) => pipe(
     employees,
     join(self, (e, s) => eq(e.manager_id, s.id)),
-    pickCols("id", "name", "manager_id")
+    pick("id", "name", "manager_id")
   ))
 );
 
-const q = pipe(orgTree, pickCols("id", "name"));
+const q = pipe(orgTree, pick("id", "name"));
 ```

@@ -5,14 +5,14 @@ import type { ColumnRef, ColumnRefs } from "../expr.ts";
 type QueryColumns = Record<string, any>;
 type StringKeyOf<T> = Extract<keyof T, string>;
 
-type PickColsProjection<
+type PickProjection<
   TColumns extends Record<TNames[number], any>,
   TNames extends readonly [string, ...string[]],
 > = {
   [K in TNames[number]]: ColumnRef<TColumns[K], K>;
 };
 
-type PickColsResult<
+type PickResult<
   TColumns extends Record<TNames[number], any>,
   TNames extends readonly [string, ...string[]],
 > = {
@@ -38,17 +38,17 @@ type RenameProjection<TColumns extends QueryColumns, TPattern extends string> = 
   [K in StringKeyOf<TColumns> as RenamePattern<TPattern, K>]: ColumnRef<TColumns[K], K>;
 };
 
-type PickColsHelper<TNames extends readonly [string, ...string[]]> = {
+type PickHelper<TNames extends readonly [string, ...string[]]> = {
   <TInput extends ColumnRefs<Record<TNames[number], any>> | Query<Record<TNames[number], any>>>(
     input: TInput
   ): TInput extends Query<infer TColumns extends Record<TNames[number], any>>
-    ? Query<PickColsResult<TColumns, TNames>>
+    ? Query<PickResult<TColumns, TNames>>
     : TInput extends ColumnRefs<infer TColumns extends Record<TNames[number], any>>
-      ? PickColsProjection<TColumns, TNames>
+      ? PickProjection<TColumns, TNames>
       : never;
 };
 
-type MapColsHelper<TPattern extends string> = {
+type RenameHelper<TPattern extends string> = {
   <TInput extends ColumnRefs<QueryColumns> | Query<QueryColumns>>(
     input: TInput
   ): TInput extends Query<infer TColumns extends QueryColumns>
@@ -58,9 +58,9 @@ type MapColsHelper<TPattern extends string> = {
       : never;
 };
 
-export function pickCols<const TNames extends readonly [string, ...string[]]>(
+export function pick<const TNames extends readonly [string, ...string[]]>(
   ...names: TNames
-): PickColsHelper<TNames> {
+): PickHelper<TNames> {
   function pickSelectedColumns(input: ColumnRefs<QueryColumns> | Query<QueryColumns>): unknown {
     if (input instanceof Query) {
       return map(
@@ -81,12 +81,12 @@ export function pickCols<const TNames extends readonly [string, ...string[]]>(
     return result;
   }
 
-  return pickSelectedColumns as PickColsHelper<TNames>;
+  return pickSelectedColumns as PickHelper<TNames>;
 }
 
-export function mapCols<const TPattern extends string>(
-  rename: (key: string) => TPattern
-): MapColsHelper<TPattern> {
+export function rename<const TPattern extends string>(
+  renameKey: (key: string) => TPattern
+): RenameHelper<TPattern> {
   function mapSelectedColumns(input: ColumnRefs<QueryColumns> | Query<QueryColumns>): unknown {
     if (input instanceof Query) {
       return map(
@@ -96,10 +96,10 @@ export function mapCols<const TPattern extends string>(
 
     const result: Record<string, ColumnRef<any, string>> = {};
     for (const key of Object.keys(input)) {
-      result[rename(key)] = Reflect.get(input, key) as ColumnRef<any, string>;
+      result[renameKey(key)] = Reflect.get(input, key) as ColumnRef<any, string>;
     }
     return result;
   }
 
-  return mapSelectedColumns as MapColsHelper<TPattern>;
+  return mapSelectedColumns as RenameHelper<TPattern>;
 }

@@ -158,10 +158,10 @@ export const leftCol: typeof import("./src/edsl/expr.ts").leftCol = expr.leftCol
 export const rightCol: typeof import("./src/edsl/expr.ts").rightCol = expr.rightCol;
 
 /** Builds a same-name projection selector or query step. */
-export const pickCols: typeof import("./src/edsl/query.ts").pickCols = query.pickCols;
+export const pick: typeof import("./src/edsl/query.ts").pick = query.pick;
 
 /** Renames every projected column with the provided key mapper. */
-export const mapCols: typeof import("./src/edsl/query.ts").mapCols = query.mapCols;
+export const rename: typeof import("./src/edsl/query.ts").rename = query.rename;
 
 /** Builds an inequality predicate. */
 export const ne: typeof import("./src/edsl/expr.ts").ne = expr.ne;
