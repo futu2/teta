@@ -1,5 +1,5 @@
 import type { ExprRef, SqlBigInt, SqlBytes, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlTimestamp, SqlUuid, } from "../mod.ts";
-import { filter, fullJoin, innerJoin, join, leftJoin, rightJoin, take, sort, param, map, rename, pipe, table, t, fold, asc, desc, eq, gt, upper, add, coalesce, count, group, loop, sum, and, sub, caseWhen, when, mapShape, groupShape, lt, unnest, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, toString, toTimestamp, $, $left, $right, col, leftCol, rightCol, pick, drop } from "../mod.ts";
+import { filter, fullJoin, innerJoin, join, leftJoin, rightJoin, take, sort, param, map, rename, pipe, flow, table, t, fold, asc, desc, eq, gt, upper, add, coalesce, count, group, loop, sum, and, sub, caseWhen, when, mapShape, groupShape, lt, unnest, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, toString, toTimestamp, $, $left, $right, col, leftCol, rightCol, pick, drop } from "../mod.ts";
 type Equal<A, B> = ((<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false);
 type Expect<T extends true> = T;
 type ExprType<TExpr> = TExpr extends ExprRef<infer TValue> ? TValue : never;
@@ -152,6 +152,15 @@ const curriedPipeline = pipe(users, filter((user: typeof users.columns) => gt(us
     id: user.id,
     name: upper(user.name),
 })), sort((row) => [asc(row.name), desc(row.id)]), take(5));
+const flowNumberToString = flow(
+    (value: number) => value + 1,
+    (value) => `n=${value}`,
+);
+const flowPipeline = flow(
+    filter((user: typeof users.columns) => gt(user.id, 0)),
+    pick("id"),
+);
+const flowPipelineResult = flowPipeline(users);
 const curriedJoin = pipe(users, leftJoin(
     orders,
     (user: typeof users.columns, order: typeof orders.columns) => eq(user.id, order.user_id)
@@ -313,6 +322,9 @@ type _ProjectedProfileCreditLimit = Expect<Equal<ExprType<typeof projectedProfil
 type _ProjectedProfileMetadata = Expect<Equal<ExprType<typeof projectedProfiles.columns.metadata>, SqlJson<ProfileMeta>>>;
 type _ProjectedProfileAvatar = Expect<Equal<ExprType<typeof projectedProfiles.columns.avatar>, SqlBytes | null>>;
 type _ProjectedProfileNickname = Expect<Equal<ExprType<typeof projectedProfiles.columns.nickname>, string>>;
+type _FlowNumberToString = Expect<Equal<ReturnType<typeof flowNumberToString>, string>>;
+type _FlowPipelineKeys = Expect<Equal<keyof typeof flowPipelineResult.columns, "id">>;
+type _FlowPipelineId = Expect<Equal<ExprType<typeof flowPipelineResult.columns.id>, SqlInt>>;
 type _StringifiedUserId = Expect<Equal<ExprType<typeof stringifiedUserId>, string>>;
 type _StringifiedNullableNickname = Expect<Equal<ExprType<typeof stringifiedNullableNickname>, string | null>>;
 type _EventDateTimestamp = Expect<Equal<ExprType<typeof eventDateTimestamp>, SqlTimestamp>>;
@@ -321,6 +333,9 @@ void leftSelected;
 void rightSelected;
 void fullSelected;
 void curriedPipeline;
+void flowNumberToString;
+void flowPipeline;
+void flowPipelineResult;
 void curriedJoin;
 void inlineRows;
 void profileRows;

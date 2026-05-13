@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { filter, take, sort, map, toSql, asc, desc, eq, gte, replace, and, coalesce, leftJoin, onEq, prefixOverlapLeft, table, t, pipe } from "../mod.ts";
+import { filter, take, sort, map, toSql, asc, desc, eq, gte, replace, and, coalesce, leftJoin, onEq, prefixOverlapLeft, table, t, pipe, flow } from "../mod.ts";
 import { USER_PIPELINE_POSTGRES_COMPACT, USERS_ORDERS_LEFT_JOIN_SELECT_POSTGRES_COMPACT } from "./helpers/expected-sql.ts";
 import { createOrdersTable, createUsersPipelineTable, createUsersTable } from "./helpers/fixtures.ts";
 describe("function-first query api", () => {
@@ -11,6 +11,27 @@ describe("function-first query api", () => {
             age: user.age,
         })), sort((row) => [asc(row.name), desc(row.id)]), take(20));
         expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe(USER_PIPELINE_POSTGRES_COMPACT);
+    });
+    test("composes reusable query steps with Teta flow", () => {
+        const users = createUsersPipelineTable();
+        const activeUserPipeline = flow(
+            filter((user: typeof users.columns) => and(eq(user.active, true), gte(user.age, 18))),
+            map((user) => ({
+                id: user.id,
+                name: coalesce(replace(user.name, " ", "_"), "unknown"),
+                age: user.age,
+            })),
+            sort((row) => [asc(row.name), desc(row.id)]),
+            take(20)
+        );
+
+        expect(toSql(activeUserPipeline(users), { dialect: "postgresql", format: "compact" })).toBe(USER_PIPELINE_POSTGRES_COMPACT);
+    });
+    test("composes ordinary functions with Teta flow", () => {
+        const addOne = (value: number) => value + 1;
+        const toLabel = (value: number) => `n=${value}`;
+
+        expect(flow(addOne, toLabel)(41)).toBe("n=42");
     });
     test("supports curried join with a built query", () => {
         const users = createUsersTable();
