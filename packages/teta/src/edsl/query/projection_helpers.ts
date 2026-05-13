@@ -5,18 +5,18 @@ import type { ColumnRef, ColumnRefs } from "../expr.ts";
 type QueryColumns = Record<string, any>;
 type StringKeyOf<T> = Extract<keyof T, string>;
 
-type PickProjection<
-  TColumns extends Record<TNames[number], any>,
-  TNames extends readonly [string, ...string[]],
-> = {
-  [K in TNames[number]]: ColumnRef<TColumns[K], K>;
-};
-
 type PickResult<
   TColumns extends Record<TNames[number], any>,
   TNames extends readonly [string, ...string[]],
 > = {
   [K in TNames[number]]: TColumns[K];
+};
+
+type DropResult<
+  TColumns extends QueryColumns,
+  TNames extends readonly string[],
+> = {
+  [K in Exclude<StringKeyOf<TColumns>, TNames[number]>]: TColumns[K];
 };
 
 type RenamePattern<TPattern extends string, TKey extends string> =
@@ -34,72 +34,71 @@ type RenameResult<TColumns extends QueryColumns, TPattern extends string> = {
   [K in StringKeyOf<TColumns> as RenamePattern<TPattern, K>]: TColumns[K];
 };
 
-type RenameProjection<TColumns extends QueryColumns, TPattern extends string> = {
-  [K in StringKeyOf<TColumns> as RenamePattern<TPattern, K>]: ColumnRef<TColumns[K], K>;
-};
-
-type PickHelper<TNames extends readonly [string, ...string[]]> = {
-  <TInput extends ColumnRefs<Record<TNames[number], any>> | Query<Record<TNames[number], any>>>(
-    input: TInput
-  ): TInput extends Query<infer TColumns extends Record<TNames[number], any>>
-    ? Query<PickResult<TColumns, TNames>>
-    : TInput extends ColumnRefs<infer TColumns extends Record<TNames[number], any>>
-      ? PickProjection<TColumns, TNames>
-      : never;
-};
-
-type RenameHelper<TPattern extends string> = {
-  <TInput extends ColumnRefs<QueryColumns> | Query<QueryColumns>>(
-    input: TInput
-  ): TInput extends Query<infer TColumns extends QueryColumns>
-    ? Query<RenameResult<TColumns, TPattern>>
-    : TInput extends ColumnRefs<infer TColumns extends QueryColumns>
-      ? RenameProjection<TColumns, TPattern>
-      : never;
-};
+function assertKnownColumns(
+  cols: ColumnRefs<QueryColumns>,
+  names: readonly string[]
+): void {
+  for (const name of names) {
+    if (!(name in cols)) {
+      userError(
+        "DEFERRED_COLUMN_UNKNOWN",
+        `Unknown current row column '${name}'. Available columns: ${Object.keys(cols).join(", ")}`
+      );
+    }
+  }
+}
 
 export function pick<const TNames extends readonly [string, ...string[]]>(
   ...names: TNames
-): PickHelper<TNames> {
-  function pickSelectedColumns(input: ColumnRefs<QueryColumns> | Query<QueryColumns>): unknown {
-    if (input instanceof Query) {
-      return map(
-        pickSelectedColumns as (cols: ColumnRefs<QueryColumns>) => Record<string, ColumnRef<any, string>>
-      )(input);
-    }
-
+): <TColumns extends Record<TNames[number], any>>(
+  query: Query<TColumns>
+) => Query<PickResult<TColumns, TNames>> {
+  return ((query: Query<QueryColumns>) => map((input: ColumnRefs<QueryColumns>) => {
+    assertKnownColumns(input, names);
     const result: Record<string, ColumnRef<any, string>> = {};
     for (const name of names) {
-      if (!(name in input)) {
-        userError(
-          "DEFERRED_COLUMN_UNKNOWN",
-          `Unknown current row column '${name}'. Available columns: ${Object.keys(input).join(", ")}`
-        );
-      }
       result[name] = Reflect.get(input, name) as ColumnRef<any, string>;
     }
     return result;
-  }
+  })(query)) as unknown as <TColumns extends Record<TNames[number], any>>(
+    query: Query<TColumns>
+  ) => Query<PickResult<TColumns, TNames>>;
+}
 
-  return pickSelectedColumns as PickHelper<TNames>;
+export function drop<const TNames extends readonly [string, ...string[]]>(
+  ...names: TNames
+): <TColumns extends Record<TNames[number], any>>(
+  query: Query<TColumns>
+) => Query<DropResult<TColumns, TNames>> {
+  return ((query: Query<QueryColumns>) => {
+    assertKnownColumns(query.columns as ColumnRefs<QueryColumns>, names);
+    const dropped = new Set<string>(names);
+    const kept = query.columnNames.filter((name: string) => !dropped.has(name));
+
+    return map((input: ColumnRefs<QueryColumns>) => {
+      const result: Record<string, ColumnRef<any, string>> = {};
+      for (const name of kept) {
+        result[name] = Reflect.get(input, name) as ColumnRef<any, string>;
+      }
+      return result;
+    })(query);
+  }) as unknown as <TColumns extends Record<TNames[number], any>>(
+    query: Query<TColumns>
+  ) => Query<DropResult<TColumns, TNames>>;
 }
 
 export function rename<const TPattern extends string>(
   renameKey: (key: string) => TPattern
-): RenameHelper<TPattern> {
-  function mapSelectedColumns(input: ColumnRefs<QueryColumns> | Query<QueryColumns>): unknown {
-    if (input instanceof Query) {
-      return map(
-        mapSelectedColumns as (cols: ColumnRefs<QueryColumns>) => Record<string, ColumnRef<any, string>>
-      )(input);
-    }
-
+): <TColumns extends QueryColumns>(
+  query: Query<TColumns>
+) => Query<RenameResult<TColumns, TPattern>> {
+  return ((query: Query<QueryColumns>) => map((input: ColumnRefs<QueryColumns>) => {
     const result: Record<string, ColumnRef<any, string>> = {};
     for (const key of Object.keys(input)) {
       result[renameKey(key)] = Reflect.get(input, key) as ColumnRef<any, string>;
     }
     return result;
-  }
-
-  return mapSelectedColumns as RenameHelper<TPattern>;
+  })(query)) as unknown as <TColumns extends QueryColumns>(
+    query: Query<TColumns>
+  ) => Query<RenameResult<TColumns, TPattern>>;
 }

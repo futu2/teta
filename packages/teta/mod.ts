@@ -157,8 +157,11 @@ export const leftCol: typeof import("./src/edsl/expr.ts").leftCol = expr.leftCol
 /** Deferred reference to a named column on the right side of a join. */
 export const rightCol: typeof import("./src/edsl/expr.ts").rightCol = expr.rightCol;
 
-/** Builds a same-name projection selector or query step. */
+/** Keeps only the named columns in their provided order. */
 export const pick: typeof import("./src/edsl/query.ts").pick = query.pick;
+
+/** Drops the named columns and keeps the remaining columns in query order. */
+export const drop: typeof import("./src/edsl/query.ts").drop = query.drop;
 
 /** Renames every projected column with the provided key mapper. */
 export const rename: typeof import("./src/edsl/query.ts").rename = query.rename;

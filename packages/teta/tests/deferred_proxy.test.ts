@@ -148,6 +148,7 @@ describe("deferred row proxy api", () => {
     const users = createUsersTable();
 
     expectTetaUserError(
+      // @ts-expect-error exercising runtime validation for an unknown dynamic column
       () => pipe(users, pick("missing")),
       "DEFERRED_COLUMN_UNKNOWN"
     );
@@ -157,6 +158,7 @@ describe("deferred row proxy api", () => {
     const users = createUsersTable();
 
     expectTetaUserError(
+      // @ts-expect-error exercising runtime validation for an unknown dynamic column
       () => pipe(users, drop("missing")),
       "DEFERRED_COLUMN_UNKNOWN"
     );
