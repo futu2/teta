@@ -8,11 +8,13 @@ import {
   TetaUserError,
   and,
   asc,
+  caseWhen,
   coalesce,
   col,
   count,
   desc,
   eq,
+  extend,
   filter,
   fold,
   group,
@@ -36,6 +38,7 @@ import {
   take,
   toSql,
   unnest,
+  when,
 } from "../mod.ts";
 import {
   createOrdersTable,
@@ -172,6 +175,59 @@ describe("deferred row proxy api", () => {
       active: user.active,
     })));
     const actual = pipe(users, drop("age"));
+
+    expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
+      toSql(expected, { dialect: "postgresql", format: "compact" })
+    );
+  });
+
+  test("supports extend as a direct query step", () => {
+    const users = createUsersPipelineTable();
+    const expected = pipe(users, map((user) => ({
+      id: user.id,
+      name: user.name,
+      age: user.age,
+      active: user.active,
+      normalized_name: coalesce(replace(user.name, " ", "_"), "unknown"),
+    })));
+    const actual = pipe(users, extend((user) => ({
+      normalized_name: coalesce(replace(user.name, " ", "_"), "unknown"),
+    })));
+
+    expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
+      toSql(expected, { dialect: "postgresql", format: "compact" })
+    );
+  });
+
+  test("supports extend with deferred selection", () => {
+    const users = createUsersPipelineTable();
+    const expected = pipe(users, map((user) => ({
+      id: user.id,
+      name: user.name,
+      age: user.age,
+      active: user.active,
+      active_label: caseWhen([when(user.active, "active")], "inactive"),
+    })));
+    const actual = pipe(users, extend({
+      active_label: caseWhen([when($.active, "active")], "inactive"),
+    }));
+
+    expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
+      toSql(expected, { dialect: "postgresql", format: "compact" })
+    );
+  });
+
+  test("supports extend replacing an existing column", () => {
+    const users = createUsersPipelineTable();
+    const expected = pipe(users, map((user) => ({
+      id: user.id,
+      name: coalesce(replace(user.name, " ", "_"), "unknown"),
+      age: user.age,
+      active: user.active,
+    })));
+    const actual = pipe(users, extend((user) => ({
+      name: coalesce(replace(user.name, " ", "_"), "unknown"),
+    })));
 
     expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
       toSql(expected, { dialect: "postgresql", format: "compact" })

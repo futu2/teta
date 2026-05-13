@@ -1,5 +1,5 @@
 import type { ExprRef, SqlBigInt, SqlBytes, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlTimestamp, SqlUuid, } from "../mod.ts";
-import { filter, fullJoin, innerJoin, join, leftJoin, rightJoin, take, sort, param, map, rename, pipe, flow, table, t, fold, asc, desc, eq, gt, upper, add, coalesce, count, group, loop, sum, and, or, isNotNull, sub, caseWhen, when, mapShape, groupShape, lt, unnest, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, toString, toTimestamp, $, $left, $right, col, leftCol, rightCol, pick, drop } from "../mod.ts";
+import { filter, fullJoin, innerJoin, join, leftJoin, rightJoin, take, sort, param, map, rename, pipe, flow, table, t, fold, asc, desc, eq, gt, upper, add, coalesce, count, group, loop, sum, and, or, isNotNull, sub, caseWhen, when, mapShape, groupShape, lt, unnest, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, toString, toTimestamp, $, $left, $right, col, leftCol, rightCol, pick, drop, extend } from "../mod.ts";
 type Equal<A, B> = ((<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false);
 type Expect<T extends true> = T;
 type ExprType<TExpr> = TExpr extends ExprRef<infer TValue> ? TValue : never;
@@ -138,6 +138,15 @@ const projectedUsersCol = pipe(filteredUsers, map({
     id: col("id"),
     name: upper(col("name")),
 }));
+const extendedUsers = pipe(users, extend((user) => ({
+    name_upper: upper(user.name),
+})));
+const deferredExtendedUsers = pipe(users, extend({
+    name_upper: upper(col("name")),
+}));
+const replacedExtendedUsers = pipe(users, extend((user) => ({
+    id: toString(user.id),
+})));
 const pickedUsers = pipe(users, pick("id", "name"));
 const colFilteredUsers = pipe(users, filter(eq(col("id"), 1)));
 const variadicAndFilteredUsers = pipe(users, filter(and(eq(col("id"), 1), gt(col("id"), 0), isNotNull(col("name")))));
@@ -266,6 +275,13 @@ type _ProjectedUsersDeferredKeys = Expect<Equal<keyof typeof projectedUsersDefer
 type _ProjectedUsersColKeys = Expect<Equal<keyof typeof projectedUsersCol.columns, "id" | "name">>;
 type _ProjectedUsersColId = Expect<Equal<ExprType<typeof projectedUsersCol.columns.id>, SqlInt>>;
 type _ProjectedUsersColName = Expect<Equal<ExprType<typeof projectedUsersCol.columns.name>, string>>;
+type _ExtendedUsersKeys = Expect<Equal<keyof typeof extendedUsers.columns, "id" | "name" | "name_upper">>;
+type _ExtendedUsersNameUpper = Expect<Equal<ExprType<typeof extendedUsers.columns.name_upper>, string>>;
+type _DeferredExtendedUsersKeys = Expect<Equal<keyof typeof deferredExtendedUsers.columns, "id" | "name" | "name_upper">>;
+type _DeferredExtendedUsersNameUpper = Expect<Equal<ExprType<typeof deferredExtendedUsers.columns.name_upper>, string>>;
+type _ReplacedExtendedUsersKeys = Expect<Equal<keyof typeof replacedExtendedUsers.columns, "id" | "name">>;
+type _ReplacedExtendedUsersId = Expect<Equal<ExprType<typeof replacedExtendedUsers.columns.id>, string>>;
+type _ReplacedExtendedUsersName = Expect<Equal<ExprType<typeof replacedExtendedUsers.columns.name>, string>>;
 type _ColFilteredUsersId = Expect<Equal<ExprType<typeof colFilteredUsers.columns.id>, SqlInt>>;
 type _ColSortedUsersName = Expect<Equal<ExprType<typeof colSortedUsers.columns.name>, string>>;
 type _ColAggregatedOrdersTotalSpend = Expect<Equal<ExprType<typeof colAggregatedOrders.columns.total_spend>, SqlFloat>>;
@@ -366,6 +382,9 @@ void droppedOverlapRight;
 void usingJoin;
 void mappedJoin;
 void projectedUsersCol;
+void extendedUsers;
+void deferredExtendedUsers;
+void replacedExtendedUsers;
 void colFilteredUsers;
 void variadicAndFilteredUsers;
 void variadicOrFilteredUsers;
@@ -440,6 +459,8 @@ pipe(users, filter(
 pipe(users, map({
     missing: col("missing"),
 }));
+// @ts-expect-error extend rejects unknown deferred columns when applied to a typed query
+pipe(users, extend({ broken: col("missing") }));
 // @ts-expect-error col rejects unknown current-row columns in fold context
 pipe(orders, fold({
     total: sum(col("missing")),
