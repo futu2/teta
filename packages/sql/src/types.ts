@@ -10,25 +10,37 @@ declare const __sqlUuid: unique symbol;
 declare const __sqlBytes: unique symbol;
 declare const __sqlJson: unique symbol;
 
+/** Branded SQL integer value. */
 export type SqlInt = number & { readonly [__sqlInt]: true };
+/** Branded SQL floating-point value. */
 export type SqlFloat = number & { readonly [__sqlFloat]: true };
+/** Branded SQL bigint value. */
 export type SqlBigInt = bigint & { readonly [__sqlBigInt]: true };
+/** Branded SQL decimal value. */
 export type SqlDecimal = number & { readonly [__sqlDecimal]: true };
+/** Union of numeric SQL-branded values. */
 export type SqlNumber = SqlInt | SqlFloat | SqlBigInt | SqlDecimal;
+/** Branded SQL date value. */
 export type SqlDate = string & { readonly [__sqlDate]: true };
+/** Branded SQL timestamp value. */
 export type SqlTimestamp = string & { readonly [__sqlTimestamp]: true };
+/** Branded SQL UUID value. */
 export type SqlUuid = string & { readonly [__sqlUuid]: true };
+/** Branded SQL bytes/blob value. */
 export type SqlBytes = Uint8Array & { readonly [__sqlBytes]: true };
+/** Branded SQL JSON value preserving the JSON payload type. */
 export type SqlJson<T = unknown> = T & { readonly [__sqlJson]: true };
 
 type ContextSqlNumber<TContext> = Extract<Exclude<TContext, null>, SqlNumber>;
 
+/** Normalize a numeric literal against a SQL numeric context type. */
 export type NormalizeNumericLiteral<TContext, TValue> = TValue extends number | bigint
   ? [ContextSqlNumber<TContext>] extends [never]
     ? TValue
     : ContextSqlNumber<TContext>
   : TValue;
 
+/** Normalize a tuple of numeric literal values against a SQL numeric context type. */
 export type NormalizeNumericLiteralTuple<
   TContext,
   TValues extends readonly unknown[],
@@ -36,6 +48,7 @@ export type NormalizeNumericLiteralTuple<
   [K in keyof TValues]: NormalizeNumericLiteral<TContext, TValues[K]>;
 };
 
+/** Normalize TypeScript literal values to their corresponding SQL expression value types. */
 export type NormalizeExpressionLiteral<TValue> =
   TValue extends SqlNumber | SqlDate | SqlTimestamp | SqlUuid | SqlBytes
     ? TValue
@@ -55,6 +68,7 @@ export type NormalizeExpressionLiteral<TValue> =
     ? boolean
   : TValue;
 
+/** Canonical built-in dialect names supported by the renderer. */
 export type BuiltinDialect =
   | "mysql"
   | "mariadb"
@@ -73,12 +87,14 @@ export type BuiltinDialect =
   | "duckdb"
   | "hetu";
 
+/** Optional feature flags that affect dialect-specific SQL lowering. */
 export type DialectFeatures = {
   lateralJoinKeyword?: boolean;
   recursiveCte?: boolean;
   qualifyClause?: boolean;
 };
 
+/** Named fallback rewrite used when a dialect lacks a function directly. */
 export type DialectLanguageFallback =
   | "bit_length_via_length_x8"
   | "array_length_via_json_array_length"
@@ -110,12 +126,14 @@ export type DialectLanguageFallback =
   | "regex_like_via_regexp_match"
   | "regex_like_via_regexp_function";
 
+/** Function names, fallback rewrites, and unsupported functions for a dialect. */
 export type DialectLanguageConfig = {
   functions?: Record<string, string>;
   fallbacks?: Record<string, DialectLanguageFallback>;
   unsupported?: string[];
 };
 
+/** User-provided dialect specification for custom SQL dialect behavior. */
 export type DialectSpec = {
   name: string;
   parserDialect?: string | null;
@@ -123,8 +141,10 @@ export type DialectSpec = {
   language?: DialectLanguageConfig;
 };
 
+/** Dialect input accepted by renderer options. */
 export type Dialect = BuiltinDialect | DialectSpec | (string & {});
 
+/** Fully resolved dialect metadata used by the renderer. */
 export type QueryDialect = {
   name: string;
   parserDialect: string | null;
@@ -140,11 +160,16 @@ export type QueryDialect = {
   };
 };
 
+/** SQL string formatting mode. */
 export type SqlFormat = "compact" | "pretty";
+/** Query-stage lowering strategy. */
 export type SqlRenderStrategy = "optimized" | "readable";
+/** Parameter placeholder rendering mode. */
 export type SqlParameterMode = "inline" | "named" | "positional";
+/** Placeholder prefix for named or positional parameters. */
 export type SqlParameterPrefix = ":" | "$" | "@";
 
+/** Rendering options accepted by query and expression SQL helpers. */
 export type SqlOptions = Option & {
   format?: SqlFormat;
   renderStrategy?: SqlRenderStrategy;
@@ -153,6 +178,7 @@ export type SqlOptions = Option & {
   parameterPrefix?: SqlParameterPrefix;
 };
 
+/** One bound parameter produced by parameterized rendering. */
 export type SqlParam = {
   /** Runtime value passed alongside the SQL string. */
   value: unknown;
@@ -162,6 +188,7 @@ export type SqlParam = {
   name: string | null;
 };
 
+/** Rendered SQL plus any bound parameter metadata. */
 export type SqlResult = {
   sql: string;
   params: SqlParam[];

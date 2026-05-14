@@ -31,21 +31,40 @@ export type {
   QueryIRSqlTarget,
 } from "./renderer_types.ts";
 
+/** Diagnostic rendering output for a query IR. */
 export type ExplainIRResult = {
+  /** Original query IR passed to `explainIR`. */
   ir: QueryIRSqlTarget;
+  /** Parser AST produced before SQL stringification. */
   ast: AST;
+  /** Rendered SQL string. */
   sql: string;
+  /** Bound parameters collected while rendering. */
   params: SqlResult["params"];
+  /** Output column names exposed by the query. */
   columnNames: readonly string[];
+  /** Lowered query stages with their original order. */
   stages: Array<{ index: number; kind: Stage["kind"] }>;
+  /** Common table expressions attached to the query. */
   ctes: Array<{ name: string; kind: CteSpec["kind"] }>;
+  /** Resolved SQL dialect used for rendering. */
   dialect: QueryDialect;
+  /** SQL formatting mode used for rendering. */
   format: SqlFormat;
+  /** Query lowering strategy used by the renderer. */
   renderStrategy: SqlRenderStrategy;
+  /** Parameter rendering mode used for literals and params. */
   parameterMode: SqlParameterMode;
+  /** Placeholder prefix used for named or positional parameters. */
   parameterPrefix: SqlParameterPrefix;
 };
 
+/**
+ * Render a query IR to SQL plus parameter metadata.
+ *
+ * Use this when you need both the SQL string and the parameter list for a
+ * database client. `irToSql(...)` is the string-only convenience wrapper.
+ */
 export function irToSqlResult<TResult extends SqlResult = SqlResult>(
   target: QueryIRSqlTarget,
   options: SqlOptions = {}
@@ -54,6 +73,7 @@ export function irToSqlResult<TResult extends SqlResult = SqlResult>(
   return renderQueryIRTarget(target, state) as TResult;
 }
 
+/** Render a query IR to a SQL string. */
 export function irToSql(
   target: QueryIRSqlTarget,
   options: SqlOptions = {}
@@ -61,6 +81,12 @@ export function irToSql(
   return irToSqlResult(target, options).sql;
 }
 
+/**
+ * Render a standalone expression target to SQL plus parameter metadata.
+ *
+ * This is useful for testing expression builders or rendering predicates
+ * outside a full query pipeline.
+ */
 export function exprToSqlResult<TResult extends SqlResult = SqlResult>(
   target: ExprSqlTarget,
   options: SqlOptions = {}
@@ -69,6 +95,7 @@ export function exprToSqlResult<TResult extends SqlResult = SqlResult>(
   return renderExprTarget(target, state) as TResult;
 }
 
+/** Render a standalone expression target to a SQL string. */
 export function exprToSql(
   target: ExprSqlTarget,
   options: SqlOptions = {}
@@ -76,6 +103,11 @@ export function exprToSql(
   return exprToSqlResult(target, options).sql;
 }
 
+/**
+ * Lower a query IR to a `node-sql-parser` AST.
+ *
+ * Use this when integrating with tooling that consumes parser ASTs directly.
+ */
 export function irToAst(
   target: QueryIRSqlTarget,
   options: Pick<SqlOptions, "dialect" | "renderStrategy"> = {}
@@ -98,6 +130,7 @@ export function irToAst(
   );
 }
 
+/** Return the rendered SQL, AST, resolved options, stages, and CTE metadata for a query IR. */
 export function explainIR(
   target: QueryIRSqlTarget,
   options: SqlOptions = {}

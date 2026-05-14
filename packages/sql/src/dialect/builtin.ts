@@ -17,6 +17,7 @@ import { TRANSACTSQL_DIALECT } from "./transactsql.ts";
 import { TRINO_DIALECT } from "./trino.ts";
 import type { BuiltinDialectDefinition } from "./types.ts";
 
+/** Registry of canonical built-in dialect definitions. */
 export const BUILTIN_DIALECTS: Record<BuiltinDialect, BuiltinDialectDefinition> = {
   mysql: MYSQL_DIALECT,
   mariadb: MARIADB_DIALECT,

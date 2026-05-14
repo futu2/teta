@@ -1,12 +1,14 @@
 import type { BuiltinDialect, DialectLanguageConfig } from "../types.ts";
 import { BUILTIN_DIALECTS } from "./builtin.ts";
 
+/** Empty language config that leaves function names unchanged. */
 export const IDENTITY_LANGUAGE: Required<DialectLanguageConfig> = {
   functions: {},
   fallbacks: {},
   unsupported: [],
 };
 
+/** Resolve dialect function names, fallback rewrites, and unsupported functions. */
 export function resolveDialectLanguage(
   dialectName: string,
   override?: DialectLanguageConfig

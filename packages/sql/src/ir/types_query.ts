@@ -9,6 +9,7 @@ import type {
 } from "./types_expr.ts";
 import type { GeneratedCteName, InternalCteName, ScopeId } from "./types_internal.ts";
 
+/** Structured physical table source. */
 export type StructuredTableSource = {
   db: SqlIdentifier | null;
   schema: SqlIdentifier | null;
@@ -16,17 +17,21 @@ export type StructuredTableSource = {
   as: SqlIdentifier | null;
 };
 
+/** One row in an inline `VALUES` source. */
 export type ValuesRow = Readonly<Record<string, Value>>;
 
+/** Inline row-set source used for generated `VALUES` queries. */
 export type ValuesSource = {
   kind: "values";
   rows: readonly ValuesRow[];
 };
 
+/** Return true when a source is an inline `VALUES` source. */
 export function isValuesSource(source: Source): source is ValuesSource {
   return "kind" in source && source.kind === "values";
 }
 
+/** User-facing table-source input accepted by normalization helpers. */
 export type TableSourceInput =
   | string
   | {
@@ -43,7 +48,9 @@ export type TableSourceInput =
       as?: IdentifierInput | null;
     };
 
+/** Physical query source. */
 export type Source = StructuredTableSource | ValuesSource;
+/** Source reference after a table or CTE has been bound in the renderer. */
 export type SourceRef =
   | {
       kind: "table";
@@ -59,6 +66,7 @@ export type SourceRef =
       columnIdentifiers: Readonly<Record<string, SqlIdentifier>>;
     };
 
+/** Query body used inside CTEs, joins, and unions. */
 export type QuerySpec = {
   source: Source;
   stages: Stage[];
@@ -67,6 +75,7 @@ export type QuerySpec = {
   scopeId: ScopeId;
 };
 
+/** Right-hand source for a join stage. */
 export type JoinSource =
   | {
       kind: "table";
@@ -81,6 +90,7 @@ export type JoinSource =
       inheritedBindings: Readonly<Partial<Record<ScopeId, string | null>>> | null;
     };
 
+/** Projection stage that maps rows without aggregation. */
 export type MapStage = {
   kind: "map";
   items: ProjectionItem[];
@@ -89,6 +99,7 @@ export type MapStage = {
   outputScopeId: ScopeId;
 };
 
+/** Projection stage that may group and aggregate rows. */
 export type FoldStage = {
   kind: "fold";
   items: ProjectionItem[];
@@ -97,14 +108,17 @@ export type FoldStage = {
   outputScopeId: ScopeId;
 };
 
+/** Stage that replaces the current row shape with projected columns. */
 export type ProjectionStage = MapStage | FoldStage;
 
+/** Stage that adds an `ORDER BY` clause. */
 export type SortStage = {
   kind: "sort";
   items: OrderItem[];
   projectAll: ProjectionItem[];
 };
 
+/** Stage that expands an array expression into rows. */
 export type UnnestStage = {
   kind: "unnest";
   mode: "inner" | "outer";
@@ -118,12 +132,14 @@ export type UnnestStage = {
   outputScopeId: ScopeId;
 };
 
+/** Stage that limits the number of rows. */
 export type TakeStage = {
   kind: "take";
   count: number;
   projectAll: ProjectionItem[];
 };
 
+/** One lowered query pipeline operation. */
 export type Stage =
   | ProjectionStage
   | { kind: "filter"; predicate: ExprNode<boolean>; projectAll: ProjectionItem[] }
@@ -149,12 +165,14 @@ export type Stage =
       outputScopeId: ScopeId;
     };
 
+/** Root query IR before renderer-only output-column metadata is attached. */
 export type QueryIR = {
   source: Source;
   stages: Stage[];
   scopeId: ScopeId;
 };
 
+/** Common table expression attached to a query render target. */
 export type CteSpec =
   | { kind: "query"; name: string; query: QuerySpec }
   | {
@@ -165,8 +183,10 @@ export type CteSpec =
       step: QuerySpec;
     };
 
+/** Schema marker used by frontends to infer query column types. */
 export type ColumnType<T> = { kind: "column_type"; _type?: T };
 
+/** Infer a row shape from a schema object made of `ColumnType` values. */
 export type InferSchema<S extends Record<string, ColumnType<any>>> = {
   [K in keyof S]: S[K] extends ColumnType<infer T> ? T : never;
 };

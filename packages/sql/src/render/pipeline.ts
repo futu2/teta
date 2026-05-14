@@ -8,8 +8,10 @@ import { withPipelineAstRenderContext } from "./pipeline_context.ts";
 import { buildPipelineParserAst, materializeBaseCtes } from "./pipeline_cte.ts";
 import { buildRecursiveCte, createDeferredRecursiveCte } from "./recursive.ts";
 
+/** Recursive CTE helpers used by the pipeline renderer. */
 export { buildRecursiveCte, createDeferredRecursiveCte } from "./recursive.ts";
 
+/** Options for lowering a query pipeline into a parser AST. */
 export type RenderPipelineOptions = {
   ctePrefix?: string;
   baseCtes?: CteSpec[];
@@ -19,6 +21,7 @@ export type RenderPipelineOptions = {
   columnIdentifiers?: Readonly<Record<string, SqlIdentifier>>;
 };
 
+/** Render a source and lowered stages into a `node-sql-parser` AST. */
 export function renderPipelineAst(
   source: Source,
   stages: Stage[],

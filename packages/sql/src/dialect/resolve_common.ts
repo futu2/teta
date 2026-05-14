@@ -8,10 +8,12 @@ import type { BuiltinDialectDefinition } from "./types.ts";
 import { lookupBuiltinDialect, suggestCanonicalBuiltin } from "./lookup.ts";
 import { userError } from "../errors.ts";
 
+/** Return a fresh copy of the default SQL dialect. */
 export function getDefaultDialect(): QueryDialect {
   return cloneDialect(DEFAULT_DIALECT);
 }
 
+/** Deep-clone resolved dialect metadata so callers can mutate their copy safely. */
 export function cloneDialect(dialect: QueryDialect): QueryDialect {
   return {
     name: dialect.name,
@@ -29,6 +31,7 @@ export function cloneDialect(dialect: QueryDialect): QueryDialect {
   };
 }
 
+/** Compare dialects by renderer-relevant parser and feature settings. */
 export function sameDialect(left: QueryDialect, right: QueryDialect): boolean {
   return (
     left.parserDialect === right.parserDialect &&
@@ -38,6 +41,7 @@ export function sameDialect(left: QueryDialect, right: QueryDialect): boolean {
   );
 }
 
+/** Resolve a non-empty dialect name into renderer metadata. */
 export function resolveNamedDialect(rawName: string): QueryDialect {
   assertCanonicalBuiltinName(rawName);
   const builtin = lookupBuiltinDialect(rawName);
@@ -57,6 +61,7 @@ export function resolveNamedDialect(rawName: string): QueryDialect {
   };
 }
 
+/** Resolve dialect feature flags from explicit options and built-in defaults. */
 export function resolveFeatureFlags(
   explicit: DialectFeatures | undefined,
   builtinByName: BuiltinDialectDefinition | undefined,
@@ -81,6 +86,7 @@ export function resolveFeatureFlags(
   };
 }
 
+/** Throw when a built-in dialect is named with a non-canonical spelling. */
 export function assertCanonicalBuiltinName(rawName: string): void {
   const canonicalBuiltin = suggestCanonicalBuiltin(rawName);
   if (canonicalBuiltin && rawName !== canonicalBuiltin) {

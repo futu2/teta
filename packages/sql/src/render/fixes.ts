@@ -3,6 +3,7 @@ import { userError } from "../errors.ts";
 import type { QueryDialect } from "../types.ts";
 import { cloneAst, isSelectAst } from "./ast.ts";
 
+/** Apply final dialect-specific AST fixes before SQL stringification. */
 export function applyDialectFixes(ast: AST, dialect: QueryDialect): AST {
   if (!dialect.features.recursiveCte && containsRecursiveCte(ast)) {
     userError("UNSUPPORTED_RECURSIVE_CTE", `Dialect ${dialect.name} does not support recursive CTE`);

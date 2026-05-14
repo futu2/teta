@@ -1,3 +1,21 @@
+/**
+ * SQL rendering backend for Teta query frontends.
+ *
+ * This package contains the shared intermediate representation (IR), dialect
+ * metadata, and renderer used by Teta frontends. Most application code should
+ * use the higher-level frontend package; use this backend directly when you
+ * build a custom frontend, inspect generated IR, or render backend SQL yourself.
+ *
+ * @example Render a query IR
+ * ```ts
+ * import { irToSql } from "@teta/sql";
+ *
+ * const sql = irToSql(queryIr, { dialect: "postgresql" });
+ * ```
+ *
+ * @module
+ */
+
 export * from "./src/errors.ts";
 export * from "./src/ir/types.ts";
 export * from "./src/ir/utils.ts";

@@ -30,6 +30,7 @@ const RESERVED_KEYWORDS = new Set([
   "is",
 ]);
 
+/** Remove identifier quotes that are not needed for parser-safe SQL. */
 export function stripRedundantQuotes(sql: string): string {
   const replacer = (full: string, id: string) => {
     if (!isSimpleIdentifier(id)) return full;

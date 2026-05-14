@@ -14,10 +14,12 @@ import { internalError, userError } from "../errors.ts";
 
 const BARE_IDENTIFIER_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
+/** Return true when an identifier needs quoting to remain valid SQL. */
 export function shouldQuoteIdentifierName(name: string): boolean {
   return !BARE_IDENTIFIER_PATTERN.test(name);
 }
 
+/** Normalize a string or identifier object into a `SqlIdentifier`. */
 export function normalizeIdentifier<const Name extends string>(
   input: IdentifierInput<Name>,
   label = "identifier"
@@ -37,21 +39,25 @@ export function normalizeIdentifier<const Name extends string>(
   };
 }
 
+/** Extract the raw name from a normalized SQL identifier. */
 export function identifierName<const Name extends string>(value: SqlIdentifier<Name>): Name {
   return value.name;
 }
 
+/** Resolve the output identifier for a projection item, if one can be inferred. */
 export function projectionItemOutputIdentifier(item: ProjectionItem): SqlIdentifier | null {
   if (item.as) return item.as;
   if (item.expr.kind === "column") return normalizeIdentifier(item.expr.name, "projection column");
   return null;
 }
 
+/** Resolve the output column name for a projection item, if one can be inferred. */
 export function projectionItemOutputName(item: ProjectionItem): string | null {
   const identifier = projectionItemOutputIdentifier(item);
   return identifier ? identifierName(identifier) : null;
 }
 
+/** Build a projection output-name to identifier map. */
 export function projectionItemsToIdentifierMap(
   items: ProjectionItem[]
 ): Readonly<Record<string, SqlIdentifier>> {
@@ -66,6 +72,7 @@ export function projectionItemsToIdentifierMap(
   return mapping;
 }
 
+/** Build a column-name to normalized identifier map. */
 export function columnNamesToIdentifierMap(
   columnNames: readonly string[]
 ): Readonly<Record<string, SqlIdentifier>> {
@@ -76,6 +83,7 @@ export function columnNamesToIdentifierMap(
   return mapping;
 }
 
+/** Normalize user-facing table-source input into IR source metadata. */
 export function normalizeTableSource(input: TableSourceInput): Source {
   if (typeof input === "string") {
     return fromStringPath(input);
@@ -120,6 +128,7 @@ function fromStringPath(input: string): Source {
   );
 }
 
+/** Generate a stable table alias for a source at the current stage depth. */
 export function autoAlias(table: string | SqlIdentifier, stages: Stage[]): string {
   const tableName = typeof table === "string" ? table : identifierName(table);
   const aliasBase = isInternalCteName(tableName)
@@ -134,6 +143,7 @@ export function autoAlias(table: string | SqlIdentifier, stages: Stage[]): strin
   return `${name}_${joinCount + 1}`;
 }
 
+/** Return the source name used as the base for generated aliases. */
 export function sourceAliasBase(source: Source): string | SqlIdentifier {
   if (isValuesSource(source)) {
     return "values";
@@ -141,6 +151,7 @@ export function sourceAliasBase(source: Source): string | SqlIdentifier {
   return source.table;
 }
 
+/** Normalize a user-facing join type into canonical IR form. */
 export function normalizeJoinType(type: JoinTypeInput | (string & {})): JoinType {
   const normalized = type.toString().trim().toUpperCase();
   switch (normalized) {
@@ -154,6 +165,7 @@ export function normalizeJoinType(type: JoinTypeInput | (string & {})): JoinType
   }
 }
 
+/** Assert that two union inputs expose the same columns in the same order. */
 export function assertUnionCompatible(
   left: readonly string[],
   right: readonly string[]
@@ -168,6 +180,7 @@ export function assertUnionCompatible(
   }
 }
 
+/** Assert that recursive loop base and step queries expose identical columns. */
 export function assertLoopColumns(
   base: readonly string[],
   step: readonly string[]
@@ -175,6 +188,7 @@ export function assertLoopColumns(
   assertUnionCompatible(base, step);
 }
 
+/** Merge two CTE lists while rejecting duplicate names. */
 export function mergeWiths(left: CteSpec[], right: CteSpec[]): CteSpec[] {
   if (left.length === 0) return right.length ? [...right] : [];
   if (right.length === 0) return [...left];

@@ -1,5 +1,7 @@
+/** Classifies whether an error came from user input or an internal invariant. */
 export type TetaErrorKind = "user" | "internal";
 
+/** Stable error code used by Teta packages. */
 export type TetaErrorCode =
   | "GROUP_OUTSIDE_AGGREGATE"
   | "GROUP_INSIDE_AGGREGATE_FUNCTION"
@@ -24,6 +26,7 @@ export type TetaErrorCode =
   | "INTERNAL_DEV_RENDER_FAILED"
   | (string & {});
 
+/** Base class for user-facing and internal Teta errors. */
 export class TetaError extends Error {
   constructor(
     readonly kind: TetaErrorKind,
@@ -35,26 +38,31 @@ export class TetaError extends Error {
   }
 }
 
+/** Error raised for invalid user input or unsupported requested behavior. */
 export class TetaUserError extends TetaError {
   constructor(code: TetaErrorCode, message: string) {
     super("user", code, message);
   }
 }
 
+/** Error raised when a renderer or IR invariant is violated. */
 export class TetaInternalError extends TetaError {
   constructor(code: TetaErrorCode, message: string) {
     super("internal", code, message);
   }
 }
 
+/** Return true when a value is a Teta error instance. */
 export function isTetaError(value: unknown): value is TetaError {
   return value instanceof TetaError;
 }
 
+/** Throw a `TetaUserError` with a stable code. */
 export function userError(code: TetaErrorCode, message: string): never {
   throw new TetaUserError(code, message);
 }
 
+/** Throw a `TetaInternalError` with a stable code. */
 export function internalError(code: TetaErrorCode, message: string): never {
   throw new TetaInternalError(code, message);
 }

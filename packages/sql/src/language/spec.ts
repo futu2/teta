@@ -1,3 +1,4 @@
+/** Catalog of language functions and features covered by Teta's dialect layer. */
 export const LANGUAGE_SPEC = {
   math: [
     "+",
@@ -98,8 +99,10 @@ export const LANGUAGE_SPEC = {
   queryFeatures: ["LATERAL_JOIN", "RECURSIVE_CTE"],
 } as const;
 
+/** Category key from `LANGUAGE_SPEC`. */
 export type LanguageCategory = keyof typeof LANGUAGE_SPEC;
 
+/** Return the language support catalog. */
 export function getLanguageSpec(): typeof LANGUAGE_SPEC {
   return LANGUAGE_SPEC;
 }

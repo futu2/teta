@@ -11,6 +11,7 @@ import { attachUnion } from "./union.ts";
 import { compileLoopPart } from "./recursive_compile.ts";
 import type { RecursivePart } from "./recursive_deferred.ts";
 
+/** Build a parser AST CTE for a recursive base/step query pair. */
 export function buildRecursiveCte(
   name: InternalCteName,
   columnNames: readonly string[],
@@ -32,6 +33,7 @@ export function buildRecursiveCte(
   } as With & { recursive: boolean };
 }
 
+/** Convert a Teta CTE spec into a parser AST `WITH` item. */
 export function materializeCte(cte: CteSpec, dialect: QueryDialect): With {
   const renderedName = resolveIdentifierName(cte.name, getSqlRenderContext());
   switch (cte.kind) {

@@ -23,6 +23,7 @@ const WITH_KEYWORDS = new Set(["WITH", "WITH RECURSIVE"]);
 const CTE_INDENT = "  ";
 const CTE_BODY_INDENT = "  ";
 
+/** Format compact SQL into a stable multi-line representation. */
 export function formatSqlPretty(sql: string): string {
   const orderedKeywords = [...PRETTY_KEYWORDS].sort((left, right) => right.length - left.length);
   const state: PrettyFormatState = {

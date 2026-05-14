@@ -1,6 +1,7 @@
 import { TetaUserError } from "../errors.ts";
 import type { QueryIR } from "./types_query.ts";
 
+/** Assert that an unknown value has the minimum shape of a query IR. */
 export function validateQueryIR(value: unknown): asserts value is QueryIR {
   if (typeof value !== "object" || value === null) {
     throw new TetaUserError("INVALID_TABLE_SOURCE", "Query IR must be an object");

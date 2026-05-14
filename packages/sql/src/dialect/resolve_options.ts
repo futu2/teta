@@ -11,6 +11,7 @@ import { getDefaultDialect } from "./resolve_common.ts";
 import { resolveDialect } from "./resolve_dialect.ts";
 import { isDialectSpec } from "./resolve_spec.ts";
 
+/** Fully resolved renderer options. */
 export type ResolvedSqlOptions = {
   dialect: ReturnType<typeof resolveDialect>;
   options?: Option;
@@ -20,6 +21,7 @@ export type ResolvedSqlOptions = {
   parameterPrefix: SqlParameterPrefix;
 };
 
+/** Normalize overloaded renderer options into a single resolved options object. */
 export function buildSqlOptions(
   dialectOrOpt?: Dialect | SqlOptions,
   optOrFormat?: SqlOptions | SqlFormat,
