@@ -4,17 +4,22 @@ import {
   resolveDeferredExpr,
   toExprNode,
   type ColumnRefs,
-  type DeferredExprDepsOf,
 } from "../expr.ts";
 import type { SqlNumber } from "../sql/types.ts";
 import { userError } from "../errors.ts";
 import { Query, createQuery } from "./builder.ts";
-import type { QueryStep } from "./builder.ts";
 import { resolveSelectQuery } from "./mutations.ts";
 import type { SelectProjection } from "./planner.ts";
 import { resolveDerivedQueryInit } from "./state.ts";
-
-type QueryColumns = Record<string, any>;
+import type {
+  ColumnValueForKey,
+  ColumnValuesForKeys,
+  CurrentDepsOf,
+  KnownDeferredCurrentColumnsGuard,
+  LiteralDeferredKeys,
+  QueryColumns,
+  SingleLiteralKey,
+} from "./deferred_types.ts";
 type SelectExpr = ExprRef<unknown>;
 type SelectValue = SelectExpr | AliasedSelectValue<string, SelectExpr>;
 type SelectList = readonly SelectValue[];
@@ -43,42 +48,6 @@ export function alias<const TName extends string>(
   });
 }
 
-type CurrentDepsOf<TExpr> = DeferredExprDepsOf<TExpr> extends { current?: infer TCurrent }
-  ? TCurrent
-  : Record<never, never>;
-
-type LeftDepsOf<TExpr> = DeferredExprDepsOf<TExpr> extends { left?: infer TLeft }
-  ? TLeft
-  : Record<never, never>;
-
-type RightDepsOf<TExpr> = DeferredExprDepsOf<TExpr> extends { right?: infer TRight }
-  ? TRight
-  : Record<never, never>;
-
-type LiteralDeferredKeys<TDeps> = Extract<{
-  [K in keyof TDeps]: K extends string
-    ? string extends K
-      ? never
-      : K
-    : never;
-}[keyof TDeps], string>;
-
-type SingleLiteralKey<TDeps> = LiteralDeferredKeys<TDeps> extends infer TKey extends string
-  ? [TKey] extends [never]
-    ? never
-    : TKey
-  : never;
-
-type ColumnValueForKey<TColumns extends QueryColumns, TKey> =
-  [TKey] extends [never]
-    ? never
-    : TKey extends keyof TColumns
-      ? TColumns[TKey & keyof TColumns]
-      : never;
-
-type ColumnValuesForKeys<TColumns extends QueryColumns, TKeys> =
-  TKeys extends keyof TColumns ? TColumns[TKeys] : never;
-
 type CurrentDeferredComputedValue<TColumns extends QueryColumns, TValue, TExpr> =
   [LiteralDeferredKeys<CurrentDepsOf<TExpr>>] extends [never]
     ? TValue
@@ -92,29 +61,6 @@ type CurrentDeferredExprValue<TColumns extends QueryColumns, TExpr> =
     : TExpr extends ExprRef<infer TValue>
       ? CurrentDeferredComputedValue<TColumns, TValue, TExpr>
       : never;
-
-type KnownDeferredCurrentColumnsGuard<
-  TColumns extends QueryColumns,
-  TExpr,
-> = ([Exclude<LiteralDeferredKeys<CurrentDepsOf<TExpr>>, keyof TColumns>] extends [never]
-    ? unknown
-    : {
-        __teta_unknown_deferred_current_columns__: Exclude<
-          LiteralDeferredKeys<CurrentDepsOf<TExpr>>,
-          keyof TColumns
-        >;
-      })
-  & ([LiteralDeferredKeys<LeftDepsOf<TExpr>> | LiteralDeferredKeys<RightDepsOf<TExpr>>] extends [never]
-    ? unknown
-    : {
-        __teta_invalid_deferred_current_scope_columns__:
-          | LiteralDeferredKeys<LeftDepsOf<TExpr>>
-          | LiteralDeferredKeys<RightDepsOf<TExpr>>;
-      });
-
-type UnionToIntersection<T> = (
-  T extends unknown ? (value: T) => void : never
-) extends (value: infer TResult) => void ? TResult : never;
 
 type CurrentDeferredListGuard<
   TColumns extends QueryColumns,

@@ -205,7 +205,7 @@ describe("error paths", () => {
         const invalidStep = () => pipe(orders, map((order) => ({
             user_id: order.user_id,
         }))) as unknown as typeof base;
-        expect(() => loop(base, invalidStep)).toThrow(LOOP_COLUMN_MISMATCH_ERROR);
+        expect(() => pipe(base, loop(invalidStep))).toThrow(LOOP_COLUMN_MISMATCH_ERROR);
     });
     test("rejects legacy array selection syntax at runtime", () => {
         const users = createUsersTable();

@@ -50,18 +50,20 @@ console.log(toSql(activeUsers, { dialect: "postgresql", format: "pretty" }));
 Reusable functional pipelines can be saved with `flow(...)`, and `extend(...)` keeps existing columns while adding computed ones:
 
 ```ts
-import { col, extend, filterEq, flow, lower, pick } from "@teta/teta";
+import { col, extend, filterEq, flow, lower, pick, take, whenStep } from "@teta/teta";
 
 const activePublicUsers = flow(
   filterEq(col("active"), true),
   extend((user) => ({
     normalized_email: lower(user.email),
   })),
-  pick("id", "normalized_email")
+  pick("id", "normalized_email"),
+  whenStep(includeLimit, take(50))
 );
 ```
 
 Bare strings in comparison filter helpers are literals; use `col("name")` or a row callback for columns.
+`whenStep(...)` and `unlessStep(...)` use host-language booleans to include or skip schema-preserving steps while building a query; use `filter(...)` and predicate expressions for conditions evaluated by SQL.
 
 Use `select(...)` for list-style projections. Plain column refs keep their names, and `alias(...)` names computed outputs:
 
@@ -101,6 +103,21 @@ const activeUsers = pipe(
 ```
 
 Use `col("name")`, `leftCol("name")`, and `rightCol("name")` for no-callback column refs that can be checked by TypeScript in query context.
+
+Additional predicate helpers include `between(...)`, `isNotIn(...)`/`notIn(...)`, and `isDistinctFrom(...)`:
+
+```ts
+import { and, between, filter, isDistinctFrom, isNotIn } from "@teta/teta";
+
+const adultUsers = pipe(
+  users,
+  filter((user) => and(
+    between(user.age, 18, 64),
+    isNotIn(user.email, ["bot@example.com"]),
+    isDistinctFrom(user.email, "anonymous@example.com"),
+  ))
+);
+```
 
 More docs:
 

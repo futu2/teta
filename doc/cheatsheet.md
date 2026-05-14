@@ -57,6 +57,16 @@ const activePublicUsers = flow(
 );
 ```
 
+Use `identityStep()`, `whenStep(condition, step)`, and `unlessStep(condition, step)` for simple host-language conditional composition. These helpers include or skip schema-preserving query steps while building the query; they do not create SQL `CASE` logic.
+
+```ts
+const visibleUsers = flow(
+  filterEq(col("active"), true),
+  whenStep(includeLimit, take(50)),
+  unlessStep(includeDeleted, filterEq(col("deleted"), false))
+);
+```
+
 ### Typed deferred column refs
 
 Use string-literal column refs when a callback only exists to access columns:
@@ -134,7 +144,7 @@ Build a recursive CTE from a base query plus a recursive step.
 
 ```ts
 const base = pipe(table("seed", { n: t.int() }), map((s) => ({ n: s.n })));
-const q = loop(base, (self) => pipe(self, map((s) => ({ n: add(s.n, 1) }))));
+const q = pipe(base, loop((self) => pipe(self, map((s) => ({ n: add(s.n, 1) })))));
 ```
 
 ### `join(...)`
@@ -202,8 +212,8 @@ const q = pipe(
 ### Set operations
 
 ```ts
-const allUsers = unionAll(activeUsers, inactiveUsers);
-const uniqueUsers = union(activeUsers, inactiveUsers);
+const allUsers = pipe(activeUsers, unionAll(inactiveUsers));
+const uniqueUsers = pipe(activeUsers, union(inactiveUsers));
 ```
 
 ## 2) Query helpers
@@ -232,6 +242,9 @@ const uniqueUsers = union(activeUsers, inactiveUsers);
 - `unionAll(right)`
 - `union(right)`
 - `loop(step)`
+- `identityStep()`
+- `whenStep(condition, step)`
+- `unlessStep(condition, step)`
 
 `map(...)`, `fold(...)`, `filter(...)`, `sort(...)`, `take(...)`, `join(...)`, `union(...)`, `unionAll(...)`, and `loop(...)`
 all return `QueryStep` functions when called without the left query.
@@ -306,6 +319,10 @@ const explicitSql = irToSql(ir, { dialect: "postgresql" });
 - `lte(left, right)`
 - `like(value, pattern)`
 - `isIn(value, values)`
+- `isNotIn(value, values)`
+- `notIn(value, values)`
+- `between(value, lower, upper)`
+- `isDistinctFrom(left, right)`
 - `and(...conditions)`
 - `or(...conditions)`
 - `not(value)`

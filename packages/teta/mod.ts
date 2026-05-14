@@ -46,6 +46,15 @@ export const filterLt: typeof import("./src/edsl/query.ts").filterLt = query.fil
 /** Filters rows where the left operand is less than or equal to the right operand. */
 export const filterLte: typeof import("./src/edsl/query.ts").filterLte = query.filterLte;
 
+/** Returns a query step that leaves its input unchanged. */
+export const identityStep: typeof import("./src/edsl/query.ts").identityStep = query.identityStep;
+
+/** Applies a schema-preserving query step when a host-language condition is true. */
+export const whenStep: typeof import("./src/edsl/query.ts").whenStep = query.whenStep;
+
+/** Applies a schema-preserving query step when a host-language condition is false. */
+export const unlessStep: typeof import("./src/edsl/query.ts").unlessStep = query.unlessStep;
+
 /** Joins two query inputs as an inner join. */
 export const innerJoin: typeof import("./src/edsl/query.ts").innerJoin = query.innerJoin;
 
@@ -207,6 +216,18 @@ export const like: typeof import("./src/edsl/expr.ts").like = expr.like;
 
 /** Builds an `IN` predicate. */
 export const isIn: typeof import("./src/edsl/expr.ts").isIn = expr.isIn;
+
+/** Builds a `NOT IN` predicate. */
+export const isNotIn: typeof import("./src/edsl/expr.ts").isNotIn = expr.isNotIn;
+
+/** Alias for `isNotIn(...)`. */
+export const notIn: typeof import("./src/edsl/expr.ts").notIn = expr.notIn;
+
+/** Builds a `BETWEEN` predicate. */
+export const between: typeof import("./src/edsl/expr.ts").between = expr.between;
+
+/** Builds an `IS DISTINCT FROM` predicate. */
+export const isDistinctFrom: typeof import("./src/edsl/expr.ts").isDistinctFrom = expr.isDistinctFrom;
 
 /** Combines predicates with logical `AND`. */
 export const and: typeof import("./src/edsl/expr.ts").and = expr.and;

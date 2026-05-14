@@ -132,6 +132,9 @@ function renderBinaryOperand(
 ): ParserExprAst {
   const ast = exprNodeToAst(expr, renderContext);
   const normalized = unwrapGroups(expr);
+  if (parentOp === "BETWEEN" && normalized.kind === "binary" && normalized.op === "AND") {
+    return ast;
+  }
   if (normalized.kind === "binary" && binaryPrecedence(normalized.op) < binaryPrecedence(parentOp)) {
     return parenthesizeAst(ast);
   }
@@ -179,6 +182,9 @@ function binaryPrecedence(op: BinaryExprAst["operator"]): number {
     case "IS":
     case "IS NOT":
     case "IN":
+    case "NOT IN":
+    case "BETWEEN":
+    case "IS DISTINCT FROM":
       return 3;
     case "||":
       return 4;

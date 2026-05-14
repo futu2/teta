@@ -1,6 +1,7 @@
 import { userError } from "../errors.ts";
 import { map, Query } from "./builder.ts";
-import type { ColumnRef, ColumnRefs } from "../expr.ts";
+import type { ColumnRefs } from "../expr.ts";
+import { mapColumnNames, selectColumnsByName } from "./projection_utils.ts";
 
 type QueryColumns = Record<string, any>;
 type StringKeyOf<T> = Extract<keyof T, string>;
@@ -55,11 +56,7 @@ export function pick<const TNames extends readonly [string, ...string[]]>(
 ) => Query<PickResult<TColumns, TNames>> {
   return ((query: Query<QueryColumns>) => map((input: ColumnRefs<QueryColumns>) => {
     assertKnownColumns(input, names);
-    const result: Record<string, ColumnRef<any, string>> = {};
-    for (const name of names) {
-      result[name] = Reflect.get(input, name) as ColumnRef<any, string>;
-    }
-    return result;
+    return selectColumnsByName(input, names);
   })(query)) as unknown as <TColumns extends Record<TNames[number], any>>(
     query: Query<TColumns>
   ) => Query<PickResult<TColumns, TNames>>;
@@ -76,11 +73,7 @@ export function drop<const TNames extends readonly [string, ...string[]]>(
     const kept = query.columnNames.filter((name: string) => !dropped.has(name));
 
     return map((input: ColumnRefs<QueryColumns>) => {
-      const result: Record<string, ColumnRef<any, string>> = {};
-      for (const name of kept) {
-        result[name] = Reflect.get(input, name) as ColumnRef<any, string>;
-      }
-      return result;
+      return selectColumnsByName(input, kept);
     })(query);
   }) as unknown as <TColumns extends Record<TNames[number], any>>(
     query: Query<TColumns>
@@ -93,11 +86,7 @@ export function rename<const TPattern extends string>(
   query: Query<TColumns>
 ) => Query<RenameResult<TColumns, TPattern>> {
   return ((query: Query<QueryColumns>) => map((input: ColumnRefs<QueryColumns>) => {
-    const result: Record<string, ColumnRef<any, string>> = {};
-    for (const key of Object.keys(input)) {
-      result[renameKey(key)] = Reflect.get(input, key) as ColumnRef<any, string>;
-    }
-    return result;
+    return mapColumnNames(input, query.columnNames, renameKey);
   })(query)) as unknown as <TColumns extends QueryColumns>(
     query: Query<TColumns>
   ) => Query<RenameResult<TColumns, TPattern>>;

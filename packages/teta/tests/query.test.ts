@@ -142,7 +142,7 @@ describe("toSql(query, options)", () => {
             id: t.int(),
             tags: t.array(t.string()),
         });
-        const query = unnest(sessions, (session) => session.tags, { value: "tag" });
+        const query = pipe(sessions, unnest((session) => session.tags, { value: "tag" }));
         expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe("SELECT sessions_0.id AS id, sessions_0.tags AS tags, unnest_1.tag AS tag FROM sessions AS sessions_0 CROSS JOIN LATERAL UNNEST(sessions_0.tags) AS unnest_1(tag)");
     });
     test("renders duckdb unnest as cross join", () => {
@@ -150,7 +150,7 @@ describe("toSql(query, options)", () => {
             id: t.int(),
             tags: t.array(t.string()),
         });
-        const query = unnest(sessions, (session) => session.tags, { value: "tag" });
+        const query = pipe(sessions, unnest((session) => session.tags, { value: "tag" }));
         expect(toSql(query, { dialect: "duckdb", format: "compact" })).toBe("SELECT sessions_0.id AS id, sessions_0.tags AS tags, unnest_1.tag AS tag FROM sessions AS sessions_0 CROSS JOIN UNNEST(sessions_0.tags) AS unnest_1(tag)");
     });
     test("renders hetu unnest as lateral view outer posexplode", () => {
@@ -158,7 +158,7 @@ describe("toSql(query, options)", () => {
             id: t.int(),
             tags: t.array(t.string()),
         });
-        const query = unnest(sessions, (session) => session.tags, { value: "tag", ordinality: "idx" }, { outer: true });
+        const query = pipe(sessions, unnest((session) => session.tags, { value: "tag", ordinality: "idx" }, { outer: true }));
         expect(toSql(query, { dialect: "hetu", format: "compact" })).toBe("SELECT sessions_0.id AS id, sessions_0.tags AS tags, unnest_1.tag AS tag, unnest_1.idx AS idx FROM sessions AS sessions_0 LATERAL VIEW OUTER POSEXPLODE(sessions_0.tags) unnest_1 AS idx, tag");
     });
     test("hoists a non-lateral subquery join into a CTE", () => {
@@ -323,9 +323,11 @@ describe("toSql(query, options)", () => {
         });
 
         expect(() => (union as any)()).toThrow("Wrong number of arguments");
-        expect(() => (union as any)(users, archivedUsers, archivedUsers)).toThrow("Wrong number of arguments");
+        expect(() => (union as any)(users, archivedUsers)).toThrow("union() is curried-only");
+        expect(() => (union as any)(users, archivedUsers, archivedUsers)).toThrow("union() is curried-only");
         expect(() => (unionAll as any)()).toThrow("Wrong number of arguments");
-        expect(() => (unionAll as any)(users, archivedUsers, archivedUsers)).toThrow("Wrong number of arguments");
+        expect(() => (unionAll as any)(users, archivedUsers)).toThrow("unionAll() is curried-only");
+        expect(() => (unionAll as any)(users, archivedUsers, archivedUsers)).toThrow("unionAll() is curried-only");
     });
     test("supports curried loop helper without external currying", () => {
         const seed = pipe(
@@ -346,7 +348,8 @@ describe("toSql(query, options)", () => {
         const step = (self: typeof seed) => pipe(self, filter((row) => gt(row.n, 0)));
 
         expect(() => (loop as any)()).toThrow("Wrong number of arguments");
-        expect(() => (loop as any)(seed, step, step)).toThrow("Wrong number of arguments");
+        expect(() => (loop as any)(seed, step)).toThrow("loop() is curried-only");
+        expect(() => (loop as any)(seed, step, step)).toThrow("loop() is curried-only");
     });
     test("renders structured schema-qualified sources", () => {
         const events = table({ schema: "analytics", table: "events" }, { id: t.int() });

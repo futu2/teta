@@ -179,10 +179,10 @@ const renamed = pipe(
 ```ts
 import { unnest } from "@teta/teta";
 
-const usersByTag = unnest(users, (user) => user.tags, {
+const usersByTag = pipe(users, unnest((user) => user.tags, {
   value: "tag",
   ordinality: "tag_index",
-});
+}));
 // original user columns + { tag: string, tag_index: SqlInt }
 ```
 

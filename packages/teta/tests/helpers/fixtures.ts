@@ -49,17 +49,15 @@ export function buildUserPipelineQuery() {
 }
 export function buildOrgTreeQuery() {
     const employees = createEmployeesTable();
-    return loop(
-        pipe(
-            employees,
-            filter((employee) => isNull(employee.manager_id)),
-            map((employee) => ({
-                id: employee.id,
-                name: employee.name,
-                manager_id: employee.manager_id,
-            }))
-        ),
-        (self) => pipe(
+    return pipe(
+        employees,
+        filter((employee) => isNull(employee.manager_id)),
+        map((employee) => ({
+            id: employee.id,
+            name: employee.name,
+            manager_id: employee.manager_id,
+        })),
+        loop((self) => pipe(
             employees,
             join(
                 self,
@@ -70,7 +68,7 @@ export function buildOrgTreeQuery() {
                     manager_id: employee.manager_id,
                 })
             )
-        )
+        ))
     );
 }
 export function buildDialectMatrixQuery() {

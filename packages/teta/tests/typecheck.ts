@@ -1,5 +1,5 @@
 import type { ExprRef, SqlBigInt, SqlBytes, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlTimestamp, SqlUuid, } from "../mod.ts";
-import { filter, filterEq, filterNe, filterGt, filterGte, filterLt, filterLte, fullJoin, innerJoin, join, leftJoin, rightJoin, take, sort, param, map, rename, pipe, flow, table, t, fold, asc, desc, eq, gt, upper, add, mul, coalesce, count, group, loop, sum, and, or, isNotNull, sub, caseWhen, when, mapShape, groupShape, lt, unnest, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, toString, toTimestamp, col, leftCol, rightCol, pick, drop, extend, select, alias } from "../mod.ts";
+import { between, filter, filterEq, filterNe, filterGt, filterGte, filterLt, filterLte, fullJoin, identityStep, innerJoin, isDistinctFrom, isNotIn, join, leftJoin, rightJoin, take, sort, param, map, rename, pipe, flow, table, t, fold, asc, desc, eq, gt, upper, add, mul, coalesce, count, group, loop, sum, and, or, isNotNull, sub, caseWhen, when, mapShape, groupShape, lt, unnest, unionAll, union, unlessStep, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, toString, toTimestamp, col, leftCol, rightCol, pick, drop, extend, select, alias, whenStep } from "../mod.ts";
 type Equal<A, B> = ((<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false);
 type Expect<T extends true> = T;
 type ExprType<TExpr> = TExpr extends ExprRef<infer TValue> ? TValue : never;
@@ -183,6 +183,14 @@ const filterLteUsers = pipe(users, filterLte((user) => user.id, 100));
 const literalStringFilter = pipe(users, filterEq("status", "active"));
 const variadicAndFilteredUsers = pipe(users, filter(and(eq(col("id"), 1), gt(col("id"), 0), isNotNull(col("name")))));
 const variadicOrFilteredUsers = pipe(users, filter(or(eq(col("name"), "Ada"), eq(col("name"), "Grace"), eq(col("name"), "Linus"))));
+const conditionalStepUsers = pipe(users, identityStep(), whenStep(true, filterEq(col("name"), "Ada")), unlessStep(false, take(10)));
+const unionStepUsers = pipe(users, union(users), unionAll(users));
+const unnestStepSessions = pipe(sessions, unnest(col("tags"), { value: "tag" }));
+const predicateConvenienceUsers = pipe(users, filter((user) => and(
+    between(user.id, 1, 10),
+    isNotIn(user.name, ["Ada", "Grace"]),
+    isDistinctFrom(user.name, "anonymous"),
+)));
 const singleAndExpr = and(eq(col("id"), 1));
 const singleOrExpr = or(eq(col("id"), 1));
 const colSortedUsers = pipe(users, sort([asc(col("name")), desc(col("id"))]));
@@ -190,7 +198,7 @@ const colAggregatedOrders = pipe(orders, fold({
     user_id: group(col("user_id")),
     total_spend: sum(col("total")),
 }));
-const colExplodedSessions = unnest(sessions, col("tags"), { value: "tag" });
+const colExplodedSessions = pipe(sessions, unnest(col("tags"), { value: "tag" }));
 // @ts-expect-error pick rejects unknown columns when applied to a typed query
 const invalidPickedUsers = pipe(users, pick("missing"));
 const curriedPipeline = pipe(users, filter((user: typeof users.columns) => gt(user.id, 0)), map((user) => ({
@@ -242,8 +250,8 @@ const fullSelected = pipe(fullJoined, map((row) => ({
 const leftViaJoinSelected = pipe(leftViaJoin, map((row) => ({
     total: coalesce(row.total, 0),
 })));
-const explodedSessions = unnest(sessions, (session) => session.tags, { value: "tag", ordinality: "tag_index" });
-const outerExplodedSessions = unnest(sessions, (session) => session.tags, { value: "tag" }, { outer: true });
+const explodedSessions = pipe(sessions, unnest((session) => session.tags, { value: "tag", ordinality: "tag_index" }));
+const outerExplodedSessions = pipe(sessions, unnest((session) => session.tags, { value: "tag" }, { outer: true }));
 const leftJoinTotal = coalesce(leftJoined.columns.total, 0);
 const leftJoinTotalRemaining = sub(leftJoinTotal, 1);
 const projectedWithQuotedKey = pipe(users, map((user) => ({ ["User Id"]: user.id })));
@@ -256,7 +264,8 @@ const aggregatedTotals = pipe(orders, fold((order) => ({
     totals: arrayAgg(order.total),
 })));
 const loopBase = pipe(users, map((user) => ({ id: user.id })));
-const looped = loop(loopBase, (self) => pipe(self, filter((row) => gt(row.id, 0))));
+const looped = pipe(loopBase, loop((self) => pipe(self, filter((row) => gt(row.id, 0)))));
+const loopStepUsers = pipe(loopBase, loop((self) => pipe(self, filter((row) => gt(row.id, 0)))));
 const projectedWithCase = pipe(users, map((user) => ({
     id: user.id,
     age_bucket: caseWhen([
@@ -352,6 +361,11 @@ type _ColMappedJoinUserId = Expect<Equal<ExprType<typeof colMappedJoin.columns.u
 type _ColMappedJoinTotal = Expect<Equal<ExprType<typeof colMappedJoin.columns.total>, SqlFloat | null>>;
 type _VariadicAndFilteredUsersId = Expect<Equal<ExprType<typeof variadicAndFilteredUsers.columns.id>, SqlInt>>;
 type _VariadicOrFilteredUsersName = Expect<Equal<ExprType<typeof variadicOrFilteredUsers.columns.name>, string>>;
+type _ConditionalStepUsersName = Expect<Equal<ExprType<typeof conditionalStepUsers.columns.name>, string>>;
+type _UnionStepUsersName = Expect<Equal<ExprType<typeof unionStepUsers.columns.name>, string>>;
+type _LoopStepUsersId = Expect<Equal<ExprType<typeof loopStepUsers.columns.id>, SqlInt>>;
+type _UnnestStepSessionsTag = Expect<Equal<ExprType<typeof unnestStepSessions.columns.tag>, string>>;
+type _PredicateConvenienceUsersName = Expect<Equal<ExprType<typeof predicateConvenienceUsers.columns.name>, string>>;
 type _SingleAndExpr = Expect<Equal<ExprType<typeof singleAndExpr>, boolean>>;
 type _SingleOrExpr = Expect<Equal<ExprType<typeof singleOrExpr>, boolean>>;
 type _PickedUsersId = Expect<Equal<ExprType<typeof pickedUsers.columns.id>, SqlInt>>;
@@ -466,6 +480,11 @@ void filterLteUsers;
 void literalStringFilter;
 void variadicAndFilteredUsers;
 void variadicOrFilteredUsers;
+void conditionalStepUsers;
+void unionStepUsers;
+void loopStepUsers;
+void unnestStepSessions;
+void predicateConvenienceUsers;
 void singleAndExpr;
 void singleOrExpr;
 void colSortedUsers;
@@ -591,7 +610,7 @@ pipe(users, sort(
     asc(col("missing"))
 ));
 // @ts-expect-error col rejects unknown current-row columns in unnest context
-unnest(sessions, col("missing"), { value: "tag" });
+pipe(sessions, unnest(col("missing"), { value: "tag" }));
 // @ts-expect-error leftCol rejects unknown join-left columns
 pipe(users, leftJoin(
     orders,
@@ -675,7 +694,7 @@ pipe(orders, fold((order) => [group(order.user_id)]));
 // @ts-expect-error map projections must reject undefined values
 pipe(users, map({ id: undefined }));
 // @ts-expect-error unnest selectors must reject undefined
-unnest(sessions, undefined, { value: "tag" });
+pipe(sessions, unnest(undefined, { value: "tag" }));
 // @ts-expect-error rename should reject unknown direct renamed fields
 pipe(directKeyMappedSelection, map((user) => ({ broken: user.prefix1_na })));
 // @ts-expect-error drop rejects unknown columns when applied to a typed query
@@ -696,6 +715,14 @@ fold(orders, (order) => ({ user_id: group(order.user_id) }));
 sort(users, (user) => asc(user.id));
 // @ts-expect-error take is curried-only
 take(users, 10);
+// @ts-expect-error union is curried-only
+union(users, users);
+// @ts-expect-error unionAll is curried-only
+unionAll(users, users);
+// @ts-expect-error loop is curried-only
+loop(loopBase, (self) => pipe(self, filter((row) => gt(row.id, 0))));
+// @ts-expect-error unnest is curried-only
+unnest(sessions, col("tags"), { value: "tag" });
 // @ts-expect-error join is curried-only
 join(users, orders, (user, order) => eq(user.id, order.user_id));
 // @ts-expect-error lateral join is curried-only

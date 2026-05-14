@@ -158,17 +158,15 @@ export const LIVE_LANGUAGE_ANALYTIC_CASES: LiveSpecCase[] = [
         name: "recursive cte",
         build: () => {
             const employees = employeeTable();
-            const orgTree = loop(
-                pipe(
-                    employees,
-                    filter((employee) => isNull(employee.manager_id)),
-                    map((employee) => ({
-                        id: employee.id,
-                        name: employee.name,
-                        manager_id: employee.manager_id,
-                    }))
-                ),
-                (self) => pipe(
+            const orgTree = pipe(
+                employees,
+                filter((employee) => isNull(employee.manager_id)),
+                map((employee) => ({
+                    id: employee.id,
+                    name: employee.name,
+                    manager_id: employee.manager_id,
+                })),
+                loop((self) => pipe(
                     employees,
                     join(
                         self,
@@ -179,7 +177,7 @@ export const LIVE_LANGUAGE_ANALYTIC_CASES: LiveSpecCase[] = [
                             manager_id: employee.manager_id,
                         })
                     )
-                )
+                ))
             );
             return pipe(orgTree, map((employee) => ({ id: employee.id, name: employee.name })), sort((employee) => asc(employee.id)));
         },

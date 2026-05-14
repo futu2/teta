@@ -23,7 +23,10 @@ export type BinaryOp =
   | "LIKE"
   | "IS"
   | "IS NOT"
-  | "IN";
+  | "IN"
+  | "NOT IN"
+  | "BETWEEN"
+  | "IS DISTINCT FROM";
 /** Unary operator supported by expression IR nodes. */
 export type UnaryOp = "NOT";
 /** Built-in aggregate function names. */

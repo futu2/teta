@@ -2,14 +2,19 @@ import { filter, Query } from "./builder.ts";
 import type { QueryStep } from "./builder.ts";
 import type {
   ColumnRefs,
-  DeferredExprDepsOf,
   ExprInput,
 } from "../expr.ts";
 import { ExprRef, resolveDeferredExpr } from "../expr.ts";
 import { eq, ne, gt, gte, lt, lte } from "../expr.ts";
 import type { SqlDate, SqlNumber, SqlTimestamp } from "../sql/types.ts";
+import type {
+  ColumnValueForKey,
+  CurrentDepsOf,
+  KnownDeferredCurrentColumnsGuard,
+  QueryColumns,
+  SingleLiteralKey,
+} from "./deferred_types.ts";
 
-type QueryColumns = Record<string, any>;
 type ComparableInput = SqlNumber | number | bigint | SqlDate | SqlTimestamp | null;
 type IsAny<T> = 0 extends (1 & T) ? true : false;
 type NotFunction<T> = IsAny<T> extends true
@@ -106,62 +111,10 @@ type OrderedComparableCurrentValueGuard<
         ];
       }
   : unknown;
-type CurrentDepsOf<TExpr> = DeferredExprDepsOf<TExpr> extends { current?: infer TCurrent }
-  ? TCurrent
-  : Record<never, never>;
-
-type LeftDepsOf<TExpr> = DeferredExprDepsOf<TExpr> extends { left?: infer TLeft }
-  ? TLeft
-  : Record<never, never>;
-
-type RightDepsOf<TExpr> = DeferredExprDepsOf<TExpr> extends { right?: infer TRight }
-  ? TRight
-  : Record<never, never>;
-
-type LiteralDeferredKeys<TDeps> = Extract<{
-  [K in keyof TDeps]: K extends string
-    ? string extends K
-      ? never
-      : K
-    : never;
-}[keyof TDeps], string>;
-
-type SingleLiteralKey<TDeps> = LiteralDeferredKeys<TDeps> extends infer TKey extends string
-  ? [TKey] extends [never]
-    ? never
-    : TKey
-  : never;
-
-type ColumnValueForKey<TColumns extends QueryColumns, TKey> =
-  [TKey] extends [never]
-    ? never
-    : TKey extends keyof TColumns
-      ? TColumns[TKey & keyof TColumns]
-      : never;
-
 type CurrentExprInputValue<TColumns extends QueryColumns, TExpr> =
   TExpr extends ExprRef<never, any>
     ? ColumnValueForKey<TColumns, SingleLiteralKey<CurrentDepsOf<TExpr>>>
     : ExprInputValueOf<TExpr>;
-
-type KnownDeferredCurrentColumnsGuard<
-  TColumns extends QueryColumns,
-  TExpr,
-> = ([Exclude<LiteralDeferredKeys<CurrentDepsOf<TExpr>>, keyof TColumns>] extends [never]
-    ? unknown
-    : {
-        __teta_unknown_deferred_current_columns__: Exclude<
-          LiteralDeferredKeys<CurrentDepsOf<TExpr>>,
-          keyof TColumns
-        >;
-      })
-  & ([LiteralDeferredKeys<LeftDepsOf<TExpr>> | LiteralDeferredKeys<RightDepsOf<TExpr>>] extends [never]
-    ? unknown
-    : {
-        __teta_invalid_deferred_current_scope_columns__:
-          | LiteralDeferredKeys<LeftDepsOf<TExpr>>
-          | LiteralDeferredKeys<RightDepsOf<TExpr>>;
-      });
 
 export function filterEq<
   TColumns extends QueryColumns,

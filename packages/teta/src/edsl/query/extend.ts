@@ -1,95 +1,19 @@
 import { map, Query } from "./builder.ts";
 import type {
-  ColumnRef,
   ColumnRefs,
-  DeferredExprDepsOf,
-  ExprRef,
   ProjectionResult,
   ProjectionShape,
   ProjectionValue,
-  ProjectionValueResult,
 } from "../expr.ts";
 import { userError } from "../errors.ts";
+import type {
+  CurrentDeferredProjectionResult,
+  KnownDeferredCurrentSelectionGuard,
+  QueryColumns,
+} from "./deferred_types.ts";
+import { selectColumnsByName } from "./projection_utils.ts";
 
-type QueryColumns = Record<string, any>;
 type StringKeyOf<T> = Extract<keyof T, string>;
-
-type CurrentDepsOf<TExpr> = DeferredExprDepsOf<TExpr> extends { current?: infer TCurrent }
-  ? TCurrent
-  : Record<never, never>;
-
-type LeftDepsOf<TExpr> = DeferredExprDepsOf<TExpr> extends { left?: infer TLeft }
-  ? TLeft
-  : Record<never, never>;
-
-type RightDepsOf<TExpr> = DeferredExprDepsOf<TExpr> extends { right?: infer TRight }
-  ? TRight
-  : Record<never, never>;
-
-type LiteralDeferredKeys<TDeps> = Extract<{
-  [K in keyof TDeps]: K extends string
-    ? string extends K
-      ? never
-      : K
-    : never;
-}[keyof TDeps], string>;
-
-type KnownDeferredCurrentColumnsGuard<
-  TColumns extends QueryColumns,
-  TExpr,
-> = ([Exclude<LiteralDeferredKeys<CurrentDepsOf<TExpr>>, keyof TColumns>] extends [never]
-    ? unknown
-    : {
-        __teta_unknown_deferred_current_columns__: Exclude<
-          LiteralDeferredKeys<CurrentDepsOf<TExpr>>,
-          keyof TColumns
-        >;
-      })
-  & ([LiteralDeferredKeys<LeftDepsOf<TExpr>> | LiteralDeferredKeys<RightDepsOf<TExpr>>] extends [never]
-    ? unknown
-    : {
-        __teta_invalid_deferred_current_scope_columns__:
-          | LiteralDeferredKeys<LeftDepsOf<TExpr>>
-          | LiteralDeferredKeys<RightDepsOf<TExpr>>;
-      });
-
-type UnionToIntersection<T> = (
-  T extends unknown ? (value: T) => void : never
-) extends (value: infer TResult) => void ? TResult : never;
-
-type KnownDeferredCurrentSelectionGuard<
-  TColumns extends QueryColumns,
-  TSelection extends Record<string, unknown>,
-> = UnionToIntersection<{
-  [K in keyof TSelection]: KnownDeferredCurrentColumnsGuard<TColumns, TSelection[K]>;
-}[keyof TSelection]>;
-
-type ColumnValueForKey<TColumns extends QueryColumns, TKey> =
-  [TKey] extends [never]
-    ? never
-    : TKey extends keyof TColumns
-      ? TColumns[TKey & keyof TColumns]
-      : never;
-
-type SingleLiteralKey<TDeps> = LiteralDeferredKeys<TDeps> extends infer TKey extends string
-  ? [TKey] extends [never]
-    ? never
-    : TKey
-  : never;
-
-type CurrentDeferredExprValue<TColumns extends QueryColumns, TExpr> =
-  TExpr extends ExprRef<never>
-    ? ColumnValueForKey<TColumns, SingleLiteralKey<CurrentDepsOf<TExpr>>>
-    : TExpr extends ExprRef<infer TValue>
-      ? TValue
-      : ProjectionValueResult<TExpr>;
-
-type CurrentDeferredProjectionResult<
-  TColumns extends QueryColumns,
-  TSelection extends Record<string, unknown>,
-> = {
-  [K in keyof TSelection]: CurrentDeferredExprValue<TColumns, Exclude<TSelection[K], undefined>>;
-};
 
 type DeferredProjectionShapeInput<TSelection extends Record<string, unknown>> = {
   [K in keyof TSelection]: [NonNullable<TSelection[K]>] extends [never]
@@ -152,10 +76,6 @@ export function extend(...args: unknown[]): unknown {
 function currentColumns(
   cols: ColumnRefs<QueryColumns>,
   columnNames: readonly string[]
-): Record<string, ColumnRef<any, string>> {
-  const result: Record<string, ColumnRef<any, string>> = {};
-  for (const name of columnNames) {
-    result[name] = Reflect.get(cols, name) as ColumnRef<any, string>;
-  }
-  return result;
+): ReturnType<typeof selectColumnsByName> {
+  return selectColumnsByName(cols, columnNames);
 }

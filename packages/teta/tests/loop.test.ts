@@ -33,7 +33,7 @@ describe("recursive loop queries", () => {
     expect(sql).toContain(`SELECT ${loopName}_0.id, ${loopName}_0.name FROM ${loopName} AS ${loopName}_0`);
   });
 
-  test("supports loop(base, step) as the recursive builder", () => {
+  test("supports loop(step) as the recursive builder", () => {
     const employees = createEmployeesTable();
     const base = pipe(
       employees,
@@ -47,9 +47,8 @@ describe("recursive loop queries", () => {
 
     const sql = toSql(
       pipe(
-        loop(
-          base,
-          (self) => pipe(
+        base,
+        loop((self) => pipe(
             employees,
             join(
               self,
@@ -60,8 +59,7 @@ describe("recursive loop queries", () => {
                 manager_id: employee.manager_id,
               })
             )
-          )
-        ),
+          )),
         map((employee) => ({ id: employee.id, name: employee.name }))
       ),
       { dialect: "postgresql", format: "compact" }
@@ -88,9 +86,9 @@ describe("recursive loop queries", () => {
     );
 
     const sql = toSql(
-      loop(
+      pipe(
         directSup,
-        (self) => pipe(
+        loop((self) => pipe(
           self,
           join(
             directSup,
@@ -101,7 +99,7 @@ describe("recursive loop queries", () => {
               distance: add(current.distance, 1),
             })
           )
-        )
+        ))
       ),
       { dialect: "postgresql", format: "compact" }
     );
@@ -131,9 +129,9 @@ describe("recursive loop queries", () => {
     );
 
     const sql = toSql(
-      loop(
+      pipe(
         orgInfo,
-        (self) => pipe(
+        loop((self) => pipe(
           self,
           join(
             orgInfo,
@@ -144,7 +142,7 @@ describe("recursive loop queries", () => {
               distance: add(o.distance, 1),
             })
           )
-        )
+        ))
       ),
       { dialect: "hetu", format: "compact" }
     );

@@ -102,6 +102,54 @@ export function isIn<T, TValue extends ExprInput<T>, const TValues extends reado
   }) as ExprRef<boolean, DeferredExprDepsForArgs<[TValue, ...TValues]>>;
 }
 
+export function isNotIn<T, TValue extends ExprInput<T>, const TValues extends readonly ExprInput<T>[]>(
+  value: TValue,
+  values: TValues
+): ExprRef<boolean, DeferredExprDepsForArgs<[TValue, ...TValues]>> {
+  if (values.length === 0) {
+    userError("INVALID_FUNCTION_NAME", "notIn requires at least one value");
+  }
+  return binaryExpr<DeferredExprDepsForArgs<[TValue, ...TValues]>>("NOT IN", toExprNode(value as ExprInput<T>), {
+    kind: "list",
+    items: values.map((item) => toExprNode(item as ExprInput<T>)),
+  }) as ExprRef<boolean, DeferredExprDepsForArgs<[TValue, ...TValues]>>;
+}
+
+export const notIn = isNotIn;
+
+export function between<
+  T extends ComparableInput,
+  TValue extends ExprInput<T>,
+  TLower extends ExprInput<T>,
+  TUpper extends ExprInput<T>,
+>(
+  value: TValue,
+  lower: TLower,
+  upper: TUpper
+): ExprRef<boolean, DeferredExprDepsForArgs<[TValue, TLower, TUpper]>> {
+  return binaryExpr<DeferredExprDepsForArgs<[TValue, TLower, TUpper]>>(
+    "BETWEEN",
+    toExprNode(value as ExprInput<T>),
+    {
+      kind: "binary",
+      op: "AND",
+      left: toExprNode(lower as ExprInput<T>),
+      right: toExprNode(upper as ExprInput<T>),
+    }
+  ) as ExprRef<boolean, DeferredExprDepsForArgs<[TValue, TLower, TUpper]>>;
+}
+
+export function isDistinctFrom<T, TLeft extends ExprInput<T>, TRight extends ExprInput<T>>(
+  left: TLeft,
+  right: TRight
+): ExprRef<boolean, DeferredExprDepsForArgs<[TLeft, TRight]>> {
+  return binaryExpr<DeferredExprDepsForArgs<[TLeft, TRight]>>(
+    "IS DISTINCT FROM",
+    toExprNode(left as ExprInput<T>),
+    toExprNode(right as ExprInput<T>)
+  ) as ExprRef<boolean, DeferredExprDepsForArgs<[TLeft, TRight]>>;
+}
+
 type BooleanInput = ExprInput<boolean | null>;
 type NonEmptyBooleanInputs = readonly [BooleanInput, ...BooleanInput[]];
 

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { filter, take, sort, map, toSql, asc, desc, eq, gte, replace, and, coalesce, leftJoin, onEq, prefixOverlapLeft, table, t, pipe, flow } from "../mod.ts";
+import { between, filter, filterEq, identityStep, isDistinctFrom, isNotIn, take, sort, map, toSql, asc, desc, eq, gte, replace, and, coalesce, leftJoin, onEq, prefixOverlapLeft, table, t, pipe, flow, unlessStep, unionAll, union, unnest, whenStep } from "../mod.ts";
 import { USER_PIPELINE_POSTGRES_COMPACT, USERS_ORDERS_LEFT_JOIN_SELECT_POSTGRES_COMPACT } from "./helpers/expected-sql.ts";
 import { createOrdersTable, createUsersPipelineTable, createUsersTable } from "./helpers/fixtures.ts";
 describe("function-first query api", () => {
@@ -32,6 +32,47 @@ describe("function-first query api", () => {
         const toLabel = (value: number) => `n=${value}`;
 
         expect(flow(addOne, toLabel)(41)).toBe("n=42");
+    });
+    test("uses simple boolean query-step combinators", () => {
+        const users = createUsersPipelineTable();
+        const query = pipe(
+            users,
+            identityStep(),
+            whenStep(true, filterEq((user) => user.active, true)),
+            whenStep(false, filterEq((user) => user.age, 99)),
+            unlessStep(false, take(5))
+        );
+
+        expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe("SELECT users_0.id AS id, users_0.name AS name, users_0.age AS age, users_0.active AS active FROM users AS users_0 WHERE users_0.active = TRUE LIMIT 5");
+    });
+    test("uses curried aliases for union and unnest helpers", () => {
+        const users = table("users", {
+            id: t.int(),
+            tags: t.array(t.string()),
+        });
+        const archivedUsers = table("archived_users", {
+            id: t.int(),
+            tags: t.array(t.string()),
+        });
+        const unioned = pipe(users, union(archivedUsers), unionAll(archivedUsers));
+        const exploded = pipe(users, unnest((user) => user.tags, { value: "tag" }));
+
+        expect(toSql(unioned, { dialect: "postgresql", format: "compact" })).toBe("WITH cte_0(id, tags) AS (SELECT users_0.id, users_0.tags FROM users AS users_0 UNION SELECT archived_users_0.id, archived_users_0.tags FROM archived_users AS archived_users_0) SELECT cte_0_0.id, cte_0_0.tags FROM cte_0 AS cte_0_0 UNION ALL SELECT archived_users_0.id, archived_users_0.tags FROM archived_users AS archived_users_0");
+        expect(toSql(exploded, { dialect: "postgresql", format: "compact" })).toBe("SELECT users_0.id AS id, users_0.tags AS tags, unnest_1.tag AS tag FROM users AS users_0 CROSS JOIN LATERAL UNNEST(users_0.tags) AS unnest_1(tag)");
+    });
+    test("renders additional predicate conveniences", () => {
+        const users = createUsersPipelineTable();
+        const query = pipe(
+            users,
+            filter((user) => and(
+                between(user.age, 18, 64),
+                isNotIn(user.name, ["bot", "test"]),
+                isDistinctFrom(user.name, "anonymous")
+            )),
+            map((user) => ({ id: user.id }))
+        );
+
+        expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe("SELECT users_0.id FROM users AS users_0 WHERE users_0.age BETWEEN 18 AND 64 AND users_0.name NOT IN ('bot', 'test') AND users_0.name IS DISTINCT FROM 'anonymous'");
     });
     test("supports curried join with a built query", () => {
         const users = createUsersTable();

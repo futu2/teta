@@ -457,8 +457,8 @@ describe("typed deferred column api", () => {
       id: t.int(),
       tags: t.array(t.string()),
     });
-    const expected = unnest(sessions, (session) => session.tags, { value: "tag" });
-    const actual = unnest(sessions, col("tags"), { value: "tag" });
+    const expected = pipe(sessions, unnest((session) => session.tags, { value: "tag" }));
+    const actual = pipe(sessions, unnest(col("tags"), { value: "tag" }));
 
     expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
       toSql(expected, { dialect: "postgresql", format: "compact" })
@@ -470,8 +470,8 @@ describe("typed deferred column api", () => {
       id: t.int(),
       tags: t.array(t.string()),
     });
-    const expected = unnest(sessions, (session) => session.tags, { value: "tag" });
-    const actual = unnest(sessions, col("tags"), { value: "tag" });
+    const expected = pipe(sessions, unnest((session) => session.tags, { value: "tag" }));
+    const actual = pipe(sessions, unnest(col("tags"), { value: "tag" }));
 
     expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
       toSql(expected, { dialect: "postgresql", format: "compact" })
@@ -676,7 +676,7 @@ describe("typed deferred column api", () => {
     expectTetaUserError(() => pipe(users, filter(undefined as never)), "DEFERRED_INPUT_INVALID");
     expectTetaUserError(() => pipe(users, sort(undefined as never)), "DEFERRED_INPUT_INVALID");
     expectTetaUserError(
-      () => unnest(sessions, undefined as never, { value: "tag" }),
+      () => pipe(sessions, unnest(undefined as never, { value: "tag" })),
       "DEFERRED_INPUT_INVALID"
     );
     expectTetaUserError(

@@ -241,10 +241,10 @@ const usersWithTags = table("users", {
   tags: t.array(t.string()),
 });
 
-const exploded = unnest(usersWithTags, (user) => user.tags, {
+const exploded = pipe(usersWithTags, unnest((user) => user.tags, {
   value: "tag",
   ordinality: "tag_index",
-});
+}));
 
 // adds inferred columns:
 // tag: string
@@ -882,7 +882,7 @@ const inactiveUsers = pipe(
   map((u) => ({ id: u.id, name: u.name }))
 );
 
-const allUsers = unionAll(activeUsers, inactiveUsers);
+const allUsers = pipe(activeUsers, unionAll(inactiveUsers));
 ```
 
 ### Recursive loop (WITH RECURSIVE)

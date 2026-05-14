@@ -768,21 +768,12 @@ function _take<TColumns extends QueryColumns>(
   return buildTake(query, count);
 }
 
-export function unionAll<TColumns extends QueryColumns>(
-  left: Query<TColumns>,
-  right: Query<TColumns>
-): Query<TColumns>;
-
 export function unionAll<TColumns extends QueryColumns>(right: Query<TColumns>): QueryStep<TColumns, TColumns>;
 
 export function unionAll(...args: unknown[]): unknown {
-  assertCurriedBinaryArity(args);
-  if (args.length === 1) {
-    const [right] = args;
-    return (left: Query<QueryColumns>) => _unionAll(left, right as Query<QueryColumns>);
-  }
-  const [left, right] = args;
-  return _unionAll(left as Query<QueryColumns>, right as Query<QueryColumns>);
+  assertCurriedUnaryArity("unionAll", "unionAll(right)", args);
+  const [right] = args;
+  return (left: Query<QueryColumns>) => _unionAll(left, right as Query<QueryColumns>);
 }
 
 function _unionAll<TColumns extends QueryColumns>(
@@ -792,21 +783,12 @@ function _unionAll<TColumns extends QueryColumns>(
   return buildUnion(left, right, "union all");
 }
 
-export function union<TColumns extends QueryColumns>(
-  left: Query<TColumns>,
-  right: Query<TColumns>
-): Query<TColumns>;
-
 export function union<TColumns extends QueryColumns>(right: Query<TColumns>): QueryStep<TColumns, TColumns>;
 
 export function union(...args: unknown[]): unknown {
-  assertCurriedBinaryArity(args);
-  if (args.length === 1) {
-    const [right] = args;
-    return (left: Query<QueryColumns>) => _union(left, right as Query<QueryColumns>);
-  }
-  const [left, right] = args;
-  return _union(left as Query<QueryColumns>, right as Query<QueryColumns>);
+  assertCurriedUnaryArity("union", "union(right)", args);
+  const [right] = args;
+  return (left: Query<QueryColumns>) => _union(left, right as Query<QueryColumns>);
 }
 
 function _union<TColumns extends QueryColumns>(
@@ -817,26 +799,14 @@ function _union<TColumns extends QueryColumns>(
 }
 
 export function loop<TColumns extends QueryColumns>(
-  base: Query<TColumns>,
-  step: (self: Query<TColumns>) => Query<TColumns>
-): Query<TColumns>;
-
-export function loop<TColumns extends QueryColumns>(
   step: (self: Query<TColumns>) => Query<TColumns>
 ): QueryStep<TColumns, TColumns>;
 
 export function loop(...args: unknown[]): unknown {
-  assertCurriedBinaryArity(args);
-  if (args.length === 1) {
-    const [step] = args;
-    return (base: Query<QueryColumns>) =>
-      _loop(base, step as (self: Query<QueryColumns>) => Query<QueryColumns>);
-  }
-  const [base, step] = args;
-  return _loop(
-    base as Query<QueryColumns>,
-    step as (self: Query<QueryColumns>) => Query<QueryColumns>
-  );
+  assertCurriedUnaryArity("loop", "loop(step)", args);
+  const [step] = args;
+  return (base: Query<QueryColumns>) =>
+    _loop(base, step as (self: Query<QueryColumns>) => Query<QueryColumns>);
 }
 
 function _loop<TColumns extends QueryColumns>(
@@ -1079,46 +1049,6 @@ export function unnest<
   TOrdinalityName extends string | undefined = undefined,
   TOuter extends boolean | undefined = undefined,
 >(
-  left: Query<TLeft>,
-  selector: (cols: ColumnRefs<TLeft>) => ExprRef<TCollection>,
-  selection: UnnestSelection<TValueName, TOrdinalityName>,
-  options?: UnnestOptions<TOuter>
-): Query<
-  TLeft & UnnestGeneratedColumns<
-    CollectionItem<TCollection>,
-    TValueName,
-    TOrdinalityName,
-    TOuter
-  >
->;
-
-export function unnest<
-  TLeft extends QueryColumns,
-  TSelector extends ExprRef<readonly unknown[] | unknown[] | null>,
-  TValueName extends string,
-  TOrdinalityName extends string | undefined = undefined,
-  TOuter extends boolean | undefined = undefined,
->(
-  left: Query<TLeft>,
-  selector: DeferredCurrentExprInput<TLeft, TSelector>,
-  selection: UnnestSelection<TValueName, TOrdinalityName>,
-  options?: UnnestOptions<TOuter>
-): Query<
-  TLeft & UnnestGeneratedColumns<
-    CurrentDeferredCollectionItem<TLeft, TSelector>,
-    TValueName,
-    TOrdinalityName,
-    TOuter
-  >
->;
-
-export function unnest<
-  TLeft extends QueryColumns,
-  TCollection extends readonly unknown[] | unknown[] | null,
-  TValueName extends string,
-  TOrdinalityName extends string | undefined = undefined,
-  TOuter extends boolean | undefined = undefined,
->(
   selector: (cols: ColumnRefs<TLeft>) => ExprRef<TCollection>,
   selection: UnnestSelection<TValueName, TOrdinalityName>,
   options?: UnnestOptions<TOuter>
@@ -1154,16 +1084,7 @@ export function unnest<
 >;
 
 export function unnest(...args: unknown[]): unknown {
-  if (args[0] instanceof Query) {
-    const [left, selector, selection, options] = args;
-    return _unnest(
-      left as Query<QueryColumns>,
-      selector as UnnestSelectorInput<QueryColumns, readonly unknown[] | unknown[] | null>,
-      selection as UnnestSelection<string, string | undefined>,
-      options as UnnestOptions<boolean | undefined> | undefined
-    );
-  }
-
+  assertNotDataFirstQueryHelper("unnest", "unnest(selector, selection, options?)", args);
   const [selector, selection, options] = args;
   return (left: Query<QueryColumns>) =>
     _unnest(
@@ -1246,6 +1167,12 @@ function assertCurriedBinaryArity(args: unknown[]): void {
   if (args.length !== 1 && args.length !== 2) {
     throw new Error("Wrong number of arguments");
   }
+}
+
+function assertCurriedUnaryArity(helper: string, usage: string, args: unknown[]): void {
+  if (args.length === 1) return;
+  assertNotDataFirstQueryHelper(helper, usage, args);
+  throw new Error("Wrong number of arguments");
 }
 
 type ParsedCurriedJoinInvocation = {

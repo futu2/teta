@@ -41,10 +41,10 @@ describe("explain api", () => {
             id: t.int(),
             manager_id: t.nullable(t.int()),
         });
-        const query = loop(pipe(employees, map((employee) => ({
+        const query = pipe(pipe(employees, map((employee) => ({
             id: employee.id,
             manager_id: employee.manager_id,
-        }))), (self) => pipe(self, filter((row) => isNotNull(row.manager_id))));
+        }))), loop((self) => pipe(self, filter((row) => isNotNull(row.manager_id)))));
         const result = explain(query, {
             dialect: "postgresql",
             format: "compact",
