@@ -16,22 +16,22 @@ import type {
   SqlRenderStrategy,
   SqlResult,
 } from "../sql/types.ts";
-import {
-  ExprRef,
-  resolveDeferredExpr,
-  resolveDeferredOrderItem,
-  resolveDeferredProjectionShape,
-} from "../expr.ts";
+import { ExprRef } from "../expr.ts";
 import { createColumnRefs } from "../expr.ts";
 import type {
   ColumnRefs,
-  DeferredExprDepsOf,
   ExprRefs,
   ProjectionResult,
   ProjectionShape,
   ProjectionValue,
   ProjectionValueResult,
 } from "../expr.ts";
+import {
+  resolveDeferredExpr,
+  resolveDeferredOrderItem,
+  resolveDeferredProjectionShape,
+  type DeferredExprDepsOf,
+} from "../internal_deferred_expr.ts";
 import {
   createDeferredRecursiveCte,
   explainIR,

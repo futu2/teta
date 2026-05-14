@@ -4,11 +4,11 @@ import {
   binaryExpr,
   fn,
   toExprNode,
-  type DeferredExprDepsForArgs,
   type ExprInput,
   type ExprInputValue,
   type PropagateNull,
 } from "../core.ts";
+import type { DeferredExprDepsForArgs } from "../../../core/expr/runtime.ts";
 import { userError } from "../../../errors.ts";
 
 type NullableSqlNumber = SqlNumber | number | bigint | null;

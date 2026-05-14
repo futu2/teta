@@ -5,6 +5,8 @@ import { fileURLToPath } from "node:url";
 import * as teta from "../mod.ts";
 
 const modPath = fileURLToPath(new URL("../mod.ts", import.meta.url));
+const coreExprPath = fileURLToPath(new URL("../src/edsl/core/expr.ts", import.meta.url));
+const exprPath = fileURLToPath(new URL("../src/edsl/expr.ts", import.meta.url));
 
 describe("core entrypoint boundary", () => {
   test("does not export dev helpers", () => {
@@ -43,5 +45,24 @@ describe("core entrypoint boundary", () => {
     }
 
     expect(source.includes("development utilities")).toBe(false);
+  });
+
+  test("core expression barrels do not export deferred internals", async () => {
+    const coreExprSource = await readFile(coreExprPath, "utf8");
+    const exprSource = await readFile(exprPath, "utf8");
+    const bannedCoreExports = [
+      "DeferredExprDeps",
+      "DeferredExprDepsForArgs",
+      "DeferredExprDepsOf",
+      "DeferredExprDepScope",
+      "EmptyDeferredExprDeps",
+    ];
+
+    for (const name of bannedCoreExports) {
+      expect(coreExprSource.includes(`type ${name}`)).toBe(false);
+    }
+
+    expect(coreExprSource.includes("./expr/deferred.ts")).toBe(false);
+    expect(exprSource.includes("./core/expr/deferred.ts")).toBe(false);
   });
 });

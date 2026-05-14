@@ -4,10 +4,12 @@ import {
   binaryExpr,
   toExprNode,
   wrapExpr,
-  type DeferredOrderItem,
-  type DeferredExprDepsForArgs,
   type ExprInput,
 } from "../core.ts";
+import type {
+  DeferredExprDepsForArgs,
+  DeferredOrderItem,
+} from "../../../core/expr/runtime.ts";
 import { userError } from "../../../errors.ts";
 
 type ComparableInput = SqlNumber | number | bigint | SqlDate | SqlTimestamp | null;

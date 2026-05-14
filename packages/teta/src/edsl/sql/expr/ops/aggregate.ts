@@ -5,13 +5,13 @@ import {
   over,
   toExprNode,
   windowExpr,
-  type DeferredExprDepsForArgs,
   type ExprInput,
   type ExprInputValue,
   type PropagateNull,
   type WindowBuilder,
   type WindowSpecInput,
 } from "../core.ts";
+import type { DeferredExprDepsForArgs } from "../../../core/expr/runtime.ts";
 
 type NullableSqlNumber = SqlNumber | null;
 

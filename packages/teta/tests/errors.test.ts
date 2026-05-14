@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { TetaUserError, alias, count, eq, extend, filter, fold, fullJoin, group, innerJoin, join, leftCol, leftJoin, loop, map, prefixOverlapLeft, rightCol, rightJoin, select, sort, take, toSql, values, pipe } from "../mod.ts";
+import { TetaUserError, alias, count, eq, extend, filter, fold, fullJoin, group, innerJoin, join, leftJoin, loop, map, prefixOverlapLeft, rightJoin, select, sort, take, toSql, values, pipe } from "../mod.ts";
+import { leftCol, rightCol } from "../src/edsl/internal_deferred_expr.ts";
 import { EXTEND_CURRIED_ONLY_ERROR, FILTER_CURRIED_ONLY_ERROR, FOLD_CURRIED_ONLY_ERROR, FULL_JOIN_CURRIED_ONLY_ERROR, GROUP_INSIDE_AGGREGATE_FUNCTION_ERROR, GROUP_OUTSIDE_AGGREGATE_ERROR, INNER_JOIN_CURRIED_ONLY_ERROR, JOIN_CURRIED_ONLY_ERROR, JOIN_MERGE_CONFLICT_ERROR, JOIN_OVERLAPPING_COLUMNS_ERROR, LEFT_JOIN_CURRIED_ONLY_ERROR, LEGACY_JOIN_MERGE_OPTION_ERROR, LEGACY_SELECTION_ARRAY_ERROR, LOOP_COLUMN_MISMATCH_ERROR, MAP_CURRIED_ONLY_ERROR, NON_CANONICAL_POSTGRES_DIALECT_ERROR, RIGHT_JOIN_CURRIED_ONLY_ERROR, SELECT_ALIAS_EMPTY_ERROR, SELECT_DUPLICATE_COLUMN_ERROR, SELECT_INVALID_SELECTION_ERROR, SORT_CURRIED_ONLY_ERROR, TAKE_CURRIED_ONLY_ERROR, UNSUPPORTED_CROSS_JOIN_ERROR, VALUES_COLUMN_MISMATCH_ERROR, VALUES_EMPTY_ERROR } from "./helpers/expected-errors.ts";
 import { createOrdersTable, createUsersTable } from "./helpers/fixtures.ts";
 describe("error paths", () => {

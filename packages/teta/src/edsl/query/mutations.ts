@@ -10,9 +10,11 @@ import {
   createColumnRefs,
   dedupeExprs,
   projectAllItems,
+} from "../expr.ts";
+import {
   resolveDeferredExpr,
   resolveDeferredProjectionShape,
-} from "../expr.ts";
+} from "../internal_deferred_expr.ts";
 import type {
   ColumnRefs,
   ExprRef,

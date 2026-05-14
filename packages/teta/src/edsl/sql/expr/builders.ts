@@ -5,11 +5,13 @@ import {
   fn,
   lit,
   toExprNode,
-  type DeferredExprDeps,
-  type DeferredExprDepsForArgs,
   type ExprInput,
   type ExprInputValue,
 } from "./core.ts";
+import type {
+  DeferredExprDeps,
+  DeferredExprDepsForArgs,
+} from "../../core/expr/runtime.ts";
 import { group } from "./ops/aggregate.ts";
 
 export type CaseBranch<

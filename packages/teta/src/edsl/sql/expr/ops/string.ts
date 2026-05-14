@@ -2,12 +2,12 @@ import type { SqlInt } from "../../types.ts";
 import {
   fn,
   wrapExpr,
-  type DeferredExprDepsForArgs,
   type ExprInput,
   type ExprInputValue,
   type ExprRef,
   type PropagateNull,
 } from "../core.ts";
+import type { DeferredExprDepsForArgs } from "../../../core/expr/runtime.ts";
 
 type NullableString = string | null;
 

@@ -1,10 +1,10 @@
 import {
   ColumnRef,
   ExprRef,
-  resolveDeferredExpr,
   toExprNode,
   type ColumnRefs,
 } from "../expr.ts";
+import { resolveDeferredExpr } from "../internal_deferred_expr.ts";
 import type { SqlNumber } from "../sql/types.ts";
 import { userError } from "../errors.ts";
 import { Query, createQuery } from "./builder.ts";

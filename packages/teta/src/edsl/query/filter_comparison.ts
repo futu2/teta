@@ -4,7 +4,8 @@ import type {
   ColumnRefs,
   ExprInput,
 } from "../expr.ts";
-import { ExprRef, resolveDeferredExpr } from "../expr.ts";
+import { ExprRef } from "../expr.ts";
+import { resolveDeferredExpr } from "../internal_deferred_expr.ts";
 import { eq, ne, gt, gte, lt, lte } from "../expr.ts";
 import type { SqlDate, SqlNumber, SqlTimestamp } from "../sql/types.ts";
 import type {

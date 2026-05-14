@@ -1,8 +1,7 @@
 import type {
   DeferredExprDepsOf,
-  ExprRef,
-  ProjectionValueResult,
-} from "../expr.ts";
+} from "../internal_deferred_expr.ts";
+import type { ExprRef, ProjectionValueResult } from "../expr.ts";
 
 export type QueryColumns = Record<string, any>;
 

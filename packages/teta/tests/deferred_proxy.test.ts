@@ -9,7 +9,6 @@ import {
   asc,
   caseWhen,
   coalesce,
-  col,
   count,
   desc,
   eq,
@@ -27,7 +26,6 @@ import {
   gte,
   isNotNull,
   leftJoin,
-  leftCol,
   join,
   lt,
   lte,
@@ -40,7 +38,6 @@ import {
   pipe,
   rename,
   replace,
-  rightCol,
   select,
   sort,
   sum,
@@ -51,6 +48,7 @@ import {
   unnest,
   when,
 } from "../mod.ts";
+import { col, leftCol, rightCol } from "../src/edsl/internal_deferred_expr.ts";
 import {
   createOrdersTable,
   createUsersPipelineTable,
