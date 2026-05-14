@@ -13,6 +13,12 @@ describe("core entrypoint boundary", () => {
     expect("watchQuerySourceToClipboard" in teta).toBe(false);
   });
 
+  test("does not export proxy shorthand column refs", () => {
+    expect("$" in teta).toBe(false);
+    expect("$left" in teta).toBe(false);
+    expect("$right" in teta).toBe(false);
+  });
+
   test("mod.ts source does not export dev helpers or dev-only types", async () => {
     const source = await readFile(modPath, "utf8");
     const bannedExports = [

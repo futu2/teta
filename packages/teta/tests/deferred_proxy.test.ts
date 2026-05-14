@@ -1,8 +1,5 @@
 import { describe, expect, test } from "bun:test";
 import {
-  $,
-  $left,
-  $right,
   ExprRef,
   TetaInternalError,
   TetaUserError,
@@ -77,10 +74,10 @@ function expectTetaUserError(fn: () => unknown, code: string): void {
   }
 }
 
-describe("deferred row proxy api", () => {
-  test("exports deferred row proxies that compose through expression helpers", () => {
-    expect(eq($.id, 1)).toBeInstanceOf(ExprRef);
-    expect(eq($left.id, $right.user_id)).toBeInstanceOf(ExprRef);
+describe("typed deferred column api", () => {
+  test("exports deferred column refs that compose through expression helpers", () => {
+    expect(eq(col("id"), 1)).toBeInstanceOf(ExprRef);
+    expect(eq(leftCol("id"), rightCol("user_id"))).toBeInstanceOf(ExprRef);
   });
 
   test("exports projection helpers as query steps", () => {
@@ -104,13 +101,13 @@ describe("deferred row proxy api", () => {
     );
     const actual = pipe(
       users,
-      filter(and(eq($.active, true), gte($.age, 18))),
+      filter(and(eq(col("active"), true), gte(col("age"), 18))),
       map({
-        id: $.id,
-        name: coalesce(replace($.name, " ", "_"), "unknown"),
-        age: $.age,
+        id: col("id"),
+        name: coalesce(replace(col("name"), " ", "_"), "unknown"),
+        age: col("age"),
       }),
-      sort([asc($.name), desc($.id)]),
+      sort([asc(col("name")), desc(col("id"))]),
       take(20)
     );
 
@@ -123,11 +120,11 @@ describe("deferred row proxy api", () => {
     const users = createUsersPipelineTable();
     const expected = pipe(
       users,
-      filter(and(and(eq($.active, true), gte($.age, 18)), isNotNull($.name)))
+      filter(and(and(eq(col("active"), true), gte(col("age"), 18)), isNotNull(col("name"))))
     );
     const actual = pipe(
       users,
-      filter(and(eq($.active, true), gte($.age, 18), isNotNull($.name)))
+      filter(and(eq(col("active"), true), gte(col("age"), 18), isNotNull(col("name"))))
     );
 
     expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
@@ -139,11 +136,11 @@ describe("deferred row proxy api", () => {
     const users = createUsersPipelineTable();
     const expected = pipe(
       users,
-      filter(or(or(eq($.name, "Ada"), eq($.name, "Grace")), eq($.name, "Linus")))
+      filter(or(or(eq(col("name"), "Ada"), eq(col("name"), "Grace")), eq(col("name"), "Linus")))
     );
     const actual = pipe(
       users,
-      filter(or(eq($.name, "Ada"), eq($.name, "Grace"), eq($.name, "Linus")))
+      filter(or(eq(col("name"), "Ada"), eq(col("name"), "Grace"), eq(col("name"), "Linus")))
     );
 
     expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
@@ -268,10 +265,10 @@ describe("deferred row proxy api", () => {
   test("supports select with deferred column lists", () => {
     const users = createUsersPipelineTable();
     const expected = pipe(users, map({
-      id: $.id,
-      name: $.name,
+      id: col("id"),
+      name: col("name"),
     }));
-    const actual = pipe(users, select([$.id, $.name]));
+    const actual = pipe(users, select([col("id"), col("name")]));
 
     expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
       toSql(expected, { dialect: "postgresql", format: "compact" })
@@ -349,7 +346,7 @@ describe("deferred row proxy api", () => {
       active_label: caseWhen([when(user.active, "active")], "inactive"),
     })));
     const actual = pipe(users, extend({
-      active_label: caseWhen([when($.active, "active")], "inactive"),
+      active_label: caseWhen([when(col("active"), "active")], "inactive"),
     }));
 
     expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
@@ -427,9 +424,9 @@ describe("deferred row proxy api", () => {
       total_spend: sum(order.total),
     })));
     const actual = pipe(orders, fold({
-      user_id: group($.user_id),
-      order_count: count($.order_id),
-      total_spend: sum($.total),
+      user_id: group(col("user_id")),
+      order_count: count(col("order_id")),
+      total_spend: sum(col("total")),
     }));
 
     expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
@@ -461,7 +458,7 @@ describe("deferred row proxy api", () => {
       tags: t.array(t.string()),
     });
     const expected = unnest(sessions, (session) => session.tags, { value: "tag" });
-    const actual = unnest(sessions, $.tags, { value: "tag" });
+    const actual = unnest(sessions, col("tags"), { value: "tag" });
 
     expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
       toSql(expected, { dialect: "postgresql", format: "compact" })
@@ -499,11 +496,11 @@ describe("deferred row proxy api", () => {
       users,
       leftJoin(
         orders,
-        eq($left.id, $right.user_id)
+        eq(leftCol("id"), rightCol("user_id"))
       ),
       map({
-        user_id: $.id,
-        total: $.total,
+        user_id: col("id"),
+        total: col("total"),
       })
     );
 
@@ -530,10 +527,10 @@ describe("deferred row proxy api", () => {
       users,
       leftJoin(
         orders,
-        eq($left.id, $right.user_id),
+        eq(leftCol("id"), rightCol("user_id")),
         {
-          user_id: $left.id,
-          order_total: $right.total,
+          user_id: leftCol("id"),
+          order_total: rightCol("total"),
         }
       )
     );
@@ -595,10 +592,10 @@ describe("deferred row proxy api", () => {
       users,
       join(
         orders,
-        eq($left.id, $right.user_id),
+        eq(leftCol("id"), rightCol("user_id")),
         {
-          type: $left.type,
-          lateral: $right.total,
+          type: leftCol("type"),
+          lateral: rightCol("total"),
         }
       )
     );
@@ -610,7 +607,10 @@ describe("deferred row proxy api", () => {
 
   test("reports missing current-row deferred columns", () => {
     const users = createUsersTable();
-    expect(() => pipe(users, map({ missing: $.missing }))).toThrow(
+    expect(
+      // @ts-expect-error exercising runtime validation for an unknown dynamic column
+      () => pipe(users, map({ missing: col("missing") }))
+    ).toThrow(
       DEFERRED_CURRENT_COLUMN_UNKNOWN_ERROR
     );
   });
@@ -619,10 +619,12 @@ describe("deferred row proxy api", () => {
     const users = createUsersTable();
     const orders = createOrdersTable();
     expect(() => pipe(
+      // @ts-expect-error exercising runtime validation for an unknown dynamic column
       users,
       leftJoin(
         orders,
-        eq($left.missing, $right.user_id)
+        // @ts-expect-error exercising runtime validation for an unknown dynamic column
+        eq(leftCol("missing"), rightCol("user_id"))
       )
     )).toThrow(
       DEFERRED_LEFT_COLUMN_UNKNOWN_ERROR
@@ -633,10 +635,12 @@ describe("deferred row proxy api", () => {
     const users = createUsersTable();
     const orders = createOrdersTable();
     expect(() => pipe(
+      // @ts-expect-error exercising runtime validation for an unknown dynamic column
       users,
       leftJoin(
         orders,
-        eq($left.id, $right.missing)
+        // @ts-expect-error exercising runtime validation for an unknown dynamic column
+        eq(leftCol("id"), rightCol("missing"))
       )
     )).toThrow(
       DEFERRED_RIGHT_COLUMN_UNKNOWN_ERROR
@@ -645,7 +649,10 @@ describe("deferred row proxy api", () => {
 
   test("reports join-side deferred refs outside join helpers", () => {
     const users = createUsersTable();
-    expect(() => pipe(users, filter(eq($left.id, 1)))).toThrow(DEFERRED_LEFT_SCOPE_ERROR);
+    expect(
+      // @ts-expect-error exercising runtime validation for invalid current-row scope
+      () => pipe(users, filter(eq(leftCol("id"), 1)))
+    ).toThrow(DEFERRED_LEFT_SCOPE_ERROR);
   });
 
   test("reports join-side deferred refs outside select", () => {
@@ -693,7 +700,7 @@ describe("deferred row proxy api", () => {
         users,
         join(
           orders,
-          eq($left.id, $right.user_id),
+          eq(leftCol("id"), rightCol("user_id")),
           { bad: 1 } as never
         )
       ),
@@ -702,6 +709,6 @@ describe("deferred row proxy api", () => {
   });
 
   test("guards direct rendering of unresolved deferred refs", () => {
-    expect(() => toSql($.id as ExprRef<unknown>)).toThrow(TetaInternalError);
+    expect(() => toSql(col("id") as ExprRef<unknown>)).toThrow(TetaInternalError);
   });
 });

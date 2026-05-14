@@ -5,7 +5,7 @@ Quick reference for the public API exported from `@teta/teta`.
 Teta is function-first. Row-transforming query helpers are curried query steps used with `pipe(...)`.
 
 ```ts
-import { $, $left, $right, add, alias, and, arrayAppend, arrayContains, arrayJoin, arrayLength, arrayPosition, arraySlice, asc, avg, bitLength, cast, charLength, characterLength, coalesce, col, concat, count, currentDate, currentTimestamp, dateAdd, dateDiff, dateFormat, dateLiteral, dateParse, dateTrunc, day, desc, drop, dropOverlapLeft, dropOverlapRight, eq, explain, ExprRef, extend, f, filter, filterEq, flow, fn, fold, fromUnixTime, fullJoin, group, gt, gte, hour, innerJoin, isIn, isNotNull, isNull, join, lag, lead, left, leftCol, leftJoin, like, loop, lower, lt, lte, map, rename, max, min, minute, mod, month, mul, ne, not, ntile, nullIf, octetLength, onEq, over, overlay, param, percentRank, pick, pipe, position, pow, prefixAllLeft, prefixAllRight, prefixOverlapLeft, prefixOverlapRight, Query, rank, regexExtract, regexLike, regexReplace, replace, reverse, right, rightCol, rightJoin, round, rowNumber, rpad, select, shape, sort, sqrt, sub, substring, suffixAllLeft, suffixAllRight, sum, sumOver, t, table, take, timestampLiteral, toAst, toDate, toFloat, toInt, toIR, toSql, toSqlResult, toUnixTime, trim, union, unionAll, unnest, upper, usingCols, values, when, windowFn, year } from "@teta/teta";
+import { add, alias, and, arrayAppend, arrayContains, arrayJoin, arrayLength, arrayPosition, arraySlice, asc, avg, bitLength, cast, charLength, characterLength, coalesce, col, concat, count, currentDate, currentTimestamp, dateAdd, dateDiff, dateFormat, dateLiteral, dateParse, dateTrunc, day, desc, drop, dropOverlapLeft, dropOverlapRight, eq, explain, ExprRef, extend, f, filter, filterEq, flow, fn, fold, fromUnixTime, fullJoin, group, gt, gte, hour, innerJoin, isIn, isNotNull, isNull, join, lag, lead, left, leftCol, leftJoin, like, loop, lower, lt, lte, map, rename, max, min, minute, mod, month, mul, ne, not, ntile, nullIf, octetLength, onEq, over, overlay, param, percentRank, pick, pipe, position, pow, prefixAllLeft, prefixAllRight, prefixOverlapLeft, prefixOverlapRight, Query, rank, regexExtract, regexLike, regexReplace, replace, reverse, right, rightCol, rightJoin, round, rowNumber, rpad, select, shape, sort, sqrt, sub, substring, suffixAllLeft, suffixAllRight, sum, sumOver, t, table, take, timestampLiteral, toAst, toDate, toFloat, toInt, toIR, toSql, toSqlResult, toUnixTime, trim, union, unionAll, unnest, upper, usingCols, values, when, windowFn, year } from "@teta/teta";
 ```
 
 ## 1) Query roots and composition
@@ -76,8 +76,6 @@ Typed deferred column refs:
 - `leftCol("name")` for join-left refs
 - `rightCol("name")` for join-right refs
 
-Prefer these over `$`, `$left`, and `$right` when you want TypeScript/LSP errors for misspelled column names.
-
 ```ts
 const joined = pipe(
   users,
@@ -89,16 +87,16 @@ const joined = pipe(
 );
 ```
 
-### Deferred row shorthand
+### Deferred column refs
 
-Use `$` when a callback only exists to access current-row columns:
+Use `col(...)` when a callback only exists to access current-row columns:
 
 ```ts
 const q = pipe(
   users,
-  filter(and(eq($.active, true), gte($.age, 18))),
-  map({ id: $.id, name: upper($.name) }),
-  sort(asc($.name))
+  filter(and(eq(col("active"), true), gte(col("age"), 18))),
+  map({ id: col("id"), name: upper(col("name")) }),
+  sort(asc(col("name")))
 );
 ```
 
@@ -109,15 +107,15 @@ const compactUsers = pipe(users, pick("id", "name"));
 const activeUserColumns = pipe(users, drop("deleted_at"));
 ```
 
-Use `$left` and `$right` in join predicates and merge shapes:
+Use `leftCol(...)` and `rightCol(...)` in join predicates and merge shapes:
 
 ```ts
 const joined = pipe(
   users,
   leftJoin(
     orders,
-    eq($left.id, $right.user_id),
-    { user_id: $left.id, order_total: $right.total }
+    eq(leftCol("id"), rightCol("user_id")),
+    { user_id: leftCol("id"), order_total: rightCol("total") }
   )
 );
 ```

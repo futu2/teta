@@ -100,7 +100,7 @@ const activeUsers = pipe(
 );
 ```
 
-Use `col("name")`, `leftCol("name")`, and `rightCol("name")` for no-callback column refs that can be checked by TypeScript in query context. `$`, `$left`, and `$right` remain available as runtime-checked shorthand.
+Use `col("name")`, `leftCol("name")`, and `rightCol("name")` for no-callback column refs that can be checked by TypeScript in query context.
 
 More docs:
 

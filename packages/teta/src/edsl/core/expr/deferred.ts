@@ -15,8 +15,6 @@ type DeferredColumnDeps<
   [K in TScope]: Record<TName, unknown>;
 };
 
-type DeferredRowProxy = any;
-
 type DeferredResolutionTarget = {
   label: string;
   columns: ColumnRefs<Record<string, any>>;
@@ -33,10 +31,6 @@ export type DeferredResolutionScope = {
   left?: DeferredResolutionTarget;
   right?: DeferredResolutionTarget;
 };
-
-export const $: DeferredRowProxy = createDeferredRowProxy("current");
-export const $left: DeferredRowProxy = createDeferredRowProxy("left");
-export const $right: DeferredRowProxy = createDeferredRowProxy("right");
 
 export function col<const TName extends string>(
   name: TName
@@ -106,19 +100,6 @@ export function resolveDeferredProjectionShape<TSelection extends ProjectionShap
     }
   }
   return resolved as TSelection;
-}
-
-function createDeferredRowProxy(scope: DeferredColumnScope): DeferredRowProxy {
-  return new Proxy(
-    {},
-    {
-      get(_target, prop) {
-        if (typeof prop !== "string") return undefined;
-        if (prop === "then") return undefined;
-        return deferredColumn(scope, prop);
-      },
-    }
-  ) as DeferredRowProxy;
 }
 
 function deferredColumn<TScope extends DeferredColumnScope, TName extends string>(

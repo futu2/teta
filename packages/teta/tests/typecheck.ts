@@ -1,5 +1,5 @@
 import type { ExprRef, SqlBigInt, SqlBytes, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlTimestamp, SqlUuid, } from "../mod.ts";
-import { filter, filterEq, filterNe, filterGt, filterGte, filterLt, filterLte, fullJoin, innerJoin, join, leftJoin, rightJoin, take, sort, param, map, rename, pipe, flow, table, t, fold, asc, desc, eq, gt, upper, add, mul, coalesce, count, group, loop, sum, and, or, isNotNull, sub, caseWhen, when, mapShape, groupShape, lt, unnest, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, toString, toTimestamp, $, $left, $right, col, leftCol, rightCol, pick, drop, extend, select, alias } from "../mod.ts";
+import { filter, filterEq, filterNe, filterGt, filterGte, filterLt, filterLte, fullJoin, innerJoin, join, leftJoin, rightJoin, take, sort, param, map, rename, pipe, flow, table, t, fold, asc, desc, eq, gt, upper, add, mul, coalesce, count, group, loop, sum, and, or, isNotNull, sub, caseWhen, when, mapShape, groupShape, lt, unnest, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, toString, toTimestamp, col, leftCol, rightCol, pick, drop, extend, select, alias } from "../mod.ts";
 type Equal<A, B> = ((<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false);
 type Expect<T extends true> = T;
 type ExprType<TExpr> = TExpr extends ExprRef<infer TValue> ? TValue : never;
@@ -131,8 +131,8 @@ const projectedUsers = pipe(filteredUsers, map((user: typeof filteredUsers.colum
     name: upper(user.name),
 })));
 const projectedUsersDeferred = pipe(filteredUsers, map({
-    id: $.id,
-    name: upper($.name),
+    id: col("id"),
+    name: upper(col("name")),
 }));
 const projectedUsersCol = pipe(filteredUsers, map({
     id: col("id"),
@@ -510,11 +510,11 @@ pipe(users, fullJoin(
 pipe(users, leftJoin(
     profileRows,
     // @ts-expect-error deferred no-merge joins with overlapping output names require an explicit merge strategy
-    eq($left.id, $right.id)
+    eq(leftCol("id"), rightCol("id"))
 ));
 pipe(users, leftJoin(
     orders,
-    eq($left.id, $right.user_id),
+    eq(leftCol("id"), rightCol("user_id")),
     // @ts-expect-error deferred join merge shapes must only contain expression refs
     { user_id: 1 }
 ));
