@@ -41,4 +41,3 @@ export {
   type WindowSpecInput,
 } from "./expr/core.ts";
 export { createColumnRefs, mergeColumnRefs, mergeColumnNames, projectAllItems } from "./expr/columns.ts";
-export * from "./expr/deferred.ts";
