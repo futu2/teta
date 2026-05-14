@@ -154,6 +154,14 @@ const deferredGeneratedSelectedUsers = pipe(users, select([
     col("id"),
     add(col("id"), 1),
 ]));
+const mappedSelectedUsers = pipe(users, map((user) => ({
+    id: user.id,
+    name: user.name,
+})), select([col("id"), col("name")]));
+const mappedSortedTakenSelectedUsers = pipe(users, map((user) => ({
+    id: user.id,
+    name: user.name,
+})), sort((user) => [desc(user.id)]), take(5), select([col("id"), col("name")]));
 const extendedUsers = pipe(users, extend((user) => ({
     name_upper: upper(user.name),
 })));
@@ -315,6 +323,12 @@ type _GeneratedSelectedUsersCol1 = Expect<Equal<ExprType<typeof generatedSelecte
 type _GeneratedSelectedUsersCol2 = Expect<Equal<ExprType<typeof generatedSelectedUsers.columns.col_2>, SqlInt>>;
 type _DeferredGeneratedSelectedUsersKeys = Expect<Equal<keyof typeof deferredGeneratedSelectedUsers.columns, "id" | "col_1">>;
 type _DeferredGeneratedSelectedUsersCol1 = Expect<Equal<ExprType<typeof deferredGeneratedSelectedUsers.columns.col_1>, SqlInt>>;
+type _MappedSelectedUsersKeys = Expect<Equal<keyof typeof mappedSelectedUsers.columns, "id" | "name">>;
+type _MappedSelectedUsersId = Expect<Equal<ExprType<typeof mappedSelectedUsers.columns.id>, SqlInt>>;
+type _MappedSelectedUsersName = Expect<Equal<ExprType<typeof mappedSelectedUsers.columns.name>, string>>;
+type _MappedSortedTakenSelectedUsersKeys = Expect<Equal<keyof typeof mappedSortedTakenSelectedUsers.columns, "id" | "name">>;
+type _MappedSortedTakenSelectedUsersId = Expect<Equal<ExprType<typeof mappedSortedTakenSelectedUsers.columns.id>, SqlInt>>;
+type _MappedSortedTakenSelectedUsersName = Expect<Equal<ExprType<typeof mappedSortedTakenSelectedUsers.columns.name>, string>>;
 type _ExtendedUsersKeys = Expect<Equal<keyof typeof extendedUsers.columns, "id" | "name" | "name_upper">>;
 type _ExtendedUsersNameUpper = Expect<Equal<ExprType<typeof extendedUsers.columns.name_upper>, string>>;
 type _DeferredExtendedUsersKeys = Expect<Equal<keyof typeof deferredExtendedUsers.columns, "id" | "name" | "name_upper">>;
@@ -552,6 +566,16 @@ pipe(users, extend({ broken: leftCol("id") }));
 pipe(users, extend({ broken: rightCol("user_id") }));
 // @ts-expect-error select rejects unknown deferred current columns
 pipe(users, select([col("missing")]));
+// @ts-expect-error select rejects mixed valid and unknown deferred current columns
+pipe(users, select([col("id"), col("missing")]));
+// @ts-expect-error select rejects duplicate output names from repeated columns
+pipe(users, select([col("id"), col("id")]));
+// @ts-expect-error select rejects duplicate output names from alias collisions
+pipe(users, select((user) => [user.id, pipe(user.name, alias("id"))]));
+// @ts-expect-error select rejects unknown deferred current columns after map
+pipe(users, map((user) => ({ id: user.id, name: user.name })), select([col("id"), col("missing")]));
+// @ts-expect-error select rejects unknown deferred current columns after map, sort, and take
+pipe(users, map((user) => ({ id: user.id, name: user.name })), sort((user) => [desc(user.id)]), take(5), select([col("id"), col("missing")]));
 // @ts-expect-error leftCol is invalid in current-row select context
 pipe(users, select([leftCol("id")]));
 // @ts-expect-error rightCol is invalid in current-row select context

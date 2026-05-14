@@ -119,9 +119,10 @@ type UnionToIntersection<T> = (
 type CurrentDeferredListGuard<
   TColumns extends QueryColumns,
   TItems extends readonly unknown[],
-> = UnionToIntersection<{
-  [K in keyof TItems]: KnownDeferredCurrentColumnsGuard<TColumns, UnwrapAliased<TItems[K]>>;
-}[number]>;
+> = TItems extends readonly [infer THead, ...infer TTail]
+  ? KnownDeferredCurrentColumnsGuard<TColumns, UnwrapAliased<THead>>
+    & CurrentDeferredListGuard<TColumns, TTail>
+  : unknown;
 
 type UnwrapAliased<TItem> =
   TItem extends AliasedSelectValue<string, infer TExpr> ? TExpr : TItem;
@@ -153,6 +154,31 @@ type IsPlainSelectedColumn<TItem> =
       : false
   : false;
 
+type SelectOutputKeys<
+  TItems extends readonly unknown[],
+  TGenerated extends readonly unknown[] = [],
+> = TItems extends readonly [infer THead, ...infer TTail]
+  ? IsPlainSelectedColumn<THead> extends true
+    ? [SelectOutputKey<THead, never>, ...SelectOutputKeys<TTail, TGenerated>]
+    : [SelectOutputKey<THead, `col_${Increment<TGenerated>["length"]}`>, ...SelectOutputKeys<TTail, Increment<TGenerated>>]
+  : [];
+
+type DuplicateSelectOutputKeys<
+  TKeys extends readonly string[],
+  TSeen extends string = never,
+> = TKeys extends readonly [infer THead extends string, ...infer TTail extends readonly string[]]
+  ? THead extends TSeen
+    ? THead | DuplicateSelectOutputKeys<TTail, TSeen>
+    : DuplicateSelectOutputKeys<TTail, TSeen | THead>
+  : never;
+
+type SelectDuplicateOutputGuard<TItems extends readonly unknown[]> =
+  [DuplicateSelectOutputKeys<SelectOutputKeys<TItems>>] extends [never]
+    ? unknown
+    : {
+        __teta_duplicate_select_output_columns__: DuplicateSelectOutputKeys<SelectOutputKeys<TItems>>;
+      };
+
 type SelectResultEntries<
   TColumns extends QueryColumns,
   TItems extends readonly unknown[],
@@ -178,12 +204,16 @@ type SelectResult<TColumns extends QueryColumns, TItems extends readonly unknown
 export function select<const TItems extends SelectList>(
   items: TItems
 ): <TColumns extends QueryColumns>(
-  query: Query<TColumns> & CurrentDeferredListGuard<NoInfer<TColumns>, TItems>
+  query: Query<TColumns>
+    & CurrentDeferredListGuard<NoInfer<TColumns>, TItems>
+    & SelectDuplicateOutputGuard<TItems>
 ) => Query<SelectResult<TColumns, TItems>>;
 
 export function select<TColumns extends QueryColumns, const TItems extends SelectList>(
   selector: (cols: ColumnRefs<TColumns>) => TItems
-): QueryStep<TColumns, SelectResult<TColumns, TItems>>;
+): (
+  query: Query<TColumns> & SelectDuplicateOutputGuard<TItems>
+) => Query<SelectResult<TColumns, TItems>>;
 
 export function select(...args: unknown[]): unknown {
   if (args[0] instanceof Query) {

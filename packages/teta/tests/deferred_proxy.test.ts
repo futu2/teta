@@ -299,7 +299,7 @@ describe("typed deferred column api", () => {
     const users = createUsersPipelineTable();
 
     expectTetaUserError(
-      () => pipe(users, select((user) => [user.id, pipe(user.name, alias("id"))])),
+      () => pipe(users, select((user: typeof users.columns) => [user.id, pipe(user.name, alias("id"))]) as never),
       "SELECT_DUPLICATE_COLUMN"
     );
   });

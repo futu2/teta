@@ -213,10 +213,10 @@ describe("error paths", () => {
     });
     test("rejects invalid select helper usage", () => {
         const users = createUsersTable();
-        expect(() => pipe(users, select((user) => [
+        expect(() => pipe(users, select((user: typeof users.columns) => [
             user.id,
             pipe(user.name, alias("id")),
-        ]))).toThrow(SELECT_DUPLICATE_COLUMN_ERROR);
+        ]) as never)).toThrow(SELECT_DUPLICATE_COLUMN_ERROR);
         expect(() => alias("")).toThrow(SELECT_ALIAS_EMPTY_ERROR);
         expect(() => pipe(users, select([
             alias("bad") as never,
