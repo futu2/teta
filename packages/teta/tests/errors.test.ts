@@ -164,23 +164,6 @@ describe("error paths", () => {
             JOIN_CURRIED_ONLY_ERROR
         );
     });
-    test("rejects removed data-first lateral join with callback on expression at runtime", () => {
-        const users = createUsersTable();
-        const orders = createOrdersTable();
-        expectUserError(
-            () => (join as any)(
-                users,
-                (user: typeof users.columns) =>
-                    pipe(
-                        orders,
-                        filter((order: typeof orders.columns) => eq(order.user_id, user.id))
-                    ),
-                (user: typeof users.columns, order: typeof orders.columns) => eq(user.id, order.user_id)
-            ),
-            "QUERY_HELPER_CURRIED_ONLY",
-            JOIN_CURRIED_ONLY_ERROR
-        );
-    });
     test("rejects removed fixed data-first lateral join with callback on expression at runtime", () => {
         const users = createUsersTable();
         const orders = createOrdersTable();
