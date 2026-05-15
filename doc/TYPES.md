@@ -167,7 +167,7 @@ const profiles = table("profiles", {
 
 const renamed = pipe(
   users,
-  leftJoin(profiles, onEq({ id: "user_id" }), prefixOverlapLeft("left_"))
+  leftJoinMerge(profiles, onEq({ id: "user_id" }), prefixOverlapLeft("left_"))
 );
 ```
 

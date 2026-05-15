@@ -898,17 +898,6 @@ type ParsedCurriedJoinInvocation = {
 
 const DATA_FIRST_JOIN_INVOCATION = Symbol("DATA_FIRST_JOIN_INVOCATION");
 
-function parseCurriedJoinInvocation(
-  args: unknown[],
-  helper: string,
-  usage: string
-): ParsedCurriedJoinInvocation {
-  assertNotDataFirstJoinInvocation(args, helper, usage);
-  const [right, on, maybeMerge, maybeOptions] = args;
-  const { merge, options } = parseJoinMergeAndOptions(maybeMerge, maybeOptions);
-  return { right, on, merge, options };
-}
-
 function assertNotDataFirstJoinInvocation(
   args: unknown[],
   helper: string,
@@ -938,20 +927,6 @@ function assertNotDataFirstJoinInvocation(
       }
     }
   }
-}
-
-function parseJoinMergeAndOptions(
-  maybeMerge: unknown,
-  maybeOptions: unknown
-): { merge: unknown; options: unknown } {
-  assertNoLegacyJoinMergeOption(maybeMerge);
-  assertNoLegacyJoinMergeOption(maybeOptions);
-  const merge =
-    typeof maybeMerge === "function" || isJoinMergeShape(maybeMerge, maybeOptions)
-      ? maybeMerge
-      : undefined;
-  const options = merge === undefined ? maybeMerge : maybeOptions;
-  return { merge, options };
 }
 
 function isJoinMergeShape(value: unknown, maybeOptions: unknown): boolean {
