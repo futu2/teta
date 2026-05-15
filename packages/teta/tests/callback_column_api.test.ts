@@ -414,6 +414,15 @@ describe("callback column api", () => {
         left: { kind: "bogus" },
         right: { kind: "literal", value: "Ada" },
       } as any),
+      new ExprRef({ kind: "func", name: "BAD", args: null } as any),
+      new ExprRef({ kind: "case", whens: null, elseExpr: null } as any),
+      new ExprRef({
+        kind: "window",
+        name: "BAD",
+        args: [],
+        partitionBy: null,
+        orderBy: [null],
+      } as any),
     ];
 
     for (const malformed of cases) {

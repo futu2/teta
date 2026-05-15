@@ -405,23 +405,50 @@ function containsDeferredColumn(node: unknown): boolean {
     case "agg":
       return containsDeferredColumn(exprNode.arg);
     case "func":
-      return exprNode.args.some((arg) => containsDeferredColumn(arg));
+      return validateArray(exprNode.args).some((arg) => containsDeferredColumn(arg));
     case "list":
     case "array":
-      return exprNode.items.some((item) => containsDeferredColumn(item));
+      return validateArray(exprNode.items).some((item) => containsDeferredColumn(item));
     case "extract":
       return containsDeferredColumn(exprNode.source);
     case "window":
-      return exprNode.args.some((arg) => containsDeferredColumn(arg))
-        || (exprNode.partitionBy?.some((item) => containsDeferredColumn(item)) ?? false)
-        || (exprNode.orderBy?.some((item) => containsDeferredColumn(item.expr)) ?? false);
+      return validateArray(exprNode.args).some((arg) => containsDeferredColumn(arg))
+        || validateNullableArray(exprNode.partitionBy).some((item) => containsDeferredColumn(item))
+        || validateNullableArray(exprNode.orderBy).some((item) => containsDeferredColumn(validateOrderItem(item).expr));
     case "case":
-      return exprNode.whens.some((branch) =>
-        containsDeferredColumn(branch.when) || containsDeferredColumn(branch.then)
-      ) || (exprNode.elseExpr ? containsDeferredColumn(exprNode.elseExpr) : false);
+      return validateArray(exprNode.whens).some((branch) => {
+        const caseBranch = validateCaseBranch(branch);
+        return containsDeferredColumn(caseBranch.when) || containsDeferredColumn(caseBranch.then);
+      }) || (exprNode.elseExpr ? containsDeferredColumn(exprNode.elseExpr) : false);
     case "column":
     case "literal":
     case "param":
       return false;
   }
+}
+
+function validateArray(value: unknown): unknown[] {
+  if (!Array.isArray(value)) {
+    invalidExpressionOperand();
+  }
+  return value;
+}
+
+function validateNullableArray(value: unknown): unknown[] {
+  if (value === null || value === undefined) return [];
+  return validateArray(value);
+}
+
+function validateOrderItem(value: unknown): { expr: unknown } {
+  if (value === null || typeof value !== "object") {
+    invalidExpressionOperand();
+  }
+  return value as { expr: unknown };
+}
+
+function validateCaseBranch(value: unknown): { when: unknown; then: unknown } {
+  if (value === null || typeof value !== "object") {
+    invalidExpressionOperand();
+  }
+  return value as { when: unknown; then: unknown };
 }
