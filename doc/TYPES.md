@@ -269,7 +269,7 @@ Inside that pipeline, `filter((user) => eq(user.active, true))` and `take(10)` a
 - `take(...)` returns `QueryStep<T, T>`
 - `flow(...)` composes query steps and preserves each intermediate type.
 - `extend(...)` keeps existing columns and adds or replaces the extension keys.
-- `filterEq(...)` and related helpers return `QueryStep<T, T>` and apply the same deferred-column checks as `filter(...)`.
+- `filterEq(...)` and related helpers return `QueryStep<T, T>` and use row callbacks when operands come from query columns.
 
 You usually do not need to write `QueryStep<...>` explicitly, but it is the right type when building higher-level query utilities.
 

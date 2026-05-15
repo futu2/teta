@@ -50,10 +50,10 @@ console.log(toSql(activeUsers, { dialect: "postgresql", format: "pretty" }));
 Reusable functional pipelines can be saved with `flow(...)`, and `extend(...)` keeps existing columns while adding computed ones:
 
 ```ts
-import { col, extend, filterEq, flow, lower, pick, take, whenStep } from "@teta/teta";
+import { extend, filterEq, flow, lower, pick, take, whenStep } from "@teta/teta";
 
 const activePublicUsers = flow(
-  filterEq(col("active"), true),
+  filterEq((user) => user.active, true),
   extend((user) => ({
     normalized_email: lower(user.email),
   })),
@@ -62,7 +62,7 @@ const activePublicUsers = flow(
 );
 ```
 
-Bare strings in comparison filter helpers are literals; use `col("name")` or a row callback for columns.
+Bare strings in comparison filter helpers are literals; use row callbacks for columns.
 `whenStep(...)` and `unlessStep(...)` use host-language booleans to include or skip schema-preserving steps while building a query; use `filter(...)` and predicate expressions for conditions evaluated by SQL.
 
 Use `select(...)` for list-style projections. Plain column refs keep their names, and `alias(...)` names computed outputs:
@@ -89,20 +89,18 @@ const direct = toSql(activeUsers, { dialect: "postgresql" });
 const explicit = irToSql(toIR(activeUsers), { dialect: "postgresql" });
 ```
 
-The callback form gives the strongest autocomplete and compile-time column checks. For compact query code, Teta also exports typed deferred column refs:
+The callback form gives autocomplete and compile-time column checks while keeping query steps reusable:
 
 ```ts
-import { and, asc, col, eq, filter, gte, pick, sort, pipe } from "@teta/teta";
+import { and, asc, eq, filter, gte, pick, sort, pipe } from "@teta/teta";
 
 const activeUsers = pipe(
   users,
-  filter(and(eq(col("active"), true), gte(col("age"), 18))),
+  filter((user) => and(eq(user.active, true), gte(user.age, 18))),
   pick("id", "email"),
-  sort(asc(col("email")))
+  sort((user) => asc(user.email))
 );
 ```
-
-Use `col("name")`, `leftCol("name")`, and `rightCol("name")` for no-callback column refs that can be checked by TypeScript in query context.
 
 Additional predicate helpers include `between(...)`, `isNotIn(...)`/`notIn(...)`, and `isDistinctFrom(...)`:
 

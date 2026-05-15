@@ -402,7 +402,7 @@ Downstream code can then access concrete properties such as `user_id` and `user_
 
 ```ts
 const publicActiveUsers = flow(
-  filterEq(col("active"), true),
+  filterEq((user) => user.active, true),
   extend((user) => ({ name_upper: upper(user.name) })),
   pick("id", "name_upper")
 );

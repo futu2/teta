@@ -5,7 +5,7 @@ Quick reference for the public API exported from `@teta/teta`.
 Teta is function-first. Row-transforming query helpers are curried query steps used with `pipe(...)`.
 
 ```ts
-import { add, alias, and, arrayAppend, arrayContains, arrayJoin, arrayLength, arrayPosition, arraySlice, asc, avg, bitLength, cast, charLength, characterLength, coalesce, col, concat, count, currentDate, currentTimestamp, dateAdd, dateDiff, dateFormat, dateLiteral, dateParse, dateTrunc, day, desc, drop, dropOverlapLeft, dropOverlapRight, eq, explain, ExprRef, extend, f, filter, filterEq, flow, fn, fold, fromUnixTime, fullJoin, group, gt, gte, hour, innerJoin, isIn, isNotNull, isNull, join, lag, lead, left, leftCol, leftJoin, like, loop, lower, lt, lte, map, rename, max, min, minute, mod, month, mul, ne, not, ntile, nullIf, octetLength, onEq, over, overlay, param, percentRank, pick, pipe, position, pow, prefixAllLeft, prefixAllRight, prefixOverlapLeft, prefixOverlapRight, Query, rank, regexExtract, regexLike, regexReplace, replace, reverse, right, rightCol, rightJoin, round, rowNumber, rpad, select, shape, sort, sqrt, sub, substring, suffixAllLeft, suffixAllRight, sum, sumOver, t, table, take, timestampLiteral, toAst, toDate, toFloat, toInt, toIR, toSql, toSqlResult, toUnixTime, trim, union, unionAll, unnest, upper, usingCols, values, when, windowFn, year } from "@teta/teta";
+import { add, alias, and, arrayAppend, arrayContains, arrayJoin, arrayLength, arrayPosition, arraySlice, asc, avg, bitLength, cast, charLength, characterLength, coalesce, concat, count, currentDate, currentTimestamp, dateAdd, dateDiff, dateFormat, dateLiteral, dateParse, dateTrunc, day, desc, drop, dropOverlapLeft, dropOverlapRight, eq, explain, ExprRef, extend, f, filter, filterEq, flow, fn, fold, fromUnixTime, fullJoin, group, gt, gte, hour, innerJoin, isIn, isNotNull, isNull, join, lag, lead, left, leftJoin, like, loop, lower, lt, lte, map, rename, max, min, minute, mod, month, mul, ne, not, ntile, nullIf, octetLength, onEq, over, overlay, param, percentRank, pick, pipe, position, pow, prefixAllLeft, prefixAllRight, prefixOverlapLeft, prefixOverlapRight, Query, rank, regexExtract, regexLike, regexReplace, replace, reverse, right, rightJoin, round, rowNumber, rpad, select, shape, sort, sqrt, sub, substring, suffixAllLeft, suffixAllRight, sum, sumOver, t, table, take, timestampLiteral, toAst, toDate, toFloat, toInt, toIR, toSql, toSqlResult, toUnixTime, trim, union, unionAll, unnest, upper, usingCols, values, when, windowFn, year } from "@teta/teta";
 ```
 
 ## 1) Query roots and composition
@@ -52,7 +52,7 @@ Use `flow(...)` to save reusable pipelines:
 
 ```ts
 const activePublicUsers = flow(
-  filterEq(col("active"), true),
+  filterEq((user) => user.active, true),
   pick("id", "name")
 );
 ```
@@ -61,52 +61,45 @@ Use `identityStep()`, `whenStep(condition, step)`, and `unlessStep(condition, st
 
 ```ts
 const visibleUsers = flow(
-  filterEq(col("active"), true),
+  filterEq((user) => user.active, true),
   whenStep(includeLimit, take(50)),
-  unlessStep(includeDeleted, filterEq(col("deleted"), false))
+  unlessStep(includeDeleted, filterEq((user) => user.deleted, false))
 );
 ```
 
-### Typed deferred column refs
+### Callback column selectors
 
-Use string-literal column refs when a callback only exists to access columns:
+Use row callbacks to access columns with autocomplete and compile-time checks:
 
 ```ts
 const q = pipe(
   users,
-  filter(and(eq(col("active"), true), gte(col("age"), 18))),
-  map({ id: col("id"), name: upper(col("name")) }),
-  sort(asc(col("name")))
+  filter((user) => and(eq(user.active, true), gte(user.age, 18))),
+  map((user) => ({ id: user.id, name: upper(user.name) })),
+  sort((user) => asc(user.name))
 );
 ```
-
-Typed deferred column refs:
-
-- `col("name")` for current-row helpers
-- `leftCol("name")` for join-left refs
-- `rightCol("name")` for join-right refs
 
 ```ts
 const joined = pipe(
   users,
   leftJoin(
     orders,
-    eq(leftCol("id"), rightCol("user_id")),
-    { user_id: leftCol("id"), order_total: rightCol("total") }
+    (user, order) => eq(user.id, order.user_id)
   )
 );
 ```
 
-### Deferred column refs
-
-Use `col(...)` when a callback only exists to access current-row columns:
+Use `leftJoinMap(...)` when the join output should be projected at the join boundary:
 
 ```ts
-const q = pipe(
+const joined = pipe(
   users,
-  filter(and(eq(col("active"), true), gte(col("age"), 18))),
-  map({ id: col("id"), name: upper(col("name")) }),
-  sort(asc(col("name")))
+  leftJoinMap(
+    orders,
+    (user, order) => eq(user.id, order.user_id),
+    (user, order) => ({ user_id: user.id, order_total: order.total })
+  )
 );
 ```
 
@@ -117,20 +110,7 @@ const compactUsers = pipe(users, pick("id", "name"));
 const activeUserColumns = pipe(users, drop("deleted_at"));
 ```
 
-Use `leftCol(...)` and `rightCol(...)` in join predicates and merge shapes:
-
-```ts
-const joined = pipe(
-  users,
-  leftJoin(
-    orders,
-    eq(leftCol("id"), rightCol("user_id")),
-    { user_id: leftCol("id"), order_total: rightCol("total") }
-  )
-);
-```
-
-Callback selectors remain the strictest typed form because the row parameter carries the current query shape.
+Callback selectors carry the current query shape through the row parameter.
 
 ### Curried helpers
 Row-transforming query helpers are query steps used with `pipe(...)`.
@@ -454,7 +434,7 @@ const explicitSql = irToSql(ir, { dialect: "postgresql" });
 - ``f`prefix ${expr} suffix` ``
 
 ```ts
-filter(and(eq(col("active"), true), gte(col("age"), 18), isNotNull(col("email"))))
+filter((user) => and(eq(user.active, true), gte(user.age, 18), isNotNull(user.email)))
 ```
 
 ### Projection helpers
