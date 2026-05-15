@@ -402,6 +402,18 @@ describe("callback column api", () => {
       new ExprRef(null as any),
       new ExprRef("bad" as any),
       new ExprRef({ kind: "bogus" } as any),
+      new ExprRef({
+        kind: "binary",
+        op: "=",
+        left: null,
+        right: { kind: "literal", value: "Ada" },
+      } as any),
+      new ExprRef({
+        kind: "binary",
+        op: "=",
+        left: { kind: "bogus" },
+        right: { kind: "literal", value: "Ada" },
+      } as any),
     ];
 
     for (const malformed of cases) {

@@ -549,6 +549,8 @@ pipe(users, filterEq((user) => user.name, (user) => user.id));
 pipe(users, filterEq(internalCol("name"), "Ada"));
 // @ts-expect-error deferred col operands are removed from filterGt
 pipe(users, filterGt(internalCol("id"), 1));
+// @ts-expect-error wrapped deferred col operands are removed from filterEq
+pipe(users, filterEq(add(internalCol("id"), 1), 2));
 pipe(users, map((user) => ({
     // @ts-expect-error callbacks reject unknown current-row columns in map context
     missing: user.missing,

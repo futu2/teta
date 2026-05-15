@@ -6,6 +6,7 @@ import type {
   ExprInput,
 } from "../expr.ts";
 import { ExprRef, eq, ne, gt, gte, lt, lte } from "../expr.ts";
+import type { DeferredExprDepsOf } from "../internal_deferred_expr.ts";
 import type { NormalizeNumericLiteral, SqlDate, SqlNumber, SqlTimestamp } from "../sql/types.ts";
 import type { QueryColumns } from "./deferred_types.ts";
 import { userError } from "../errors.ts";
@@ -23,6 +24,8 @@ type CallableOperand<TColumns extends QueryColumns, TValue> =
 type Operand<TColumns extends QueryColumns, TValue> =
   | DirectOperand<TValue>
   | CallableOperand<TColumns, TValue>;
+type NonDeferredDirectOperand<TInput extends ExprInput<unknown>> =
+  keyof DeferredExprDepsOf<TInput> extends never ? TInput : never;
 type ExprInputValueOf<TExpr> =
   TExpr extends ExprRef<infer TValue, any> ? TValue
   : TExpr extends ExprInput<infer TValue> ? TValue
@@ -79,8 +82,8 @@ export function filterEq<TColumns extends QueryColumns, T, TLeft extends ExprInp
 ): QueryStep<TColumns, TColumns>;
 
 export function filterEq<TLeft extends DirectOperand<unknown>, TRight extends DirectOperand<unknown>>(
-  left: TLeft & NotFunction<TLeft>,
-  right: TRight & NotFunction<TRight>,
+  left: NonDeferredDirectOperand<TLeft> & NotFunction<TLeft>,
+  right: NonDeferredDirectOperand<TRight> & NotFunction<TRight>,
   ...guard: SameExprInputValueRest<TLeft, TRight>
 ): <TColumns extends QueryColumns>(query: Query<TColumns>) => Query<TColumns>;
 
@@ -112,8 +115,8 @@ export function filterNe<TColumns extends QueryColumns, T, TLeft extends ExprInp
 ): QueryStep<TColumns, TColumns>;
 
 export function filterNe<TLeft extends DirectOperand<unknown>, TRight extends DirectOperand<unknown>>(
-  left: TLeft & NotFunction<TLeft>,
-  right: TRight & NotFunction<TRight>,
+  left: NonDeferredDirectOperand<TLeft> & NotFunction<TLeft>,
+  right: NonDeferredDirectOperand<TRight> & NotFunction<TRight>,
   ...guard: SameExprInputValueRest<TLeft, TRight>
 ): <TColumns extends QueryColumns>(query: Query<TColumns>) => Query<TColumns>;
 
@@ -141,7 +144,7 @@ export function filterGt<
   TRight extends ExprInput<NoInfer<T>>,
 >(
   left: (cols: ColumnRefs<TColumns>) => TLeft,
-  right: TRight & NotFunction<TRight>
+  right: NonDeferredDirectOperand<TRight> & NotFunction<TRight>
 ): QueryStep<TColumns, TColumns>;
 
 export function filterGt<
@@ -150,13 +153,13 @@ export function filterGt<
   TLeft extends ExprInput<NoInfer<T>>,
   TRight extends ExprInput<T>,
 >(
-  left: TLeft & NotFunction<TLeft>,
+  left: NonDeferredDirectOperand<TLeft> & NotFunction<TLeft>,
   right: (cols: ColumnRefs<TColumns>) => TRight
 ): QueryStep<TColumns, TColumns>;
 
 export function filterGt<TLeft extends DirectOperand<unknown>, TRight extends DirectOperand<unknown>>(
-  left: TLeft & NotFunction<TLeft>,
-  right: TRight & NotFunction<TRight>,
+  left: NonDeferredDirectOperand<TLeft> & NotFunction<TLeft>,
+  right: NonDeferredDirectOperand<TRight> & NotFunction<TRight>,
   ...guard: [
     ...SameExprInputValueRest<TLeft, TRight>,
     ...ComparableExprInputRest<TLeft>,
@@ -188,7 +191,7 @@ export function filterGte<
   TRight extends ExprInput<NoInfer<T>>,
 >(
   left: (cols: ColumnRefs<TColumns>) => TLeft,
-  right: TRight & NotFunction<TRight>
+  right: NonDeferredDirectOperand<TRight> & NotFunction<TRight>
 ): QueryStep<TColumns, TColumns>;
 
 export function filterGte<
@@ -197,13 +200,13 @@ export function filterGte<
   TLeft extends ExprInput<NoInfer<T>>,
   TRight extends ExprInput<T>,
 >(
-  left: TLeft & NotFunction<TLeft>,
+  left: NonDeferredDirectOperand<TLeft> & NotFunction<TLeft>,
   right: (cols: ColumnRefs<TColumns>) => TRight
 ): QueryStep<TColumns, TColumns>;
 
 export function filterGte<TLeft extends DirectOperand<unknown>, TRight extends DirectOperand<unknown>>(
-  left: TLeft & NotFunction<TLeft>,
-  right: TRight & NotFunction<TRight>,
+  left: NonDeferredDirectOperand<TLeft> & NotFunction<TLeft>,
+  right: NonDeferredDirectOperand<TRight> & NotFunction<TRight>,
   ...guard: [
     ...SameExprInputValueRest<TLeft, TRight>,
     ...ComparableExprInputRest<TLeft>,
@@ -235,7 +238,7 @@ export function filterLt<
   TRight extends ExprInput<NoInfer<T>>,
 >(
   left: (cols: ColumnRefs<TColumns>) => TLeft,
-  right: TRight & NotFunction<TRight>
+  right: NonDeferredDirectOperand<TRight> & NotFunction<TRight>
 ): QueryStep<TColumns, TColumns>;
 
 export function filterLt<
@@ -244,13 +247,13 @@ export function filterLt<
   TLeft extends ExprInput<NoInfer<T>>,
   TRight extends ExprInput<T>,
 >(
-  left: TLeft & NotFunction<TLeft>,
+  left: NonDeferredDirectOperand<TLeft> & NotFunction<TLeft>,
   right: (cols: ColumnRefs<TColumns>) => TRight
 ): QueryStep<TColumns, TColumns>;
 
 export function filterLt<TLeft extends DirectOperand<unknown>, TRight extends DirectOperand<unknown>>(
-  left: TLeft & NotFunction<TLeft>,
-  right: TRight & NotFunction<TRight>,
+  left: NonDeferredDirectOperand<TLeft> & NotFunction<TLeft>,
+  right: NonDeferredDirectOperand<TRight> & NotFunction<TRight>,
   ...guard: [
     ...SameExprInputValueRest<TLeft, TRight>,
     ...ComparableExprInputRest<TLeft>,
@@ -282,7 +285,7 @@ export function filterLte<
   TRight extends ExprInput<NoInfer<T>>,
 >(
   left: (cols: ColumnRefs<TColumns>) => TLeft,
-  right: TRight & NotFunction<TRight>
+  right: NonDeferredDirectOperand<TRight> & NotFunction<TRight>
 ): QueryStep<TColumns, TColumns>;
 
 export function filterLte<
@@ -291,13 +294,13 @@ export function filterLte<
   TLeft extends ExprInput<NoInfer<T>>,
   TRight extends ExprInput<T>,
 >(
-  left: TLeft & NotFunction<TLeft>,
+  left: NonDeferredDirectOperand<TLeft> & NotFunction<TLeft>,
   right: (cols: ColumnRefs<TColumns>) => TRight
 ): QueryStep<TColumns, TColumns>;
 
 export function filterLte<TLeft extends DirectOperand<unknown>, TRight extends DirectOperand<unknown>>(
-  left: TLeft & NotFunction<TLeft>,
-  right: TRight & NotFunction<TRight>,
+  left: NonDeferredDirectOperand<TLeft> & NotFunction<TLeft>,
+  right: NonDeferredDirectOperand<TRight> & NotFunction<TRight>,
   ...guard: [
     ...SameExprInputValueRest<TLeft, TRight>,
     ...ComparableExprInputRest<TLeft>,
@@ -388,33 +391,34 @@ function isKnownExprNodeKind(kind: string): boolean {
     || kind === "deferred_column";
 }
 
-function containsDeferredColumn(node: ExprNode<unknown>): boolean {
-  switch (node.kind) {
+function containsDeferredColumn(node: unknown): boolean {
+  const exprNode = validateOperandNode(node);
+  switch (exprNode.kind) {
     case "deferred_column":
       return true;
     case "binary":
-      return containsDeferredColumn(node.left) || containsDeferredColumn(node.right);
+      return containsDeferredColumn(exprNode.left) || containsDeferredColumn(exprNode.right);
     case "unary":
     case "group":
     case "cast":
-      return containsDeferredColumn(node.expr);
+      return containsDeferredColumn(exprNode.expr);
     case "agg":
-      return containsDeferredColumn(node.arg);
+      return containsDeferredColumn(exprNode.arg);
     case "func":
-      return node.args.some((arg) => containsDeferredColumn(arg));
+      return exprNode.args.some((arg) => containsDeferredColumn(arg));
     case "list":
     case "array":
-      return node.items.some((item) => containsDeferredColumn(item));
+      return exprNode.items.some((item) => containsDeferredColumn(item));
     case "extract":
-      return containsDeferredColumn(node.source);
+      return containsDeferredColumn(exprNode.source);
     case "window":
-      return node.args.some((arg) => containsDeferredColumn(arg))
-        || (node.partitionBy?.some((item) => containsDeferredColumn(item)) ?? false)
-        || (node.orderBy?.some((item) => containsDeferredColumn(item.expr)) ?? false);
+      return exprNode.args.some((arg) => containsDeferredColumn(arg))
+        || (exprNode.partitionBy?.some((item) => containsDeferredColumn(item)) ?? false)
+        || (exprNode.orderBy?.some((item) => containsDeferredColumn(item.expr)) ?? false);
     case "case":
-      return node.whens.some((branch) =>
+      return exprNode.whens.some((branch) =>
         containsDeferredColumn(branch.when) || containsDeferredColumn(branch.then)
-      ) || (node.elseExpr ? containsDeferredColumn(node.elseExpr) : false);
+      ) || (exprNode.elseExpr ? containsDeferredColumn(exprNode.elseExpr) : false);
     case "column":
     case "literal":
     case "param":
