@@ -182,12 +182,12 @@ const predicateConvenienceUsers = pipe(users, filter((user) => and(
 )));
 const singleAndExpr = and(eq(users.columns.id, 1));
 const singleOrExpr = or(eq(users.columns.id, 1));
-const colSortedUsers = pipe(users, sort((user) => [asc(user.name), desc(user.id)]));
-const colAggregatedOrders = pipe(orders, fold((order) => ({
+const callbackSortedUsers = pipe(users, sort((user) => [asc(user.name), desc(user.id)]));
+const callbackAggregatedOrders = pipe(orders, fold((order) => ({
     user_id: group(order.user_id),
     total_spend: sum(order.total),
 })));
-const colExplodedSessions = pipe(sessions, unnest((session) => session.tags, { value: "tag" }));
+const callbackExplodedSessions = pipe(sessions, unnest((session) => session.tags, { value: "tag" }));
 // @ts-expect-error pick rejects unknown columns when applied to a typed query
 const invalidPickedUsers = pipe(users, pick("missing"));
 const curriedPipeline = pipe(users, filter((user: typeof users.columns) => gt(user.id, 0)), map((user) => ({
@@ -335,9 +335,9 @@ type _FilterGtUsersId = Expect<Equal<ExprType<typeof filterGtUsers.columns.id>, 
 type _FilterLtUsersId = Expect<Equal<ExprType<typeof filterLtUsers.columns.id>, SqlInt>>;
 type _FilterLteUsersId = Expect<Equal<ExprType<typeof filterLteUsers.columns.id>, SqlInt>>;
 type _LiteralStringFilterName = Expect<Equal<ExprType<typeof literalStringFilter.columns.name>, string>>;
-type _ColSortedUsersName = Expect<Equal<ExprType<typeof colSortedUsers.columns.name>, string>>;
-type _ColAggregatedOrdersTotalSpend = Expect<Equal<ExprType<typeof colAggregatedOrders.columns.total_spend>, SqlFloat>>;
-type _ColExplodedSessionsTag = Expect<Equal<ExprType<typeof colExplodedSessions.columns.tag>, string>>;
+type _CallbackSortedUsersName = Expect<Equal<ExprType<typeof callbackSortedUsers.columns.name>, string>>;
+type _CallbackAggregatedOrdersTotalSpend = Expect<Equal<ExprType<typeof callbackAggregatedOrders.columns.total_spend>, SqlFloat>>;
+type _CallbackExplodedSessionsTag = Expect<Equal<ExprType<typeof callbackExplodedSessions.columns.tag>, string>>;
 type _CallbackMergedJoinUserId = Expect<Equal<ExprType<typeof callbackMergedJoin.columns.user_id>, SqlInt>>;
 type _CallbackMergedJoinTotal = Expect<Equal<ExprType<typeof callbackMergedJoin.columns.total>, SqlFloat | null>>;
 type _VariadicAndFilteredUsersId = Expect<Equal<ExprType<typeof variadicAndFilteredUsers.columns.id>, SqlInt>>;
@@ -466,9 +466,9 @@ void unnestStepSessions;
 void predicateConvenienceUsers;
 void singleAndExpr;
 void singleOrExpr;
-void colSortedUsers;
-void colAggregatedOrders;
-void colExplodedSessions;
+void callbackSortedUsers;
+void callbackAggregatedOrders;
+void callbackExplodedSessions;
 void projectedWithQuotedKey;
 void aggregatedWithQuotedKey;
 void aggregatedTotals;
