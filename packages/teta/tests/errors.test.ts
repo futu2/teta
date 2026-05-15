@@ -194,6 +194,20 @@ describe("error paths", () => {
         const users = createUsersTable();
         expect(() => pipe(users, map((user) => ([user.id] as never)))).toThrow(LEGACY_SELECTION_ARRAY_ERROR);
     });
+    test("rejects erased invalid map and fold selectors with user errors", () => {
+        const users = createUsersTable();
+        const orders = createOrdersTable();
+        expectUserError(
+            () => pipe(users, map(undefined as never)),
+            "DEFERRED_INPUT_INVALID",
+            "map() expects a row callback"
+        );
+        expectUserError(
+            () => pipe(orders, fold({} as never)),
+            "DEFERRED_INPUT_INVALID",
+            "fold() expects a row callback"
+        );
+    });
     test("rejects invalid select helper usage", () => {
         const users = createUsersTable();
         expect(() => pipe(users, select((user: typeof users.columns) => [

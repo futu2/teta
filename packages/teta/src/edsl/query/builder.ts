@@ -563,6 +563,7 @@ function _map<TColumns extends QueryColumns, const Sel extends ProjectionShape>(
   query: Query<TColumns>,
   selector: (cols: ColumnRefs<TColumns>) => Sel
 ): Query<ProjectionResult<Sel>> {
+  assertRowCallback("map", selector);
   return buildMap(query, selector);
 }
 
@@ -584,6 +585,7 @@ function _fold<TColumns extends QueryColumns, const Sel extends ProjectionShape>
   query: Query<TColumns>,
   selector: (cols: ColumnRefs<TColumns>) => Sel
 ): Query<ProjectionResult<Sel>> {
+  assertRowCallback("fold", selector);
   return buildFold(query, selector);
 }
 
