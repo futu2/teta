@@ -1,7 +1,5 @@
 import { describe, expect, test } from "bun:test";
 import {
-  ExprRef,
-  TetaInternalError,
   TetaUserError,
   add,
   alias,
@@ -48,18 +46,11 @@ import {
   unnest,
   when,
 } from "../mod.ts";
-import { col, leftCol, rightCol } from "../src/edsl/internal_deferred_expr.ts";
 import {
   createOrdersTable,
   createUsersPipelineTable,
   createUsersTable,
 } from "./helpers/fixtures.ts";
-import {
-  DEFERRED_CURRENT_COLUMN_UNKNOWN_ERROR,
-  DEFERRED_LEFT_COLUMN_UNKNOWN_ERROR,
-  DEFERRED_LEFT_SCOPE_ERROR,
-  DEFERRED_RIGHT_COLUMN_UNKNOWN_ERROR,
-} from "./helpers/expected-errors.ts";
 
 function expectTetaUserError(fn: () => unknown, code: string): void {
   try {
@@ -72,12 +63,7 @@ function expectTetaUserError(fn: () => unknown, code: string): void {
   }
 }
 
-describe("typed deferred column api", () => {
-  test("exports deferred column refs that compose through expression helpers", () => {
-    expect(eq(col("id"), 1)).toBeInstanceOf(ExprRef);
-    expect(eq(leftCol("id"), rightCol("user_id"))).toBeInstanceOf(ExprRef);
-  });
-
+describe("callback column api", () => {
   test("exports projection helpers as query steps", () => {
     expect(typeof pick("id")).toBe("function");
     expect(typeof drop("id")).toBe("function");
@@ -99,13 +85,13 @@ describe("typed deferred column api", () => {
     );
     const actual = pipe(
       users,
-      filter(and(eq(col("active"), true), gte(col("age"), 18))),
-      map({
-        id: col("id"),
-        name: coalesce(replace(col("name"), " ", "_"), "unknown"),
-        age: col("age"),
-      }),
-      sort([asc(col("name")), desc(col("id"))]),
+      filter((user) => and(eq(user.active, true), gte(user.age, 18))),
+      map((user) => ({
+        id: user.id,
+        name: coalesce(replace(user.name, " ", "_"), "unknown"),
+        age: user.age,
+      })),
+      sort((row) => [asc(row.name), desc(row.id)]),
       take(20)
     );
 
@@ -114,15 +100,15 @@ describe("typed deferred column api", () => {
     );
   });
 
-  test("supports variadic and for deferred filters", () => {
+  test("supports variadic and for callback filters", () => {
     const users = createUsersPipelineTable();
     const expected = pipe(
       users,
-      filter(and(and(eq(col("active"), true), gte(col("age"), 18)), isNotNull(col("name"))))
+      filter((user) => and(and(eq(user.active, true), gte(user.age, 18)), isNotNull(user.name)))
     );
     const actual = pipe(
       users,
-      filter(and(eq(col("active"), true), gte(col("age"), 18), isNotNull(col("name"))))
+      filter((user) => and(eq(user.active, true), gte(user.age, 18), isNotNull(user.name)))
     );
 
     expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
@@ -130,15 +116,15 @@ describe("typed deferred column api", () => {
     );
   });
 
-  test("supports variadic or for deferred filters", () => {
+  test("supports variadic or for callback filters", () => {
     const users = createUsersPipelineTable();
     const expected = pipe(
       users,
-      filter(or(or(eq(col("name"), "Ada"), eq(col("name"), "Grace")), eq(col("name"), "Linus")))
+      filter((user) => or(or(eq(user.name, "Ada"), eq(user.name, "Grace")), eq(user.name, "Linus")))
     );
     const actual = pipe(
       users,
-      filter(or(eq(col("name"), "Ada"), eq(col("name"), "Grace"), eq(col("name"), "Linus")))
+      filter((user) => or(eq(user.name, "Ada"), eq(user.name, "Grace"), eq(user.name, "Linus")))
     );
 
     expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
@@ -146,10 +132,10 @@ describe("typed deferred column api", () => {
     );
   });
 
-  test("supports filterEq with deferred expression operands", () => {
+  test("supports filterEq with callback expression operands", () => {
     const users = createUsersPipelineTable();
-    const expected = pipe(users, filter(eq(col("active"), true)));
-    const actual = pipe(users, filterEq(col("active"), true));
+    const expected = pipe(users, filter((user) => eq(user.active, true)));
+    const actual = pipe(users, filterEq((user) => user.active, true));
 
     expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
       toSql(expected, { dialect: "postgresql", format: "compact" })
@@ -183,8 +169,8 @@ describe("typed deferred column api", () => {
     const users = table("users", {
       status: t.string(),
     });
-    const expected = pipe(users, filter(eq("status", col("status"))));
-    const actual = pipe(users, filterEq("status", col("status")));
+    const expected = pipe(users, filter(() => eq("status", "status")));
+    const actual = pipe(users, filterEq("status", "status"));
 
     expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
       toSql(expected, { dialect: "postgresql", format: "compact" })
@@ -204,10 +190,10 @@ describe("typed deferred column api", () => {
   test("supports comparison filter helpers for remaining operators", () => {
     const users = createUsersPipelineTable();
     const cases = [
-      [pipe(users, filter(ne(col("name"), "deleted"))), pipe(users, filterNe(col("name"), "deleted"))],
-      [pipe(users, filter(gt(col("age"), 18))), pipe(users, filterGt(col("age"), 18))],
-      [pipe(users, filter(lt(col("age"), 65))), pipe(users, filterLt(col("age"), 65))],
-      [pipe(users, filter(lte(col("age"), 65))), pipe(users, filterLte(col("age"), 65))],
+      [pipe(users, filter((user) => ne(user.name, "deleted"))), pipe(users, filterNe((user) => user.name, "deleted"))],
+      [pipe(users, filter((user) => gt(user.age, 18))), pipe(users, filterGt((user) => user.age, 18))],
+      [pipe(users, filter((user) => lt(user.age, 65))), pipe(users, filterLt((user) => user.age, 65))],
+      [pipe(users, filter((user) => lte(user.age, 65))), pipe(users, filterLte((user) => user.age, 65))],
     ] as const;
 
     for (const [expected, actual] of cases) {
@@ -217,7 +203,7 @@ describe("typed deferred column api", () => {
     }
   });
 
-  test("matches callback SQL for typed col filter, map, sort, and take", () => {
+  test("matches callback SQL for typed filter, map, sort, and take", () => {
     const users = createUsersPipelineTable();
     const expected = pipe(
       users,
@@ -232,13 +218,13 @@ describe("typed deferred column api", () => {
     );
     const actual = pipe(
       users,
-      filter(and(eq(col("active"), true), gte(col("age"), 18))),
-      map({
-        id: col("id"),
-        name: coalesce(replace(col("name"), " ", "_"), "unknown"),
-        age: col("age"),
-      }),
-      sort([asc(col("name")), desc(col("id"))]),
+      filter((user) => and(eq(user.active, true), gte(user.age, 18))),
+      map((user) => ({
+        id: user.id,
+        name: coalesce(replace(user.name, " ", "_"), "unknown"),
+        age: user.age,
+      })),
+      sort((row) => [asc(row.name), desc(row.id)]),
       take(20)
     );
 
@@ -260,13 +246,17 @@ describe("typed deferred column api", () => {
     );
   });
 
-  test("supports select with deferred column lists", () => {
+  test("supports select with callback column lists after map", () => {
     const users = createUsersPipelineTable();
-    const expected = pipe(users, map({
-      id: col("id"),
-      name: col("name"),
-    }));
-    const actual = pipe(users, select([col("id"), col("name")]));
+    const mapped = pipe(users, map((user) => ({
+      id: user.id,
+      name: user.name,
+    })));
+    const expected = pipe(mapped, map((user) => ({
+      id: user.id,
+      name: user.name,
+    })));
+    const actual = pipe(mapped, select((user) => [user.id, user.name]));
 
     expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
       toSql(expected, { dialect: "postgresql", format: "compact" })
@@ -334,7 +324,7 @@ describe("typed deferred column api", () => {
     );
   });
 
-  test("supports extend with deferred selection", () => {
+  test("supports extend with callback selection", () => {
     const users = createUsersPipelineTable();
     const expected = pipe(users, map((user) => ({
       id: user.id,
@@ -343,9 +333,9 @@ describe("typed deferred column api", () => {
       active: user.active,
       active_label: caseWhen([when(user.active, "active")], "inactive"),
     })));
-    const actual = pipe(users, extend({
-      active_label: caseWhen([when(col("active"), "active")], "inactive"),
-    }));
+    const actual = pipe(users, extend((user) => ({
+      active_label: caseWhen([when(user.active, "active")], "inactive"),
+    })));
 
     expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
       toSql(expected, { dialect: "postgresql", format: "compact" })
@@ -421,29 +411,29 @@ describe("typed deferred column api", () => {
       order_count: count(order.order_id),
       total_spend: sum(order.total),
     })));
-    const actual = pipe(orders, fold({
-      user_id: group(col("user_id")),
-      order_count: count(col("order_id")),
-      total_spend: sum(col("total")),
-    }));
+    const actual = pipe(orders, fold((order) => ({
+      user_id: group(order.user_id),
+      order_count: count(order.order_id),
+      total_spend: sum(order.total),
+    })));
 
     expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
       toSql(expected, { dialect: "postgresql", format: "compact" })
     );
   });
 
-  test("matches callback SQL for typed col fold aggregations", () => {
+  test("matches callback SQL for typed fold aggregations", () => {
     const orders = createOrdersTable();
     const expected = pipe(orders, fold((order) => ({
       user_id: group(order.user_id),
       order_count: count(order.order_id),
       total_spend: sum(order.total),
     })));
-    const actual = pipe(orders, fold({
-      user_id: group(col("user_id")),
-      order_count: count(col("order_id")),
-      total_spend: sum(col("total")),
-    }));
+    const actual = pipe(orders, fold((order) => ({
+      user_id: group(order.user_id),
+      order_count: count(order.order_id),
+      total_spend: sum(order.total),
+    })));
 
     expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
       toSql(expected, { dialect: "postgresql", format: "compact" })
@@ -456,20 +446,20 @@ describe("typed deferred column api", () => {
       tags: t.array(t.string()),
     });
     const expected = pipe(sessions, unnest((session) => session.tags, { value: "tag" }));
-    const actual = pipe(sessions, unnest(col("tags"), { value: "tag" }));
+    const actual = pipe(sessions, unnest((session) => session.tags, { value: "tag" }));
 
     expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
       toSql(expected, { dialect: "postgresql", format: "compact" })
     );
   });
 
-  test("matches callback SQL for typed col unnest", () => {
+  test("matches callback SQL for typed unnest", () => {
     const sessions = table("sessions", {
       id: t.int(),
       tags: t.array(t.string()),
     });
     const expected = pipe(sessions, unnest((session) => session.tags, { value: "tag" }));
-    const actual = pipe(sessions, unnest(col("tags"), { value: "tag" }));
+    const actual = pipe(sessions, unnest((session) => session.tags, { value: "tag" }));
 
     expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
       toSql(expected, { dialect: "postgresql", format: "compact" })
@@ -494,12 +484,12 @@ describe("typed deferred column api", () => {
       users,
       leftJoin(
         orders,
-        eq(leftCol("id"), rightCol("user_id"))
+        (user, order) => eq(user.id, order.user_id)
       ),
-      map({
-        user_id: col("id"),
-        total: col("total"),
-      })
+      map((row) => ({
+        user_id: row.id,
+        total: row.total,
+      }))
     );
 
     expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
@@ -507,7 +497,7 @@ describe("typed deferred column api", () => {
     );
   });
 
-  test("supports deferred join merge shapes", () => {
+  test("supports callback join merge shapes", () => {
     const users = createUsersTable();
     const orders = createOrdersTable();
     const expected = pipe(
@@ -525,11 +515,11 @@ describe("typed deferred column api", () => {
       users,
       leftJoin(
         orders,
-        eq(leftCol("id"), rightCol("user_id")),
-        {
-          user_id: leftCol("id"),
-          order_total: rightCol("total"),
-        }
+        (user, order) => eq(user.id, order.user_id),
+        (user, order) => ({
+          user_id: user.id,
+          order_total: order.total,
+        })
       )
     );
 
@@ -538,7 +528,7 @@ describe("typed deferred column api", () => {
     );
   });
 
-  test("matches callback SQL for typed join column refs", () => {
+  test("matches callback SQL for typed join merge callbacks", () => {
     const users = createUsersTable();
     const orders = createOrdersTable();
     const expected = pipe(
@@ -556,11 +546,11 @@ describe("typed deferred column api", () => {
       users,
       leftJoin(
         orders,
-        eq(leftCol("id"), rightCol("user_id")),
-        {
-          user_id: leftCol("id"),
-          order_total: rightCol("total"),
-        }
+        (user, order) => eq(user.id, order.user_id),
+        (user, order) => ({
+          user_id: user.id,
+          order_total: order.total,
+        })
       )
     );
 
@@ -569,7 +559,7 @@ describe("typed deferred column api", () => {
     );
   });
 
-  test("supports option-named deferred join merge output keys", () => {
+  test("supports option-named callback join merge output keys", () => {
     const users = table("users", {
       id: t.int(),
       type: t.string(),
@@ -590,11 +580,11 @@ describe("typed deferred column api", () => {
       users,
       join(
         orders,
-        eq(leftCol("id"), rightCol("user_id")),
-        {
-          type: leftCol("type"),
-          lateral: rightCol("total"),
-        }
+        (user, order) => eq(user.id, order.user_id),
+        (user, order) => ({
+          type: user.type,
+          lateral: order.total,
+        })
       )
     );
 
@@ -603,67 +593,7 @@ describe("typed deferred column api", () => {
     );
   });
 
-  test("reports missing current-row deferred columns", () => {
-    const users = createUsersTable();
-    expect(
-      // @ts-expect-error exercising runtime validation for an unknown dynamic column
-      () => pipe(users, map({ missing: col("missing") }))
-    ).toThrow(
-      DEFERRED_CURRENT_COLUMN_UNKNOWN_ERROR
-    );
-  });
-
-  test("reports missing deferred join-left columns", () => {
-    const users = createUsersTable();
-    const orders = createOrdersTable();
-    expect(() => pipe(
-      // @ts-expect-error exercising runtime validation for an unknown dynamic column
-      users,
-      leftJoin(
-        orders,
-        // @ts-expect-error exercising runtime validation for an unknown dynamic column
-        eq(leftCol("missing"), rightCol("user_id"))
-      )
-    )).toThrow(
-      DEFERRED_LEFT_COLUMN_UNKNOWN_ERROR
-    );
-  });
-
-  test("reports missing deferred join-right columns", () => {
-    const users = createUsersTable();
-    const orders = createOrdersTable();
-    expect(() => pipe(
-      // @ts-expect-error exercising runtime validation for an unknown dynamic column
-      users,
-      leftJoin(
-        orders,
-        // @ts-expect-error exercising runtime validation for an unknown dynamic column
-        eq(leftCol("id"), rightCol("missing"))
-      )
-    )).toThrow(
-      DEFERRED_RIGHT_COLUMN_UNKNOWN_ERROR
-    );
-  });
-
-  test("reports join-side deferred refs outside join helpers", () => {
-    const users = createUsersTable();
-    expect(
-      // @ts-expect-error exercising runtime validation for invalid current-row scope
-      () => pipe(users, filter(eq(leftCol("id"), 1)))
-    ).toThrow(DEFERRED_LEFT_SCOPE_ERROR);
-  });
-
-  test("reports join-side deferred refs outside select", () => {
-    const users = createUsersPipelineTable();
-
-    expectTetaUserError(
-      // @ts-expect-error exercising runtime validation for invalid current-row select scope
-      () => pipe(users, select([leftCol("id")])),
-      "DEFERRED_COLUMN_SCOPE"
-    );
-  });
-
-  test("reports undefined deferred helper inputs as user errors", () => {
+  test("reports undefined callback helper inputs as user errors", () => {
     const users = createUsersTable();
     const sessions = table("sessions", {
       id: t.int(),
@@ -689,24 +619,4 @@ describe("typed deferred column api", () => {
     );
   });
 
-  test("reports invalid deferred join merge values as user errors", () => {
-    const users = createUsersTable();
-    const orders = createOrdersTable();
-
-    expectTetaUserError(
-      () => pipe(
-        users,
-        join(
-          orders,
-          eq(leftCol("id"), rightCol("user_id")),
-          { bad: 1 } as never
-        )
-      ),
-      "DEFERRED_PROJECTION_INVALID"
-    );
-  });
-
-  test("guards direct rendering of unresolved deferred refs", () => {
-    expect(() => toSql(col("id") as ExprRef<unknown>)).toThrow(TetaInternalError);
-  });
 });

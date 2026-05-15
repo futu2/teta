@@ -1,7 +1,6 @@
 import type { ExprRef, SqlBigInt, SqlBytes, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlTimestamp, SqlUuid, } from "../mod.ts";
 import * as publicApi from "../mod.ts";
 import { between, filter, filterEq, filterNe, filterGt, filterGte, filterLt, filterLte, fullJoin, identityStep, innerJoin, isDistinctFrom, isNotIn, join, leftJoin, rightJoin, take, sort, param, map, rename, pipe, flow, table, t, fold, asc, desc, eq, gt, upper, add, mul, coalesce, count, group, loop, sum, and, or, isNotNull, sub, caseWhen, when, mapShape, groupShape, lt, unnest, unionAll, union, unlessStep, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, toString, toTimestamp, pick, drop, extend, select, alias, whenStep } from "../mod.ts";
-import { col, leftCol, rightCol } from "../src/edsl/internal_deferred_expr.ts";
 type Equal<A, B> = ((<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false);
 type Expect<T extends true> = T;
 type ExprType<TExpr> = TExpr extends ExprRef<infer TValue> ? TValue : never;
@@ -121,27 +120,27 @@ const mappedJoin = pipe(users, leftJoin(
 ));
 const colMappedJoin = pipe(users, leftJoin(
     orders,
-    eq(leftCol("id"), rightCol("user_id")),
-    {
-        user_id: leftCol("id"),
-        total: rightCol("total"),
-    }
+    (user, order) => eq(user.id, order.user_id),
+    (user, order) => ({
+        user_id: user.id,
+        total: order.total,
+    })
 ));
 const filteredUsers = pipe(users, filter((user: typeof users.columns) => gt(user.id, 0)));
 const projectedUsers = pipe(filteredUsers, map((user: typeof filteredUsers.columns) => ({
     id: user.id,
     name: upper(user.name),
 })));
-const projectedUsersDeferred = pipe(filteredUsers, map({
-    id: col("id"),
-    name: upper(col("name")),
-}));
-const projectedUsersCol = pipe(filteredUsers, map({
-    id: col("id"),
-    name: upper(col("name")),
-}));
+const projectedUsersDeferred = pipe(filteredUsers, map((user) => ({
+    id: user.id,
+    name: upper(user.name),
+})));
+const projectedUsersCol = pipe(filteredUsers, map((user) => ({
+    id: user.id,
+    name: upper(user.name),
+})));
 const selectedUsers = pipe(users, select((user) => [user.id, user.name]));
-const deferredSelectedUsers = pipe(users, select([col("id"), col("name")]));
+const deferredSelectedUsers = pipe(users, select((user) => [user.id, user.name]));
 const aliasedSelectedUsers = pipe(users, select((user) => [
     pipe(user.id, alias("old_id")),
     pipe(upper(user.name), alias("name_upper")),
@@ -152,30 +151,30 @@ const generatedSelectedUsers = pipe(users, select((user) => [
     user.name,
     add(user.id, 2),
 ]));
-const deferredGeneratedSelectedUsers = pipe(users, select([
-    col("id"),
-    add(col("id"), 1),
+const deferredGeneratedSelectedUsers = pipe(users, select((user) => [
+    user.id,
+    add(user.id, 1),
 ]));
 const mappedSelectedUsers = pipe(users, map((user) => ({
     id: user.id,
     name: user.name,
-})), select([col("id"), col("name")]));
+})), select((user) => [user.id, user.name]));
 const mappedSortedTakenSelectedUsers = pipe(users, map((user) => ({
     id: user.id,
     name: user.name,
-})), sort((user) => [desc(user.id)]), take(5), select([col("id"), col("name")]));
+})), sort((user) => [desc(user.id)]), take(5), select((user) => [user.id, user.name]));
 const extendedUsers = pipe(users, extend((user) => ({
     name_upper: upper(user.name),
 })));
-const deferredExtendedUsers = pipe(users, extend({
-    name_upper: upper(col("name")),
-}));
+const deferredExtendedUsers = pipe(users, extend((user) => ({
+    name_upper: upper(user.name),
+})));
 const replacedExtendedUsers = pipe(users, extend((user) => ({
     id: toString(user.id),
 })));
 const pickedUsers = pipe(users, pick("id", "name"));
-const colFilteredUsers = pipe(users, filter(eq(col("id"), 1)));
-const filterEqColUsers = pipe(users, filterEq(col("name"), "Ada"));
+const colFilteredUsers = pipe(users, filter((user) => eq(user.id, 1)));
+const filterEqColUsers = pipe(users, filterEq((user) => user.name, "Ada"));
 const filterGteComputedUsers = pipe(users, filterGte((user) => add(mul(user.id, 2), 1), 3));
 const filterEqCallbackUsers = pipe(users, filterEq((user) => user.id, (user) => user.id));
 const filterNeUsers = pipe(users, filterNe((user) => user.name, "deleted"));
@@ -183,24 +182,24 @@ const filterGtUsers = pipe(users, filterGt((user) => user.id, 0));
 const filterLtUsers = pipe(users, filterLt((user) => user.id, 100));
 const filterLteUsers = pipe(users, filterLte((user) => user.id, 100));
 const literalStringFilter = pipe(users, filterEq("status", "active"));
-const variadicAndFilteredUsers = pipe(users, filter(and(eq(col("id"), 1), gt(col("id"), 0), isNotNull(col("name")))));
-const variadicOrFilteredUsers = pipe(users, filter(or(eq(col("name"), "Ada"), eq(col("name"), "Grace"), eq(col("name"), "Linus"))));
-const conditionalStepUsers = pipe(users, identityStep(), whenStep(true, filterEq(col("name"), "Ada")), unlessStep(false, take(10)));
+const variadicAndFilteredUsers = pipe(users, filter((user) => and(eq(user.id, 1), gt(user.id, 0), isNotNull(user.name))));
+const variadicOrFilteredUsers = pipe(users, filter((user) => or(eq(user.name, "Ada"), eq(user.name, "Grace"), eq(user.name, "Linus"))));
+const conditionalStepUsers = pipe(users, identityStep(), whenStep(true, filterEq((user) => user.name, "Ada")), unlessStep(false, take(10)));
 const unionStepUsers = pipe(users, union(users), unionAll(users));
-const unnestStepSessions = pipe(sessions, unnest(col("tags"), { value: "tag" }));
+const unnestStepSessions = pipe(sessions, unnest((session) => session.tags, { value: "tag" }));
 const predicateConvenienceUsers = pipe(users, filter((user) => and(
     between(user.id, 1, 10),
     isNotIn(user.name, ["Ada", "Grace"]),
     isDistinctFrom(user.name, "anonymous"),
 )));
-const singleAndExpr = and(eq(col("id"), 1));
-const singleOrExpr = or(eq(col("id"), 1));
-const colSortedUsers = pipe(users, sort([asc(col("name")), desc(col("id"))]));
-const colAggregatedOrders = pipe(orders, fold({
-    user_id: group(col("user_id")),
-    total_spend: sum(col("total")),
-}));
-const colExplodedSessions = pipe(sessions, unnest(col("tags"), { value: "tag" }));
+const singleAndExpr = and(eq(users.columns.id, 1));
+const singleOrExpr = or(eq(users.columns.id, 1));
+const colSortedUsers = pipe(users, sort((user) => [asc(user.name), desc(user.id)]));
+const colAggregatedOrders = pipe(orders, fold((order) => ({
+    user_id: group(order.user_id),
+    total_spend: sum(order.total),
+})));
+const colExplodedSessions = pipe(sessions, unnest((session) => session.tags, { value: "tag" }));
 // @ts-expect-error pick rejects unknown columns when applied to a typed query
 const invalidPickedUsers = pipe(users, pick("missing"));
 const curriedPipeline = pipe(users, filter((user: typeof users.columns) => gt(user.id, 0)), map((user) => ({
@@ -295,7 +294,7 @@ const projectedProfiles = pipe(profiles, map((profile) => ({
 const uuidFilteredProfiles = pipe(profiles, filter((profile) => eq(profile.id, param("00000000-0000-0000-0000-000000000000"))));
 const bigintFilteredProfiles = pipe(profiles, filter((profile) => and(gt(profile.external_id, 0), eq(profile.external_id, 42n))));
 const nullableFilterGtCallbackUsers = pipe(profiles, filterGt((profile) => profile.credit_limit, 0));
-const nullableFilterGtColUsers = pipe(profiles, filterGt(col("credit_limit"), 0));
+const nullableFilterGtColUsers = pipe(profiles, filterGt((profile) => profile.credit_limit, 0));
 const nullableFilterGtRightCallbackUsers = pipe(profiles, filterGt(0, (profile) => profile.credit_limit));
 const stringifiedUserId = toString(users.columns.id);
 const stringifiedNullableNickname = toString(profiles.columns.nickname);
@@ -544,115 +543,94 @@ pipe(users, fullJoin(
 ));
 pipe(users, leftJoin(
     profileRows,
-    // @ts-expect-error deferred no-merge joins with overlapping output names require an explicit merge strategy
-    eq(leftCol("id"), rightCol("id"))
+    // @ts-expect-error no-merge joins with overlapping output names require an explicit merge strategy
+    (user, profile) => eq(user.id, profile.id)
 ));
-pipe(users, leftJoin(
-    orders,
-    eq(leftCol("id"), rightCol("user_id")),
-    // @ts-expect-error deferred join merge shapes must only contain expression refs
-    { user_id: 1 }
-));
-// @ts-expect-error col rejects unknown current-row columns in filter context
 pipe(users, filter(
-    eq(col("missing"), 1)
+    (user) => eq(
+        // @ts-expect-error callbacks reject unknown current-row columns in filter context
+        user.missing,
+        1
+    )
 ));
-// @ts-expect-error filterEq rejects unknown deferred columns when applied to a typed query
-pipe(users, filterEq(col("missing"), 1));
-// @ts-expect-error filterEq rejects mismatched direct operand types
-pipe(users, filterEq(col("name"), 1));
+// @ts-expect-error filterEq rejects unknown callback columns when applied to a typed query
+pipe(users, filterEq((user) => user.missing, 1));
+// @ts-expect-error filterEq rejects mismatched callback operand types
+pipe(users, filterEq((user) => user.name, 1));
 // @ts-expect-error filterEq rejects mismatched literal operand types
 pipe(users, filterEq("name", 1));
-// @ts-expect-error filterGt rejects non-comparable string direct operands
-pipe(users, filterGt(col("name"), "Ada"));
-// @ts-expect-error filterGt rejects mismatched direct operand types
-pipe(users, filterGt(col("name"), 1));
+// @ts-expect-error filterGt rejects non-comparable string callback operands
+pipe(users, filterGt((user) => user.name, "Ada"));
+// @ts-expect-error filterGt rejects mismatched callback operand types
+pipe(users, filterGt((user) => user.name, 1));
 // @ts-expect-error filterGte rejects mismatched mixed callback/direct operands
 pipe(users, filterGte((user) => user.id, "1"));
-// @ts-expect-error filterEq rejects invalid left deferred scope in mixed direct/callback current context
-pipe(users, filterEq(leftCol("id"), (user) => user.id));
-// @ts-expect-error filterEq rejects invalid right deferred scope in mixed direct/callback current context
-pipe(users, filterEq((user) => user.id, rightCol("user_id")));
 // @ts-expect-error filterEq callback operands must be valid expressions
 pipe(users, filterEq((user) => user.name, (user) => user.id));
-// @ts-expect-error col rejects unknown current-row columns in map context
-pipe(users, map({
-    missing: col("missing"),
-}));
-// @ts-expect-error extend rejects unknown deferred columns when applied to a typed query
-pipe(users, extend({ broken: col("missing") }));
-// @ts-expect-error leftCol is invalid in current-row extend context
-pipe(users, extend({ broken: leftCol("id") }));
-// @ts-expect-error rightCol is invalid in current-row extend context
-pipe(users, extend({ broken: rightCol("user_id") }));
-// @ts-expect-error select rejects unknown deferred current columns
-pipe(users, select([col("missing")]));
-// @ts-expect-error select rejects mixed valid and unknown deferred current columns
-pipe(users, select([col("id"), col("missing")]));
+pipe(users, map((user) => ({
+    // @ts-expect-error callbacks reject unknown current-row columns in map context
+    missing: user.missing,
+})));
+// @ts-expect-error extend rejects unknown callback columns when applied to a typed query
+pipe(users, extend((user) => ({ broken: user.missing })));
+// @ts-expect-error select rejects unknown callback current columns
+pipe(users, select((user) => [user.missing]));
+// @ts-expect-error select rejects mixed valid and unknown callback current columns
+pipe(users, select((user) => [user.id, user.missing]));
 // @ts-expect-error select rejects duplicate output names from repeated columns
-pipe(users, select([col("id"), col("id")]));
+pipe(users, select((user) => [user.id, user.id]));
 // @ts-expect-error select rejects duplicate output names from alias collisions
 pipe(users, select((user) => [user.id, pipe(user.name, alias("id"))]));
-// @ts-expect-error select rejects unknown deferred current columns after map
-pipe(users, map((user) => ({ id: user.id, name: user.name })), select([col("id"), col("missing")]));
-// @ts-expect-error select rejects unknown deferred current columns after map, sort, and take
-pipe(users, map((user) => ({ id: user.id, name: user.name })), sort((user) => [desc(user.id)]), take(5), select([col("id"), col("missing")]));
-// @ts-expect-error leftCol is invalid in current-row select context
-pipe(users, select([leftCol("id")]));
-// @ts-expect-error rightCol is invalid in current-row select context
-pipe(users, select([rightCol("user_id")]));
+// @ts-expect-error select rejects unknown callback current columns after map
+pipe(users, map((user) => ({ id: user.id, name: user.name })), select((user) => [user.id, user.missing]));
+// @ts-expect-error select rejects unknown callback current columns after map, sort, and take
+pipe(users, map((user) => ({ id: user.id, name: user.name })), sort((user) => [desc(user.id)]), take(5), select((user) => [user.id, user.missing]));
 // @ts-expect-error alias must wrap a select expression item through pipe
 pipe(users, select((user) => [alias("bad")]));
-// @ts-expect-error col rejects unknown current-row columns in fold context
-pipe(orders, fold({
-    total: sum(col("missing")),
-}));
-// @ts-expect-error col rejects unknown current-row columns in sort context
+pipe(orders, fold((order) => ({
+    // @ts-expect-error callbacks reject unknown current-row columns in fold context
+    total: sum(order.missing),
+})));
 pipe(users, sort(
-    asc(col("missing"))
+    // @ts-expect-error callbacks reject unknown current-row columns in sort context
+    (user) => asc(user.missing)
 ));
-// @ts-expect-error col rejects unknown current-row columns in unnest context
-pipe(sessions, unnest(col("missing"), { value: "tag" }));
-// @ts-expect-error leftCol rejects unknown join-left columns
+// @ts-expect-error callbacks reject unknown current-row columns in unnest context
+pipe(sessions, unnest((session) => session.missing, { value: "tag" }));
 pipe(users, leftJoin(
     orders,
-    // @ts-expect-error leftCol rejects unknown join-left columns
-    eq(leftCol("missing"), rightCol("user_id"))
+    // @ts-expect-error callbacks reject unknown join-left columns
+    (user, order) => eq(user.missing, order.user_id)
 ));
-// @ts-expect-error rightCol rejects unknown join-right columns
 pipe(users, leftJoin(
     orders,
-    // @ts-expect-error rightCol rejects unknown join-right columns
-    eq(leftCol("id"), rightCol("missing"))
+    // @ts-expect-error callbacks reject unknown join-right columns
+    (user, order) => eq(user.id, order.missing)
 ));
 pipe(users,
-    // @ts-expect-error leftCol rejects unknown join-left columns in merge shapes
     leftJoin(
         orders,
-        eq(leftCol("id"), rightCol("user_id")),
-        {
-            user_id: leftCol("missing"),
-        }
+        (user, order) => eq(user.id, order.user_id),
+        (user, _order) => ({
+            // @ts-expect-error callbacks reject unknown join-left columns in merge shapes
+            user_id: user.missing,
+        })
     )
 );
 pipe(users,
-    // @ts-expect-error rightCol rejects unknown join-right columns in merge shapes
     leftJoin(
         orders,
-        eq(leftCol("id"), rightCol("user_id")),
-        {
-            total: rightCol("missing"),
-        }
+        (user, order) => eq(user.id, order.user_id),
+        (_user, order) => ({
+            // @ts-expect-error callbacks reject unknown join-right columns in merge shapes
+            total: order.missing,
+        })
     )
 );
-// @ts-expect-error col rejects unknown current-row columns when applying filter step directly
-filter(eq(col("missing"), 1))(users);
-// @ts-expect-error col rejects unknown current-row columns when applying sort step directly
-sort(asc(col("missing")))(users);
-// @ts-expect-error leftCol is invalid in current-row filter context
-filter(eq(leftCol("id"), 1))(users);
-// @ts-expect-error col is invalid in join predicate context
-leftJoin(orders, eq(col("id"), rightCol("user_id")))(users);
+// @ts-expect-error callbacks reject unknown current-row columns when applying filter step directly
+filter((user) => eq(user.missing, 1))(users);
+// @ts-expect-error callbacks reject unknown current-row columns when applying sort step directly
+sort((user) => asc(user.missing))(users);
 // @ts-expect-error toTimestamp should reject arbitrary strings
 toTimestamp(rawTimestampRows.columns.raw_ts);
 const profileRowsWithUserId = values([
@@ -724,7 +702,7 @@ unionAll(users, users);
 // @ts-expect-error loop is curried-only
 loop(loopBase, (self) => pipe(self, filter((row) => gt(row.id, 0))));
 // @ts-expect-error unnest is curried-only
-unnest(sessions, col("tags"), { value: "tag" });
+unnest(sessions, (session: typeof sessions.columns) => session.tags, { value: "tag" });
 // @ts-expect-error join is curried-only
 join(users, orders, (user, order) => eq(user.id, order.user_id));
 // @ts-expect-error lateral join is curried-only
