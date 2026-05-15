@@ -191,12 +191,20 @@ export function createQuery<TColumns extends QueryColumns>(
 function queryOf<TColumns extends QueryColumns>(
   state: QueryState<TColumns>
 ): Query<TColumns> {
+  const source = freezeQueryStateValue(state.source);
+  const stages = freezeQueryStateValue(state.stages) as QueryState<TColumns>["stages"];
+  const columnNames = freezeQueryStateValue(state.columnNames);
+  const withs = freezeQueryStateValue(state.withs) as QueryState<TColumns>["withs"];
+  const columnIdentifiers = freezeQueryStateValue(state.columnIdentifiers);
   const frozenState = Object.freeze({
     ...state,
-    stages: Object.freeze([...state.stages]) as QueryState<TColumns>["stages"],
-    columnNames: Object.freeze([...state.columnNames]),
-    withs: Object.freeze([...state.withs]) as QueryState<TColumns>["withs"],
-    columnIdentifiers: Object.freeze({ ...state.columnIdentifiers }),
+    source,
+    stages,
+    // Column refs are currently Proxy-backed; Task 3 will tighten their invariants.
+    columns: state.columns,
+    columnNames,
+    withs,
+    columnIdentifiers,
   }) as Readonly<QueryState<TColumns>>;
 
   return Object.freeze({
@@ -211,6 +219,37 @@ function queryOf<TColumns extends QueryColumns>(
     withs: frozenState.withs,
     columnIdentifiers: frozenState.columnIdentifiers,
   });
+}
+
+function freezeQueryStateValue<T>(value: T, seen = new WeakMap<object, unknown>()): T {
+  if (!value || typeof value !== "object") return value;
+
+  const object = value as object;
+  const existing = seen.get(object);
+  if (existing) return existing as T;
+
+  if (Array.isArray(value)) {
+    const copy: unknown[] = [];
+    seen.set(object, copy);
+    for (const item of value) {
+      copy.push(freezeQueryStateValue(item, seen));
+    }
+    return Object.freeze(copy) as T;
+  }
+
+  if (!isPlainObject(value)) {
+    return value;
+  }
+
+  const copy: Record<PropertyKey, unknown> = {};
+  seen.set(object, copy);
+  for (const key of Reflect.ownKeys(value)) {
+    copy[key] = freezeQueryStateValue(
+      (value as Record<PropertyKey, unknown>)[key],
+      seen
+    );
+  }
+  return Object.freeze(copy) as T;
 }
 
 function deriveQuery<

@@ -52,7 +52,13 @@ describe("tagged EDSL value model", () => {
     expect(isQuery(users)).toBe(true);
     expect(Object.isFrozen(users)).toBe(true);
     expect(Object.isFrozen(users.state)).toBe(true);
+    expect(Object.isFrozen(users.source)).toBe(true);
+    expect(Object.isFrozen(users.columnNames)).toBe(true);
     expect(users.columnNames).toEqual(["id"]);
+
+    const filtered = pipe(users, filter((user) => eq(user.id, lit(1))));
+    expect(Object.isFrozen(filtered.stages)).toBe(true);
+    expect(Object.isFrozen(filtered.stages[0])).toBe(true);
   });
 
   test("rejects malformed expression-like values", () => {
