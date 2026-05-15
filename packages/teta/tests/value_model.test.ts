@@ -108,4 +108,22 @@ describe("tagged EDSL value model", () => {
       );
     }).toThrow("Unknown column 'missing'. Available columns: id, name.");
   });
+
+  test("allows reflective names when they are callback columns", () => {
+    const events = table("events", {
+      then: t.string(),
+      toJSON: t.string(),
+      inspect: t.string(),
+    });
+
+    const query = pipe(
+      events,
+      filter((row) => eq(row.then, row.toJSON)),
+      filter((row) => eq(row.inspect, "ok"))
+    );
+
+    expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe(
+      'SELECT events_0.then AS then, events_0."toJSON" AS "toJSON", events_0.inspect AS inspect FROM events AS events_0 WHERE events_0.then = events_0."toJSON" AND events_0.inspect = \'ok\''
+    );
+  });
 });

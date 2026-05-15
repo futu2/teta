@@ -18,6 +18,10 @@ function assertKnownColumn(name: string, columns: readonly string[]): void {
   );
 }
 
+function isReflectiveName(name: string): boolean {
+  return name === "then" || name === "toJSON" || name === "inspect";
+}
+
 export function createColumnRefs<TColumns extends Record<string, unknown>>(
   tableName: ScopeId | null,
   columnNames: readonly string[]
@@ -37,7 +41,7 @@ export function createColumnRefs<TColumns extends Record<string, unknown>>(
     {
       get(_target, prop) {
         if (typeof prop !== "string") return undefined;
-        if (prop === "then" || prop === "toJSON" || prop === "inspect") return undefined;
+        if (!columns.includes(prop) && isReflectiveName(prop)) return undefined;
         assertKnownColumn(prop, columns);
         return getColumn(prop);
       },
@@ -87,7 +91,7 @@ export function mergeColumnRefs<
     {
       get(_target, prop) {
         if (typeof prop !== "string") return undefined;
-        if (prop === "then" || prop === "toJSON" || prop === "inspect") return undefined;
+        if (!mergedKeys.includes(prop) && isReflectiveName(prop)) return undefined;
         assertKnownColumn(prop, mergedKeys);
         return getColumn(prop);
       },
