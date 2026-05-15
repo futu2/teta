@@ -19,6 +19,7 @@ import type {
 import { createColumnRefs } from "../expr.ts";
 import type {
   ColumnRefs,
+  ExprLike,
   ExprRef,
   ExprRefs,
   ProjectionResult,
@@ -103,7 +104,7 @@ type SortInput<TColumns extends QueryColumns> =
 type UnnestSelectorInput<
   TLeft extends QueryColumns,
   TCollection extends readonly unknown[] | unknown[] | null,
-> = (cols: ColumnRefs<TLeft>) => ExprRef<TCollection>;
+> = (cols: ColumnRefs<TLeft>) => ExprLike<TCollection>;
 
 type JoinOnInput<
   TLeft extends QueryColumns,
@@ -748,7 +749,7 @@ export function unnest<
   TOrdinalityName extends string | undefined = undefined,
   TOuter extends boolean | undefined = undefined,
 >(
-  selector: (cols: ColumnRefs<TLeft>) => ExprRef<TCollection>,
+  selector: (cols: ColumnRefs<TLeft>) => ExprLike<TCollection>,
   selection: UnnestSelection<TValueName, TOrdinalityName>,
   options?: UnnestOptions<TOuter>
 ): QueryStep<

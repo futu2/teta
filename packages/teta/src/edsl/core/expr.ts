@@ -1,10 +1,10 @@
 export type {
   ColumnRef,
+  ExprRef,
   WindowBuilder,
 } from "./expr/core.ts";
 
 export {
-  ExprRef,
   lit,
   param,
   array,
@@ -30,6 +30,7 @@ export {
   isColumn,
   type ColumnRefs,
   type Expr,
+  type ExprLike,
   type ExprInput,
   type ExprInputTuple,
   type ExprInputValue,

@@ -188,8 +188,8 @@ export type QueryStageKind = import("./src/edsl/query.ts").QueryStageKind;
 export type QueryStep<TInputColumns extends Record<string, any>, TOutputColumns extends Record<string, any>> = import("./src/edsl/query.ts").QueryStep<TInputColumns, TOutputColumns>;
 
 /** Typed SQL expression reference used throughout the query DSL. */
-export const ExprRef: typeof import("./src/edsl/expr.ts").ExprRef = expr.ExprRef;
 export type ExprRef<T> = import("./src/edsl/expr.ts").ExprRef<T>;
+export type ExprLike<T> = import("./src/edsl/expr.ts").ExprLike<T>;
 
 /** Returns true for tagged SQL expression values. */
 export const isExpr: typeof import("./src/edsl/expr.ts").isExpr = expr.isExpr;

@@ -1,9 +1,9 @@
 import type { JoinType, JoinTypeInput } from "../core/types.ts";
 import { and, eq, mergeColumnNames } from "../expr.ts";
-import type { ColumnRefs, ExprRef, ExprRefs } from "../expr.ts";
+import type { ColumnRefs, ExprLike, ExprRef, ExprRefs } from "../expr.ts";
 import { userError } from "../errors.ts";
 
-export type JoinSelection = Record<string, ExprRef<unknown>>;
+export type JoinSelection = Record<string, ExprLike<unknown>>;
 
 export type JoinOverlappingColumnNames<
   TLeft extends Record<string, any>,
@@ -31,7 +31,7 @@ export type JoinOnNoMerge<
 > = JoinOn<TLeft, TRight> & JoinNoMergeGuard<TLeft, TRight>;
 
 export type JoinSelectionResult<TSelection extends JoinSelection> = {
-  [K in keyof TSelection]: TSelection[K] extends ExprRef<infer TValue> ? TValue : never;
+  [K in keyof TSelection]: TSelection[K] extends ExprLike<infer TValue> ? TValue : never;
 };
 
 export type JoinColumnMerger<
@@ -210,8 +210,8 @@ export function usingCols(nameOrNames: string | readonly string[]) {
 
     for (const name of names) {
       const next = eq(
-        left[name as keyof typeof left] as ExprRef<any>,
-        right[name as keyof typeof right] as ExprRef<any>
+        left[name as keyof typeof left] as ExprLike<any>,
+        right[name as keyof typeof right] as ExprLike<any>
       );
       predicate = predicate ? and(predicate, next) : next;
     }
@@ -249,8 +249,8 @@ export function onEq<const TMapping extends Record<string, string>>(
 
     for (const [leftName, rightName] of Object.entries(mapping) as Array<[LeftKey, RightKey]>) {
       const next = eq(
-        left[leftName as keyof typeof left] as ExprRef<any>,
-        right[rightName as unknown as keyof typeof right] as ExprRef<any>
+        left[leftName as keyof typeof left] as ExprLike<any>,
+        right[rightName as unknown as keyof typeof right] as ExprLike<any>
       );
       predicate = predicate ? and(predicate, next) : next;
     }
@@ -590,7 +590,7 @@ function defaultJoinColumnMerger<
   TLeft extends Record<string, any>,
   TRight extends Record<string, any>
 >(left: ColumnRefs<TLeft>, right: ColumnRefs<TRight>): ExprRefs<TLeft & TRight> {
-  return { ...left, ...right } as ExprRefs<TLeft & TRight>;
+  return { ...left, ...right } as unknown as ExprRefs<TLeft & TRight>;
 }
 
 function resolveMergedColumnNames(
@@ -615,7 +615,7 @@ function getOverlappingColumnNames(
 function assignJoinMergeColumn(
   target: JoinSelection,
   key: string,
-  value: ExprRef<unknown>
+  value: ExprLike<unknown>
 ): void {
   if (Object.prototype.hasOwnProperty.call(target, key)) {
     userError("JOIN_MERGE_CONFLICT", `join merge helper still overlaps after renaming: ${key}`);

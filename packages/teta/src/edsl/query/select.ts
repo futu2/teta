@@ -3,6 +3,7 @@ import {
   toExprNode,
   type ColumnRef,
   type ColumnRefs,
+  type ExprLike,
   type ExprRef,
 } from "../expr.ts";
 import { userError } from "../errors.ts";
@@ -11,7 +12,7 @@ import { resolveSelectQuery } from "./mutations.ts";
 import type { SelectProjection } from "./planner.ts";
 import { resolveDerivedQueryInit } from "./state.ts";
 type QueryColumns = Record<string, any>;
-type SelectExpr = ExprRef<unknown>;
+type SelectExpr = ExprLike<unknown>;
 type SelectValue = SelectExpr | AliasedSelectValue<string, SelectExpr>;
 type SelectList = readonly SelectValue[];
 
@@ -19,7 +20,7 @@ const ALIASED_SELECT_VALUE: unique symbol = Symbol("teta.alias");
 
 export type AliasedSelectValue<
   TName extends string,
-  TExpr extends ExprRef<unknown>,
+  TExpr extends SelectExpr,
 > = {
   readonly [ALIASED_SELECT_VALUE]: true;
   readonly name: TName;
@@ -28,7 +29,7 @@ export type AliasedSelectValue<
 
 export function alias<const TName extends string>(
   name: TName
-): <TExpr extends ExprRef<unknown>>(expr: TExpr) => AliasedSelectValue<TName, TExpr> {
+): <TExpr extends SelectExpr>(expr: TExpr) => AliasedSelectValue<TName, TExpr> {
   if (!name.trim()) {
     userError("SELECT_ALIAS_EMPTY", "alias name cannot be empty");
   }
@@ -45,12 +46,16 @@ type UnwrapAliased<TItem> =
 type SelectItemValue<TItem> =
   TItem extends AliasedSelectValue<string, infer TExpr> ? ExprValue<TExpr>
   : TItem extends ExprRef<unknown> ? ExprValue<TItem>
+  : TItem extends ColumnRef<unknown, string> ? ExprValue<TItem>
   : never;
 
-type ExprValue<TExpr> = TExpr extends ExprRef<infer TValue> ? TValue : never;
+type ExprValue<TExpr> =
+  TExpr extends ExprRef<infer TValue> ? TValue
+  : TExpr extends ColumnRef<infer TValue, string> ? TValue
+  : never;
 
 type SelectOutputKey<TItem, TFallback extends string> =
-  [TItem] extends [AliasedSelectValue<infer TName, ExprRef<unknown>>] ? TName
+  [TItem] extends [AliasedSelectValue<infer TName, SelectExpr>] ? TName
   : [TItem] extends [{ readonly kind: "column"; readonly name: infer TName extends string }] ? TName
   : TFallback;
 
@@ -153,7 +158,7 @@ function normalizeSelectItems(value: unknown): SelectList {
   return value as SelectList;
 }
 
-function isAliasedSelectValue(value: unknown): value is AliasedSelectValue<string, ExprRef<unknown>> {
+function isAliasedSelectValue(value: unknown): value is AliasedSelectValue<string, SelectExpr> {
   return value !== null
     && typeof value === "object"
     && (value as { readonly [ALIASED_SELECT_VALUE]?: unknown })[ALIASED_SELECT_VALUE] === true;

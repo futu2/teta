@@ -42,7 +42,6 @@ import {
   unnest,
   when,
 } from "../mod.ts";
-import { ExprRef } from "../src/edsl/expr.ts";
 import {
   createOrdersTable,
   createUsersPipelineTable,
@@ -384,46 +383,61 @@ describe("callback column api", () => {
   test("rejects malformed direct expression operands in comparison helpers at runtime", () => {
     const users = createUsersTable();
     const cases = [
-      new ExprRef(undefined as any),
-      new ExprRef(null as any),
-      new ExprRef("bad" as any),
-      new ExprRef({ kind: "bogus" } as any),
-      new ExprRef({ kind: "column" } as any),
-      new ExprRef({
-        kind: "binary",
-        op: "=",
-        left: null,
-        right: { kind: "literal", value: "Ada" },
-      } as any),
-      new ExprRef({
-        kind: "binary",
-        op: "=",
-        left: { kind: "bogus" },
-        right: { kind: "literal", value: "Ada" },
-      } as any),
-      new ExprRef({
-        kind: "binary",
-        op: "=",
-        left: { kind: "column" },
-        right: { kind: "literal", value: "Ada" },
-      } as any),
-      new ExprRef({ kind: "func", name: "BAD", args: null } as any),
-      new ExprRef({ kind: "case", whens: null, elseExpr: null } as any),
-      new ExprRef({ kind: "case", whens: [], elseExpr: 0 } as any),
-      new ExprRef({
-        kind: "window",
-        name: "BAD",
-        args: [],
-        partitionBy: null,
-        orderBy: [null],
-      } as any),
-      new ExprRef({
-        kind: "window",
-        name: "BAD",
-        args: [],
-        partitionBy: null,
-        orderBy: [{ direction: "SIDEWAYS", expr: { kind: "literal", value: "Ada" } }],
-      } as any),
+      { kind: "expr", node: { kind: "bogus", value: undefined } },
+      { kind: "expr", node: { kind: "bogus", value: null } },
+      { kind: "expr", node: { kind: "bogus", value: "bad" } },
+      { kind: "expr", node: { kind: "bogus" } },
+      { kind: "expr", node: { kind: "column" } },
+      {
+        kind: "expr",
+        node: {
+          kind: "binary",
+          op: "=",
+          left: null,
+          right: { kind: "literal", value: "Ada" },
+        },
+      },
+      {
+        kind: "expr",
+        node: {
+          kind: "binary",
+          op: "=",
+          left: { kind: "bogus" },
+          right: { kind: "literal", value: "Ada" },
+        },
+      },
+      {
+        kind: "expr",
+        node: {
+          kind: "binary",
+          op: "=",
+          left: { kind: "column" },
+          right: { kind: "literal", value: "Ada" },
+        },
+      },
+      { kind: "expr", node: { kind: "func", name: "BAD", args: null } },
+      { kind: "expr", node: { kind: "case", whens: null, elseExpr: null } },
+      { kind: "expr", node: { kind: "case", whens: [], elseExpr: 0 } },
+      {
+        kind: "expr",
+        node: {
+          kind: "window",
+          name: "BAD",
+          args: [],
+          partitionBy: null,
+          orderBy: [null],
+        },
+      },
+      {
+        kind: "expr",
+        node: {
+          kind: "window",
+          name: "BAD",
+          args: [],
+          partitionBy: null,
+          orderBy: [{ direction: "SIDEWAYS", expr: { kind: "literal", value: "Ada" } }],
+        },
+      },
     ];
 
     for (const malformed of cases) {

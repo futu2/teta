@@ -13,6 +13,7 @@ import {
 } from "../expr.ts";
 import type {
   ColumnRefs,
+  ExprLike,
   ExprRef,
   ProjectionResult,
   ProjectionShape,
@@ -229,7 +230,7 @@ export function resolveUnnestQuery<
   TGenerated extends Record<string, any>,
 >(
   leftQuery: QueryState<TLeft>,
-  collection: ExprRef<unknown>,
+  collection: ExprLike<unknown>,
   selection: { value: string; ordinality?: string },
   options: { outer?: boolean } = {}
 ): QueryDeriveInit<TLeft & TGenerated> {

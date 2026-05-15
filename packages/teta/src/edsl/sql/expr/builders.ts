@@ -7,6 +7,7 @@ import {
   toExprNode,
   type ExprInput,
   type ExprInputValue,
+  type ExprLike,
   type ExprRef,
 } from "./core.ts";
 import { group } from "./ops/aggregate.ts";
@@ -69,8 +70,8 @@ export function caseWhen<
 }
 
 export function mapShape<
-  T extends Record<string, ExprRef<unknown>>,
-  TOutput extends ExprRef<unknown>,
+  T extends Record<string, ExprLike<unknown>>,
+  TOutput extends ExprLike<unknown>,
 >(
   value: T,
   mapper: (value: T[keyof T]) => TOutput
@@ -82,11 +83,11 @@ export function mapShape<
   return result as { [K in keyof T]: TOutput };
 }
 
-export type GroupShapeResult<T extends Record<string, ExprRef<unknown>>> = {
-  [K in keyof T]: T[K] extends ExprRef<infer TValue> ? ExprRef<TValue> : never;
+export type GroupShapeResult<T extends Record<string, ExprLike<unknown>>> = {
+  [K in keyof T]: T[K] extends ExprLike<infer TValue> ? ExprRef<TValue> : never;
 };
 
-export function groupShape<T extends Record<string, ExprRef<unknown>>>(
+export function groupShape<T extends Record<string, ExprLike<unknown>>>(
   value: T
 ): GroupShapeResult<T> {
   const result: Partial<GroupShapeResult<T>> = {};

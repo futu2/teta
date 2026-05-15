@@ -36,8 +36,11 @@ type LiteralInput<T> = T extends number
   : T extends StringLiteralCompatible
     ? string
     : T;
-export type ExprInput<T> = ExprRef<T> | LiteralInput<T>;
-export type ExprInputValue<TInput> = TInput extends ExprRef<infer TValue> ? TValue : TInput;
+export type ExprInput<T> = ExprLike<T> | LiteralInput<T>;
+export type ExprInputValue<TInput> =
+  TInput extends ExprRef<infer TValue> ? TValue
+  : TInput extends ColumnRef<infer TValue, string> ? TValue
+  : TInput;
 export type ExprInputTuple<T extends readonly unknown[]> = {
   [K in keyof T]: ExprInput<T[K]>;
 };
@@ -67,16 +70,11 @@ export type Column<T, Name extends string> = Readonly<{
   name: Name;
 }>;
 
-export type ExprRef<T> = Expr<T> | Column<T, string>;
+export type ExprRef<T> = Expr<T>;
 
 export type ColumnRef<T, Name extends string> = Column<T, Name>;
 
-export const ExprRef = function <T>(this: unknown, node: ExprNode<T>): ExprRef<T> {
-  return exprOf<T>(node);
-} as {
-  new <T>(node: ExprNode<T>): ExprRef<T>;
-  <T>(node: ExprNode<T>): ExprRef<T>;
-};
+export type ExprLike<T> = ExprRef<T> | ColumnRef<T, string>;
 
 export type WindowExpr<T> = Readonly<{
   kind: "window_builder";
@@ -110,7 +108,7 @@ export function windowBuilderOf<T>(
   return Object.freeze({ kind: "window_builder" as const, name, args: [...args] });
 }
 
-export function isExpr(value: unknown): value is ExprRef<unknown> {
+export function isExpr(value: unknown): value is ExprLike<unknown> {
   if (!value || typeof value !== "object") return false;
   const candidate = value as { kind?: unknown; node?: unknown };
   return (
@@ -143,7 +141,7 @@ export type ColumnRefs<T extends Record<string, unknown>> = {
   [K in KnownStringKeyOf<T>]: ColumnRef<T[K], K>;
 };
 export type ExprRefs<T extends Record<string, unknown>> = {
-  [K in KnownStringKeyOf<T>]: ExprRef<T[K]>;
+  [K in KnownStringKeyOf<T>]: ExprLike<T[K]>;
 };
 
 export function lit<T extends Value>(value: T): ExprRef<T> {
