@@ -21,6 +21,7 @@ export {
   shouldAlias,
   unwrapGroupExpr,
   toExprNode,
+  isExprNode,
   toExprNodeList,
   toOrderItems,
   exprOf,

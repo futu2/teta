@@ -162,7 +162,7 @@ export function isColumn(value: unknown): value is Column<unknown, string> {
   return candidate.table === node.table && candidate.name === node.name;
 }
 
-function isExprNode(value: unknown): value is ExprNode<unknown> {
+export function isExprNode(value: unknown): value is ExprNode<unknown> {
   if (!value || typeof value !== "object") return false;
   const candidate = value as { kind?: unknown };
   switch (candidate.kind) {

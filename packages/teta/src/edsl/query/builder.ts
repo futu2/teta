@@ -16,7 +16,7 @@ import type {
   SqlRenderStrategy,
   SqlResult,
 } from "../sql/types.ts";
-import { createColumnRefs } from "../expr.ts";
+import { createColumnRefs, isExprNode } from "../expr.ts";
 import type {
   ColumnRefs,
   ExprLike,
@@ -1154,7 +1154,7 @@ function isStage(value: unknown): boolean {
         && (stage.groupBy === null || isExprNodeArray(stage.groupBy))
         && typeof stage.outputScopeId === "string";
     case "filter":
-      return isExprNodeLike(stage.predicate) && isProjectionItems(stage.projectAll);
+      return isExprNode(stage.predicate) && isProjectionItems(stage.projectAll);
     case "sort":
       return isOrderItems(stage.items) && isProjectionItems(stage.projectAll);
     case "take":
@@ -1164,13 +1164,13 @@ function isStage(value: unknown): boolean {
         && (stage.lateral === undefined || typeof stage.lateral === "boolean")
         && isJoinSource(stage.source)
         && (stage.as === null || typeof stage.as === "string")
-        && isExprNodeLike(stage.on)
+        && isExprNode(stage.on)
         && isProjectionItems(stage.projectAll)
         && typeof stage.rightScopeId === "string"
         && typeof stage.outputScopeId === "string";
     case "unnest":
       return (stage.mode === "inner" || stage.mode === "outer")
-        && isExprNodeLike(stage.expr)
+        && isExprNode(stage.expr)
         && typeof stage.withOrdinality === "boolean"
         && (stage.as === null || typeof stage.as === "string")
         && isStringArray(stage.columnNames)
@@ -1223,7 +1223,7 @@ function isProjectionItems(value: unknown): boolean {
 function isProjectionItem(value: unknown): boolean {
   if (!isPlainObject(value)) return false;
   const item = value as { expr?: unknown; as?: unknown };
-  return isExprNodeLike(item.expr) && (item.as === null || isSqlIdentifier(item.as));
+  return isExprNode(item.expr) && (item.as === null || isSqlIdentifier(item.as));
 }
 
 function isOrderItems(value: unknown): boolean {
@@ -1233,30 +1233,11 @@ function isOrderItems(value: unknown): boolean {
 function isOrderItem(value: unknown): boolean {
   if (!isPlainObject(value)) return false;
   const item = value as { expr?: unknown; direction?: unknown };
-  return isExprNodeLike(item.expr) && (item.direction === "ASC" || item.direction === "DESC");
+  return isExprNode(item.expr) && (item.direction === "ASC" || item.direction === "DESC");
 }
 
 function isExprNodeArray(value: unknown): boolean {
-  return Array.isArray(value) && value.every(isExprNodeLike);
-}
-
-function isExprNodeLike(value: unknown): boolean {
-  if (!isPlainObject(value)) return false;
-  const kind = (value as { kind?: unknown }).kind;
-  return kind === "column"
-    || kind === "literal"
-    || kind === "param"
-    || kind === "binary"
-    || kind === "unary"
-    || kind === "agg"
-    || kind === "group"
-    || kind === "func"
-    || kind === "list"
-    || kind === "array"
-    || kind === "extract"
-    || kind === "cast"
-    || kind === "window"
-    || kind === "case";
+  return Array.isArray(value) && value.every(isExprNode);
 }
 
 function isCteSpec(value: unknown): boolean {

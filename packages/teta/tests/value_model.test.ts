@@ -96,6 +96,25 @@ describe("tagged EDSL value model", () => {
     };
 
     expect(isQuery(forged)).toBe(false);
+
+    const malformedPredicateStages = [{
+      kind: "filter",
+      predicate: { kind: "literal" },
+      projectAll: [{
+        expr: users.columns.id.node,
+        as: { name: "id", quoted: false },
+      }],
+    }];
+    const forgedWithMalformedPredicate = {
+      ...users,
+      state: {
+        ...users.state,
+        stages: malformedPredicateStages,
+      },
+      stages: malformedPredicateStages,
+    };
+
+    expect(isQuery(forgedWithMalformedPredicate)).toBe(false);
   });
 
   test("freezes nested expression arrays", () => {
