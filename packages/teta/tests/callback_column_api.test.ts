@@ -16,6 +16,7 @@ import {
   filterLte,
   filterNe,
   fold,
+  param,
   gt,
   gte,
   isNotNull,
@@ -41,6 +42,7 @@ import {
   unnest,
   when,
 } from "../mod.ts";
+import { ExprRef } from "../src/edsl/expr.ts";
 import {
   createOrdersTable,
   createUsersPipelineTable,
@@ -391,6 +393,26 @@ describe("callback column api", () => {
       () => pipe(users, filterGt(internalCol("id") as any, 1)),
       "QUERY_FILTER_DEFERRED_OPERAND"
     );
+  });
+
+  test("rejects malformed direct expression operands in comparison helpers at runtime", () => {
+    const users = createUsersTable();
+    const cases = [
+      new ExprRef(undefined as any),
+      new ExprRef(null as any),
+      new ExprRef("bad" as any),
+      new ExprRef({ kind: "bogus" } as any),
+    ];
+
+    for (const malformed of cases) {
+      expectTetaUserError(
+        () => pipe(users, filterEq(malformed as any, "Ada")),
+        "QUERY_FILTER_INVALID_OPERAND"
+      );
+    }
+
+    const valid = pipe(users, filterEq(param("Ada"), "Ada"));
+    expect(toSql(valid, { dialect: "postgresql", format: "compact" })).toContain("$1 = 'Ada'");
   });
 
 });

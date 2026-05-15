@@ -342,12 +342,50 @@ function isCallableOperand<TColumns extends QueryColumns, T>(
 }
 
 function rejectDeferredOperand(operand: ExprInput<unknown>): void {
-  if (operand instanceof ExprRef && containsDeferredColumn(operand.node)) {
+  if (!(operand instanceof ExprRef)) return;
+  const node = validateOperandNode(operand.node);
+  if (containsDeferredColumn(node)) {
     userError(
       "QUERY_FILTER_DEFERRED_OPERAND",
       "Comparison filter helpers no longer accept deferred col() operands. Use a row callback instead."
     );
   }
+}
+
+function validateOperandNode(node: unknown): ExprNode<unknown> {
+  if (node === null || typeof node !== "object") {
+    invalidExpressionOperand();
+  }
+  const kind = (node as { kind?: unknown }).kind;
+  if (typeof kind !== "string" || !isKnownExprNodeKind(kind)) {
+    invalidExpressionOperand();
+  }
+  return node as ExprNode<unknown>;
+}
+
+function invalidExpressionOperand(): never {
+  userError(
+    "QUERY_FILTER_INVALID_OPERAND",
+    "Comparison filter helpers received an invalid expression operand."
+  );
+}
+
+function isKnownExprNodeKind(kind: string): boolean {
+  return kind === "column"
+    || kind === "literal"
+    || kind === "param"
+    || kind === "binary"
+    || kind === "unary"
+    || kind === "agg"
+    || kind === "group"
+    || kind === "func"
+    || kind === "list"
+    || kind === "array"
+    || kind === "extract"
+    || kind === "cast"
+    || kind === "window"
+    || kind === "case"
+    || kind === "deferred_column";
 }
 
 function containsDeferredColumn(node: ExprNode<unknown>): boolean {
