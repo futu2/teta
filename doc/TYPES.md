@@ -10,7 +10,7 @@ Teta's type story is easiest to understand in four layers:
 
 1. `t.*` declares column types for a schema.
 2. `table(...)` and `values(...)` produce `Query<TColumns>`.
-3. query callbacks receive typed expression refs and return new query shapes.
+3. query callbacks receive typed expression values and return new query shapes.
 4. render helpers use SQL-focused types such as `SqlOptions` and `SqlResult`.
 
 In practice, you usually let TypeScript infer everything and only annotate types at API boundaries or when extracting reusable helpers.
@@ -191,7 +191,7 @@ const usersByTag = pipe(users, unnest((user) => user.tags, {
 
 ## 3) `Expr<T>` is the expression type
 
-Inside query callbacks, columns are typed expression refs.
+Inside query callbacks, columns are typed expression values.
 
 - `user.id` is not a plain `number`; it is an expression with type `Expr<SqlInt>`
 - `user.email` is `Expr<string>`
