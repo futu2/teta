@@ -64,6 +64,12 @@ describe("tagged EDSL value model", () => {
   test("rejects malformed expression-like values", () => {
     expect(isExpr({ kind: "expr", node: null })).toBe(false);
     expect(isExpr({ kind: "expr", node: { kind: "bogus" } })).toBe(false);
+    expect(isColumn({
+      kind: "column",
+      node: { kind: "literal", value: 1 },
+      table: null,
+      name: "id",
+    })).toBe(false);
     expect(isExpr({ kind: "expr", node: { kind: "param", name: null } })).toBe(false);
     expect(isExpr({ kind: "expr", node: { kind: "param", value: undefined, name: null } })).toBe(false);
     expect(isExpr(param(null))).toBe(true);
@@ -73,6 +79,23 @@ describe("tagged EDSL value model", () => {
     expect(() => toExprNode({ kind: "expr", node: { kind: "bogus" } } as any)).toThrow(
       "Unsupported literal value"
     );
+  });
+
+  test("rejects malformed query-like values", () => {
+    const users = table("users", {
+      id: t.int(),
+    });
+    const malformedStages = [{ kind: "filter" }];
+    const forged = {
+      ...users,
+      state: {
+        ...users.state,
+        stages: malformedStages,
+      },
+      stages: malformedStages,
+    };
+
+    expect(isQuery(forged)).toBe(false);
   });
 
   test("freezes nested expression arrays", () => {

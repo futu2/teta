@@ -1119,15 +1119,144 @@ function isSource(value: unknown): boolean {
 
 function isStage(value: unknown): boolean {
   if (!isPlainObject(value)) return false;
+  const stage = value as {
+    kind?: unknown;
+    items?: unknown;
+    keys?: unknown;
+    groupBy?: unknown;
+    outputScopeId?: unknown;
+    predicate?: unknown;
+    projectAll?: unknown;
+    count?: unknown;
+    joinType?: unknown;
+    lateral?: unknown;
+    source?: unknown;
+    as?: unknown;
+    on?: unknown;
+    rightScopeId?: unknown;
+    mode?: unknown;
+    expr?: unknown;
+    withOrdinality?: unknown;
+    columnNames?: unknown;
+    columnIdentifiers?: unknown;
+    op?: unknown;
+    right?: unknown;
+  };
+  switch (stage.kind) {
+    case "map":
+      return isProjectionItems(stage.items)
+        && isStringArray(stage.keys)
+        && stage.groupBy === null
+        && typeof stage.outputScopeId === "string";
+    case "fold":
+      return isProjectionItems(stage.items)
+        && isStringArray(stage.keys)
+        && (stage.groupBy === null || isExprNodeArray(stage.groupBy))
+        && typeof stage.outputScopeId === "string";
+    case "filter":
+      return isExprNodeLike(stage.predicate) && isProjectionItems(stage.projectAll);
+    case "sort":
+      return isOrderItems(stage.items) && isProjectionItems(stage.projectAll);
+    case "take":
+      return typeof stage.count === "number" && isProjectionItems(stage.projectAll);
+    case "join":
+      return isJoinType(stage.joinType)
+        && (stage.lateral === undefined || typeof stage.lateral === "boolean")
+        && isJoinSource(stage.source)
+        && (stage.as === null || typeof stage.as === "string")
+        && isExprNodeLike(stage.on)
+        && isProjectionItems(stage.projectAll)
+        && typeof stage.rightScopeId === "string"
+        && typeof stage.outputScopeId === "string";
+    case "unnest":
+      return (stage.mode === "inner" || stage.mode === "outer")
+        && isExprNodeLike(stage.expr)
+        && typeof stage.withOrdinality === "boolean"
+        && (stage.as === null || typeof stage.as === "string")
+        && isStringArray(stage.columnNames)
+        && isColumnIdentifiers(stage.columnIdentifiers)
+        && isProjectionItems(stage.projectAll)
+        && typeof stage.rightScopeId === "string"
+        && typeof stage.outputScopeId === "string";
+    case "union":
+      return (stage.op === "union" || stage.op === "union all")
+        && isProjectionItems(stage.projectAll)
+        && isQuerySpec(stage.right)
+        && typeof stage.outputScopeId === "string";
+    default:
+      return false;
+  }
+}
+
+function isJoinType(value: unknown): boolean {
+  return value === "INNER" || value === "LEFT" || value === "RIGHT" || value === "FULL";
+}
+
+function isJoinSource(value: unknown): boolean {
+  if (!isPlainObject(value)) return false;
+  const source = value as {
+    kind?: unknown;
+    db?: unknown;
+    table?: unknown;
+    schema?: unknown;
+    columnIdentifiers?: unknown;
+    query?: unknown;
+    inheritedBindings?: unknown;
+  };
+  if (source.kind === "table") {
+    return (source.db === null || isSqlIdentifier(source.db))
+      && isSqlIdentifier(source.table)
+      && (source.schema === null || isSqlIdentifier(source.schema))
+      && isColumnIdentifiers(source.columnIdentifiers);
+  }
+  if (source.kind === "subquery") {
+    return isQuerySpec(source.query)
+      && (source.inheritedBindings === null || isPlainObject(source.inheritedBindings));
+  }
+  return false;
+}
+
+function isProjectionItems(value: unknown): boolean {
+  return Array.isArray(value) && value.every(isProjectionItem);
+}
+
+function isProjectionItem(value: unknown): boolean {
+  if (!isPlainObject(value)) return false;
+  const item = value as { expr?: unknown; as?: unknown };
+  return isExprNodeLike(item.expr) && (item.as === null || isSqlIdentifier(item.as));
+}
+
+function isOrderItems(value: unknown): boolean {
+  return Array.isArray(value) && value.every(isOrderItem);
+}
+
+function isOrderItem(value: unknown): boolean {
+  if (!isPlainObject(value)) return false;
+  const item = value as { expr?: unknown; direction?: unknown };
+  return isExprNodeLike(item.expr) && (item.direction === "ASC" || item.direction === "DESC");
+}
+
+function isExprNodeArray(value: unknown): boolean {
+  return Array.isArray(value) && value.every(isExprNodeLike);
+}
+
+function isExprNodeLike(value: unknown): boolean {
+  if (!isPlainObject(value)) return false;
   const kind = (value as { kind?: unknown }).kind;
-  return kind === "map"
-    || kind === "fold"
-    || kind === "filter"
-    || kind === "sort"
-    || kind === "take"
-    || kind === "join"
-    || kind === "unnest"
-    || kind === "union";
+  return kind === "column"
+    || kind === "literal"
+    || kind === "param"
+    || kind === "binary"
+    || kind === "unary"
+    || kind === "agg"
+    || kind === "group"
+    || kind === "func"
+    || kind === "list"
+    || kind === "array"
+    || kind === "extract"
+    || kind === "cast"
+    || kind === "window"
+    || kind === "case";
 }
 
 function isCteSpec(value: unknown): boolean {

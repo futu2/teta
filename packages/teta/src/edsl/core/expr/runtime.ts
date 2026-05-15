@@ -149,8 +149,17 @@ export function isExpr(value: unknown): value is ExprLike<unknown> {
 
 export function isColumn(value: unknown): value is Column<unknown, string> {
   if (!isExpr(value)) return false;
-  const candidate = value as { kind?: unknown; table?: unknown; name?: unknown };
-  return candidate.kind === "column" && typeof candidate.name === "string";
+  const candidate = value as {
+    kind?: unknown;
+    node?: unknown;
+    table?: unknown;
+    name?: unknown;
+  };
+  if (candidate.kind !== "column" || !isColumnNode(candidate.node as { kind?: unknown })) {
+    return false;
+  }
+  const node = candidate.node as { table: unknown; name: unknown };
+  return candidate.table === node.table && candidate.name === node.name;
 }
 
 function isExprNode(value: unknown): value is ExprNode<unknown> {
