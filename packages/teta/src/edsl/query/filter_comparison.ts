@@ -342,8 +342,17 @@ function isCallableOperand<TColumns extends QueryColumns, T>(
 }
 
 function validateOperand(operand: ExprInput<unknown>): void {
-  if (!isExpr(operand)) return;
+  if (!isExpr(operand)) {
+    if (isTaggedExpressionLike(operand)) invalidExpressionOperand();
+    return;
+  }
   validateOperandTree(operand.node);
+}
+
+function isTaggedExpressionLike(value: unknown): boolean {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as { kind?: unknown };
+  return candidate.kind === "expr" || candidate.kind === "column";
 }
 
 function validateOperandNode(node: unknown): ExprNode<unknown> {

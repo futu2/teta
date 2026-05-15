@@ -9,6 +9,7 @@ import {
   toSql,
   filter,
   pipe,
+  windowFn,
 } from "../mod.ts";
 import { toExprNode } from "../src/edsl/expr.ts";
 
@@ -20,6 +21,7 @@ describe("tagged EDSL value model", () => {
     expect(isExpr(expr)).toBe(true);
     expect(isColumn(expr)).toBe(false);
     expect(Object.isFrozen(expr)).toBe(true);
+    expect(Object.isFrozen(expr.node)).toBe(true);
     expect(toExprNode(expr)).toEqual({ kind: "literal", value: 1 });
   });
 
@@ -35,14 +37,27 @@ describe("tagged EDSL value model", () => {
     expect(isExpr(id)).toBe(true);
     expect(isColumn(id)).toBe(true);
     expect(Object.isFrozen(id)).toBe(true);
+    expect(Object.isFrozen(id.node)).toBe(true);
     expect(id.name).toBe("id");
   });
 
   test("rejects malformed expression-like values", () => {
     expect(isExpr({ kind: "expr", node: null })).toBe(false);
+    expect(isExpr({ kind: "expr", node: { kind: "bogus" } })).toBe(false);
     expect(() => toExprNode({ kind: "expr", node: null } as any)).toThrow(
       "Unsupported literal value"
     );
+    expect(() => toExprNode({ kind: "expr", node: { kind: "bogus" } } as any)).toThrow(
+      "Unsupported literal value"
+    );
+  });
+
+  test("freezes nested expression arrays", () => {
+    const window = windowFn("ROW_NUMBER", lit(1));
+
+    expect(Object.isFrozen(window)).toBe(true);
+    expect(Object.isFrozen(window.args)).toBe(true);
+    expect(Object.isFrozen(window.args[0])).toBe(true);
   });
 
   test("tagged expressions still render through query helpers", () => {

@@ -56,6 +56,31 @@ type NullableDateLike = SqlDate | SqlTimestamp | string | null;
 type NullableSqlNumber = SqlNumber | null;
 type NullableString = string | null;
 
+const BINARY_OPS = new Set<string>([
+  "=",
+  "!=",
+  "<",
+  "<=",
+  ">",
+  ">=",
+  "AND",
+  "OR",
+  "+",
+  "-",
+  "*",
+  "/",
+  "||",
+  "LIKE",
+  "IS",
+  "IS NOT",
+  "IN",
+  "NOT IN",
+  "BETWEEN",
+  "IS DISTINCT FROM",
+]);
+
+const AGG_FUNCS = new Set<string>(["COUNT", "SUM", "AVG", "MIN", "MAX", "ARRAY_AGG"]);
+
 export type Expr<T> = Readonly<{
   kind: "expr";
   node: ExprNode<T>;
@@ -86,16 +111,17 @@ export type WindowExpr<T> = Readonly<{
 export type WindowBuilder<T> = WindowExpr<T>;
 
 export function exprOf<T>(node: ExprNode<T>): Expr<T> {
-  return Object.freeze({ kind: "expr" as const, node });
+  return Object.freeze({ kind: "expr" as const, node: freezeExprNode(node) });
 }
 
 export function columnOf<T, Name extends string>(
   table: ColumnTableRef,
   name: Name
 ): Column<T, Name> {
+  const node = freezeExprNode({ kind: "column", table, name } as ExprNode<T>);
   return Object.freeze({
     kind: "column" as const,
-    node: { kind: "column", table, name } as ExprNode<T>,
+    node,
     table,
     name,
   });
@@ -105,7 +131,11 @@ export function windowBuilderOf<T>(
   name: string,
   args: readonly ExprNode<unknown>[]
 ): WindowBuilder<T> {
-  return Object.freeze({ kind: "window_builder" as const, name, args: [...args] });
+  return Object.freeze({
+    kind: "window_builder" as const,
+    name,
+    args: Object.freeze(args.map((arg) => freezeExprNode(arg))),
+  });
 }
 
 export function isExpr(value: unknown): value is ExprLike<unknown> {
@@ -126,7 +156,177 @@ export function isColumn(value: unknown): value is Column<unknown, string> {
 function isExprNode(value: unknown): value is ExprNode<unknown> {
   if (!value || typeof value !== "object") return false;
   const candidate = value as { kind?: unknown };
-  return typeof candidate.kind === "string";
+  switch (candidate.kind) {
+    case "column":
+      return isColumnNode(candidate);
+    case "literal":
+      return isLiteralNode(candidate);
+    case "param":
+      return isParamNode(candidate);
+    case "binary":
+      return isBinaryNode(candidate);
+    case "unary":
+      return isUnaryNode(candidate);
+    case "agg":
+      return isAggNode(candidate);
+    case "group":
+      return isGroupNode(candidate);
+    case "func":
+      return isFuncNode(candidate);
+    case "list":
+    case "array":
+      return isExprNodeArray((candidate as { items?: unknown }).items);
+    case "extract":
+      return isExtractNode(candidate);
+    case "cast":
+      return isCastNode(candidate);
+    case "window":
+      return isWindowNode(candidate);
+    case "case":
+      return isCaseNode(candidate);
+    default:
+      return false;
+  }
+}
+
+function freezeExprNode<T>(node: ExprNode<T>): ExprNode<T> {
+  if (!isExprNode(node)) {
+    userError("INVALID_LITERAL_VALUE", `Unsupported literal value: ${String(node)}`);
+  }
+  return deepFreeze(node);
+}
+
+function deepFreeze<T>(value: T, seen = new WeakSet<object>()): T {
+  if (!value || typeof value !== "object") return value;
+  const object = value as object;
+  if (seen.has(object)) return value;
+  seen.add(object);
+  for (const key of Reflect.ownKeys(object)) {
+    deepFreeze((value as Record<PropertyKey, unknown>)[key], seen);
+  }
+  return Object.freeze(value);
+}
+
+function isColumnNode(value: { kind?: unknown }): boolean {
+  const candidate = value as { table?: unknown; name?: unknown };
+  return (
+    (typeof candidate.table === "string" || candidate.table === null) &&
+    typeof candidate.name === "string"
+  );
+}
+
+function isLiteralNode(value: { kind?: unknown }): boolean {
+  return isLiteralValue((value as { value?: unknown }).value);
+}
+
+function isLiteralValue(value: unknown): value is Value {
+  const type = typeof value;
+  return value === null
+    || type === "string"
+    || type === "number"
+    || type === "boolean"
+    || type === "bigint"
+    || isTemporalLiteral(value);
+}
+
+function isParamNode(value: { kind?: unknown }): boolean {
+  const candidate = value as { name?: unknown };
+  return typeof candidate.name === "string" || candidate.name === null;
+}
+
+function isBinaryNode(value: { kind?: unknown }): boolean {
+  const candidate = value as { op?: unknown; left?: unknown; right?: unknown };
+  return (
+    typeof candidate.op === "string" &&
+    BINARY_OPS.has(candidate.op) &&
+    isExprNode(candidate.left) &&
+    isExprNode(candidate.right)
+  );
+}
+
+function isUnaryNode(value: { kind?: unknown }): boolean {
+  const candidate = value as { op?: unknown; expr?: unknown };
+  return candidate.op === "NOT" && isExprNode(candidate.expr);
+}
+
+function isAggNode(value: { kind?: unknown }): boolean {
+  const candidate = value as { name?: unknown; arg?: unknown; distinct?: unknown };
+  return (
+    typeof candidate.name === "string" &&
+    (AGG_FUNCS.has(candidate.name) || candidate.name.length > 0) &&
+    isExprNode(candidate.arg) &&
+    typeof candidate.distinct === "boolean"
+  );
+}
+
+function isGroupNode(value: { kind?: unknown }): boolean {
+  return isExprNode((value as { expr?: unknown }).expr);
+}
+
+function isFuncNode(value: { kind?: unknown }): boolean {
+  const candidate = value as { name?: unknown; args?: unknown };
+  return typeof candidate.name === "string" && isExprNodeArray(candidate.args);
+}
+
+function isExtractNode(value: { kind?: unknown }): boolean {
+  const candidate = value as { field?: unknown; source?: unknown };
+  return typeof candidate.field === "string" && isExprNode(candidate.source);
+}
+
+function isCastNode(value: { kind?: unknown }): boolean {
+  const candidate = value as { expr?: unknown; target?: unknown };
+  return typeof candidate.target === "string" && isExprNode(candidate.expr);
+}
+
+function isWindowNode(value: { kind?: unknown }): boolean {
+  const candidate = value as {
+    name?: unknown;
+    args?: unknown;
+    partitionBy?: unknown;
+    orderBy?: unknown;
+  };
+  return (
+    typeof candidate.name === "string" &&
+    isExprNodeArray(candidate.args) &&
+    isNullableExprNodeArray(candidate.partitionBy) &&
+    isNullableOrderItems(candidate.orderBy)
+  );
+}
+
+function isCaseNode(value: { kind?: unknown }): boolean {
+  const candidate = value as { whens?: unknown; elseExpr?: unknown };
+  return (
+    Array.isArray(candidate.whens) &&
+    candidate.whens.every(isCaseWhenNode) &&
+    (candidate.elseExpr === null || isExprNode(candidate.elseExpr))
+  );
+}
+
+function isCaseWhenNode(value: unknown): boolean {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as { when?: unknown; then?: unknown };
+  return isExprNode(candidate.when) && isExprNode(candidate.then);
+}
+
+function isExprNodeArray(value: unknown): value is ExprNode<unknown>[] {
+  return Array.isArray(value) && value.every(isExprNode);
+}
+
+function isNullableExprNodeArray(value: unknown): boolean {
+  return value === null || isExprNodeArray(value);
+}
+
+function isNullableOrderItems(value: unknown): boolean {
+  return value === null || (Array.isArray(value) && value.every(isOrderItem));
+}
+
+function isOrderItem(value: unknown): value is OrderItem {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as { expr?: unknown; direction?: unknown };
+  return (
+    isExprNode(candidate.expr) &&
+    (candidate.direction === "ASC" || candidate.direction === "DESC")
+  );
 }
 
 type KnownStringKeyOf<T extends Record<string, unknown>> = Extract<{
