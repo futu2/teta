@@ -51,6 +51,7 @@ describe("core entrypoint boundary", () => {
     const coreExprSource = await readFile(coreExprPath, "utf8");
     const exprSource = await readFile(exprPath, "utf8");
     const bannedCoreExports = [
+      "DeferredOrderItem",
       "DeferredExprDeps",
       "DeferredExprDepsForArgs",
       "DeferredExprDepsOf",

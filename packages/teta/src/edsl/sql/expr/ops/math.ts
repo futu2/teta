@@ -8,7 +8,7 @@ import {
   type ExprInputValue,
   type PropagateNull,
 } from "../core.ts";
-import type { DeferredExprDepsForArgs } from "../../../core/expr/runtime.ts";
+import type { DeferredExprDepsForArgs } from "../../../internal_deferred_expr.ts";
 import { userError } from "../../../errors.ts";
 
 type NullableSqlNumber = SqlNumber | number | bigint | null;

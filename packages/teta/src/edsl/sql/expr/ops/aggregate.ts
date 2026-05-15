@@ -11,7 +11,7 @@ import {
   type WindowBuilder,
   type WindowSpecInput,
 } from "../core.ts";
-import type { DeferredExprDepsForArgs } from "../../../core/expr/runtime.ts";
+import type { DeferredExprDepsForArgs } from "../../../internal_deferred_expr.ts";
 
 type NullableSqlNumber = SqlNumber | null;
 

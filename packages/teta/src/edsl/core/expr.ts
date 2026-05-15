@@ -21,7 +21,6 @@ export {
   toExprNodeList,
   toOrderItems,
   type ColumnRefs,
-  type DeferredOrderItem,
   type ExprInput,
   type ExprInputTuple,
   type ExprInputValue,

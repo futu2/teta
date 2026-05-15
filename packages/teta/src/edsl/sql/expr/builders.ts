@@ -11,7 +11,7 @@ import {
 import type {
   DeferredExprDeps,
   DeferredExprDepsForArgs,
-} from "../../core/expr/runtime.ts";
+} from "../../internal_deferred_expr.ts";
 import { group } from "./ops/aggregate.ts";
 
 export type CaseBranch<

@@ -7,7 +7,7 @@ import {
   type ExprRef,
   type PropagateNull,
 } from "../core.ts";
-import type { DeferredExprDepsForArgs } from "../../../core/expr/runtime.ts";
+import type { DeferredExprDepsForArgs } from "../../../internal_deferred_expr.ts";
 
 type NullableString = string | null;
 

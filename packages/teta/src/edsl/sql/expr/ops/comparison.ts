@@ -9,7 +9,7 @@ import {
 import type {
   DeferredExprDepsForArgs,
   DeferredOrderItem,
-} from "../../../core/expr/runtime.ts";
+} from "../../../internal_deferred_expr.ts";
 import { userError } from "../../../errors.ts";
 
 type ComparableInput = SqlNumber | number | bigint | SqlDate | SqlTimestamp | null;

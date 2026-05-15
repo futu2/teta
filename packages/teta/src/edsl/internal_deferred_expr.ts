@@ -12,5 +12,6 @@ export type {
   DeferredExprDepsForArgs,
   DeferredExprDepsOf,
   DeferredExprDepScope,
+  DeferredOrderItem,
   EmptyDeferredExprDeps,
 } from "./core/expr/runtime.ts";
