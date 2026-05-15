@@ -1,12 +1,13 @@
 import type { CaseWhenNode, ExprNode } from "../../core/types.ts";
 import type { NormalizeExpressionLiteral } from "../types.ts";
 import {
-  ExprRef,
+  exprOf,
   fn,
   lit,
   toExprNode,
   type ExprInput,
   type ExprInputValue,
+  type ExprRef,
 } from "./core.ts";
 import { group } from "./ops/aggregate.ts";
 
@@ -116,7 +117,7 @@ function buildCaseExpr<T>(
   whens: CaseWhenNode[],
   elseExpr: ExprNode<unknown> | null
 ): ExprRef<T | null> {
-  return new ExprRef<T | null>({
+  return exprOf<T | null>({
     kind: "case",
     whens,
     elseExpr,

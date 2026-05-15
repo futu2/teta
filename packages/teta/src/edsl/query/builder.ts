@@ -16,10 +16,10 @@ import type {
   SqlRenderStrategy,
   SqlResult,
 } from "../sql/types.ts";
-import { ExprRef } from "../expr.ts";
 import { createColumnRefs } from "../expr.ts";
 import type {
   ColumnRefs,
+  ExprRef,
   ExprRefs,
   ProjectionResult,
   ProjectionShape,

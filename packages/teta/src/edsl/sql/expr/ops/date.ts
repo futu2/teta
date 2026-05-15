@@ -6,7 +6,15 @@ import type {
   SqlNumber,
   SqlTimestamp,
 } from "../../types.ts";
-import { ExprRef, fn, funcExpr, toExprNode, type ExprInput, type PropagateNull } from "../core.ts";
+import {
+  exprOf,
+  fn,
+  funcExpr,
+  toExprNode,
+  type ExprInput,
+  type ExprRef,
+  type PropagateNull,
+} from "../core.ts";
 import { userError } from "../../../errors.ts";
 import { cast } from "./math.ts";
 
@@ -24,14 +32,14 @@ export function currentTimestamp(): ExprRef<SqlTimestamp> {
 }
 
 export function dateLiteral(value: string): ExprRef<SqlDate> {
-  return new ExprRef<SqlDate>({
+  return exprOf<SqlDate>({
     kind: "literal",
     value: { kind: "date_literal", value } as DateLiteral,
   });
 }
 
 export function timestampLiteral(value: string): ExprRef<SqlTimestamp> {
-  return new ExprRef<SqlTimestamp>({
+  return exprOf<SqlTimestamp>({
     kind: "literal",
     value: { kind: "timestamp_literal", value } as TimestampLiteral,
   });
@@ -41,7 +49,7 @@ export function extract<TValue>(value: ExprInput<TValue>, field: string): ExprRe
   if (!field.trim()) {
     userError("INVALID_FUNCTION_NAME", "extract requires a field");
   }
-  return new ExprRef<PropagateNull<TValue, SqlFloat>>({
+  return exprOf<PropagateNull<TValue, SqlFloat>>({
     kind: "extract",
     field,
     source: toExprNode(value),

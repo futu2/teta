@@ -5,7 +5,7 @@ import type {
   ColumnRefs,
   ExprInput,
 } from "../expr.ts";
-import { ExprRef, eq, ne, gt, gte, lt, lte } from "../expr.ts";
+import { eq, gt, gte, isExpr, lt, lte, ne, type ExprRef } from "../expr.ts";
 import type { NormalizeNumericLiteral, SqlDate, SqlNumber, SqlTimestamp } from "../sql/types.ts";
 type QueryColumns = Record<string, any>;
 import { userError } from "../errors.ts";
@@ -342,7 +342,7 @@ function isCallableOperand<TColumns extends QueryColumns, T>(
 }
 
 function validateOperand(operand: ExprInput<unknown>): void {
-  if (!(operand instanceof ExprRef)) return;
+  if (!isExpr(operand)) return;
   validateOperandTree(operand.node);
 }
 

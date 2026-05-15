@@ -191,6 +191,12 @@ export type QueryStep<TInputColumns extends Record<string, any>, TOutputColumns 
 export const ExprRef: typeof import("./src/edsl/expr.ts").ExprRef = expr.ExprRef;
 export type ExprRef<T> = import("./src/edsl/expr.ts").ExprRef<T>;
 
+/** Returns true for tagged SQL expression values. */
+export const isExpr: typeof import("./src/edsl/expr.ts").isExpr = expr.isExpr;
+
+/** Returns true for tagged SQL column expression values. */
+export const isColumn: typeof import("./src/edsl/expr.ts").isColumn = expr.isColumn;
+
 /** Builds an equality predicate. */
 export const eq: typeof import("./src/edsl/expr.ts").eq = expr.eq;
 

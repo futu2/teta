@@ -53,21 +53,82 @@ type NullableDateLike = SqlDate | SqlTimestamp | string | null;
 type NullableSqlNumber = SqlNumber | null;
 type NullableString = string | null;
 
-export class ExprRef<T> {
-  constructor(readonly node: ExprNode<T>) {}
-}
+export type Expr<T> = Readonly<{
+  kind: "expr";
+  node: ExprNode<T>;
+}>;
 
 export type ColumnTableRef = ScopeId | typeof OUTER_TABLE_ALIAS | null;
 
-export class ColumnRef<T, Name extends string> extends ExprRef<T> {
-  readonly table: ColumnTableRef;
-  readonly name: Name;
+export type Column<T, Name extends string> = Readonly<{
+  kind: "column";
+  node: ExprNode<T>;
+  table: ColumnTableRef;
+  name: Name;
+}>;
 
-  constructor(table: ColumnTableRef, name: Name) {
-    super({ kind: "column", table, name });
-    this.table = table;
-    this.name = name;
-  }
+export type ExprRef<T> = Expr<T> | Column<T, string>;
+
+export type ColumnRef<T, Name extends string> = Column<T, Name>;
+
+export const ExprRef = function <T>(this: unknown, node: ExprNode<T>): ExprRef<T> {
+  return exprOf<T>(node);
+} as {
+  new <T>(node: ExprNode<T>): ExprRef<T>;
+  <T>(node: ExprNode<T>): ExprRef<T>;
+};
+
+export type WindowExpr<T> = Readonly<{
+  kind: "window_builder";
+  name: string;
+  args: readonly ExprNode<unknown>[];
+  readonly __valueType?: T;
+}>;
+
+export type WindowBuilder<T> = WindowExpr<T>;
+
+export function exprOf<T>(node: ExprNode<T>): Expr<T> {
+  return Object.freeze({ kind: "expr" as const, node });
+}
+
+export function columnOf<T, Name extends string>(
+  table: ColumnTableRef,
+  name: Name
+): Column<T, Name> {
+  return Object.freeze({
+    kind: "column" as const,
+    node: { kind: "column", table, name } as ExprNode<T>,
+    table,
+    name,
+  });
+}
+
+export function windowBuilderOf<T>(
+  name: string,
+  args: readonly ExprNode<unknown>[]
+): WindowBuilder<T> {
+  return Object.freeze({ kind: "window_builder" as const, name, args: [...args] });
+}
+
+export function isExpr(value: unknown): value is ExprRef<unknown> {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as { kind?: unknown; node?: unknown };
+  return (
+    (candidate.kind === "expr" || candidate.kind === "column") &&
+    isExprNode(candidate.node)
+  );
+}
+
+export function isColumn(value: unknown): value is Column<unknown, string> {
+  if (!isExpr(value)) return false;
+  const candidate = value as { kind?: unknown; table?: unknown; name?: unknown };
+  return candidate.kind === "column" && typeof candidate.name === "string";
+}
+
+function isExprNode(value: unknown): value is ExprNode<unknown> {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as { kind?: unknown };
+  return typeof candidate.kind === "string";
 }
 
 type KnownStringKeyOf<T extends Record<string, unknown>> = Extract<{
@@ -86,7 +147,7 @@ export type ExprRefs<T extends Record<string, unknown>> = {
 };
 
 export function lit<T extends Value>(value: T): ExprRef<T> {
-  return new ExprRef<T>({ kind: "literal", value });
+  return exprOf<T>({ kind: "literal", value });
 }
 
 export function param<T>(value: T, name: string | null = null): ExprRef<T> {
@@ -96,11 +157,11 @@ export function param<T>(value: T, name: string | null = null): ExprRef<T> {
   if (name !== null && !name.trim()) {
     userError("INVALID_PARAM_NAME", "param name cannot be empty");
   }
-  return new ExprRef<T>({ kind: "param", value, name });
+  return exprOf<T>({ kind: "param", value, name });
 }
 
 export function array<T = unknown>(...values: ExprInput<T>[]): ExprRef<T[]> {
-  return new ExprRef<T[]>({
+  return exprOf<T[]>({
     kind: "array",
     items: values.map((value) => toExprNode(value)),
   });
@@ -126,19 +187,19 @@ export function windowFn<T = unknown>(
   if (!name.trim()) {
     userError("INVALID_WINDOW_FUNCTION_NAME", "windowFn requires a function name");
   }
-  return new WindowBuilder<T>(name, args.map((arg) => toExprNode(arg)));
+  return windowBuilderOf<T>(name, args.map((arg) => toExprNode(arg)));
 }
 
 export function wrapExpr<T>(value: ExprInput<T>): ExprRef<T> {
-  if (value instanceof ExprRef) return value;
-  return new ExprRef<T>(toExprNode(value));
+  if (isExpr(value)) return value as ExprRef<T>;
+  return exprOf<T>(toExprNode(value));
 }
 
 export function aggregateExpr<T, TArg extends ExprInput<unknown>>(
   name: AggFunc,
   arg: TArg
 ): ExprRef<T> {
-  return new ExprRef<T>({
+  return exprOf<T>({
     kind: "agg",
     name,
     arg: toExprNode(arg as ExprInput<unknown>),
@@ -147,11 +208,11 @@ export function aggregateExpr<T, TArg extends ExprInput<unknown>>(
 }
 
 export function windowExpr<T>(name: string, ...args: ExprInput<unknown>[]): WindowBuilder<T> {
-  return new WindowBuilder<T>(name, args.map((arg) => toExprNode(arg)));
+  return windowBuilderOf<T>(name, args.map((arg) => toExprNode(arg)));
 }
 
 export function toExprNode<T>(value: ExprInput<T>): ExprNode<T> {
-  if (value instanceof ExprRef) return value.node;
+  if (isExpr(value)) return value.node as ExprNode<T>;
   if (value === undefined) {
     userError("INVALID_LITERAL_VALUE", "Unsupported literal value: undefined");
   }
@@ -188,19 +249,13 @@ export function toOrderItems(input?: OrderItem | OrderItem[]): OrderItem[] | nul
   return Array.isArray(input) ? input : [input];
 }
 
-export class WindowBuilder<T> {
-  declare readonly __valueType?: T;
-
-  constructor(readonly name: string, readonly args: ExprNode<unknown>[]) {}
-}
-
 export function over<T>(window: WindowBuilder<T>, spec: WindowSpecInput = {}): ExprRef<T> {
   const partitionBy = toExprNodeList(spec.partitionBy);
   const orderBy = toOrderItems(spec.orderBy);
-  return new ExprRef<T>({
+  return exprOf<T>({
     kind: "window",
     name: window.name,
-    args: window.args,
+    args: [...window.args],
     partitionBy,
     orderBy,
   });
@@ -211,9 +266,9 @@ export function binaryExpr(
   left: ExprNode<unknown>,
   right: ExprNode<unknown>
 ): ExprRef<unknown> {
-  return new ExprRef<unknown>({ kind: "binary", op, left, right });
+  return exprOf<unknown>({ kind: "binary", op, left, right });
 }
 
 export function funcExpr<T>(name: string, args: ExprNode<unknown>[]): ExprRef<T> {
-  return new ExprRef<T>({ kind: "func", name, args });
+  return exprOf<T>({ kind: "func", name, args });
 }

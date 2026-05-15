@@ -1,11 +1,12 @@
 import type { NormalizeNumericLiteral, SqlFloat, SqlInt, SqlNumber } from "../../types.ts";
 import {
-  ExprRef,
   binaryExpr,
+  exprOf,
   fn,
   toExprNode,
   type ExprInput,
   type ExprInputValue,
+  type ExprRef,
   type PropagateNull,
 } from "../core.ts";
 import { userError } from "../../../errors.ts";
@@ -152,7 +153,7 @@ export function cast<TTarget = unknown, TInput extends ExprInput<unknown> = Expr
   if (!target.trim()) {
     userError("INVALID_FUNCTION_NAME", "cast requires a target type");
   }
-  return new ExprRef<TTarget>({
+  return exprOf<TTarget>({
     kind: "cast",
     expr: toExprNode(value as ExprInput<unknown>),
     target,

@@ -1,6 +1,10 @@
+export type {
+  ColumnRef,
+  WindowBuilder,
+} from "./expr/core.ts";
+
 export {
   ExprRef,
-  ColumnRef,
   lit,
   param,
   array,
@@ -11,7 +15,6 @@ export {
   windowExpr,
   binaryExpr,
   funcExpr,
-  WindowBuilder,
   over,
   containsGroup,
   dedupeExprs,
@@ -20,7 +23,13 @@ export {
   toExprNode,
   toExprNodeList,
   toOrderItems,
+  exprOf,
+  columnOf,
+  windowBuilderOf,
+  isExpr,
+  isColumn,
   type ColumnRefs,
+  type Expr,
   type ExprInput,
   type ExprInputTuple,
   type ExprInputValue,
@@ -32,6 +41,8 @@ export {
   type ProjectionShape,
   type ProjectionValue,
   type ProjectionValueResult,
+  type Column,
   type WindowSpecInput,
+  type WindowExpr,
 } from "./expr/core.ts";
 export { createColumnRefs, mergeColumnRefs, mergeColumnNames, projectAllItems } from "./expr/columns.ts";

@@ -1,11 +1,12 @@
 import type { SqlDate, SqlNumber, SqlTimestamp } from "../../types.ts";
 import type { OrderItem } from "../../../core/types.ts";
 import {
-  ExprRef,
   binaryExpr,
+  exprOf,
   toExprNode,
   wrapExpr,
   type ExprInput,
+  type ExprRef,
 } from "../core.ts";
 import { userError } from "../../../errors.ts";
 
@@ -185,13 +186,13 @@ function booleanChain(
       right: toExprNode(value as BooleanInput),
     };
   }
-  return new ExprRef<boolean>(current);
+  return exprOf<boolean>(current);
 }
 
 export function not<TValue extends ExprInput<boolean | null>>(
   value: TValue
 ): ExprRef<boolean> {
-  return new ExprRef<boolean>({
+  return exprOf<boolean>({
     kind: "unary",
     op: "NOT",
     expr: toExprNode(value as ExprInput<boolean | null>),

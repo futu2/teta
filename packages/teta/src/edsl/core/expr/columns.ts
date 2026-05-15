@@ -1,9 +1,10 @@
 import type { ScopeId, ProjectionItem, SqlIdentifier } from "../types.ts";
 import {
-  ColumnRef,
-  ExprRef,
+  columnOf,
+  isExpr,
   shouldAlias,
   toExprNode,
+  type ColumnRef,
   type ColumnRefs,
   type ExprRefs,
 } from "./core.ts";
@@ -18,7 +19,7 @@ export function createColumnRefs<TColumns extends Record<string, unknown>>(
   const getColumn = (name: string) => {
     const existing = cache.get(name);
     if (existing) return existing;
-    const next = new ColumnRef<unknown, string>(tableName, name);
+    const next = columnOf<unknown, string>(tableName, name);
     cache.set(name, next);
     return next;
   };
@@ -65,8 +66,8 @@ export function mergeColumnRefs<
     const rightHas = rightKeys.includes(prop);
     const leftValue = Reflect.get(left, prop);
     const rightValue = Reflect.get(right, prop);
-    const leftRef = leftValue instanceof ExprRef ? leftValue : undefined;
-    const rightRef = rightValue instanceof ExprRef ? rightValue : undefined;
+    const leftRef = isExpr(leftValue) ? leftValue : undefined;
+    const rightRef = isExpr(rightValue) ? rightValue : undefined;
     if (rightHas && !leftHas) return rightRef;
     return leftRef ?? rightRef;
   };
@@ -126,7 +127,7 @@ export function projectAllItems<TColumns extends Record<string, unknown>>(
 ): ProjectionItem[] {
   return columnNames.map((name) => {
     const value = Reflect.get(columns, name);
-    if (!(value instanceof ExprRef)) {
+    if (!isExpr(value)) {
       internalError("INTERNAL_UNKNOWN_COLUMN_REF", `Unknown column ref: ${name}`);
     }
     const ref = value;

@@ -1,8 +1,9 @@
 import {
-  ColumnRef,
-  ExprRef,
+  isExpr,
   toExprNode,
+  type ColumnRef,
   type ColumnRefs,
+  type ExprRef,
 } from "../expr.ts";
 import { userError } from "../errors.ts";
 import { Query, createQuery } from "./builder.ts";
@@ -49,13 +50,13 @@ type SelectItemValue<TItem> =
 type ExprValue<TExpr> = TExpr extends ExprRef<infer TValue> ? TValue : never;
 
 type SelectOutputKey<TItem, TFallback extends string> =
-  TItem extends AliasedSelectValue<infer TName, ExprRef<unknown>> ? TName
-  : TItem extends ColumnRef<unknown, infer TName> ? TName
+  [TItem] extends [AliasedSelectValue<infer TName, ExprRef<unknown>>] ? TName
+  : [TItem] extends [{ readonly kind: "column"; readonly name: infer TName extends string }] ? TName
   : TFallback;
 
 type Increment<T extends readonly unknown[]> = [...T, unknown];
 type IsPlainSelectedColumn<TItem> =
-  UnwrapAliased<TItem> extends ColumnRef<unknown, string> ? true
+  [UnwrapAliased<TItem>] extends [{ readonly kind: "column"; readonly name: string }] ? true
   : false;
 
 type SelectOutputKeys<
@@ -145,7 +146,7 @@ function normalizeSelectItems(value: unknown): SelectList {
   }
   for (const item of value) {
     const expr = isAliasedSelectValue(item) ? item.expr : item;
-    if (!(expr instanceof ExprRef)) {
+    if (!isExpr(expr)) {
       userError("SELECT_INVALID_SELECTION", "select() items must be expressions");
     }
   }

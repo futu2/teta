@@ -1,12 +1,13 @@
 import type { SqlFloat, SqlInt, SqlNumber } from "../../types.ts";
 import {
-  ExprRef,
   aggregateExpr,
+  exprOf,
   over,
   toExprNode,
   windowExpr,
   type ExprInput,
   type ExprInputValue,
+  type ExprRef,
   type PropagateNull,
   type WindowBuilder,
   type WindowSpecInput,
@@ -17,7 +18,7 @@ type NullableSqlNumber = SqlNumber | null;
 export function group<TInput extends ExprInput<unknown>>(
   value: TInput
 ): ExprRef<ExprInputValue<TInput>> {
-  return new ExprRef<ExprInputValue<TInput>>({
+  return exprOf<ExprInputValue<TInput>>({
     kind: "group",
     expr: toExprNode(value as ExprInput<unknown>) as any,
   });
