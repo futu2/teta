@@ -4,11 +4,8 @@ import {
   add,
   alias,
   and,
-  asc,
   caseWhen,
   coalesce,
-  count,
-  desc,
   eq,
   extend,
   filter,
@@ -20,7 +17,6 @@ import {
   filterNe,
   fold,
   gt,
-  group,
   gte,
   isNotNull,
   leftJoin,
@@ -30,6 +26,7 @@ import {
   map,
   mul,
   ne,
+  onEq,
   or,
   drop,
   pick,
@@ -38,10 +35,8 @@ import {
   replace,
   select,
   sort,
-  sum,
   t,
   table,
-  take,
   toSql,
   unnest,
   when,
@@ -68,36 +63,6 @@ describe("callback column api", () => {
     expect(typeof pick("id")).toBe("function");
     expect(typeof drop("id")).toBe("function");
     expect(typeof rename((key) => key)).toBe("function");
-  });
-
-  test("matches callback SQL for filter, map, sort, and take", () => {
-    const users = createUsersPipelineTable();
-    const expected = pipe(
-      users,
-      filter((user) => and(eq(user.active, true), gte(user.age, 18))),
-      map((user) => ({
-        id: user.id,
-        name: coalesce(replace(user.name, " ", "_"), "unknown"),
-        age: user.age,
-      })),
-      sort((row) => [asc(row.name), desc(row.id)]),
-      take(20)
-    );
-    const actual = pipe(
-      users,
-      filter((user) => and(eq(user.active, true), gte(user.age, 18))),
-      map((user) => ({
-        id: user.id,
-        name: coalesce(replace(user.name, " ", "_"), "unknown"),
-        age: user.age,
-      })),
-      sort((row) => [asc(row.name), desc(row.id)]),
-      take(20)
-    );
-
-    expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
-      toSql(expected, { dialect: "postgresql", format: "compact" })
-    );
   });
 
   test("supports variadic and for callback filters", () => {
@@ -203,36 +168,6 @@ describe("callback column api", () => {
     }
   });
 
-  test("matches callback SQL for typed filter, map, sort, and take", () => {
-    const users = createUsersPipelineTable();
-    const expected = pipe(
-      users,
-      filter((user) => and(eq(user.active, true), gte(user.age, 18))),
-      map((user) => ({
-        id: user.id,
-        name: coalesce(replace(user.name, " ", "_"), "unknown"),
-        age: user.age,
-      })),
-      sort((row) => [asc(row.name), desc(row.id)]),
-      take(20)
-    );
-    const actual = pipe(
-      users,
-      filter((user) => and(eq(user.active, true), gte(user.age, 18))),
-      map((user) => ({
-        id: user.id,
-        name: coalesce(replace(user.name, " ", "_"), "unknown"),
-        age: user.age,
-      })),
-      sort((row) => [asc(row.name), desc(row.id)]),
-      take(20)
-    );
-
-    expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
-      toSql(expected, { dialect: "postgresql", format: "compact" })
-    );
-  });
-
   test("supports select with callback column lists", () => {
     const users = createUsersPipelineTable();
     const expected = pipe(users, map((user) => ({
@@ -240,23 +175,6 @@ describe("callback column api", () => {
       name: user.name,
     })));
     const actual = pipe(users, select((user) => [user.id, user.name]));
-
-    expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
-      toSql(expected, { dialect: "postgresql", format: "compact" })
-    );
-  });
-
-  test("supports select with callback column lists after map", () => {
-    const users = createUsersPipelineTable();
-    const mapped = pipe(users, map((user) => ({
-      id: user.id,
-      name: user.name,
-    })));
-    const expected = pipe(mapped, map((user) => ({
-      id: user.id,
-      name: user.name,
-    })));
-    const actual = pipe(mapped, select((user) => [user.id, user.name]));
 
     expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
       toSql(expected, { dialect: "postgresql", format: "compact" })
@@ -404,69 +322,7 @@ describe("callback column api", () => {
     );
   });
 
-  test("matches callback SQL for fold aggregations", () => {
-    const orders = createOrdersTable();
-    const expected = pipe(orders, fold((order) => ({
-      user_id: group(order.user_id),
-      order_count: count(order.order_id),
-      total_spend: sum(order.total),
-    })));
-    const actual = pipe(orders, fold((order) => ({
-      user_id: group(order.user_id),
-      order_count: count(order.order_id),
-      total_spend: sum(order.total),
-    })));
-
-    expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
-      toSql(expected, { dialect: "postgresql", format: "compact" })
-    );
-  });
-
-  test("matches callback SQL for typed fold aggregations", () => {
-    const orders = createOrdersTable();
-    const expected = pipe(orders, fold((order) => ({
-      user_id: group(order.user_id),
-      order_count: count(order.order_id),
-      total_spend: sum(order.total),
-    })));
-    const actual = pipe(orders, fold((order) => ({
-      user_id: group(order.user_id),
-      order_count: count(order.order_id),
-      total_spend: sum(order.total),
-    })));
-
-    expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
-      toSql(expected, { dialect: "postgresql", format: "compact" })
-    );
-  });
-
-  test("matches callback SQL for unnest", () => {
-    const sessions = table("sessions", {
-      id: t.int(),
-      tags: t.array(t.string()),
-    });
-    const expected = pipe(sessions, unnest((session) => session.tags, { value: "tag" }));
-    const actual = pipe(sessions, unnest((session) => session.tags, { value: "tag" }));
-
-    expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
-      toSql(expected, { dialect: "postgresql", format: "compact" })
-    );
-  });
-
-  test("matches callback SQL for typed unnest", () => {
-    const sessions = table("sessions", {
-      id: t.int(),
-      tags: t.array(t.string()),
-    });
-    const expected = pipe(sessions, unnest((session) => session.tags, { value: "tag" }));
-    const actual = pipe(sessions, unnest((session) => session.tags, { value: "tag" }));
-
-    expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
-      toSql(expected, { dialect: "postgresql", format: "compact" })
-    );
-  });
-
-  test("matches callback SQL for join predicates", () => {
+  test("matches callback SQL for onEq join predicates", () => {
     const users = createUsersTable();
     const orders = createOrdersTable();
     const expected = pipe(
@@ -484,108 +340,12 @@ describe("callback column api", () => {
       users,
       leftJoin(
         orders,
-        (user, order) => eq(user.id, order.user_id)
+        onEq({ id: "user_id" })
       ),
       map((row) => ({
         user_id: row.id,
         total: row.total,
       }))
-    );
-
-    expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
-      toSql(expected, { dialect: "postgresql", format: "compact" })
-    );
-  });
-
-  test("supports callback join merge shapes", () => {
-    const users = createUsersTable();
-    const orders = createOrdersTable();
-    const expected = pipe(
-      users,
-      leftJoin(
-        orders,
-        (user, order) => eq(user.id, order.user_id),
-        (user, order) => ({
-          user_id: user.id,
-          order_total: order.total,
-        })
-      )
-    );
-    const actual = pipe(
-      users,
-      leftJoin(
-        orders,
-        (user, order) => eq(user.id, order.user_id),
-        (user, order) => ({
-          user_id: user.id,
-          order_total: order.total,
-        })
-      )
-    );
-
-    expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
-      toSql(expected, { dialect: "postgresql", format: "compact" })
-    );
-  });
-
-  test("matches callback SQL for typed join merge callbacks", () => {
-    const users = createUsersTable();
-    const orders = createOrdersTable();
-    const expected = pipe(
-      users,
-      leftJoin(
-        orders,
-        (user, order) => eq(user.id, order.user_id),
-        (user, order) => ({
-          user_id: user.id,
-          order_total: order.total,
-        })
-      )
-    );
-    const actual = pipe(
-      users,
-      leftJoin(
-        orders,
-        (user, order) => eq(user.id, order.user_id),
-        (user, order) => ({
-          user_id: user.id,
-          order_total: order.total,
-        })
-      )
-    );
-
-    expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
-      toSql(expected, { dialect: "postgresql", format: "compact" })
-    );
-  });
-
-  test("supports option-named callback join merge output keys", () => {
-    const users = table("users", {
-      id: t.int(),
-      type: t.string(),
-    });
-    const orders = createOrdersTable();
-    const expected = pipe(
-      users,
-      join(
-        orders,
-        (user, order) => eq(user.id, order.user_id),
-        (user, order) => ({
-          type: user.type,
-          lateral: order.total,
-        })
-      )
-    );
-    const actual = pipe(
-      users,
-      join(
-        orders,
-        (user, order) => eq(user.id, order.user_id),
-        (user, order) => ({
-          type: user.type,
-          lateral: order.total,
-        })
-      )
     );
 
     expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(

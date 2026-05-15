@@ -118,7 +118,7 @@ const mappedJoin = pipe(users, leftJoin(
     mappedProfileOnEq,
     prefixOverlapLeft("left_")
 ));
-const colMappedJoin = pipe(users, leftJoin(
+const callbackMergedJoin = pipe(users, leftJoin(
     orders,
     (user, order) => eq(user.id, order.user_id),
     (user, order) => ({
@@ -131,16 +131,7 @@ const projectedUsers = pipe(filteredUsers, map((user: typeof filteredUsers.colum
     id: user.id,
     name: upper(user.name),
 })));
-const projectedUsersDeferred = pipe(filteredUsers, map((user) => ({
-    id: user.id,
-    name: upper(user.name),
-})));
-const projectedUsersCol = pipe(filteredUsers, map((user) => ({
-    id: user.id,
-    name: upper(user.name),
-})));
 const selectedUsers = pipe(users, select((user) => [user.id, user.name]));
-const deferredSelectedUsers = pipe(users, select((user) => [user.id, user.name]));
 const aliasedSelectedUsers = pipe(users, select((user) => [
     pipe(user.id, alias("old_id")),
     pipe(upper(user.name), alias("name_upper")),
@@ -151,7 +142,7 @@ const generatedSelectedUsers = pipe(users, select((user) => [
     user.name,
     add(user.id, 2),
 ]));
-const deferredGeneratedSelectedUsers = pipe(users, select((user) => [
+const generatedExpressionSelectedUsers = pipe(users, select((user) => [
     user.id,
     add(user.id, 1),
 ]));
@@ -166,15 +157,12 @@ const mappedSortedTakenSelectedUsers = pipe(users, map((user) => ({
 const extendedUsers = pipe(users, extend((user) => ({
     name_upper: upper(user.name),
 })));
-const deferredExtendedUsers = pipe(users, extend((user) => ({
-    name_upper: upper(user.name),
-})));
 const replacedExtendedUsers = pipe(users, extend((user) => ({
     id: toString(user.id),
 })));
 const pickedUsers = pipe(users, pick("id", "name"));
-const colFilteredUsers = pipe(users, filter((user) => eq(user.id, 1)));
-const filterEqColUsers = pipe(users, filterEq((user) => user.name, "Ada"));
+const callbackFilteredUsers = pipe(users, filter((user) => eq(user.id, 1)));
+const filterEqCallbackNameUsers = pipe(users, filterEq((user) => user.name, "Ada"));
 const filterGteComputedUsers = pipe(users, filterGte((user) => add(mul(user.id, 2), 1), 3));
 const filterEqCallbackUsers = pipe(users, filterEq((user) => user.id, (user) => user.id));
 const filterNeUsers = pipe(users, filterNe((user) => user.name, "deleted"));
@@ -294,7 +282,7 @@ const projectedProfiles = pipe(profiles, map((profile) => ({
 const uuidFilteredProfiles = pipe(profiles, filter((profile) => eq(profile.id, param("00000000-0000-0000-0000-000000000000"))));
 const bigintFilteredProfiles = pipe(profiles, filter((profile) => and(gt(profile.external_id, 0), eq(profile.external_id, 42n))));
 const nullableFilterGtCallbackUsers = pipe(profiles, filterGt((profile) => profile.credit_limit, 0));
-const nullableFilterGtColUsers = pipe(profiles, filterGt((profile) => profile.credit_limit, 0));
+const nullableFilterGtCallbackLeftUsers = pipe(profiles, filterGt((profile) => profile.credit_limit, 0));
 const nullableFilterGtRightCallbackUsers = pipe(profiles, filterGt(0, (profile) => profile.credit_limit));
 const stringifiedUserId = toString(users.columns.id);
 const stringifiedNullableNickname = toString(profiles.columns.nickname);
@@ -316,23 +304,17 @@ type _FullJoinTotal = Expect<Equal<ExprType<typeof fullJoined.columns.total>, Sq
 type _LeftViaJoinTotal = Expect<Equal<ExprType<typeof leftViaJoin.columns.total>, SqlFloat | null>>;
 type _ProjectedUsersId = Expect<Equal<ExprType<typeof projectedUsers.columns.id>, SqlInt>>;
 type _ProjectedUsersName = Expect<Equal<ExprType<typeof projectedUsers.columns.name>, string>>;
-type _ProjectedUsersDeferredKeys = Expect<Equal<keyof typeof projectedUsersDeferred.columns, "id" | "name">>;
-type _ProjectedUsersColKeys = Expect<Equal<keyof typeof projectedUsersCol.columns, "id" | "name">>;
-type _ProjectedUsersColId = Expect<Equal<ExprType<typeof projectedUsersCol.columns.id>, SqlInt>>;
-type _ProjectedUsersColName = Expect<Equal<ExprType<typeof projectedUsersCol.columns.name>, string>>;
 type _SelectedUsersKeys = Expect<Equal<keyof typeof selectedUsers.columns, "id" | "name">>;
 type _SelectedUsersId = Expect<Equal<ExprType<typeof selectedUsers.columns.id>, SqlInt>>;
 type _SelectedUsersName = Expect<Equal<ExprType<typeof selectedUsers.columns.name>, string>>;
-type _DeferredSelectedUsersKeys = Expect<Equal<keyof typeof deferredSelectedUsers.columns, "id" | "name">>;
-type _DeferredSelectedUsersId = Expect<Equal<ExprType<typeof deferredSelectedUsers.columns.id>, SqlInt>>;
 type _AliasedSelectedUsersKeys = Expect<Equal<keyof typeof aliasedSelectedUsers.columns, "old_id" | "name_upper">>;
 type _AliasedSelectedUsersOldId = Expect<Equal<ExprType<typeof aliasedSelectedUsers.columns.old_id>, SqlInt>>;
 type _AliasedSelectedUsersNameUpper = Expect<Equal<ExprType<typeof aliasedSelectedUsers.columns.name_upper>, string>>;
 type _GeneratedSelectedUsersKeys = Expect<Equal<keyof typeof generatedSelectedUsers.columns, "id" | "col_1" | "name" | "col_2">>;
 type _GeneratedSelectedUsersCol1 = Expect<Equal<ExprType<typeof generatedSelectedUsers.columns.col_1>, SqlInt>>;
 type _GeneratedSelectedUsersCol2 = Expect<Equal<ExprType<typeof generatedSelectedUsers.columns.col_2>, SqlInt>>;
-type _DeferredGeneratedSelectedUsersKeys = Expect<Equal<keyof typeof deferredGeneratedSelectedUsers.columns, "id" | "col_1">>;
-type _DeferredGeneratedSelectedUsersCol1 = Expect<Equal<ExprType<typeof deferredGeneratedSelectedUsers.columns.col_1>, SqlInt>>;
+type _GeneratedExpressionSelectedUsersKeys = Expect<Equal<keyof typeof generatedExpressionSelectedUsers.columns, "id" | "col_1">>;
+type _GeneratedExpressionSelectedUsersCol1 = Expect<Equal<ExprType<typeof generatedExpressionSelectedUsers.columns.col_1>, SqlInt>>;
 type _MappedSelectedUsersKeys = Expect<Equal<keyof typeof mappedSelectedUsers.columns, "id" | "name">>;
 type _MappedSelectedUsersId = Expect<Equal<ExprType<typeof mappedSelectedUsers.columns.id>, SqlInt>>;
 type _MappedSelectedUsersName = Expect<Equal<ExprType<typeof mappedSelectedUsers.columns.name>, string>>;
@@ -341,13 +323,11 @@ type _MappedSortedTakenSelectedUsersId = Expect<Equal<ExprType<typeof mappedSort
 type _MappedSortedTakenSelectedUsersName = Expect<Equal<ExprType<typeof mappedSortedTakenSelectedUsers.columns.name>, string>>;
 type _ExtendedUsersKeys = Expect<Equal<keyof typeof extendedUsers.columns, "id" | "name" | "name_upper">>;
 type _ExtendedUsersNameUpper = Expect<Equal<ExprType<typeof extendedUsers.columns.name_upper>, string>>;
-type _DeferredExtendedUsersKeys = Expect<Equal<keyof typeof deferredExtendedUsers.columns, "id" | "name" | "name_upper">>;
-type _DeferredExtendedUsersNameUpper = Expect<Equal<ExprType<typeof deferredExtendedUsers.columns.name_upper>, string>>;
 type _ReplacedExtendedUsersKeys = Expect<Equal<keyof typeof replacedExtendedUsers.columns, "id" | "name">>;
 type _ReplacedExtendedUsersId = Expect<Equal<ExprType<typeof replacedExtendedUsers.columns.id>, string>>;
 type _ReplacedExtendedUsersName = Expect<Equal<ExprType<typeof replacedExtendedUsers.columns.name>, string>>;
-type _ColFilteredUsersId = Expect<Equal<ExprType<typeof colFilteredUsers.columns.id>, SqlInt>>;
-type _FilterEqColUsersName = Expect<Equal<ExprType<typeof filterEqColUsers.columns.name>, string>>;
+type _CallbackFilteredUsersId = Expect<Equal<ExprType<typeof callbackFilteredUsers.columns.id>, SqlInt>>;
+type _FilterEqCallbackNameUsersName = Expect<Equal<ExprType<typeof filterEqCallbackNameUsers.columns.name>, string>>;
 type _FilterGteComputedUsersId = Expect<Equal<ExprType<typeof filterGteComputedUsers.columns.id>, SqlInt>>;
 type _FilterEqCallbackUsersId = Expect<Equal<ExprType<typeof filterEqCallbackUsers.columns.id>, SqlInt>>;
 type _FilterNeUsersName = Expect<Equal<ExprType<typeof filterNeUsers.columns.name>, string>>;
@@ -358,8 +338,8 @@ type _LiteralStringFilterName = Expect<Equal<ExprType<typeof literalStringFilter
 type _ColSortedUsersName = Expect<Equal<ExprType<typeof colSortedUsers.columns.name>, string>>;
 type _ColAggregatedOrdersTotalSpend = Expect<Equal<ExprType<typeof colAggregatedOrders.columns.total_spend>, SqlFloat>>;
 type _ColExplodedSessionsTag = Expect<Equal<ExprType<typeof colExplodedSessions.columns.tag>, string>>;
-type _ColMappedJoinUserId = Expect<Equal<ExprType<typeof colMappedJoin.columns.user_id>, SqlInt>>;
-type _ColMappedJoinTotal = Expect<Equal<ExprType<typeof colMappedJoin.columns.total>, SqlFloat | null>>;
+type _CallbackMergedJoinUserId = Expect<Equal<ExprType<typeof callbackMergedJoin.columns.user_id>, SqlInt>>;
+type _CallbackMergedJoinTotal = Expect<Equal<ExprType<typeof callbackMergedJoin.columns.total>, SqlFloat | null>>;
 type _VariadicAndFilteredUsersId = Expect<Equal<ExprType<typeof variadicAndFilteredUsers.columns.id>, SqlInt>>;
 type _VariadicOrFilteredUsersName = Expect<Equal<ExprType<typeof variadicOrFilteredUsers.columns.name>, string>>;
 type _ConditionalStepUsersName = Expect<Equal<ExprType<typeof conditionalStepUsers.columns.name>, string>>;
@@ -424,7 +404,7 @@ type _ProjectedProfileMetadata = Expect<Equal<ExprType<typeof projectedProfiles.
 type _ProjectedProfileAvatar = Expect<Equal<ExprType<typeof projectedProfiles.columns.avatar>, SqlBytes | null>>;
 type _ProjectedProfileNickname = Expect<Equal<ExprType<typeof projectedProfiles.columns.nickname>, string>>;
 type _NullableFilterGtCallbackUsersCreditLimit = Expect<Equal<ExprType<typeof nullableFilterGtCallbackUsers.columns.credit_limit>, SqlDecimal | null>>;
-type _NullableFilterGtColUsersCreditLimit = Expect<Equal<ExprType<typeof nullableFilterGtColUsers.columns.credit_limit>, SqlDecimal | null>>;
+type _NullableFilterGtCallbackLeftUsersCreditLimit = Expect<Equal<ExprType<typeof nullableFilterGtCallbackLeftUsers.columns.credit_limit>, SqlDecimal | null>>;
 type _NullableFilterGtRightCallbackUsersCreditLimit = Expect<Equal<ExprType<typeof nullableFilterGtRightCallbackUsers.columns.credit_limit>, SqlDecimal | null>>;
 type _FlowNumberToString = Expect<Equal<ReturnType<typeof flowNumberToString>, string>>;
 type _FlowPipelineKeys = Expect<Equal<keyof typeof flowPipelineResult.columns, "id">>;
@@ -461,17 +441,15 @@ void droppedOverlapLeft;
 void droppedOverlapRight;
 void usingJoin;
 void mappedJoin;
-void projectedUsersCol;
+void callbackMergedJoin;
 void selectedUsers;
-void deferredSelectedUsers;
 void aliasedSelectedUsers;
 void generatedSelectedUsers;
-void deferredGeneratedSelectedUsers;
+void generatedExpressionSelectedUsers;
 void extendedUsers;
-void deferredExtendedUsers;
 void replacedExtendedUsers;
-void colFilteredUsers;
-void filterEqColUsers;
+void callbackFilteredUsers;
+void filterEqCallbackNameUsers;
 void filterGteComputedUsers;
 void filterEqCallbackUsers;
 void filterNeUsers;
@@ -491,7 +469,6 @@ void singleOrExpr;
 void colSortedUsers;
 void colAggregatedOrders;
 void colExplodedSessions;
-void colMappedJoin;
 void projectedWithQuotedKey;
 void aggregatedWithQuotedKey;
 void aggregatedTotals;
@@ -502,7 +479,7 @@ void projectedProfiles;
 void uuidFilteredProfiles;
 void bigintFilteredProfiles;
 void nullableFilterGtCallbackUsers;
-void nullableFilterGtColUsers;
+void nullableFilterGtCallbackLeftUsers;
 void nullableFilterGtRightCallbackUsers;
 void invalidPickedUsers;
 // @ts-expect-error filter predicates must return boolean expressions
