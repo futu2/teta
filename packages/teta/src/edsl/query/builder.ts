@@ -23,13 +23,8 @@ import type {
   ExprRefs,
   ProjectionResult,
   ProjectionShape,
-  ProjectionValue,
-  ProjectionValueResult,
 } from "../expr.ts";
 import {
-  resolveDeferredExpr,
-  resolveDeferredOrderItem,
-  resolveDeferredProjectionShape,
   type DeferredExprDepsOf,
 } from "../internal_deferred_expr.ts";
 import {
@@ -150,13 +145,6 @@ type UnionToIntersection<T> = (
   T extends unknown ? (value: T) => void : never
 ) extends (value: infer TResult) => void ? TResult : never;
 
-type KnownDeferredCurrentSelectionGuard<
-  TColumns extends QueryColumns,
-  TSelection extends Record<string, unknown>,
-> = UnionToIntersection<{
-  [K in keyof TSelection]: KnownDeferredCurrentColumnsGuard<TColumns, TSelection[K]>;
-}[keyof TSelection]>;
-
 type KnownDeferredJoinSelectionGuard<
   TLeft extends QueryColumns,
   TRight extends QueryColumns,
@@ -178,25 +166,6 @@ type ColumnValueForKey<TColumns extends QueryColumns, TKey> =
       ? TColumns[TKey & keyof TColumns]
       : never;
 
-type CurrentDeferredExprValue<TColumns extends QueryColumns, TExpr> =
-  TExpr extends ExprRef<never>
-    ? ColumnValueForKey<TColumns, SingleLiteralKey<CurrentDepsOf<TExpr>>>
-    : TExpr extends ExprRef<infer TValue>
-      ? TValue
-      : ProjectionValueResult<TExpr>;
-
-type CurrentDeferredProjectionResult<
-  TColumns extends QueryColumns,
-  TSelection extends Record<string, unknown>,
-> = {
-  [K in keyof TSelection]: CurrentDeferredExprValue<TColumns, Exclude<TSelection[K], undefined>>;
-};
-
-type CurrentDeferredCollectionItem<TColumns extends QueryColumns, TExpr> =
-  TExpr extends ExprRef<never>
-    ? CollectionItem<CurrentDeferredExprValue<TColumns, TExpr>>
-    : CollectionItem<DeferredExprValue<TExpr>>;
-
 export type QueryStep<
   TInputColumns extends QueryColumns,
   TOutputColumns extends QueryColumns,
@@ -217,31 +186,6 @@ export type QueryExplainCte = {
 };
 
 export type QueryStageKind = "map" | "fold" | "filter" | "sort" | "take" | "join" | "unnest" | "union";
-
-type SelectorOrSelection<
-  TColumns extends QueryColumns,
-  TSelection extends ProjectionShape,
-> = ((cols: ColumnRefs<TColumns>) => TSelection) | TSelection;
-
-type NonCallableSelection<TSelection> = TSelection & {
-  readonly apply?: never;
-  readonly bind?: never;
-  readonly call?: never;
-};
-
-type DeferredProjectionShapeInput<TSelection extends Record<string, unknown>> = {
-  [K in keyof TSelection]: [NonNullable<TSelection[K]>] extends [never]
-    ? never
-    : NonNullable<TSelection[K]> extends ProjectionValue
-      ? TSelection[K]
-      : never;
-};
-
-type DefinedProjectionShape<TSelection extends Record<string, unknown>> = {
-  [K in keyof TSelection]: Exclude<TSelection[K], undefined> extends ProjectionValue
-    ? Exclude<TSelection[K], undefined>
-    : never;
-};
 
 type DefinedJoinSelection<TSelection extends Record<string, unknown>> = {
   [K in keyof TSelection]: Exclude<TSelection[K], undefined>;
@@ -294,8 +238,7 @@ type DeferredJoinSelection<TSelection extends Record<string, unknown>> = {
 };
 
 type PredicateInput<TColumns extends QueryColumns> =
-  | ((cols: ColumnRefs<TColumns>) => ExprRef<boolean>)
-  | ExprRef<boolean>;
+  (cols: ColumnRefs<TColumns>) => ExprRef<boolean>;
 
 type DeferredExprInput<TExpr> = [NonNullable<TExpr>] extends [never]
   ? never
@@ -303,37 +246,19 @@ type DeferredExprInput<TExpr> = [NonNullable<TExpr>] extends [never]
     ? TExpr
     : never;
 
-type DeferredCurrentExprInput<TColumns extends QueryColumns, TExpr> =
-  DeferredExprInput<TExpr> & KnownDeferredCurrentColumnsGuard<TColumns, TExpr>;
-
 type DeferredJoinExprInput<
   TLeft extends QueryColumns,
   TRight extends QueryColumns,
   TExpr,
 > = DeferredExprInput<TExpr> & KnownDeferredJoinColumnsGuard<TLeft, TRight, TExpr>;
 
-type DeferredExprValue<TExpr> =
-  NonNullable<TExpr> extends ExprRef<infer TValue> ? TValue : never;
-
-type OrderItemExpr<TItem> = TItem extends OrderItem
-  ? DeferredExprDepsOf<TItem> extends infer _TDeps
-    ? TItem
-    : never
-  : never;
-
-type SortExprRefs<TInput> = TInput extends readonly unknown[]
-  ? OrderItemExpr<TInput[number]>
-  : OrderItemExpr<TInput>;
-
 type SortInput<TColumns extends QueryColumns> =
-  | ((cols: ColumnRefs<TColumns>) => OrderItem | OrderItem[])
-  | OrderItem
-  | OrderItem[];
+  (cols: ColumnRefs<TColumns>) => OrderItem | OrderItem[];
 
 type UnnestSelectorInput<
   TLeft extends QueryColumns,
   TCollection extends readonly unknown[] | unknown[] | null,
-> = ((cols: ColumnRefs<TLeft>) => ExprRef<TCollection>) | ExprRef<TCollection>;
+> = (cols: ColumnRefs<TLeft>) => ExprRef<TCollection>;
 
 type JoinOnInput<
   TLeft extends QueryColumns,
@@ -359,16 +284,6 @@ type JoinMergeInput<
 > =
   | JoinColumnMergerForType<TLeft, TRight, TType, TSelection>
   | TSelection;
-
-function currentDeferredScope<TColumns extends QueryColumns>(query: Query<TColumns>) {
-  return {
-    current: {
-      label: "current row",
-      columns: query.columns as ColumnRefs<Record<string, any>>,
-      columnNames: query.columnNames,
-    },
-  };
-}
 
 type CollectionItem<TCollection> =
   NonNullable<TCollection> extends readonly (infer TItem)[] ? TItem
@@ -517,10 +432,7 @@ function buildUnnest<
   selection: UnnestSelection<TValueName, TOrdinalityName>,
   options: UnnestOptions<TOuter> = {}
 ): Query<TLeft & TGenerated> {
-  const collection =
-    typeof selector === "function"
-      ? selector(left.columns)
-      : resolveDeferredExpr(selector, currentDeferredScope(left));
+  const collection = selector(left.columns);
   return deriveQuery(
     left,
     resolveUnnestQuery<TLeft, TGenerated>(
@@ -537,12 +449,9 @@ function buildMap<
   TSelection extends ProjectionShape,
 >(
   query: Query<TColumns>,
-  selector: SelectorOrSelection<TColumns, TSelection>
+  selector: (cols: ColumnRefs<TColumns>) => TSelection
 ): Query<ProjectionResult<TSelection>> {
-  const selection =
-    typeof selector === "function"
-      ? selector(query.columns)
-      : resolveDeferredProjectionShape(selector, currentDeferredScope(query));
+  const selection = selector(query.columns);
   return deriveQuery(query, resolveMapQuery(query, selection));
 }
 
@@ -551,12 +460,9 @@ function buildFold<
   TSelection extends ProjectionShape,
 >(
   query: Query<TColumns>,
-  selector: SelectorOrSelection<TColumns, TSelection>
+  selector: (cols: ColumnRefs<TColumns>) => TSelection
 ): Query<ProjectionResult<TSelection>> {
-  const selection =
-    typeof selector === "function"
-      ? selector(query.columns)
-      : resolveDeferredProjectionShape(selector, currentDeferredScope(query));
+  const selection = selector(query.columns);
   return deriveQuery(query, resolveFoldQuery(query, selection));
 }
 
@@ -564,10 +470,7 @@ function buildFilter<TColumns extends QueryColumns>(
   query: Query<TColumns>,
   predicate: PredicateInput<TColumns>
 ): Query<TColumns> {
-  const resolved =
-    typeof predicate === "function"
-      ? predicate(query.columns)
-      : resolveDeferredExpr(predicate, currentDeferredScope(query));
+  const resolved = predicate(query.columns);
   return deriveQuery(query, resolveFilterQuery(query, resolved.node));
 }
 
@@ -575,18 +478,9 @@ function buildSort<TColumns extends QueryColumns>(
   query: Query<TColumns>,
   selector: SortInput<TColumns>
 ): Query<TColumns> {
-  const next =
-    typeof selector === "function"
-      ? selector(query.columns)
-      : selector;
+  const next = selector(query.columns);
   const items = Array.isArray(next) ? next : [next];
-  return deriveQuery(
-    query,
-    resolveSortQuery(
-      query,
-      items.map((item) => resolveDeferredOrderItem(item, currentDeferredScope(query)))
-    )
-  );
+  return deriveQuery(query, resolveSortQuery(query, items));
 }
 
 function buildTake<TColumns extends QueryColumns>(
@@ -651,12 +545,6 @@ function buildLoop<TColumns extends QueryColumns>(
   });
 }
 
-export function map<const Sel extends Record<string, unknown>>(
-  selection: NonCallableSelection<Sel> & DeferredProjectionShapeInput<Sel>
-): <TColumns extends QueryColumns>(
-  query: Query<TColumns> & KnownDeferredCurrentSelectionGuard<NoInfer<TColumns>, Sel>
-) => Query<CurrentDeferredProjectionResult<TColumns, DefinedProjectionShape<Sel>>>;
-
 export function map<TColumns extends QueryColumns, const Sel extends ProjectionShape>(
   selector: (cols: ColumnRefs<TColumns>) => Sel
 ): QueryStep<TColumns, ProjectionResult<Sel>>;
@@ -667,22 +555,16 @@ export function map(...args: unknown[]): unknown {
   return (query: Query<QueryColumns>) =>
     _map(
       query,
-      selector as SelectorOrSelection<QueryColumns, ProjectionShape>
+      selector as (cols: ColumnRefs<QueryColumns>) => ProjectionShape
     );
 }
 
 function _map<TColumns extends QueryColumns, const Sel extends ProjectionShape>(
   query: Query<TColumns>,
-  selector: SelectorOrSelection<TColumns, Sel>
+  selector: (cols: ColumnRefs<TColumns>) => Sel
 ): Query<ProjectionResult<Sel>> {
   return buildMap(query, selector);
 }
-
-export function fold<const Sel extends Record<string, unknown>>(
-  selection: NonCallableSelection<Sel> & DeferredProjectionShapeInput<Sel>
-): <TColumns extends QueryColumns>(
-  query: Query<TColumns> & KnownDeferredCurrentSelectionGuard<NoInfer<TColumns>, Sel>
-) => Query<CurrentDeferredProjectionResult<TColumns, DefinedProjectionShape<Sel>>>;
 
 export function fold<TColumns extends QueryColumns, const Sel extends ProjectionShape>(
   selector: (cols: ColumnRefs<TColumns>) => Sel
@@ -694,22 +576,16 @@ export function fold(...args: unknown[]): unknown {
   return (query: Query<QueryColumns>) =>
     _fold(
       query,
-      selector as SelectorOrSelection<QueryColumns, ProjectionShape>
+      selector as (cols: ColumnRefs<QueryColumns>) => ProjectionShape
     );
 }
 
 function _fold<TColumns extends QueryColumns, const Sel extends ProjectionShape>(
   query: Query<TColumns>,
-  selector: SelectorOrSelection<TColumns, Sel>
+  selector: (cols: ColumnRefs<TColumns>) => Sel
 ): Query<ProjectionResult<Sel>> {
   return buildFold(query, selector);
 }
-
-export function filter<TExpr extends ExprRef<boolean>>(
-  predicate: TExpr
-): <TColumns extends QueryColumns>(
-  query: Query<TColumns> & KnownDeferredCurrentColumnsGuard<NoInfer<TColumns>, TExpr>
-) => Query<TColumns>;
 
 export function filter<TColumns extends QueryColumns>(
   predicate: (cols: ColumnRefs<TColumns>) => ExprRef<boolean>
@@ -726,14 +602,15 @@ function _filter<TColumns extends QueryColumns>(
   query: Query<TColumns>,
   predicate: PredicateInput<TColumns>
 ): Query<TColumns> {
+  assertRowCallback("filter", predicate);
   return buildFilter(query, predicate);
 }
 
-export function sort<TSelector extends OrderItem | OrderItem[]>(
-  selector: TSelector
-): <TColumns extends QueryColumns>(
-  query: Query<TColumns> & KnownDeferredCurrentColumnsGuard<NoInfer<TColumns>, SortExprRefs<TSelector>>
-) => Query<TColumns>;
+export function filterResolved<TColumns extends QueryColumns>(
+  predicate: ExprRef<boolean>
+): QueryStep<TColumns, TColumns> {
+  return (query) => deriveQuery(query, resolveFilterQuery(query, predicate.node));
+}
 
 export function sort<TColumns extends QueryColumns>(
   selector: (cols: ColumnRefs<TColumns>) => OrderItem | OrderItem[]
@@ -750,6 +627,7 @@ function _sort<TColumns extends QueryColumns>(
   query: Query<TColumns>,
   selector: SortInput<TColumns>
 ): Query<TColumns> {
+  assertRowCallback("sort", selector);
   return buildSort(query, selector);
 }
 
@@ -1062,27 +940,6 @@ export function unnest<
   >
 >;
 
-export function unnest<
-  TLeft extends QueryColumns,
-  TSelector extends ExprRef<readonly unknown[] | unknown[] | null>,
-  TValueName extends string,
-  TOrdinalityName extends string | undefined = undefined,
-  TOuter extends boolean | undefined = undefined,
->(
-  selector: DeferredCurrentExprInput<TLeft, TSelector>,
-  selection: UnnestSelection<TValueName, TOrdinalityName>,
-  options?: UnnestOptions<TOuter>
-): (
-  query: Query<TLeft> & KnownDeferredCurrentColumnsGuard<NoInfer<TLeft>, TSelector>
-) => Query<
-  TLeft & UnnestGeneratedColumns<
-    CurrentDeferredCollectionItem<TLeft, TSelector>,
-    TValueName,
-    TOrdinalityName,
-    TOuter
-  >
->;
-
 export function unnest(...args: unknown[]): unknown {
   assertNotDataFirstQueryHelper("unnest", "unnest(selector, selection, options?)", args);
   const [selector, selection, options] = args;
@@ -1114,6 +971,7 @@ function _unnest<
     TOuter
   >
 > {
+  assertRowCallback("unnest", selector);
   return buildUnnest(left, selector, selection, options);
 }
 
@@ -1160,6 +1018,12 @@ function curriedOnlyError(helper: string, usage: string): never {
 function assertNotDataFirstQueryHelper(helper: string, usage: string, args: unknown[]): void {
   if (args[0] instanceof Query) {
     curriedOnlyError(helper, usage);
+  }
+}
+
+function assertRowCallback(helper: string, value: unknown): asserts value is (...args: any[]) => unknown {
+  if (typeof value !== "function") {
+    userError("DEFERRED_INPUT_INVALID", `${helper}() expects a row callback`);
   }
 }
 

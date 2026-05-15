@@ -4,22 +4,12 @@ import {
   toExprNode,
   type ColumnRefs,
 } from "../expr.ts";
-import { resolveDeferredExpr } from "../internal_deferred_expr.ts";
-import type { SqlNumber } from "../sql/types.ts";
 import { userError } from "../errors.ts";
 import { Query, createQuery } from "./builder.ts";
 import { resolveSelectQuery } from "./mutations.ts";
 import type { SelectProjection } from "./planner.ts";
 import { resolveDerivedQueryInit } from "./state.ts";
-import type {
-  ColumnValueForKey,
-  ColumnValuesForKeys,
-  CurrentDepsOf,
-  KnownDeferredCurrentColumnsGuard,
-  LiteralDeferredKeys,
-  QueryColumns,
-  SingleLiteralKey,
-} from "./deferred_types.ts";
+type QueryColumns = Record<string, any>;
 type SelectExpr = ExprRef<unknown>;
 type SelectValue = SelectExpr | AliasedSelectValue<string, SelectExpr>;
 type SelectList = readonly SelectValue[];
@@ -48,56 +38,24 @@ export function alias<const TName extends string>(
   });
 }
 
-type CurrentDeferredComputedValue<TColumns extends QueryColumns, TValue, TExpr> =
-  [LiteralDeferredKeys<CurrentDepsOf<TExpr>>] extends [never]
-    ? TValue
-    : TValue extends number | bigint
-      ? Extract<ColumnValuesForKeys<TColumns, LiteralDeferredKeys<CurrentDepsOf<TExpr>>>, SqlNumber>
-      : TValue;
-
-type CurrentDeferredExprValue<TColumns extends QueryColumns, TExpr> =
-  TExpr extends ExprRef<never>
-    ? ColumnValueForKey<TColumns, SingleLiteralKey<CurrentDepsOf<TExpr>>>
-    : TExpr extends ExprRef<infer TValue>
-      ? CurrentDeferredComputedValue<TColumns, TValue, TExpr>
-      : never;
-
-type CurrentDeferredListGuard<
-  TColumns extends QueryColumns,
-  TItems extends readonly unknown[],
-> = TItems extends readonly [infer THead, ...infer TTail]
-  ? KnownDeferredCurrentColumnsGuard<TColumns, UnwrapAliased<THead>>
-    & CurrentDeferredListGuard<TColumns, TTail>
-  : unknown;
-
 type UnwrapAliased<TItem> =
   TItem extends AliasedSelectValue<string, infer TExpr> ? TExpr : TItem;
 
-type SelectItemValue<TColumns extends QueryColumns, TItem> =
-  TItem extends AliasedSelectValue<string, infer TExpr> ? CurrentDeferredExprValue<TColumns, TExpr>
-  : TItem extends ExprRef<unknown> ? CurrentDeferredExprValue<TColumns, TItem>
+type SelectItemValue<TItem> =
+  TItem extends AliasedSelectValue<string, infer TExpr> ? ExprValue<TExpr>
+  : TItem extends ExprRef<unknown> ? ExprValue<TItem>
   : never;
+
+type ExprValue<TExpr> = TExpr extends ExprRef<infer TValue> ? TValue : never;
 
 type SelectOutputKey<TItem, TFallback extends string> =
   TItem extends AliasedSelectValue<infer TName, ExprRef<unknown>> ? TName
   : TItem extends ColumnRef<unknown, infer TName> ? TName
-  : TItem extends ExprRef<never>
-    ? SingleLiteralKey<CurrentDepsOf<TItem>> extends infer TName extends string
-      ? [TName] extends [never]
-        ? TFallback
-        : TName
-      : TFallback
   : TFallback;
 
 type Increment<T extends readonly unknown[]> = [...T, unknown];
 type IsPlainSelectedColumn<TItem> =
   UnwrapAliased<TItem> extends ColumnRef<unknown, string> ? true
-  : UnwrapAliased<TItem> extends ExprRef<never>
-    ? SingleLiteralKey<CurrentDepsOf<UnwrapAliased<TItem>>> extends infer TName extends string
-      ? [TName] extends [never]
-        ? false
-        : true
-      : false
   : false;
 
 type SelectOutputKeys<
@@ -126,40 +84,31 @@ type SelectDuplicateOutputGuard<TItems extends readonly unknown[]> =
       };
 
 type SelectResultEntries<
-  TColumns extends QueryColumns,
   TItems extends readonly unknown[],
   TGenerated extends readonly unknown[] = [],
 > = TItems extends readonly [infer THead, ...infer TTail]
   ? IsPlainSelectedColumn<THead> extends true
     ? {
-        [K in SelectOutputKey<THead, never>]: SelectItemValue<TColumns, THead>;
-      } & SelectResultEntries<TColumns, TTail, TGenerated>
+        [K in SelectOutputKey<THead, never>]: SelectItemValue<THead>;
+      } & SelectResultEntries<TTail, TGenerated>
     : {
         [K in SelectOutputKey<THead, `col_${Increment<TGenerated>["length"]}`>]:
-          SelectItemValue<TColumns, THead>;
-      } & SelectResultEntries<TColumns, TTail, Increment<TGenerated>>
+          SelectItemValue<THead>;
+      } & SelectResultEntries<TTail, Increment<TGenerated>>
   : {};
 
 type Simplify<T> = {
   [K in keyof T]: T[K];
 };
 
-type SelectResult<TColumns extends QueryColumns, TItems extends readonly unknown[]> =
-  Simplify<SelectResultEntries<TColumns, TItems>>;
-
-export function select<const TItems extends SelectList>(
-  items: TItems
-): <TColumns extends QueryColumns>(
-  query: Query<TColumns>
-    & CurrentDeferredListGuard<NoInfer<TColumns>, TItems>
-    & SelectDuplicateOutputGuard<TItems>
-) => Query<SelectResult<TColumns, TItems>>;
+type SelectResult<TItems extends readonly unknown[]> =
+  Simplify<SelectResultEntries<TItems>>;
 
 export function select<TColumns extends QueryColumns, const TItems extends SelectList>(
   selector: (cols: ColumnRefs<TColumns>) => TItems
 ): (
   query: Query<TColumns> & SelectDuplicateOutputGuard<TItems>
-) => Query<SelectResult<TColumns, TItems>>;
+) => Query<SelectResult<TItems>>;
 
 export function select(...args: unknown[]): unknown {
   if (args[0] instanceof Query) {
@@ -170,23 +119,18 @@ export function select(...args: unknown[]): unknown {
   }
 
   const [selectorOrItems] = args;
+  if (typeof selectorOrItems !== "function") {
+    userError("SELECT_INVALID_SELECTION", "select() items must be expressions");
+  }
+
   return (query: Query<QueryColumns>) => {
-    const rawItems = typeof selectorOrItems === "function"
-      ? (selectorOrItems as (cols: ColumnRefs<QueryColumns>) => SelectList)(query.columns)
-      : selectorOrItems;
+    const rawItems = (selectorOrItems as (cols: ColumnRefs<QueryColumns>) => SelectList)(query.columns);
     const items = normalizeSelectItems(rawItems);
     const projection = items.map((item) => {
       const aliased = isAliasedSelectValue(item);
       const expr = aliased ? item.expr : item;
-      const resolved = resolveDeferredExpr(expr, {
-        current: {
-          label: "current row",
-          columns: query.columns as ColumnRefs<QueryColumns>,
-          columnNames: query.columnNames,
-        },
-      });
       return {
-        expr: toExprNode(resolved),
+        expr: toExprNode(expr),
         alias: aliased ? item.name : null,
       };
     }) satisfies SelectProjection;

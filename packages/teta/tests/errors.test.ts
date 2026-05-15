@@ -201,9 +201,9 @@ describe("error paths", () => {
             pipe(user.name, alias("id")),
         ]) as never)).toThrow(SELECT_DUPLICATE_COLUMN_ERROR);
         expect(() => alias("")).toThrow(SELECT_ALIAS_EMPTY_ERROR);
-        expect(() => pipe(users, select([
+        expect(() => pipe(users, select(([
             alias("bad") as never,
-        ]))).toThrow(SELECT_INVALID_SELECTION_ERROR);
+        ]) as never))).toThrow(SELECT_INVALID_SELECTION_ERROR);
     });
     test("rejects non-canonical built-in dialect names", () => {
         const users = createUsersTable();

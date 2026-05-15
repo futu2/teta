@@ -1,4 +1,4 @@
-import { filter, Query } from "./builder.ts";
+import { filterResolved, Query } from "./builder.ts";
 import type { QueryStep } from "./builder.ts";
 import type {
   ColumnRefs,
@@ -455,7 +455,7 @@ function comparisonFilter<TColumns extends QueryColumns, T>(
   return (query: Query<TColumns>) => {
     const resolvedLeft = resolveOperand(query, left);
     const resolvedRight = resolveOperand(query, right);
-    return filter(op(resolvedLeft, resolvedRight))(query);
+    return filterResolved<TColumns>(op(resolvedLeft, resolvedRight))(query);
   };
 }
 
