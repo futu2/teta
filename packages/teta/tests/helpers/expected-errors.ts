@@ -21,41 +21,6 @@ export const VALUES_EMPTY_ERROR =
 export const VALUES_COLUMN_MISMATCH_ERROR =
   "values() row 2 must have exactly the same columns as row 1";
 
-
-export const LEGACY_LEFT_JOIN_FIXED_MERGE_ERROR =
-  "leftJoin() no longer accepts a merge or projection argument. Use leftJoinMap(...) for custom output or leftJoinMerge(...) for merge helpers.";
-
-export const MAP_CURRIED_ONLY_ERROR =
-  "map() is curried-only. Use pipe(query, map(selector)).";
-
-export const EXTEND_CURRIED_ONLY_ERROR =
-  "extend() is curried-only. Use pipe(query, extend(selector)).";
-
-export const FILTER_CURRIED_ONLY_ERROR =
-  "filter() is curried-only. Use pipe(query, filter(predicate)).";
-
-export const FOLD_CURRIED_ONLY_ERROR =
-  "fold() is curried-only. Use pipe(query, fold(selector)).";
-
-export const SORT_CURRIED_ONLY_ERROR =
-  "sort() is curried-only. Use pipe(query, sort(selector)).";
-
-export const TAKE_CURRIED_ONLY_ERROR =
-  "take() is curried-only. Use pipe(query, take(count)).";
-
-
-export const INNER_JOIN_CURRIED_ONLY_ERROR =
-  "innerJoin() is curried-only. Use pipe(query, innerJoin(right, on, options?)).";
-
-export const LEFT_JOIN_CURRIED_ONLY_ERROR =
-  "leftJoin() is curried-only. Use pipe(query, leftJoin(right, on, options?)).";
-
-export const RIGHT_JOIN_CURRIED_ONLY_ERROR =
-  "rightJoin() is curried-only. Use pipe(query, rightJoin(right, on, options?)).";
-
-export const FULL_JOIN_CURRIED_ONLY_ERROR =
-  "fullJoin() is curried-only. Use pipe(query, fullJoin(right, on, options?)).";
-
 export const SELECT_DUPLICATE_COLUMN_ERROR =
   "Duplicate selected column name: id";
 

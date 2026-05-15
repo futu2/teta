@@ -19,7 +19,10 @@ export function extend<TColumns extends QueryColumns, const Sel extends Projecti
 ): (query: Query<TColumns>) => Query<ExtendResult<TColumns, ProjectionResult<Sel>>>;
 
 export function extend(...args: unknown[]): unknown {
-  if (args.length !== 1 || typeof args[0] !== "function") {
+  if (args.length !== 1) {
+    userError("QUERY_HELPER_INVALID_ARGUMENTS", "extend() expects extend(selector)");
+  }
+  if (typeof args[0] !== "function") {
     userError("QUERY_HELPER_INVALID_SELECTOR", "extend() expects a row callback");
   }
 

@@ -438,8 +438,9 @@ export function map<TColumns extends QueryColumns, const Sel extends ProjectionS
 ): QueryStep<TColumns, ProjectionResult<Sel>>;
 
 export function map(...args: unknown[]): unknown {
-  assertNotDataFirstQueryHelper("map", "map(selector)", args);
+  assertCurriedInvocation("map", "map(selector)", args);
   const [selector] = args;
+  assertRowCallback("map", selector);
   return (query: Query<QueryColumns>) =>
     _map(
       query,
@@ -460,8 +461,9 @@ export function fold<TColumns extends QueryColumns, const Sel extends Projection
 ): QueryStep<TColumns, ProjectionResult<Sel>>;
 
 export function fold(...args: unknown[]): unknown {
-  assertNotDataFirstQueryHelper("fold", "fold(selector)", args);
+  assertCurriedInvocation("fold", "fold(selector)", args);
   const [selector] = args;
+  assertRowCallback("fold", selector);
   return (query: Query<QueryColumns>) =>
     _fold(
       query,
@@ -482,8 +484,9 @@ export function filter<TColumns extends QueryColumns>(
 ): QueryStep<TColumns, TColumns>;
 
 export function filter(...args: unknown[]): unknown {
-  assertNotDataFirstQueryHelper("filter", "filter(predicate)", args);
+  assertCurriedInvocation("filter", "filter(predicate)", args);
   const [predicate] = args;
+  assertRowCallback("filter", predicate);
   return (query: Query<QueryColumns>) =>
     _filter(query, predicate as PredicateInput<QueryColumns>);
 }
@@ -507,8 +510,9 @@ export function sort<TColumns extends QueryColumns>(
 ): QueryStep<TColumns, TColumns>;
 
 export function sort(...args: unknown[]): unknown {
-  assertNotDataFirstQueryHelper("sort", "sort(selector)", args);
+  assertCurriedInvocation("sort", "sort(selector)", args);
   const [selector] = args;
+  assertRowCallback("sort", selector);
   return (query: Query<QueryColumns>) =>
     _sort(query, selector as SortInput<QueryColumns>);
 }
@@ -524,8 +528,11 @@ function _sort<TColumns extends QueryColumns>(
 export function take<TColumns extends QueryColumns>(count: number): QueryStep<TColumns, TColumns>;
 
 export function take(...args: unknown[]): unknown {
-  assertNotDataFirstQueryHelper("take", "take(count)", args);
+  assertCurriedInvocation("take", "take(count)", args);
   const [count] = args;
+  if (typeof count !== "number") {
+    userError("QUERY_HELPER_INVALID_ARGUMENTS", "take() expects take(count)");
+  }
   return (query: Query<QueryColumns>) => _take(query, count as number);
 }
 
@@ -769,8 +776,9 @@ export function unnest<
 >;
 
 export function unnest(...args: unknown[]): unknown {
-  assertNotDataFirstQueryHelper("unnest", "unnest(selector, selection, options?)", args, 2, 3);
+  assertCurriedInvocation("unnest", "unnest(selector, selection, options?)", args, 2, 3);
   const [selector, selection, options] = args;
+  assertRowCallback("unnest", selector);
   return (left: Query<QueryColumns>) =>
     _unnest(
       left,
@@ -828,34 +836,15 @@ function _join<
   return buildJoin(left, right, on, merge, options);
 }
 
-function assertNoLegacyJoinMergeOption(options: unknown): void {
-  if (options && typeof options === "object" && "merge" in options) {
-    userError(
-      "JOIN_MERGE_POSITIONAL_REQUIRED",
-      "Join helpers no longer accept { merge } in options. Use the fixed *JoinMerge(...) helper."
-    );
-  }
-}
-
-function curriedOnlyError(helper: string, usage: string): never {
-  userError(
-    "QUERY_HELPER_CURRIED_ONLY",
-    `${helper}() is curried-only. Use pipe(query, ${usage}).`
-  );
-}
-
-function assertNotDataFirstQueryHelper(
+function assertCurriedInvocation(
   helper: string,
   usage: string,
   args: unknown[],
   minArgs = 1,
   maxArgs = 1
 ): void {
-  void usage;
   if (args.length < minArgs || args.length > maxArgs) {
-    const expected =
-      minArgs === maxArgs ? "exactly one argument" : `${minArgs} or ${maxArgs} arguments`;
-    userError("QUERY_HELPER_INVALID_ARITY", `${helper}() expects ${expected}`);
+    userError("QUERY_HELPER_INVALID_ARGUMENTS", `${helper}() expects ${usage}`);
   }
 }
 
@@ -877,15 +866,8 @@ export function assertProjectionShape(value: unknown): asserts value is Projecti
   }
 }
 
-function assertCurriedBinaryArity(args: unknown[]): void {
-  if (args.length !== 1 && args.length !== 2) {
-    throw new Error("Wrong number of arguments");
-  }
-}
-
-function assertCurriedUnaryArity(helper: string, usage: string, args: unknown[]): void {
+function assertCurriedUnaryArity(_helper: string, _usage: string, args: unknown[]): void {
   if (args.length === 1) return;
-  assertNotDataFirstQueryHelper(helper, usage, args);
   throw new Error("Wrong number of arguments");
 }
 
@@ -896,68 +878,12 @@ type ParsedCurriedJoinInvocation = {
   options: unknown;
 };
 
-const DATA_FIRST_JOIN_INVOCATION = Symbol("DATA_FIRST_JOIN_INVOCATION");
-
-function assertNotDataFirstJoinInvocation(
-  args: unknown[],
-  helper: string,
-  usage: string
-): void {
-  const first = args[0];
-  const second = args[1];
-  if (!isQuery(first)) return;
-
-  if (isQuery(second)) {
-    curriedOnlyError(helper, usage);
-  }
-
-  if (args.length < 3) return;
-
-  if (typeof second === "function") {
-    try {
-      const probed = (second as (outer: ColumnRefs<QueryColumns>) => unknown)(
-        qualifyOuterColumns(first.columns)
-      );
-      if (isQuery(probed)) {
-        throw DATA_FIRST_JOIN_INVOCATION;
-      }
-    } catch (error) {
-      if (error === DATA_FIRST_JOIN_INVOCATION) {
-        curriedOnlyError(helper, usage);
-      }
-    }
-  }
-}
-
-function isJoinMergeShape(value: unknown, maybeOptions: unknown): boolean {
-  if (!value || typeof value !== "object" || Array.isArray(value) || isQuery(value)) {
-    return false;
-  }
-  if (maybeOptions !== undefined) return true;
-  return !isJoinOptionsShape(value);
-}
-
-function isJoinOptionsShape(value: object): boolean {
-  let hasOption = false;
-
-  if ("type" in value) {
-    hasOption = true;
-    if (typeof value.type !== "string") return false;
-  }
-  if ("lateral" in value) {
-    hasOption = true;
-    if (typeof value.lateral !== "boolean") return false;
-  }
-
-  return hasOption;
-}
-
 function buildFixedJoinOverload(
   args: unknown[],
   type: "inner" | "left" | "right" | "full"
 ): unknown {
   const helper = fixedJoinHelperName(type);
-  const parsed = parseFixedJoinInvocation(args, helper, `${helper}(right, on, options?)`);
+  const parsed = parseFixedJoinInvocation(args, helper);
 
   return (left: Query<QueryColumns>) =>
     _join(
@@ -971,24 +897,13 @@ function buildFixedJoinOverload(
 
 function parseFixedJoinInvocation(
   args: unknown[],
-  helper: string,
-  usage: string
+  helper: string
 ): ParsedCurriedJoinInvocation {
-  assertNotDataFirstJoinInvocation(args, helper, usage);
-  if (args.length === 3 && isFixedJoinLegacyMergeArgument(args[2], undefined)) {
-    fixedJoinLegacyMergeError(helper);
-  }
-  if (args.length === 4 && isFixedJoinLegacyMergeArgument(args[2], args[3])) {
-    fixedJoinLegacyMergeError(helper);
-  }
   if (args.length !== 2 && args.length !== 3) {
-    throw new Error("Wrong number of arguments");
+    userError("QUERY_HELPER_INVALID_ARGUMENTS", `${helper}() expects ${helper}(right, on, options?)`);
   }
   const [right, on, options] = args;
-  if (hasLegacyJoinMergeOption(options)) {
-    fixedJoinLegacyMergeError(helper);
-  }
-  assertNoLegacyJoinMergeOption(options);
+  assertRowCallback(helper, on);
   assertFixedJoinOptions(helper, options);
   return { right, on, merge: undefined, options };
 }
@@ -998,7 +913,7 @@ function buildFixedJoinMapOverload(
   type: "inner" | "left" | "right" | "full",
   helper: string
 ): unknown {
-  const parsed = parseFixedJoinMapInvocation(args, helper, `${helper}(right, on, selector)`);
+  const parsed = parseFixedJoinMapInvocation(args, helper);
 
   return (left: Query<QueryColumns>) =>
     _join(
@@ -1012,14 +927,13 @@ function buildFixedJoinMapOverload(
 
 function parseFixedJoinMapInvocation(
   args: unknown[],
-  helper: string,
-  usage: string
+  helper: string
 ): ParsedCurriedJoinInvocation {
-  assertNotDataFirstJoinInvocation(args, helper, usage);
   if (args.length !== 3) {
-    throw new Error("Wrong number of arguments");
+    userError("QUERY_HELPER_INVALID_ARGUMENTS", `${helper}() expects ${helper}(right, on, selector)`);
   }
   const [right, on, merge] = args;
+  assertRowCallback(helper, on);
   assertRowCallback(helper, merge);
   return { right, on, merge, options: undefined };
 }
@@ -1043,21 +957,6 @@ function assertFixedJoinOptions(helper: string, value: unknown): void {
   ) {
     userError("DEFERRED_INPUT_INVALID", `${helper}() options must be { lateral?: boolean }`);
   }
-}
-
-function isFixedJoinLegacyMergeArgument(value: unknown, maybeOptions: unknown): boolean {
-  return typeof value === "function" || isJoinMergeShape(value, maybeOptions);
-}
-
-function hasLegacyJoinMergeOption(value: unknown): boolean {
-  return !!value && typeof value === "object" && "merge" in value;
-}
-
-function fixedJoinLegacyMergeError(helper: string): never {
-  userError(
-    "JOIN_FIXED_MERGE_REMOVED",
-    `${helper}() no longer accepts a merge or projection argument. Use ${helper}Map(...) for custom output or ${helper}Merge(...) for merge helpers.`
-  );
 }
 
 function fixedJoinHelperName(type: "inner" | "left" | "right" | "full"): string {

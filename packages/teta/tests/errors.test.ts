@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { TetaUserError, alias, count, eq, extend, filter, fold, fullJoin, group, innerJoin, innerJoinMerge, leftJoin, loop, map, prefixOverlapLeft, rightJoin, select, sort, take, toSql, values, pipe } from "../mod.ts";
-import { EXTEND_CURRIED_ONLY_ERROR, FILTER_CURRIED_ONLY_ERROR, FOLD_CURRIED_ONLY_ERROR, FULL_JOIN_CURRIED_ONLY_ERROR, GROUP_INSIDE_AGGREGATE_FUNCTION_ERROR, GROUP_OUTSIDE_AGGREGATE_ERROR, INNER_JOIN_CURRIED_ONLY_ERROR, JOIN_MERGE_CONFLICT_ERROR, JOIN_OVERLAPPING_COLUMNS_ERROR, LEFT_JOIN_CURRIED_ONLY_ERROR, LEGACY_LEFT_JOIN_FIXED_MERGE_ERROR, LEGACY_SELECTION_ARRAY_ERROR, LOOP_COLUMN_MISMATCH_ERROR, MAP_CURRIED_ONLY_ERROR, NON_CANONICAL_POSTGRES_DIALECT_ERROR, RIGHT_JOIN_CURRIED_ONLY_ERROR, SELECT_ALIAS_EMPTY_ERROR, SELECT_DUPLICATE_COLUMN_ERROR, SELECT_INVALID_SELECTION_ERROR, SORT_CURRIED_ONLY_ERROR, TAKE_CURRIED_ONLY_ERROR, VALUES_COLUMN_MISMATCH_ERROR, VALUES_EMPTY_ERROR } from "./helpers/expected-errors.ts";
+import { TetaUserError, alias, count, eq, extend, filter, fold, fullJoin, group, innerJoin, innerJoinMerge, leftJoin, loop, map, prefixOverlapLeft, rightJoin, select, sort, t, table, take, toSql, values, pipe } from "../mod.ts";
+import { GROUP_INSIDE_AGGREGATE_FUNCTION_ERROR, GROUP_OUTSIDE_AGGREGATE_ERROR, JOIN_MERGE_CONFLICT_ERROR, JOIN_OVERLAPPING_COLUMNS_ERROR, LEGACY_SELECTION_ARRAY_ERROR, LOOP_COLUMN_MISMATCH_ERROR, NON_CANONICAL_POSTGRES_DIALECT_ERROR, SELECT_ALIAS_EMPTY_ERROR, SELECT_DUPLICATE_COLUMN_ERROR, SELECT_INVALID_SELECTION_ERROR, VALUES_COLUMN_MISMATCH_ERROR, VALUES_EMPTY_ERROR } from "./helpers/expected-errors.ts";
 import { createOrdersTable, createUsersTable } from "./helpers/fixtures.ts";
 describe("error paths", () => {
     function expectUserError(fn: () => unknown, code: string, message: string): void {
@@ -27,60 +27,19 @@ describe("error paths", () => {
             bad: count(group(user.id)),
         })))).toThrow(GROUP_INSIDE_AGGREGATE_FUNCTION_ERROR);
     });
-    test("guides fixed join migration for removed merge and projection arguments", () => {
-        const users = createUsersTable();
-        const orders = createOrdersTable();
-        expectUserError(
-            () => pipe(
-                users,
-                (leftJoin as any)(
-                    orders,
-                    (user: typeof users.columns, order: typeof orders.columns) => eq(user.id, order.user_id),
-                    (user: typeof users.columns, order: typeof orders.columns) => ({
-                        id: user.id,
-                        total: order.total,
-                    })
-                )
-            ),
-            "JOIN_FIXED_MERGE_REMOVED",
-            LEGACY_LEFT_JOIN_FIXED_MERGE_ERROR
-        );
-        expectUserError(
-            () => pipe(
-                users,
-                (leftJoin as any)(
-                    orders,
-                    (user: typeof users.columns, order: typeof orders.columns) => eq(user.id, order.user_id),
-                    prefixOverlapLeft("user_")
-                )
-            ),
-            "JOIN_FIXED_MERGE_REMOVED",
-            LEGACY_LEFT_JOIN_FIXED_MERGE_ERROR
-        );
-        expectUserError(
-            () => pipe(
-                users,
-                (leftJoin as any)(
-                    orders,
-                    (user: typeof users.columns, order: typeof orders.columns) => eq(user.id, order.user_id),
-                    prefixOverlapLeft("user_"),
-                    { lateral: true }
-                )
-            ),
-            "JOIN_FIXED_MERGE_REMOVED",
-            LEGACY_LEFT_JOIN_FIXED_MERGE_ERROR
-        );
-        expectUserError(
-            () => pipe(
-                users,
-                (leftJoin as any)(
-                    orders,
-                    (user: typeof users.columns, order: typeof orders.columns) => eq(user.id, order.user_id),
-                    { merge: prefixOverlapLeft("user_"), lateral: true } as never
-                )
-            ),
-            "JOIN_FIXED_MERGE_REMOVED",
-            LEGACY_LEFT_JOIN_FIXED_MERGE_ERROR
+    test("query helpers validate only current curried shapes", () => {
+        expect(() => (map as any)()).toThrow("map() expects map(selector)");
+        expect(() => (filter as any)("not a callback")).toThrow("filter() expects a row callback");
+        expect(() => (take as any)()).toThrow("take() expects take(count)");
+    });
+    test("fixed join helpers reject invalid options without probing callbacks", () => {
+        const users = table("users", { id: t.int() });
+        const orders = table("orders", { user_id: t.int() });
+        const on = (_user: typeof users.columns, _order: typeof orders.columns) => {
+            throw new Error("callback should not be executed during argument validation");
+        };
+        expect(() => (leftJoin as any)(users, on, { type: "left" })).toThrow(
+            "leftJoin() options must be { lateral?: boolean }"
         );
     });
     test("rejects default joins with overlapping output columns", () => {
@@ -112,78 +71,61 @@ describe("error paths", () => {
             )
         )).toThrow(JOIN_MERGE_CONFLICT_ERROR);
     });
-    test("rejects removed data-first query helper calls at runtime", () => {
+    test("query helpers reject malformed current API calls at runtime", () => {
         const users = createUsersTable();
         const orders = createOrdersTable();
         expectUserError(
             () => (map as any)(users, (user: typeof users.columns) => ({ id: user.id })),
-            "QUERY_HELPER_CURRIED_ONLY",
-            MAP_CURRIED_ONLY_ERROR
+            "QUERY_HELPER_INVALID_ARGUMENTS",
+            "map() expects map(selector)"
         );
         expectUserError(
             () => (extend as any)(users, (user: typeof users.columns) => ({ name: user.name })),
-            "QUERY_HELPER_CURRIED_ONLY",
-            EXTEND_CURRIED_ONLY_ERROR
+            "QUERY_HELPER_INVALID_ARGUMENTS",
+            "extend() expects extend(selector)"
         );
         expectUserError(
             () => (filter as any)(users, (user: typeof users.columns) => eq(user.id, 1)),
-            "QUERY_HELPER_CURRIED_ONLY",
-            FILTER_CURRIED_ONLY_ERROR
+            "QUERY_HELPER_INVALID_ARGUMENTS",
+            "filter() expects filter(predicate)"
         );
         expectUserError(
             () => (fold as any)(orders, (order: typeof orders.columns) => ({
                 user_id: group(order.user_id),
                 total: count(order.order_id),
             })),
-            "QUERY_HELPER_CURRIED_ONLY",
-            FOLD_CURRIED_ONLY_ERROR
+            "QUERY_HELPER_INVALID_ARGUMENTS",
+            "fold() expects fold(selector)"
         );
         expectUserError(
             () => (sort as any)(users, (user: typeof users.columns) => user.id),
-            "QUERY_HELPER_CURRIED_ONLY",
-            SORT_CURRIED_ONLY_ERROR
+            "QUERY_HELPER_INVALID_ARGUMENTS",
+            "sort() expects sort(selector)"
         );
         expectUserError(
             () => (take as any)(users, 10),
-            "QUERY_HELPER_CURRIED_ONLY",
-            TAKE_CURRIED_ONLY_ERROR
+            "QUERY_HELPER_INVALID_ARGUMENTS",
+            "take() expects take(count)"
         );
         expectUserError(
             () => (innerJoin as any)(users, orders, (user: typeof users.columns, order: typeof orders.columns) => eq(user.id, order.user_id)),
-            "QUERY_HELPER_CURRIED_ONLY",
-            INNER_JOIN_CURRIED_ONLY_ERROR
+            "DEFERRED_INPUT_INVALID",
+            "innerJoin() expects a row callback"
         );
         expectUserError(
             () => (leftJoin as any)(users, orders, (user: typeof users.columns, order: typeof orders.columns) => eq(user.id, order.user_id)),
-            "QUERY_HELPER_CURRIED_ONLY",
-            LEFT_JOIN_CURRIED_ONLY_ERROR
+            "DEFERRED_INPUT_INVALID",
+            "leftJoin() expects a row callback"
         );
         expectUserError(
             () => (rightJoin as any)(users, orders, (user: typeof users.columns, order: typeof orders.columns) => eq(user.id, order.user_id)),
-            "QUERY_HELPER_CURRIED_ONLY",
-            RIGHT_JOIN_CURRIED_ONLY_ERROR
+            "DEFERRED_INPUT_INVALID",
+            "rightJoin() expects a row callback"
         );
         expectUserError(
             () => (fullJoin as any)(users, orders, (user: typeof users.columns, order: typeof orders.columns) => eq(user.id, order.user_id)),
-            "QUERY_HELPER_CURRIED_ONLY",
-            FULL_JOIN_CURRIED_ONLY_ERROR
-        );
-    });
-    test("rejects removed fixed data-first lateral join with callback on expression at runtime", () => {
-        const users = createUsersTable();
-        const orders = createOrdersTable();
-        expectUserError(
-            () => (leftJoin as any)(
-                users,
-                (user: typeof users.columns) =>
-                    pipe(
-                        orders,
-                        filter((order: typeof orders.columns) => eq(order.user_id, user.id))
-                    ),
-                (user: typeof users.columns, order: typeof orders.columns) => eq(user.id, order.user_id)
-            ),
-            "QUERY_HELPER_CURRIED_ONLY",
-            LEFT_JOIN_CURRIED_ONLY_ERROR
+            "DEFERRED_INPUT_INVALID",
+            "fullJoin() expects a row callback"
         );
     });
     test("rejects loop steps with mismatched column names", () => {

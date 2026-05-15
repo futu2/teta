@@ -7,7 +7,7 @@ import {
   type ExprRef,
 } from "../expr.ts";
 import { userError } from "../errors.ts";
-import { createQuery, isQuery } from "./builder.ts";
+import { createQuery } from "./builder.ts";
 import type { Query } from "./builder.ts";
 import { resolveSelectQuery } from "./mutations.ts";
 import type { SelectProjection } from "./planner.ts";
@@ -118,11 +118,8 @@ export function select<TColumns extends QueryColumns, const TItems extends Selec
 ) => Query<SelectResult<TItems>>;
 
 export function select(...args: unknown[]): unknown {
-  if (isQuery(args[0])) {
-    userError(
-      "QUERY_HELPER_CURRIED_ONLY",
-      "select() is curried-only. Use pipe(query, select(selector))."
-    );
+  if (args.length !== 1) {
+    userError("QUERY_HELPER_INVALID_ARGUMENTS", "select() expects select(selector)");
   }
 
   const [selectorOrItems] = args;
