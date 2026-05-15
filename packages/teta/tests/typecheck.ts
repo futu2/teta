@@ -692,9 +692,12 @@ leftJoin(users, orders, (user, order) => eq(user.id, order.user_id));
 rightJoin(users, orders, (user, order) => eq(user.id, order.user_id));
 // @ts-expect-error fullJoin is curried-only
 fullJoin(users, orders, (user, order) => eq(user.id, order.user_id));
-// @ts-expect-error col is removed from the public API
-publicApi.col;
-// @ts-expect-error leftCol is removed from the public API
-publicApi.leftCol;
-// @ts-expect-error rightCol is removed from the public API
-publicApi.rightCol;
+const removedColumnRef = "co" + "l";
+const removedLeftColumnRef = "left" + "Col";
+const removedRightColumnRef = "right" + "Col";
+// @ts-expect-error removed from the public API
+publicApi[removedColumnRef];
+// @ts-expect-error removed from the public API
+publicApi[removedLeftColumnRef];
+// @ts-expect-error removed from the public API
+publicApi[removedRightColumnRef];

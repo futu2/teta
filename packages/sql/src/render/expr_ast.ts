@@ -111,11 +111,6 @@ export function exprNodeToAst(
       return windowExprToAst(expr, renderContext, exprNodeToAst);
     case "case":
       return caseExprToAst(expr, renderContext, exprNodeToAst);
-    case "deferred_column":
-      internalError(
-        "INTERNAL_UNRESOLVED_DEFERRED_COLUMN",
-        `Deferred column was not resolved before SQL rendering: ${expr.scope}.${expr.name}`
-      );
     default:
       return assertNever(expr);
   }

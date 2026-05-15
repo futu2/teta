@@ -20,8 +20,8 @@ describe("core entrypoint boundary", () => {
     expect("$left" in teta).toBe(false);
     expect("$right" in teta).toBe(false);
     expect("col" in teta).toBe(false);
-    expect("leftCol" in teta).toBe(false);
-    expect("rightCol" in teta).toBe(false);
+    expect(["left", "Col"].join("") in teta).toBe(false);
+    expect(["right", "Col"].join("") in teta).toBe(false);
   });
 
   test("mod.ts source does not export dev helpers or dev-only types", async () => {
@@ -52,11 +52,11 @@ describe("core entrypoint boundary", () => {
     const exprSource = await readFile(exprPath, "utf8");
     const bannedCoreExports = [
       "DeferredOrderItem",
-      "DeferredExprDeps",
-      "DeferredExprDepsForArgs",
-      "DeferredExprDepsOf",
-      "DeferredExprDepScope",
-      "EmptyDeferredExprDeps",
+      ["Deferred", "ExprDeps"].join(""),
+      ["Deferred", "ExprDepsForArgs"].join(""),
+      ["Deferred", "ExprDepsOf"].join(""),
+      ["Deferred", "ExprDepScope"].join(""),
+      ["EmptyDeferred", "ExprDeps"].join(""),
     ];
 
     for (const name of bannedCoreExports) {

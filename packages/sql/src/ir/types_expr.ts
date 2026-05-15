@@ -58,18 +58,7 @@ export type ExprNode<T> = (
   | CastNode
   | WindowNode
   | CaseNode
-  | DeferredColumnNode
 ) & ExprNodeResult<T>;
-
-/** Deferred column scope used before frontend column refs are resolved. */
-export type DeferredColumnScope = "current" | "left" | "right";
-
-/** Unresolved column reference produced by frontend deferred-column helpers. */
-export type DeferredColumnNode = {
-  kind: "deferred_column";
-  scope: DeferredColumnScope;
-  name: string;
-};
 
 /** Resolved column reference. */
 export type ColumnNode = {

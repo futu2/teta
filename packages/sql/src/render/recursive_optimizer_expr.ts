@@ -60,11 +60,6 @@ export function collectExprColumns(
     case "literal":
     case "param":
       return;
-    case "deferred_column":
-      internalError(
-        "INTERNAL_UNRESOLVED_DEFERRED_COLUMN",
-        `Deferred column was not resolved before recursive optimization: ${expr.scope}.${expr.name}`
-      );
     default:
       assertNever(expr);
   }
