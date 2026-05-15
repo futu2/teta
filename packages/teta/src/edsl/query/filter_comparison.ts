@@ -1,20 +1,13 @@
-import { filterResolved, Query } from "./builder.ts";
-import type { QueryStep } from "./builder.ts";
+import { filterResolved } from "./builder.ts";
+import type { Query, QueryStep } from "./builder.ts";
 import type {
   ColumnRefs,
   ExprInput,
 } from "../expr.ts";
-import { ExprRef } from "../expr.ts";
-import { resolveDeferredExpr } from "../internal_deferred_expr.ts";
+import type { ExprRef } from "../expr.ts";
 import { eq, ne, gt, gte, lt, lte } from "../expr.ts";
-import type { SqlDate, SqlNumber, SqlTimestamp } from "../sql/types.ts";
-import type {
-  ColumnValueForKey,
-  CurrentDepsOf,
-  KnownDeferredCurrentColumnsGuard,
-  QueryColumns,
-  SingleLiteralKey,
-} from "./deferred_types.ts";
+import type { NormalizeNumericLiteral, SqlDate, SqlNumber, SqlTimestamp } from "../sql/types.ts";
+import type { QueryColumns } from "./deferred_types.ts";
 
 type ComparableInput = SqlNumber | number | bigint | SqlDate | SqlTimestamp | null;
 type IsAny<T> = 0 extends (1 & T) ? true : false;
@@ -26,7 +19,6 @@ type NotFunction<T> = IsAny<T> extends true
 type DirectOperand<TValue> = ExprInput<TValue>;
 type CallableOperand<TColumns extends QueryColumns, TValue> =
   (cols: ColumnRefs<TColumns>) => ExprInput<TValue>;
-type CompatibleDirectOperand<TValue> = ExprInput<NonNullWidenLiteral<TValue> | Extract<TValue, null>>;
 type Operand<TColumns extends QueryColumns, TValue> =
   | DirectOperand<TValue>
   | CallableOperand<TColumns, TValue>;
@@ -47,10 +39,19 @@ type SameComparableValue<TLeft, TRight> =
       ? unknown
       : never
     : never;
+type NormalizeComparableLiteral<TLeft, TRight> =
+  NormalizeNumericLiteral<ExprInputValueOf<TLeft>, ExprInputValueOf<TRight>>;
+type CompatibleExprInputValue<TLeft extends ExprInput<unknown>, TRight extends ExprInput<unknown>> =
+  SameComparableValue<
+    ExprInputValueOf<TLeft>,
+    NormalizeComparableLiteral<TLeft, TRight>
+  >;
 type SameExprInputValue<TLeft extends ExprInput<unknown>, TRight extends ExprInput<unknown>> =
   IsNever<ExprInputValueOf<TLeft>> extends true ? unknown
   : IsNever<ExprInputValueOf<TRight>> extends true ? unknown
-  : SameComparableValue<ExprInputValueOf<TLeft>, ExprInputValueOf<TRight>>;
+  : CompatibleExprInputValue<TLeft, TRight> extends never
+    ? CompatibleExprInputValue<TRight, TLeft>
+    : CompatibleExprInputValue<TLeft, TRight>;
 type SameExprInputValueRest<TLeft extends ExprInput<unknown>, TRight extends ExprInput<unknown>> =
   SameExprInputValue<TLeft, TRight> extends never ? [never] : [];
 type ComparableExprInput<TInput extends ExprInput<unknown>> =
@@ -59,63 +60,6 @@ type ComparableExprInputRest<TInput extends ExprInput<unknown>> =
   ComparableExprInput<TInput> extends never ? [never] : [];
 
 type IsNever<T> = [T] extends [never] ? true : false;
-
-type SameCurrentValueGuard<
-  TColumns extends QueryColumns,
-  TLeft,
-  TRight,
-> = SameComparableValue<CurrentExprInputValue<TColumns, TLeft>, CurrentExprInputValue<TColumns, TRight>> extends never
-  ? {
-      __teta_mismatched_comparison_operand_types__: [
-        CurrentExprInputValue<TColumns, TLeft>,
-        CurrentExprInputValue<TColumns, TRight>,
-      ];
-    }
-  : unknown;
-
-type MixedCurrentValueGuard<
-  TColumns extends QueryColumns,
-  TLeft extends ExprInput<unknown>,
-  TRight extends ExprInput<unknown>,
-> = SameExprInputValue<TLeft, TRight> extends never
-  ? {
-      __teta_mismatched_comparison_operand_types__: [
-        ExprInputValueOf<TLeft>,
-        ExprInputValueOf<TRight>,
-      ];
-    }
-  : SameCurrentValueGuard<TColumns, TLeft, TRight>;
-
-type ComparableCurrentValue<
-  TColumns extends QueryColumns,
-  TExpr,
-> = Exclude<CurrentExprInputValue<TColumns, TExpr>, null> extends ComparableInput
-  ? unknown
-  : never;
-
-type OrderedComparableCurrentValueGuard<
-  TColumns extends QueryColumns,
-  TLeft,
-  TRight,
-> = [ComparableCurrentValue<TColumns, TLeft>] extends [never]
-  ? {
-      __teta_non_comparable_filter_operand__: [
-        CurrentExprInputValue<TColumns, TLeft>,
-        CurrentExprInputValue<TColumns, TRight>,
-      ];
-    }
-  : [ComparableCurrentValue<TColumns, TRight>] extends [never]
-    ? {
-        __teta_non_comparable_filter_operand__: [
-          CurrentExprInputValue<TColumns, TLeft>,
-          CurrentExprInputValue<TColumns, TRight>,
-        ];
-      }
-  : unknown;
-type CurrentExprInputValue<TColumns extends QueryColumns, TExpr> =
-  TExpr extends ExprRef<never, any>
-    ? ColumnValueForKey<TColumns, SingleLiteralKey<CurrentDepsOf<TExpr>>>
-    : ExprInputValueOf<TExpr>;
 
 export function filterEq<
   TColumns extends QueryColumns,
@@ -130,30 +74,18 @@ export function filterEq<
 export function filterEq<TColumns extends QueryColumns, T, TRight extends ExprInput<NoInfer<T>>>(
   left: CallableOperand<TColumns, T>,
   right: TRight & NotFunction<TRight>
-): (
-  query: Query<TColumns>
-    & KnownDeferredCurrentColumnsGuard<NoInfer<TColumns>, TRight>
-    & MixedCurrentValueGuard<NoInfer<TColumns>, ExprRef<T>, TRight>
-) => Query<TColumns>;
+): QueryStep<TColumns, TColumns>;
 
 export function filterEq<TColumns extends QueryColumns, T, TLeft extends ExprInput<T>>(
   left: TLeft & NotFunction<TLeft>,
   right: CallableOperand<TColumns, NoInfer<T>>
-): (
-  query: Query<TColumns>
-    & KnownDeferredCurrentColumnsGuard<NoInfer<TColumns>, TLeft>
-    & MixedCurrentValueGuard<NoInfer<TColumns>, TLeft, ExprRef<T>>
-) => Query<TColumns>;
+): QueryStep<TColumns, TColumns>;
 
 export function filterEq<TLeft extends DirectOperand<unknown>, TRight extends DirectOperand<unknown>>(
   left: TLeft & NotFunction<TLeft>,
   right: TRight & NotFunction<TRight>,
   ...guard: SameExprInputValueRest<TLeft, TRight>
-): <TColumns extends QueryColumns>(
-  query: Query<TColumns>
-    & KnownDeferredCurrentColumnsGuard<NoInfer<TColumns>, TLeft | TRight>
-    & SameCurrentValueGuard<NoInfer<TColumns>, TLeft, TRight>
-) => Query<TColumns>;
+): <TColumns extends QueryColumns>(query: Query<TColumns>) => Query<TColumns>;
 
 export function filterEq<TColumns extends QueryColumns, T>(
   left: Operand<TColumns, T>,
@@ -175,30 +107,18 @@ export function filterNe<
 export function filterNe<TColumns extends QueryColumns, T, TRight extends ExprInput<NoInfer<T>>>(
   left: CallableOperand<TColumns, T>,
   right: TRight & NotFunction<TRight>
-): (
-  query: Query<TColumns>
-    & KnownDeferredCurrentColumnsGuard<NoInfer<TColumns>, TRight>
-    & MixedCurrentValueGuard<NoInfer<TColumns>, ExprRef<T>, TRight>
-) => Query<TColumns>;
+): QueryStep<TColumns, TColumns>;
 
 export function filterNe<TColumns extends QueryColumns, T, TLeft extends ExprInput<T>>(
   left: TLeft & NotFunction<TLeft>,
   right: CallableOperand<TColumns, NoInfer<T>>
-): (
-  query: Query<TColumns>
-    & KnownDeferredCurrentColumnsGuard<NoInfer<TColumns>, TLeft>
-    & MixedCurrentValueGuard<NoInfer<TColumns>, TLeft, ExprRef<T>>
-) => Query<TColumns>;
+): QueryStep<TColumns, TColumns>;
 
 export function filterNe<TLeft extends DirectOperand<unknown>, TRight extends DirectOperand<unknown>>(
   left: TLeft & NotFunction<TLeft>,
   right: TRight & NotFunction<TRight>,
   ...guard: SameExprInputValueRest<TLeft, TRight>
-): <TColumns extends QueryColumns>(
-  query: Query<TColumns>
-    & KnownDeferredCurrentColumnsGuard<NoInfer<TColumns>, TLeft | TRight>
-    & SameCurrentValueGuard<NoInfer<TColumns>, TLeft, TRight>
-) => Query<TColumns>;
+): <TColumns extends QueryColumns>(query: Query<TColumns>) => Query<TColumns>;
 
 export function filterNe<TColumns extends QueryColumns, T>(
   left: Operand<TColumns, T>,
@@ -219,31 +139,23 @@ export function filterGt<
 
 export function filterGt<
   TColumns extends QueryColumns,
-  TLeft extends ExprInput<ComparableInput>,
-  TRight extends DirectOperand<unknown>,
+  T extends ComparableInput,
+  TLeft extends ExprInput<T>,
+  TRight extends ExprInput<NoInfer<T>>,
 >(
   left: (cols: ColumnRefs<TColumns>) => TLeft,
   right: TRight & NotFunction<TRight>
-): (
-  query: Query<TColumns>
-    & KnownDeferredCurrentColumnsGuard<NoInfer<TColumns>, TRight>
-    & MixedCurrentValueGuard<NoInfer<TColumns>, TLeft, TRight>
-    & OrderedComparableCurrentValueGuard<NoInfer<TColumns>, TLeft, TRight>
-) => Query<TColumns>;
+): QueryStep<TColumns, TColumns>;
 
 export function filterGt<
   TColumns extends QueryColumns,
-  TLeft extends DirectOperand<unknown>,
-  TRight extends ExprInput<ComparableInput>,
+  T extends ComparableInput,
+  TLeft extends ExprInput<NoInfer<T>>,
+  TRight extends ExprInput<T>,
 >(
   left: TLeft & NotFunction<TLeft>,
   right: (cols: ColumnRefs<TColumns>) => TRight
-): (
-  query: Query<TColumns>
-    & KnownDeferredCurrentColumnsGuard<NoInfer<TColumns>, TLeft>
-    & MixedCurrentValueGuard<NoInfer<TColumns>, TLeft, TRight>
-    & OrderedComparableCurrentValueGuard<NoInfer<TColumns>, TLeft, TRight>
-) => Query<TColumns>;
+): QueryStep<TColumns, TColumns>;
 
 export function filterGt<TLeft extends DirectOperand<unknown>, TRight extends DirectOperand<unknown>>(
   left: TLeft & NotFunction<TLeft>,
@@ -253,12 +165,7 @@ export function filterGt<TLeft extends DirectOperand<unknown>, TRight extends Di
     ...ComparableExprInputRest<TLeft>,
     ...ComparableExprInputRest<TRight>,
   ]
-): <TColumns extends QueryColumns>(
-  query: Query<TColumns>
-    & KnownDeferredCurrentColumnsGuard<NoInfer<TColumns>, TLeft | TRight>
-    & SameCurrentValueGuard<NoInfer<TColumns>, TLeft, TRight>
-    & OrderedComparableCurrentValueGuard<NoInfer<TColumns>, TLeft, TRight>
-) => Query<TColumns>;
+): <TColumns extends QueryColumns>(query: Query<TColumns>) => Query<TColumns>;
 
 export function filterGt<TColumns extends QueryColumns, T extends ComparableInput>(
   left: Operand<TColumns, T>,
@@ -279,31 +186,23 @@ export function filterGte<
 
 export function filterGte<
   TColumns extends QueryColumns,
-  TLeft extends ExprInput<ComparableInput>,
-  TRight extends DirectOperand<unknown>,
+  T extends ComparableInput,
+  TLeft extends ExprInput<T>,
+  TRight extends ExprInput<NoInfer<T>>,
 >(
   left: (cols: ColumnRefs<TColumns>) => TLeft,
   right: TRight & NotFunction<TRight>
-): (
-  query: Query<TColumns>
-    & KnownDeferredCurrentColumnsGuard<NoInfer<TColumns>, TRight>
-    & MixedCurrentValueGuard<NoInfer<TColumns>, TLeft, TRight>
-    & OrderedComparableCurrentValueGuard<NoInfer<TColumns>, TLeft, TRight>
-) => Query<TColumns>;
+): QueryStep<TColumns, TColumns>;
 
 export function filterGte<
   TColumns extends QueryColumns,
-  TLeft extends DirectOperand<unknown>,
-  TRight extends ExprInput<ComparableInput>,
+  T extends ComparableInput,
+  TLeft extends ExprInput<NoInfer<T>>,
+  TRight extends ExprInput<T>,
 >(
   left: TLeft & NotFunction<TLeft>,
   right: (cols: ColumnRefs<TColumns>) => TRight
-): (
-  query: Query<TColumns>
-    & KnownDeferredCurrentColumnsGuard<NoInfer<TColumns>, TLeft>
-    & MixedCurrentValueGuard<NoInfer<TColumns>, TLeft, TRight>
-    & OrderedComparableCurrentValueGuard<NoInfer<TColumns>, TLeft, TRight>
-) => Query<TColumns>;
+): QueryStep<TColumns, TColumns>;
 
 export function filterGte<TLeft extends DirectOperand<unknown>, TRight extends DirectOperand<unknown>>(
   left: TLeft & NotFunction<TLeft>,
@@ -313,12 +212,7 @@ export function filterGte<TLeft extends DirectOperand<unknown>, TRight extends D
     ...ComparableExprInputRest<TLeft>,
     ...ComparableExprInputRest<TRight>,
   ]
-): <TColumns extends QueryColumns>(
-  query: Query<TColumns>
-    & KnownDeferredCurrentColumnsGuard<NoInfer<TColumns>, TLeft | TRight>
-    & SameCurrentValueGuard<NoInfer<TColumns>, TLeft, TRight>
-    & OrderedComparableCurrentValueGuard<NoInfer<TColumns>, TLeft, TRight>
-) => Query<TColumns>;
+): <TColumns extends QueryColumns>(query: Query<TColumns>) => Query<TColumns>;
 
 export function filterGte<TColumns extends QueryColumns, T extends ComparableInput>(
   left: Operand<TColumns, T>,
@@ -339,31 +233,23 @@ export function filterLt<
 
 export function filterLt<
   TColumns extends QueryColumns,
-  TLeft extends ExprInput<ComparableInput>,
-  TRight extends DirectOperand<unknown>,
+  T extends ComparableInput,
+  TLeft extends ExprInput<T>,
+  TRight extends ExprInput<NoInfer<T>>,
 >(
   left: (cols: ColumnRefs<TColumns>) => TLeft,
   right: TRight & NotFunction<TRight>
-): (
-  query: Query<TColumns>
-    & KnownDeferredCurrentColumnsGuard<NoInfer<TColumns>, TRight>
-    & MixedCurrentValueGuard<NoInfer<TColumns>, TLeft, TRight>
-    & OrderedComparableCurrentValueGuard<NoInfer<TColumns>, TLeft, TRight>
-) => Query<TColumns>;
+): QueryStep<TColumns, TColumns>;
 
 export function filterLt<
   TColumns extends QueryColumns,
-  TLeft extends DirectOperand<unknown>,
-  TRight extends ExprInput<ComparableInput>,
+  T extends ComparableInput,
+  TLeft extends ExprInput<NoInfer<T>>,
+  TRight extends ExprInput<T>,
 >(
   left: TLeft & NotFunction<TLeft>,
   right: (cols: ColumnRefs<TColumns>) => TRight
-): (
-  query: Query<TColumns>
-    & KnownDeferredCurrentColumnsGuard<NoInfer<TColumns>, TLeft>
-    & MixedCurrentValueGuard<NoInfer<TColumns>, TLeft, TRight>
-    & OrderedComparableCurrentValueGuard<NoInfer<TColumns>, TLeft, TRight>
-) => Query<TColumns>;
+): QueryStep<TColumns, TColumns>;
 
 export function filterLt<TLeft extends DirectOperand<unknown>, TRight extends DirectOperand<unknown>>(
   left: TLeft & NotFunction<TLeft>,
@@ -373,12 +259,7 @@ export function filterLt<TLeft extends DirectOperand<unknown>, TRight extends Di
     ...ComparableExprInputRest<TLeft>,
     ...ComparableExprInputRest<TRight>,
   ]
-): <TColumns extends QueryColumns>(
-  query: Query<TColumns>
-    & KnownDeferredCurrentColumnsGuard<NoInfer<TColumns>, TLeft | TRight>
-    & SameCurrentValueGuard<NoInfer<TColumns>, TLeft, TRight>
-    & OrderedComparableCurrentValueGuard<NoInfer<TColumns>, TLeft, TRight>
-) => Query<TColumns>;
+): <TColumns extends QueryColumns>(query: Query<TColumns>) => Query<TColumns>;
 
 export function filterLt<TColumns extends QueryColumns, T extends ComparableInput>(
   left: Operand<TColumns, T>,
@@ -399,31 +280,23 @@ export function filterLte<
 
 export function filterLte<
   TColumns extends QueryColumns,
-  TLeft extends ExprInput<ComparableInput>,
-  TRight extends DirectOperand<unknown>,
+  T extends ComparableInput,
+  TLeft extends ExprInput<T>,
+  TRight extends ExprInput<NoInfer<T>>,
 >(
   left: (cols: ColumnRefs<TColumns>) => TLeft,
   right: TRight & NotFunction<TRight>
-): (
-  query: Query<TColumns>
-    & KnownDeferredCurrentColumnsGuard<NoInfer<TColumns>, TRight>
-    & MixedCurrentValueGuard<NoInfer<TColumns>, TLeft, TRight>
-    & OrderedComparableCurrentValueGuard<NoInfer<TColumns>, TLeft, TRight>
-) => Query<TColumns>;
+): QueryStep<TColumns, TColumns>;
 
 export function filterLte<
   TColumns extends QueryColumns,
-  TLeft extends DirectOperand<unknown>,
-  TRight extends ExprInput<ComparableInput>,
+  T extends ComparableInput,
+  TLeft extends ExprInput<NoInfer<T>>,
+  TRight extends ExprInput<T>,
 >(
   left: TLeft & NotFunction<TLeft>,
   right: (cols: ColumnRefs<TColumns>) => TRight
-): (
-  query: Query<TColumns>
-    & KnownDeferredCurrentColumnsGuard<NoInfer<TColumns>, TLeft>
-    & MixedCurrentValueGuard<NoInfer<TColumns>, TLeft, TRight>
-    & OrderedComparableCurrentValueGuard<NoInfer<TColumns>, TLeft, TRight>
-) => Query<TColumns>;
+): QueryStep<TColumns, TColumns>;
 
 export function filterLte<TLeft extends DirectOperand<unknown>, TRight extends DirectOperand<unknown>>(
   left: TLeft & NotFunction<TLeft>,
@@ -433,12 +306,7 @@ export function filterLte<TLeft extends DirectOperand<unknown>, TRight extends D
     ...ComparableExprInputRest<TLeft>,
     ...ComparableExprInputRest<TRight>,
   ]
-): <TColumns extends QueryColumns>(
-  query: Query<TColumns>
-    & KnownDeferredCurrentColumnsGuard<NoInfer<TColumns>, TLeft | TRight>
-    & SameCurrentValueGuard<NoInfer<TColumns>, TLeft, TRight>
-    & OrderedComparableCurrentValueGuard<NoInfer<TColumns>, TLeft, TRight>
-) => Query<TColumns>;
+): <TColumns extends QueryColumns>(query: Query<TColumns>) => Query<TColumns>;
 
 export function filterLte<TColumns extends QueryColumns, T extends ComparableInput>(
   left: Operand<TColumns, T>,
@@ -463,18 +331,9 @@ function resolveOperand<TColumns extends QueryColumns, T>(
   query: Query<TColumns>,
   operand: Operand<TColumns, T>
 ): ExprInput<T> {
-  const value = isCallableOperand(operand)
+  return isCallableOperand(operand)
     ? operand(query.columns)
     : operand;
-  return value instanceof ExprRef
-    ? resolveDeferredExpr(value, {
-        current: {
-          label: "current row",
-          columns: query.columns as ColumnRefs<Record<string, any>>,
-          columnNames: query.columnNames,
-        },
-      }) as ExprInput<T>
-    : value;
 }
 
 function isCallableOperand<TColumns extends QueryColumns, T>(

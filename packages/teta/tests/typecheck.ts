@@ -163,6 +163,7 @@ const replacedExtendedUsers = pipe(users, extend((user) => ({
 const pickedUsers = pipe(users, pick("id", "name"));
 const callbackFilteredUsers = pipe(users, filter((user) => eq(user.id, 1)));
 const filterEqCallbackNameUsers = pipe(users, filterEq((user) => user.name, "Ada"));
+const filterEqCallbackIdUsers = pipe(users, filterEq((user) => user.id, 1));
 const filterGteComputedUsers = pipe(users, filterGte((user) => add(mul(user.id, 2), 1), 3));
 const filterEqCallbackUsers = pipe(users, filterEq((user) => user.id, (user) => add(user.id, 0)));
 const filterNeUsers = pipe(users, filterNe((user) => user.name, "deleted"));
@@ -327,6 +328,7 @@ type _ReplacedExtendedUsersId = Expect<Equal<ExprType<typeof replacedExtendedUse
 type _ReplacedExtendedUsersName = Expect<Equal<ExprType<typeof replacedExtendedUsers.columns.name>, string>>;
 type _CallbackFilteredUsersId = Expect<Equal<ExprType<typeof callbackFilteredUsers.columns.id>, SqlInt>>;
 type _FilterEqCallbackNameUsersName = Expect<Equal<ExprType<typeof filterEqCallbackNameUsers.columns.name>, string>>;
+type _FilterEqCallbackIdUsersId = Expect<Equal<ExprType<typeof filterEqCallbackIdUsers.columns.id>, SqlInt>>;
 type _FilterGteComputedUsersId = Expect<Equal<ExprType<typeof filterGteComputedUsers.columns.id>, SqlInt>>;
 type _FilterEqCallbackUsersId = Expect<Equal<ExprType<typeof filterEqCallbackUsers.columns.id>, SqlInt>>;
 type _FilterNeUsersName = Expect<Equal<ExprType<typeof filterNeUsers.columns.name>, string>>;
@@ -448,6 +450,7 @@ void extendedUsers;
 void replacedExtendedUsers;
 void callbackFilteredUsers;
 void filterEqCallbackNameUsers;
+void filterEqCallbackIdUsers;
 void filterGteComputedUsers;
 void filterEqCallbackUsers;
 void filterNeUsers;
