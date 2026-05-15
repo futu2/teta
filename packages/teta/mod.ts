@@ -183,17 +183,18 @@ export type QueryStageKind = import("./src/edsl/query.ts").QueryStageKind;
 /** Single step in the lowered query plan. */
 export type QueryStep<TInputColumns extends Record<string, any>, TOutputColumns extends Record<string, any>> = import("./src/edsl/query.ts").QueryStep<TInputColumns, TOutputColumns>;
 
-/** Typed SQL expression reference used throughout the query DSL. */
-export type ExprRef<T> = import("./src/edsl/expr.ts").ExprRef<T>;
+/** Typed SQL expression value used throughout the query DSL. */
+export type Expr<T> = import("./src/edsl/expr.ts").Expr<T>;
+export type Column<T, Name extends string> = import("./src/edsl/expr.ts").Column<T, Name>;
 export type ExprLike<T> = import("./src/edsl/expr.ts").ExprLike<T>;
 
-/** Returns true for tagged SQL expression values. */
+/** Returns true when a value is a Teta expression. */
 export const isExpr: typeof import("./src/edsl/expr.ts").isExpr = expr.isExpr;
 
-/** Returns true for tagged SQL column expression values. */
+/** Returns true when a value is a Teta column expression. */
 export const isColumn: typeof import("./src/edsl/expr.ts").isColumn = expr.isColumn;
 
-/** Returns true for tagged query values. */
+/** Returns true when a value is a Teta query. */
 export const isQuery: typeof import("./src/edsl/query.ts").isQuery = query.isQuery;
 
 /** Builds an equality predicate. */
