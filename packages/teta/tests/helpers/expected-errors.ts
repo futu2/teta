@@ -46,16 +46,16 @@ export const JOIN_CURRIED_ONLY_ERROR =
   "join() is curried-only. Use pipe(query, join(right, on, merge?, options?)).";
 
 export const INNER_JOIN_CURRIED_ONLY_ERROR =
-  "innerJoin() is curried-only. Use pipe(query, innerJoin(right, on, merge?, options?)).";
+  "innerJoin() is curried-only. Use pipe(query, innerJoin(right, on, options?)).";
 
 export const LEFT_JOIN_CURRIED_ONLY_ERROR =
-  "leftJoin() is curried-only. Use pipe(query, leftJoin(right, on, merge?, options?)).";
+  "leftJoin() is curried-only. Use pipe(query, leftJoin(right, on, options?)).";
 
 export const RIGHT_JOIN_CURRIED_ONLY_ERROR =
-  "rightJoin() is curried-only. Use pipe(query, rightJoin(right, on, merge?, options?)).";
+  "rightJoin() is curried-only. Use pipe(query, rightJoin(right, on, options?)).";
 
 export const FULL_JOIN_CURRIED_ONLY_ERROR =
-  "fullJoin() is curried-only. Use pipe(query, fullJoin(right, on, merge?, options?)).";
+  "fullJoin() is curried-only. Use pipe(query, fullJoin(right, on, options?)).";
 
 export const SELECT_DUPLICATE_COLUMN_ERROR =
   "Duplicate selected column name: id";

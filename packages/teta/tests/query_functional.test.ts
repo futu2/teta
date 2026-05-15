@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { between, filter, filterEq, identityStep, isDistinctFrom, isNotIn, take, sort, map, toSql, asc, desc, eq, gte, replace, and, coalesce, leftJoin, onEq, prefixOverlapLeft, table, t, pipe, flow, unlessStep, unionAll, union, unnest, whenStep } from "../mod.ts";
+import { between, filter, filterEq, identityStep, isDistinctFrom, isNotIn, take, sort, map, toSql, asc, desc, eq, gte, replace, and, coalesce, leftJoin, leftJoinMerge, onEq, prefixOverlapLeft, table, t, pipe, flow, unlessStep, unionAll, union, unnest, whenStep } from "../mod.ts";
 import { USER_PIPELINE_POSTGRES_COMPACT, USERS_ORDERS_LEFT_JOIN_SELECT_POSTGRES_COMPACT } from "./helpers/expected-sql.ts";
 import { createOrdersTable, createUsersPipelineTable, createUsersTable } from "./helpers/fixtures.ts";
 describe("function-first query api", () => {
@@ -101,7 +101,7 @@ describe("function-first query api", () => {
         });
         const query = pipe(
             users,
-            leftJoin(
+            leftJoinMerge(
                 profiles,
                 onEq({ id: "user_id" }),
                 prefixOverlapLeft("left_")
@@ -122,7 +122,7 @@ describe("function-first query api", () => {
             user_id: t.int(),
             bio: t.string(),
         });
-        const query = leftJoin(
+        const query = leftJoinMerge(
             profiles,
             (u: typeof users.columns, p: typeof profiles.columns = profiles.columns) => eq(u.id, p.user_id),
             prefixOverlapLeft("left_")

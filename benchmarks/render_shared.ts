@@ -6,7 +6,7 @@ import {
   desc,
   eq,
   filter,
-  leftJoin,
+  leftJoinMap,
   lower,
   map,
   sort,
@@ -57,7 +57,7 @@ const orders = table("orders", {
 
 export const renderBenchmarkQuery = pipe(
   users,
-  leftJoin(
+  leftJoinMap(
     orders,
     (user, order) => eq(user.id, order.user_id),
     (user, order) => ({

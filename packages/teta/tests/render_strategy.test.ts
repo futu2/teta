@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { table, t, filter, eq, gt, map, take, toSql, innerJoin, pipe } from "../mod.ts";
+import { table, t, filter, eq, gt, map, take, toSql, innerJoinMap, pipe } from "../mod.ts";
 describe("render strategy", () => {
     test("optimized strategy keeps simple pipelines fused", () => {
         const users = table("users", {
@@ -58,7 +58,7 @@ describe("render strategy", () => {
         );
         const joinedOnce = pipe(
             users,
-            innerJoin(
+            innerJoinMap(
                 positiveOrders,
                 (user, order) => eq(user.id, order.user_id),
                 (user, order) => ({
@@ -69,7 +69,7 @@ describe("render strategy", () => {
         );
         const query = pipe(
             joinedOnce,
-            innerJoin(
+            innerJoinMap(
                 positiveOrders,
                 (row, order) => eq(row.id, order.user_id),
                 (row, order) => ({

@@ -1,6 +1,6 @@
 import type { ExprRef, SqlBigInt, SqlBytes, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlTimestamp, SqlUuid, } from "../mod.ts";
 import * as publicApi from "../mod.ts";
-import { between, filter, filterEq, filterNe, filterGt, filterGte, filterLt, filterLte, fullJoin, identityStep, innerJoin, isDistinctFrom, isNotIn, join, leftJoin, rightJoin, take, sort, param, map, rename, pipe, flow, table, t, fold, asc, desc, eq, gt, upper, add, mul, coalesce, count, group, loop, sum, and, or, isNotNull, sub, caseWhen, when, mapShape, groupShape, lt, unnest, unionAll, union, unlessStep, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, toString, toTimestamp, pick, drop, extend, select, alias, whenStep } from "../mod.ts";
+import { between, filter, filterEq, filterNe, filterGt, filterGte, filterLt, filterLte, fullJoin, fullJoinMerge, identityStep, innerJoin, innerJoinMap, innerJoinMerge, isDistinctFrom, isNotIn, join, leftJoin, leftJoinMap, leftJoinMerge, rightJoin, rightJoinMerge, take, sort, param, map, rename, pipe, flow, table, t, fold, asc, desc, eq, gt, upper, add, mul, coalesce, count, group, loop, sum, and, or, isNotNull, sub, caseWhen, when, mapShape, groupShape, lt, unnest, unionAll, union, unlessStep, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, toString, toTimestamp, pick, drop, extend, select, alias, whenStep } from "../mod.ts";
 type Equal<A, B> = ((<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false);
 type Expect<T extends true> = T;
 type ExprType<TExpr> = TExpr extends ExprRef<infer TValue> ? TValue : never;
@@ -54,7 +54,7 @@ const leftViaJoin = pipe(users, join(
     (user, order) => eq(user.id, order.user_id),
     { type: "left" }
 ));
-const renamedJoin = pipe(users, innerJoin(
+const renamedJoin = pipe(users, innerJoinMap(
     orders,
     (user, order) => eq(user.id, order.user_id),
     (user, order) => ({
@@ -62,42 +62,42 @@ const renamedJoin = pipe(users, innerJoin(
         order_total: order.total,
     })
 ));
-const overlapPrefixedLeft = pipe(users, innerJoin(
+const overlapPrefixedLeft = pipe(users, innerJoinMerge(
     profileRows,
     (user, profile) => eq(user.id, profile.id),
     prefixOverlapLeft("user_")
 ));
-const overlapPrefixedRight = pipe(users, innerJoin(
+const overlapPrefixedRight = pipe(users, innerJoinMerge(
     profileRows,
     (user, profile) => eq(user.id, profile.id),
     prefixOverlapRight("profile_")
 ));
-const allPrefixedLeft = pipe(users, innerJoin(
+const allPrefixedLeft = pipe(users, innerJoinMerge(
     profileRows,
     (user, profile) => eq(user.id, profile.id),
     prefixAllLeft("left_")
 ));
-const allPrefixedRight = pipe(users, leftJoin(
+const allPrefixedRight = pipe(users, leftJoinMerge(
     orders,
     (user, order) => eq(user.id, order.user_id),
     prefixAllRight("order_")
 ));
-const allSuffixedLeft = pipe(users, rightJoin(
+const allSuffixedLeft = pipe(users, rightJoinMerge(
     orders,
     (user, order) => eq(user.id, order.user_id),
     suffixAllLeft("_user")
 ));
-const allSuffixedRight = pipe(users, fullJoin(
+const allSuffixedRight = pipe(users, fullJoinMerge(
     orders,
     (user, order) => eq(user.id, order.user_id),
     suffixAllRight("_order")
 ));
-const droppedOverlapLeft = pipe(users, innerJoin(
+const droppedOverlapLeft = pipe(users, innerJoinMerge(
     profileRows,
     (user, profile) => eq(user.id, profile.id),
     dropOverlapLeft()
 ));
-const droppedOverlapRight = pipe(users, innerJoin(
+const droppedOverlapRight = pipe(users, innerJoinMerge(
     profileRows,
     (user, profile) => eq(user.id, profile.id),
     dropOverlapRight()
@@ -113,12 +113,12 @@ const mappedProfileRows = table("profiles_mapped", {
     bio: t.string(),
 });
 const mappedProfileOnEq: (user: typeof users.columns, profile: typeof mappedProfileRows.columns) => ExprRef<boolean> = onEq({ id: "user_id" });
-const mappedJoin = pipe(users, leftJoin(
+const mappedJoin = pipe(users, leftJoinMerge(
     mappedProfileRows,
     mappedProfileOnEq,
     prefixOverlapLeft("left_")
 ));
-const callbackMergedJoin = pipe(users, leftJoin(
+const callbackMergedJoin = pipe(users, leftJoinMap(
     orders,
     (user, order) => eq(user.id, order.user_id),
     (user, order) => ({
@@ -582,7 +582,7 @@ pipe(users, leftJoin(
     (user, order) => eq(user.id, order.missing)
 ));
 pipe(users,
-    leftJoin(
+    leftJoinMap(
         orders,
         (user, order) => eq(user.id, order.user_id),
         (user, _order) => ({
@@ -592,7 +592,7 @@ pipe(users,
     )
 );
 pipe(users,
-    leftJoin(
+    leftJoinMap(
         orders,
         (user, order) => eq(user.id, order.user_id),
         (_user, order) => ({
@@ -611,10 +611,10 @@ const profileRowsWithUserId = values([
     { id: 1 as number, user_id: 1 as number, bio: "A" as string },
     { id: 2 as number, user_id: 2 as number, bio: "B" as string },
 ]);
-// @ts-expect-error prefixOverlapLeft can still collide with right-side keys after rename
-pipe(users, innerJoin(
+pipe(users, innerJoinMerge(
     profileRowsWithUserId,
     (user, profile) => eq(user.id, profile.user_id),
+    // @ts-expect-error prefixOverlapLeft can still collide with right-side keys after rename
     prefixOverlapLeft("user_")
 ));
 const leftRowsWithUserId = values([
@@ -625,20 +625,20 @@ const rightRowsOverlappingId = values([
     { id: 1 as number, bio: "A" as string },
     { id: 2 as number, bio: "B" as string },
 ]);
-// @ts-expect-error prefixOverlapLeft must reject self-collision when renamed overlap key hits unchanged left key
-pipe(leftRowsWithUserId, innerJoin(
+pipe(leftRowsWithUserId, innerJoinMerge(
     rightRowsOverlappingId,
     (left, right) => eq(left.id, right.id),
+    // @ts-expect-error prefixOverlapLeft must reject self-collision when renamed overlap key hits unchanged left key
     prefixOverlapLeft("user_")
 ));
 const rightRowsWithUserId = values([
     { id: 1 as number, user_id: 11 as number, bio: "A" as string },
     { id: 2 as number, user_id: 22 as number, bio: "B" as string },
 ]);
-// @ts-expect-error prefixOverlapRight must reject self-collision when renamed overlap key hits unchanged right key
-pipe(users, innerJoin(
+pipe(users, innerJoinMerge(
     rightRowsWithUserId,
     (user, right) => eq(user.id, right.id),
+    // @ts-expect-error prefixOverlapRight must reject self-collision when renamed overlap key hits unchanged right key
     prefixOverlapRight("user_")
 ));
 // @ts-expect-error legacy array selection syntax is removed

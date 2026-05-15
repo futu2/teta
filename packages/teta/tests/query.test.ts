@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { Parser } from "node-sql-parser";
-import { lit, table, t, filter, innerJoin, join, leftJoin, map, toAst, toSql, asc, bitLength, characterLength, dateAdd, eq, gt, replace, rowNumber, upper, sort, over, and, take, not, or, group, unnest, dropOverlapLeft, usingCols, toString, toTimestamp, pipe, loop, union, unionAll, pick } from "../mod.ts";
+import { lit, table, t, filter, innerJoinMap, join, leftJoin, map, toAst, toSql, asc, bitLength, characterLength, dateAdd, eq, gt, replace, rowNumber, upper, sort, over, and, take, not, or, group, unnest, dropOverlapLeft, usingCols, toString, toTimestamp, pipe, loop, union, unionAll, pick } from "../mod.ts";
 import { USER_PIPELINE_POSTGRES_COMPACT, USER_PIPELINE_POSTGRES_PRETTY, USERS_NAME_LENGTH_SQLITE_COMPACT, EMPLOYEES_SELF_JOIN_POSTGRES_COMPACT, USERS_ORDERS_LEFT_JOIN_SELECT_POSTGRES_COMPACT, USERS_SELECT_FILTER_POSTGRES_COMPACT, ANALYTICS_EVENTS_SELECT_POSTGRES_COMPACT, QUOTED_ANALYTICS_EVENTS_SELECT_POSTGRES_COMPACT, QUOTED_ANALYTICS_EVENTS_SELECT_BIGQUERY_COMPACT, QUOTED_USERS_ALIAS_SELECT_POSTGRES_COMPACT, QUOTED_USERS_PROJECTED_ALIAS_BIGQUERY_COMPACT, QUOTED_ROW_NUMBER_ALIAS_FILTER_POSTGRES_COMPACT, ORDERS_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT, ORDERS_ROW_NUMBER_FILTER_POSTGRES_COMPACT, ORDERS_ROW_NUMBER_FILTER_ORDER_LIMIT_POSTGRES_COMPACT, ORDERS_TOTAL_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT, ORDERS_TOTAL_ROW_NUMBER_FILTER_POSTGRES_COMPACT, ORDERS_TOTAL_SHARED_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT, ORDERS_TOTAL_SHARED_ROW_NUMBER_FILTER_POSTGRES_COMPACT, ORDERS_TOTAL_NOT_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT, ORDERS_TOTAL_NOT_ROW_NUMBER_FILTER_POSTGRES_COMPACT, ORDERS_SHARED_DISJUNCTION_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT } from "./helpers/expected-sql.ts";
 import { buildUserPipelineQuery, createOrdersTable, createUsersTable } from "./helpers/fixtures.ts";
 describe("toSql(query, options)", () => {
@@ -196,7 +196,7 @@ describe("toSql(query, options)", () => {
         );
         const joinedOnce = pipe(
             users,
-            innerJoin(
+            innerJoinMap(
                 positiveOrders,
                 (user, order) => eq(user.id, order.user_id),
                 (user, order) => ({
@@ -207,7 +207,7 @@ describe("toSql(query, options)", () => {
         );
         const query = pipe(
             joinedOnce,
-            innerJoin(
+            innerJoinMap(
                 positiveOrders,
                 (row, order) => eq(row.id, order.user_id),
                 (row, order) => ({
@@ -235,7 +235,7 @@ describe("toSql(query, options)", () => {
         });
         const query = pipe(
             employees,
-            innerJoin(
+            innerJoinMap(
                 managers,
                 (employee, manager) => eq(employee.manager_id, manager.id),
                 (employee, manager) => ({

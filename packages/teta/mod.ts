@@ -58,14 +58,38 @@ export const unlessStep: typeof import("./src/edsl/query.ts").unlessStep = query
 /** Joins two query inputs as an inner join. */
 export const innerJoin: typeof import("./src/edsl/query.ts").innerJoin = query.innerJoin;
 
+/** Joins two query inputs as an inner join with an explicit mapped projection. */
+export const innerJoinMap: typeof import("./src/edsl/query.ts").innerJoinMap = query.innerJoinMap;
+
+/** Joins two query inputs as an inner join with an explicit merge helper. */
+export const innerJoinMerge: typeof import("./src/edsl/query.ts").innerJoinMerge = query.innerJoinMerge;
+
 /** Joins two query inputs as a left join. */
 export const leftJoin: typeof import("./src/edsl/query.ts").leftJoin = query.leftJoin;
+
+/** Joins two query inputs as a left join with an explicit mapped projection. */
+export const leftJoinMap: typeof import("./src/edsl/query.ts").leftJoinMap = query.leftJoinMap;
+
+/** Joins two query inputs as a left join with an explicit merge helper. */
+export const leftJoinMerge: typeof import("./src/edsl/query.ts").leftJoinMerge = query.leftJoinMerge;
 
 /** Joins two query inputs as a right join. */
 export const rightJoin: typeof import("./src/edsl/query.ts").rightJoin = query.rightJoin;
 
+/** Joins two query inputs as a right join with an explicit mapped projection. */
+export const rightJoinMap: typeof import("./src/edsl/query.ts").rightJoinMap = query.rightJoinMap;
+
+/** Joins two query inputs as a right join with an explicit merge helper. */
+export const rightJoinMerge: typeof import("./src/edsl/query.ts").rightJoinMerge = query.rightJoinMerge;
+
 /** Joins two query inputs as a full join. */
 export const fullJoin: typeof import("./src/edsl/query.ts").fullJoin = query.fullJoin;
+
+/** Joins two query inputs as a full join with an explicit mapped projection. */
+export const fullJoinMap: typeof import("./src/edsl/query.ts").fullJoinMap = query.fullJoinMap;
+
+/** Joins two query inputs as a full join with an explicit merge helper. */
+export const fullJoinMerge: typeof import("./src/edsl/query.ts").fullJoinMerge = query.fullJoinMerge;
 
 /** Joins two query inputs with an explicit join condition. */
 export const join: typeof import("./src/edsl/query.ts").join = query.join;
