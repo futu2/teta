@@ -24,6 +24,9 @@ export const VALUES_COLUMN_MISMATCH_ERROR =
 export const LEGACY_JOIN_MERGE_OPTION_ERROR =
   "join() no longer accepts { merge }. Pass merge as the next argument before options.";
 
+export const LEGACY_LEFT_JOIN_FIXED_MERGE_ERROR =
+  "leftJoin() no longer accepts a merge or projection argument. Use leftJoinMap(...) for custom output or leftJoinMerge(...) for merge helpers.";
+
 export const MAP_CURRIED_ONLY_ERROR =
   "map() is curried-only. Use pipe(query, map(selector)).";
 

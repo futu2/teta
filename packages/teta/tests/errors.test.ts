@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { TetaUserError, alias, count, eq, extend, filter, fold, fullJoin, group, innerJoin, join, leftJoin, loop, map, prefixOverlapLeft, rightJoin, select, sort, take, toSql, values, pipe } from "../mod.ts";
-import { EXTEND_CURRIED_ONLY_ERROR, FILTER_CURRIED_ONLY_ERROR, FOLD_CURRIED_ONLY_ERROR, FULL_JOIN_CURRIED_ONLY_ERROR, GROUP_INSIDE_AGGREGATE_FUNCTION_ERROR, GROUP_OUTSIDE_AGGREGATE_ERROR, INNER_JOIN_CURRIED_ONLY_ERROR, JOIN_CURRIED_ONLY_ERROR, JOIN_MERGE_CONFLICT_ERROR, JOIN_OVERLAPPING_COLUMNS_ERROR, LEFT_JOIN_CURRIED_ONLY_ERROR, LEGACY_JOIN_MERGE_OPTION_ERROR, LEGACY_SELECTION_ARRAY_ERROR, LOOP_COLUMN_MISMATCH_ERROR, MAP_CURRIED_ONLY_ERROR, NON_CANONICAL_POSTGRES_DIALECT_ERROR, RIGHT_JOIN_CURRIED_ONLY_ERROR, SELECT_ALIAS_EMPTY_ERROR, SELECT_DUPLICATE_COLUMN_ERROR, SELECT_INVALID_SELECTION_ERROR, SORT_CURRIED_ONLY_ERROR, TAKE_CURRIED_ONLY_ERROR, UNSUPPORTED_CROSS_JOIN_ERROR, VALUES_COLUMN_MISMATCH_ERROR, VALUES_EMPTY_ERROR } from "./helpers/expected-errors.ts";
+import { EXTEND_CURRIED_ONLY_ERROR, FILTER_CURRIED_ONLY_ERROR, FOLD_CURRIED_ONLY_ERROR, FULL_JOIN_CURRIED_ONLY_ERROR, GROUP_INSIDE_AGGREGATE_FUNCTION_ERROR, GROUP_OUTSIDE_AGGREGATE_ERROR, INNER_JOIN_CURRIED_ONLY_ERROR, JOIN_CURRIED_ONLY_ERROR, JOIN_MERGE_CONFLICT_ERROR, JOIN_OVERLAPPING_COLUMNS_ERROR, LEFT_JOIN_CURRIED_ONLY_ERROR, LEGACY_JOIN_MERGE_OPTION_ERROR, LEGACY_LEFT_JOIN_FIXED_MERGE_ERROR, LEGACY_SELECTION_ARRAY_ERROR, LOOP_COLUMN_MISMATCH_ERROR, MAP_CURRIED_ONLY_ERROR, NON_CANONICAL_POSTGRES_DIALECT_ERROR, RIGHT_JOIN_CURRIED_ONLY_ERROR, SELECT_ALIAS_EMPTY_ERROR, SELECT_DUPLICATE_COLUMN_ERROR, SELECT_INVALID_SELECTION_ERROR, SORT_CURRIED_ONLY_ERROR, TAKE_CURRIED_ONLY_ERROR, UNSUPPORTED_CROSS_JOIN_ERROR, VALUES_COLUMN_MISMATCH_ERROR, VALUES_EMPTY_ERROR } from "./helpers/expected-errors.ts";
 import { createOrdersTable, createUsersTable } from "./helpers/fixtures.ts";
 describe("error paths", () => {
     function expectUserError(fn: () => unknown, code: string, message: string): void {
@@ -55,6 +55,50 @@ describe("error paths", () => {
                 } as never
             )
         )).toThrow(LEGACY_JOIN_MERGE_OPTION_ERROR);
+    });
+    test("guides fixed join migration for removed merge and projection arguments", () => {
+        const users = createUsersTable();
+        const orders = createOrdersTable();
+        expectUserError(
+            () => pipe(
+                users,
+                (leftJoin as any)(
+                    orders,
+                    (user: typeof users.columns, order: typeof orders.columns) => eq(user.id, order.user_id),
+                    (user: typeof users.columns, order: typeof orders.columns) => ({
+                        id: user.id,
+                        total: order.total,
+                    })
+                )
+            ),
+            "JOIN_FIXED_MERGE_REMOVED",
+            LEGACY_LEFT_JOIN_FIXED_MERGE_ERROR
+        );
+        expectUserError(
+            () => pipe(
+                users,
+                (leftJoin as any)(
+                    orders,
+                    (user: typeof users.columns, order: typeof orders.columns) => eq(user.id, order.user_id),
+                    prefixOverlapLeft("user_")
+                )
+            ),
+            "JOIN_FIXED_MERGE_REMOVED",
+            LEGACY_LEFT_JOIN_FIXED_MERGE_ERROR
+        );
+        expectUserError(
+            () => pipe(
+                users,
+                (leftJoin as any)(
+                    orders,
+                    (user: typeof users.columns, order: typeof orders.columns) => eq(user.id, order.user_id),
+                    prefixOverlapLeft("user_"),
+                    { lateral: true }
+                )
+            ),
+            "JOIN_FIXED_MERGE_REMOVED",
+            LEGACY_LEFT_JOIN_FIXED_MERGE_ERROR
+        );
     });
     test("rejects default joins with overlapping output columns", () => {
         const users = createUsersTable();

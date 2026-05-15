@@ -1162,6 +1162,12 @@ function parseFixedJoinInvocation(
   usage: string
 ): ParsedCurriedJoinInvocation {
   assertNotDataFirstJoinInvocation(args, helper, usage);
+  if (args.length === 3 && isFixedJoinLegacyMergeArgument(args[2], undefined)) {
+    fixedJoinLegacyMergeError(helper);
+  }
+  if (args.length === 4 && isFixedJoinLegacyMergeArgument(args[2], args[3])) {
+    fixedJoinLegacyMergeError(helper);
+  }
   if (args.length !== 2 && args.length !== 3) {
     throw new Error("Wrong number of arguments");
   }
@@ -1221,6 +1227,17 @@ function assertFixedJoinOptions(helper: string, value: unknown): void {
   ) {
     userError("DEFERRED_INPUT_INVALID", `${helper}() options must be { lateral?: boolean }`);
   }
+}
+
+function isFixedJoinLegacyMergeArgument(value: unknown, maybeOptions: unknown): boolean {
+  return typeof value === "function" || isJoinMergeShape(value, maybeOptions);
+}
+
+function fixedJoinLegacyMergeError(helper: string): never {
+  userError(
+    "JOIN_FIXED_MERGE_REMOVED",
+    `${helper}() no longer accepts a merge or projection argument. Use ${helper}Map(...) for custom output or ${helper}Merge(...) for merge helpers.`
+  );
 }
 
 function fixedJoinHelperName(type: "inner" | "left" | "right" | "full"): string {
