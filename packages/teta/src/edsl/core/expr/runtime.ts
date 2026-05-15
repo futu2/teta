@@ -36,8 +36,8 @@ type LiteralInput<T> = T extends number
   : T extends StringLiteralCompatible
     ? string
     : T;
-export type ExprInput<T> = ExprRef<T, any> | LiteralInput<T>;
-export type ExprInputValue<TInput> = TInput extends ExprRef<infer TValue, any> ? TValue : TInput;
+export type ExprInput<T> = ExprRef<T> | LiteralInput<T>;
+export type ExprInputValue<TInput> = TInput extends ExprRef<infer TValue> ? TValue : TInput;
 export type ExprInputTuple<T extends readonly unknown[]> = {
   [K in keyof T]: ExprInput<T[K]>;
 };
@@ -53,51 +53,9 @@ type NullableDateLike = SqlDate | SqlTimestamp | string | null;
 type NullableSqlNumber = SqlNumber | null;
 type NullableString = string | null;
 
-export type DeferredExprDeps = {
-  current?: Record<string, unknown>;
-  left?: Record<string, unknown>;
-  right?: Record<string, unknown>;
-};
-
-export type EmptyDeferredExprDeps = Record<never, never>;
-
-export type DeferredExprDepScope = keyof DeferredExprDeps;
-
-type IsAny<T> = 0 extends (1 & T) ? true : false;
-
-export type DeferredExprDepsOf<TExpr> = IsAny<TExpr> extends true
-  ? EmptyDeferredExprDeps
-  : TExpr extends {
-  readonly __tetaDeferredExprDeps?: infer TDeps extends DeferredExprDeps;
-}
-    ? TDeps
-    : EmptyDeferredExprDeps;
-
-type MergeDeferredExprDeps<TLeft, TRight> = {
-  [K in DeferredExprDepScope as K extends keyof TLeft | keyof TRight ? K : never]:
-    (K extends keyof TLeft ? TLeft[K] : EmptyDeferredExprDeps)
-      & (K extends keyof TRight ? TRight[K] : EmptyDeferredExprDeps);
-};
-
-type MergeDeferredExprDepsTuple<TItems extends readonly unknown[]> =
-  TItems extends readonly [infer THead, ...infer TTail]
-    ? MergeDeferredExprDeps<DeferredExprDepsOf<THead>, MergeDeferredExprDepsTuple<TTail>>
-    : EmptyDeferredExprDeps;
-
-export type DeferredExprDepsForArgs<TItems extends readonly unknown[]> =
-  MergeDeferredExprDepsTuple<TItems>;
-
-export interface ExprRef<T, TDeps extends DeferredExprDeps = EmptyDeferredExprDeps> {
-  readonly __tetaDeferredExprDeps?: TDeps;
-}
-
-export class ExprRef<T, TDeps extends DeferredExprDeps = EmptyDeferredExprDeps> {
+export class ExprRef<T> {
   constructor(readonly node: ExprNode<T>) {}
 }
-
-export type DeferredOrderItem<TDeps extends DeferredExprDeps = EmptyDeferredExprDeps> = OrderItem & {
-  readonly __tetaDeferredExprDeps?: TDeps;
-};
 
 export type ColumnTableRef = ScopeId | typeof OUTER_TABLE_ALIAS | null;
 
@@ -154,11 +112,11 @@ export function fn<
 >(
   name: string,
   ...args: TArgs
-): ExprRef<T, DeferredExprDepsForArgs<TArgs>> {
+): ExprRef<T> {
   if (!name.trim()) {
     userError("INVALID_FUNCTION_NAME", "fn requires a function name");
   }
-  return funcExpr(name, args.map((arg) => toExprNode(arg))) as ExprRef<T, DeferredExprDepsForArgs<TArgs>>;
+  return funcExpr(name, args.map((arg) => toExprNode(arg)));
 }
 
 export function windowFn<T = unknown>(
@@ -179,8 +137,8 @@ export function wrapExpr<T>(value: ExprInput<T>): ExprRef<T> {
 export function aggregateExpr<T, TArg extends ExprInput<unknown>>(
   name: AggFunc,
   arg: TArg
-): ExprRef<T, DeferredExprDepsForArgs<[TArg]>> {
-  return new ExprRef<T, DeferredExprDepsForArgs<[TArg]>>({
+): ExprRef<T> {
+  return new ExprRef<T>({
     kind: "agg",
     name,
     arg: toExprNode(arg as ExprInput<unknown>),
@@ -248,12 +206,12 @@ export function over<T>(window: WindowBuilder<T>, spec: WindowSpecInput = {}): E
   });
 }
 
-export function binaryExpr<TDeps extends DeferredExprDeps = EmptyDeferredExprDeps>(
+export function binaryExpr(
   op: BinaryOp,
   left: ExprNode<unknown>,
   right: ExprNode<unknown>
-): ExprRef<unknown, TDeps> {
-  return new ExprRef<unknown, TDeps>({ kind: "binary", op, left, right });
+): ExprRef<unknown> {
+  return new ExprRef<unknown>({ kind: "binary", op, left, right });
 }
 
 export function funcExpr<T>(name: string, args: ExprNode<unknown>[]): ExprRef<T> {

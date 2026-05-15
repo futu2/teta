@@ -25,9 +25,6 @@ import type {
   ProjectionShape,
 } from "../expr.ts";
 import {
-  type DeferredExprDepsOf,
-} from "../internal_deferred_expr.ts";
-import {
   createDeferredRecursiveCte,
   explainIR,
   irToAst,
@@ -76,96 +73,6 @@ import { userError } from "../errors.ts";
 
 type QueryColumns = Record<string, any>;
 
-type CurrentDepsOf<TExpr> = DeferredExprDepsOf<TExpr> extends { current?: infer TCurrent }
-  ? TCurrent
-  : Record<never, never>;
-
-type LeftDepsOf<TExpr> = DeferredExprDepsOf<TExpr> extends { left?: infer TLeft }
-  ? TLeft
-  : Record<never, never>;
-
-type RightDepsOf<TExpr> = DeferredExprDepsOf<TExpr> extends { right?: infer TRight }
-  ? TRight
-  : Record<never, never>;
-
-type LiteralDeferredKeys<TDeps> = Extract<{
-  [K in keyof TDeps]: K extends string
-    ? string extends K
-      ? never
-      : K
-    : never;
-}[keyof TDeps], string>;
-
-type KnownDeferredCurrentColumnsGuard<
-  TColumns extends QueryColumns,
-  TExpr,
-> = ([Exclude<LiteralDeferredKeys<CurrentDepsOf<TExpr>>, keyof TColumns>] extends [never]
-    ? unknown
-    : {
-        __teta_unknown_deferred_current_columns__: Exclude<
-          LiteralDeferredKeys<CurrentDepsOf<TExpr>>,
-          keyof TColumns
-        >;
-      })
-  & ([LiteralDeferredKeys<LeftDepsOf<TExpr>> | LiteralDeferredKeys<RightDepsOf<TExpr>>] extends [never]
-    ? unknown
-    : {
-        __teta_invalid_deferred_current_scope_columns__:
-          | LiteralDeferredKeys<LeftDepsOf<TExpr>>
-          | LiteralDeferredKeys<RightDepsOf<TExpr>>;
-      });
-
-type KnownDeferredJoinColumnsGuard<
-  TLeft extends QueryColumns,
-  TRight extends QueryColumns,
-  TExpr,
-> = ([Exclude<LiteralDeferredKeys<LeftDepsOf<TExpr>>, keyof TLeft>] extends [never]
-    ? unknown
-    : {
-        __teta_unknown_deferred_left_columns__: Exclude<
-          LiteralDeferredKeys<LeftDepsOf<TExpr>>,
-          keyof TLeft
-        >;
-      })
-  & ([Exclude<LiteralDeferredKeys<RightDepsOf<TExpr>>, keyof TRight>] extends [never]
-    ? unknown
-    : {
-        __teta_unknown_deferred_right_columns__: Exclude<
-          LiteralDeferredKeys<RightDepsOf<TExpr>>,
-          keyof TRight
-        >;
-      })
-  & ([LiteralDeferredKeys<CurrentDepsOf<TExpr>>] extends [never]
-    ? unknown
-    : {
-        __teta_invalid_deferred_join_scope_columns__: LiteralDeferredKeys<CurrentDepsOf<TExpr>>;
-      });
-
-type UnionToIntersection<T> = (
-  T extends unknown ? (value: T) => void : never
-) extends (value: infer TResult) => void ? TResult : never;
-
-type KnownDeferredJoinSelectionGuard<
-  TLeft extends QueryColumns,
-  TRight extends QueryColumns,
-  TSelection extends Record<string, unknown>,
-> = UnionToIntersection<{
-  [K in keyof TSelection]: KnownDeferredJoinColumnsGuard<TLeft, TRight, TSelection[K]>;
-}[keyof TSelection]>;
-
-type SingleLiteralKey<TDeps> = LiteralDeferredKeys<TDeps> extends infer TKey extends string
-  ? [TKey] extends [never]
-    ? never
-    : TKey
-  : never;
-
-type ColumnValueForKey<TColumns extends QueryColumns, TKey> =
-  [TKey] extends [never]
-    ? never
-    : TKey extends keyof TColumns
-      ? TColumns[TKey & keyof TColumns]
-      : never;
-
 export type QueryStep<
   TInputColumns extends QueryColumns,
   TOutputColumns extends QueryColumns,
@@ -187,70 +94,8 @@ export type QueryExplainCte = {
 
 export type QueryStageKind = "map" | "fold" | "filter" | "sort" | "take" | "join" | "unnest" | "union";
 
-type DefinedJoinSelection<TSelection extends Record<string, unknown>> = {
-  [K in keyof TSelection]: Exclude<TSelection[K], undefined>;
-};
-
-type NullableJoinScopeValue<TValue, TType extends "inner" | "left" | "right" | "full", TScope> =
-  TType extends "full" ? TValue | null
-  : TType extends "left" ? TScope extends "right" ? TValue | null : TValue
-  : TType extends "right" ? TScope extends "left" ? TValue | null : TValue
-  : TValue;
-
-type JoinDeferredExprValue<TLeft extends QueryColumns, TRight extends QueryColumns, TExpr> =
-  TExpr extends ExprRef<infer TValue, any>
-    ? [TValue] extends [never]
-      ? [ColumnValueForKey<TLeft, SingleLiteralKey<LeftDepsOf<TExpr>>>] extends [never]
-        ? ColumnValueForKey<TRight, SingleLiteralKey<RightDepsOf<TExpr>>>
-        : ColumnValueForKey<TLeft, SingleLiteralKey<LeftDepsOf<TExpr>>>
-      : TValue
-    : never;
-
-type DeferredJoinSelectionValue<
-  TValue,
-  TDeps,
-  TType extends "inner" | "left" | "right" | "full",
-> = [LiteralDeferredKeys<LeftDepsOf<{ readonly __tetaDeferredExprDeps?: TDeps }>>] extends [never]
-  ? [LiteralDeferredKeys<RightDepsOf<{ readonly __tetaDeferredExprDeps?: TDeps }>>] extends [never]
-    ? TValue
-    : NullableJoinScopeValue<TValue, TType, "right">
-  : [LiteralDeferredKeys<RightDepsOf<{ readonly __tetaDeferredExprDeps?: TDeps }>>] extends [never]
-    ? NullableJoinScopeValue<TValue, TType, "left">
-    : TValue;
-
-type DeferredJoinSelectionResultForRecord<
-  TLeft extends QueryColumns,
-  TRight extends QueryColumns,
-  TSelection extends Record<string, unknown>,
-  TType extends "inner" | "left" | "right" | "full",
-> = {
-  [K in keyof TSelection]: TSelection[K] extends ExprRef<any, infer TDeps>
-    ? DeferredJoinSelectionValue<JoinDeferredExprValue<TLeft, TRight, TSelection[K]>, TDeps, TType>
-    : never;
-};
-
-type DeferredJoinSelection<TSelection extends Record<string, unknown>> = {
-  [K in keyof TSelection]: [NonNullable<TSelection[K]>] extends [never]
-    ? never
-    : NonNullable<TSelection[K]> extends ExprRef<unknown>
-      ? TSelection[K]
-      : never;
-};
-
 type PredicateInput<TColumns extends QueryColumns> =
   (cols: ColumnRefs<TColumns>) => ExprRef<boolean>;
-
-type DeferredExprInput<TExpr> = [NonNullable<TExpr>] extends [never]
-  ? never
-  : NonNullable<TExpr> extends ExprRef<unknown>
-    ? TExpr
-    : never;
-
-type DeferredJoinExprInput<
-  TLeft extends QueryColumns,
-  TRight extends QueryColumns,
-  TExpr,
-> = DeferredExprInput<TExpr> & KnownDeferredJoinColumnsGuard<TLeft, TRight, TExpr>;
 
 type SortInput<TColumns extends QueryColumns> =
   (cols: ColumnRefs<TColumns>) => OrderItem | OrderItem[];
@@ -263,18 +108,12 @@ type UnnestSelectorInput<
 type JoinOnInput<
   TLeft extends QueryColumns,
   TRight extends QueryColumns,
-> = JoinOn<TLeft, TRight> | ExprRef<boolean>;
+> = JoinOn<TLeft, TRight>;
 
 type JoinOnNoMergeInput<
   TLeft extends QueryColumns,
   TRight extends QueryColumns,
-> = JoinOnNoMerge<TLeft, TRight> | (ExprRef<boolean> & JoinNoMergeGuard<TLeft, TRight>);
-
-type DeferredJoinOnNoMergeInput<
-  TLeft extends QueryColumns,
-  TRight extends QueryColumns,
-  TExpr,
-> = DeferredJoinExprInput<TLeft, TRight, TExpr> & JoinNoMergeGuard<TLeft, TRight>;
+> = JoinOnNoMerge<TLeft, TRight>;
 
 type JoinMergeInput<
   TLeft extends QueryColumns,
@@ -702,7 +541,6 @@ export function join<
   TLeft extends QueryColumns,
   TRight extends QueryColumns,
   TType extends JoinTypeInput | undefined = undefined,
-  TOn extends ExprRef<boolean> = ExprRef<boolean>,
   TMerged extends QueryColumns = JoinColumnsForType<
     TLeft,
     TRight,
@@ -710,11 +548,9 @@ export function join<
   >,
 >(
   right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
-  on: JoinOnNoMerge<TLeft, TRight> | DeferredJoinOnNoMergeInput<TLeft, TRight, TOn>,
+  on: JoinOnNoMerge<TLeft, TRight>,
   options?: JoinOptions<TType>
-): (
-  query: Query<TLeft> & KnownDeferredJoinColumnsGuard<NoInfer<TLeft>, TRight, TOn>
-) => Query<TMerged>;
+): QueryStep<TLeft, TMerged>;
 
 export function join<
   TLeft extends QueryColumns,
@@ -727,21 +563,6 @@ export function join<
   merge: JoinColumnMergerForType<TLeft, TRight, CanonicalJoinType<TType>, TSelection>,
   options?: JoinOptions<TType>
 ): QueryStep<TLeft, JoinSelectionResult<TSelection>>;
-
-export function join<
-  TLeft extends QueryColumns,
-  TRight extends QueryColumns,
-  TType extends JoinTypeInput | undefined = undefined,
-  const Sel extends Record<string, unknown> = JoinSelection,
-  TOn extends ExprRef<boolean> = ExprRef<boolean>,
->(
-  right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
-  on: JoinOn<TLeft, TRight> | DeferredJoinExprInput<TLeft, TRight, TOn>,
-  merge: DeferredJoinSelection<Sel> & KnownDeferredJoinSelectionGuard<TLeft, TRight, Sel>,
-  options?: JoinOptions<TType>
-): (
-  query: Query<TLeft> & KnownDeferredJoinColumnsGuard<NoInfer<TLeft>, TRight, TOn>
-) => Query<DeferredJoinSelectionResultForRecord<TLeft, TRight, DefinedJoinSelection<Sel>, CanonicalJoinType<TType>>>;
 
 export function join(...args: unknown[]): unknown {
   const parsed = parseCurriedJoinInvocation(args, "join", "join(right, on, merge?, options?)");
@@ -996,6 +817,7 @@ function _join<
   >,
   options?: JoinOptions<TType>
 ): Query<JoinSelectionResult<TSelection>> {
+  assertRowCallback("join", on);
   return buildJoin(left, right, on, merge, options);
 }
 

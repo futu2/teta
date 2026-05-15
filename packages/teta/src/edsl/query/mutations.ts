@@ -11,10 +11,6 @@ import {
   dedupeExprs,
   projectAllItems,
 } from "../expr.ts";
-import {
-  resolveDeferredExpr,
-  resolveDeferredProjectionShape,
-} from "../internal_deferred_expr.ts";
 import type {
   ColumnRefs,
   ExprRef,
@@ -53,9 +49,7 @@ import { toQuerySpec } from "./state.ts";
 type JoinOnInput<
   TLeft extends Record<string, any>,
   TRight extends Record<string, any>,
-> =
-  | ((left: ColumnRefs<TLeft>, right: ColumnRefs<TRight>) => ExprRef<boolean>)
-  | ExprRef<boolean>;
+> = (left: ColumnRefs<TLeft>, right: ColumnRefs<TRight>) => ExprRef<boolean>;
 
 type JoinMergeInput<
   TSelection extends JoinSelection,
@@ -179,33 +173,15 @@ export function resolveJoinQuery<
   const normalizedJoinType = normalizeJoinType(joinType);
   const alias = autoAlias(sourceAliasBase(rightQuery.source), leftQuery.stages);
   const rightKeys = [...rightQuery.columnNames];
-  const rightColumns = createColumnRefs<TRight>(rightQuery.scopeId, rightKeys);
-  const joinScope = {
-    left: {
-      label: "join left",
-      columns: leftQuery.columns as ColumnRefs<Record<string, any>>,
-      columnNames: leftQuery.columnNames,
-    },
-    right: {
-      label: "join right",
-      columns: rightColumns as ColumnRefs<Record<string, any>>,
-      columnNames: rightKeys,
-    },
-  };
-  const predicate =
-    typeof on === "function"
-      ? on(leftQuery.columns, rightColumns).node
-      : resolveDeferredExpr(on, joinScope).node;
+  const rightRefs = createColumnRefs<TRight>(rightQuery.scopeId, rightKeys);
+  const predicate = on(leftQuery.columns, rightRefs).node;
   const resolvedMergeColumns =
     typeof mergeColumns === "function" || mergeColumns === undefined
       ? mergeColumns
-      : (() => resolveDeferredProjectionShape(mergeColumns, joinScope, {
-          requireExprValues: true,
-          label: "join merge",
-        }));
+      : undefined;
   const { mergedColumns, nextNames } = resolveJoinColumns(
     leftQuery.columns,
-    rightColumns,
+    rightRefs,
     leftQuery.columnNames,
     rightKeys,
     normalizedJoinType,
@@ -270,8 +246,8 @@ export function resolveUnnestQuery<
   const rightScopeId = freshScopeId();
   const outputScopeId = freshScopeId();
   const alias = autoAlias("unnest", leftQuery.stages);
-  const rightColumns = createColumnRefs<TGenerated>(rightScopeId, generatedKeys);
-  const mergedColumns = { ...leftQuery.columns, ...rightColumns };
+  const generatedRefs = createColumnRefs<TGenerated>(rightScopeId, generatedKeys);
+  const mergedColumns = { ...leftQuery.columns, ...generatedRefs };
   const nextNames = [...leftQuery.columnNames, ...generatedKeys];
   const generatedIdentifiers = columnNamesToIdentifierMap(generatedKeys);
   const stage: Stage = {

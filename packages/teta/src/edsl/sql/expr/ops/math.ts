@@ -8,7 +8,6 @@ import {
   type ExprInputValue,
   type PropagateNull,
 } from "../core.ts";
-import type { DeferredExprDepsForArgs } from "../../../internal_deferred_expr.ts";
 import { userError } from "../../../errors.ts";
 
 type NullableSqlNumber = SqlNumber | number | bigint | null;
@@ -22,91 +21,91 @@ type NumericBinaryResult<
 export function add<TLeft extends ExprInput<NullableSqlNumber>, TRight extends ExprInput<NullableSqlNumber>>(
   left: TLeft,
   right: TRight
-): ExprRef<NumericBinaryResult<TLeft, TRight>, DeferredExprDepsForArgs<[TLeft, TRight]>>;
+): ExprRef<NumericBinaryResult<TLeft, TRight>>;
 export function add<TLeft extends ExprInput<NullableSqlNumber>, TRight extends ExprInput<NullableSqlNumber>>(
   left: TLeft,
   right: TRight
-): ExprRef<NumericBinaryResult<TLeft, TRight>, DeferredExprDepsForArgs<[TLeft, TRight]>> {
-  return binaryExpr<DeferredExprDepsForArgs<[TLeft, TRight]>>(
+): ExprRef<NumericBinaryResult<TLeft, TRight>> {
+  return binaryExpr(
     "+",
     toExprNode(left),
     toExprNode(right)
-  ) as ExprRef<NumericBinaryResult<TLeft, TRight>, DeferredExprDepsForArgs<[TLeft, TRight]>>;
+  ) as ExprRef<NumericBinaryResult<TLeft, TRight>>;
 }
 
 export function sub<TLeft extends ExprInput<NullableSqlNumber>, TRight extends ExprInput<NullableSqlNumber>>(
   left: TLeft,
   right: TRight
-): ExprRef<NumericBinaryResult<TLeft, TRight>, DeferredExprDepsForArgs<[TLeft, TRight]>>;
+): ExprRef<NumericBinaryResult<TLeft, TRight>>;
 export function sub<TLeft extends ExprInput<NullableSqlNumber>, TRight extends ExprInput<NullableSqlNumber>>(
   left: TLeft,
   right: TRight
-): ExprRef<NumericBinaryResult<TLeft, TRight>, DeferredExprDepsForArgs<[TLeft, TRight]>> {
-  return binaryExpr<DeferredExprDepsForArgs<[TLeft, TRight]>>(
+): ExprRef<NumericBinaryResult<TLeft, TRight>> {
+  return binaryExpr(
     "-",
     toExprNode(left),
     toExprNode(right)
-  ) as ExprRef<NumericBinaryResult<TLeft, TRight>, DeferredExprDepsForArgs<[TLeft, TRight]>>;
+  ) as ExprRef<NumericBinaryResult<TLeft, TRight>>;
 }
 
 export function mul<TLeft extends ExprInput<NullableSqlNumber>, TRight extends ExprInput<NullableSqlNumber>>(
   left: TLeft,
   right: TRight
-): ExprRef<NumericBinaryResult<TLeft, TRight>, DeferredExprDepsForArgs<[TLeft, TRight]>>;
+): ExprRef<NumericBinaryResult<TLeft, TRight>>;
 export function mul<TLeft extends ExprInput<NullableSqlNumber>, TRight extends ExprInput<NullableSqlNumber>>(
   left: TLeft,
   right: TRight
-): ExprRef<NumericBinaryResult<TLeft, TRight>, DeferredExprDepsForArgs<[TLeft, TRight]>> {
-  return binaryExpr<DeferredExprDepsForArgs<[TLeft, TRight]>>(
+): ExprRef<NumericBinaryResult<TLeft, TRight>> {
+  return binaryExpr(
     "*",
     toExprNode(left),
     toExprNode(right)
-  ) as ExprRef<NumericBinaryResult<TLeft, TRight>, DeferredExprDepsForArgs<[TLeft, TRight]>>;
+  ) as ExprRef<NumericBinaryResult<TLeft, TRight>>;
 }
 
 export function div<TLeft extends ExprInput<NullableSqlNumber>, TRight extends ExprInput<NullableSqlNumber>>(
   left: TLeft,
   right: TRight
-): ExprRef<NumericBinaryResult<TLeft, TRight>, DeferredExprDepsForArgs<[TLeft, TRight]>>;
+): ExprRef<NumericBinaryResult<TLeft, TRight>>;
 export function div<TLeft extends ExprInput<NullableSqlNumber>, TRight extends ExprInput<NullableSqlNumber>>(
   left: TLeft,
   right: TRight
-): ExprRef<NumericBinaryResult<TLeft, TRight>, DeferredExprDepsForArgs<[TLeft, TRight]>> {
-  return binaryExpr<DeferredExprDepsForArgs<[TLeft, TRight]>>(
+): ExprRef<NumericBinaryResult<TLeft, TRight>> {
+  return binaryExpr(
     "/",
     toExprNode(left),
     toExprNode(right)
-  ) as ExprRef<NumericBinaryResult<TLeft, TRight>, DeferredExprDepsForArgs<[TLeft, TRight]>>;
+  ) as ExprRef<NumericBinaryResult<TLeft, TRight>>;
 }
 
 export function mod<TValue extends NullableSqlNumber, TLeft extends ExprInput<TValue>, TRight extends ExprInput<TValue>>(
   left: TLeft,
   right: TRight
-): ExprRef<TValue, DeferredExprDepsForArgs<[TLeft, TRight]>> {
+): ExprRef<TValue> {
   return fn<TValue, [TLeft, TRight]>("MOD", left, right);
 }
 
 export function ceil<TValue extends NullableSqlNumber, TInput extends ExprInput<TValue>>(
   value: TInput
-): ExprRef<PropagateNull<ExprInputValue<TInput>, SqlInt>, DeferredExprDepsForArgs<[TInput]>> {
+): ExprRef<PropagateNull<ExprInputValue<TInput>, SqlInt>> {
   return fn<PropagateNull<ExprInputValue<TInput>, SqlInt>, [TInput]>("CEIL", value);
 }
 
 export function floor<TValue extends NullableSqlNumber, TInput extends ExprInput<TValue>>(
   value: TInput
-): ExprRef<PropagateNull<ExprInputValue<TInput>, SqlInt>, DeferredExprDepsForArgs<[TInput]>> {
+): ExprRef<PropagateNull<ExprInputValue<TInput>, SqlInt>> {
   return fn<PropagateNull<ExprInputValue<TInput>, SqlInt>, [TInput]>("FLOOR", value);
 }
 
 export function abs<TValue extends NullableSqlNumber, TInput extends ExprInput<TValue>>(
   value: TInput
-): ExprRef<ExprInputValue<TInput>, DeferredExprDepsForArgs<[TInput]>> {
+): ExprRef<ExprInputValue<TInput>> {
   return fn<ExprInputValue<TInput>, [TInput]>("ABS", value);
 }
 
 export function sqrt<TValue extends NullableSqlNumber, TInput extends ExprInput<TValue>>(
   value: TInput
-): ExprRef<PropagateNull<ExprInputValue<TInput>, SqlFloat>, DeferredExprDepsForArgs<[TInput]>> {
+): ExprRef<PropagateNull<ExprInputValue<TInput>, SqlFloat>> {
   return fn<PropagateNull<ExprInputValue<TInput>, SqlFloat>, [TInput]>("SQRT", value);
 }
 
@@ -118,7 +117,7 @@ export function pow<
 >(
   value: TInput,
   exponent: TExponentInput
-): ExprRef<PropagateNull<ExprInputValue<TInput> | ExprInputValue<TExponentInput>, SqlFloat>, DeferredExprDepsForArgs<[TInput, TExponentInput]>> {
+): ExprRef<PropagateNull<ExprInputValue<TInput> | ExprInputValue<TExponentInput>, SqlFloat>> {
   return fn<PropagateNull<ExprInputValue<TInput> | ExprInputValue<TExponentInput>, SqlFloat>, [TInput, TExponentInput]>(
     "POWER",
     value,
@@ -129,7 +128,7 @@ export function pow<
 export function greatest<TValue extends NullableSqlNumber, TInput extends ExprInput<TValue>, const TValues extends readonly ExprInput<TValue>[]>(
   value: TInput,
   ...values: TValues
-): ExprRef<TValue, DeferredExprDepsForArgs<[TInput, ...TValues]>> {
+): ExprRef<TValue> {
   if (values.length === 0) {
     userError("INVALID_FUNCTION_NAME", "greatest requires at least one value");
   }
@@ -139,7 +138,7 @@ export function greatest<TValue extends NullableSqlNumber, TInput extends ExprIn
 export function least<TValue extends NullableSqlNumber, TInput extends ExprInput<TValue>, const TValues extends readonly ExprInput<TValue>[]>(
   value: TInput,
   ...values: TValues
-): ExprRef<TValue, DeferredExprDepsForArgs<[TInput, ...TValues]>> {
+): ExprRef<TValue> {
   if (values.length === 0) {
     userError("INVALID_FUNCTION_NAME", "least requires at least one value");
   }
@@ -149,11 +148,11 @@ export function least<TValue extends NullableSqlNumber, TInput extends ExprInput
 export function cast<TTarget = unknown, TInput extends ExprInput<unknown> = ExprInput<unknown>>(
   value: TInput,
   target: string
-): ExprRef<TTarget, DeferredExprDepsForArgs<[TInput]>> {
+): ExprRef<TTarget> {
   if (!target.trim()) {
     userError("INVALID_FUNCTION_NAME", "cast requires a target type");
   }
-  return new ExprRef<TTarget, DeferredExprDepsForArgs<[TInput]>>({
+  return new ExprRef<TTarget>({
     kind: "cast",
     expr: toExprNode(value as ExprInput<unknown>),
     target,
@@ -162,19 +161,19 @@ export function cast<TTarget = unknown, TInput extends ExprInput<unknown> = Expr
 
 export function toInt<TValue extends NullableSqlNumber, TInput extends ExprInput<TValue>>(
   value: TInput
-): ExprRef<PropagateNull<ExprInputValue<TInput>, SqlInt>, DeferredExprDepsForArgs<[TInput]>> {
+): ExprRef<PropagateNull<ExprInputValue<TInput>, SqlInt>> {
   return cast<PropagateNull<ExprInputValue<TInput>, SqlInt>, TInput>(value, "INTEGER");
 }
 
 export function toFloat<TValue extends NullableSqlNumber, TInput extends ExprInput<TValue>>(
   value: TInput
-): ExprRef<PropagateNull<ExprInputValue<TInput>, SqlFloat>, DeferredExprDepsForArgs<[TInput]>> {
+): ExprRef<PropagateNull<ExprInputValue<TInput>, SqlFloat>> {
   return cast<PropagateNull<ExprInputValue<TInput>, SqlFloat>, TInput>(value, "FLOAT");
 }
 
 export function toString<TInput extends ExprInput<unknown>>(
   value: TInput
-): ExprRef<PropagateNull<ExprInputValue<TInput>, string>, DeferredExprDepsForArgs<[TInput]>> {
+): ExprRef<PropagateNull<ExprInputValue<TInput>, string>> {
   return cast<PropagateNull<ExprInputValue<TInput>, string>, TInput>(value, "VARCHAR");
 }
 
@@ -185,16 +184,13 @@ export function round<
 >(
   value: TInput,
   scale?: TScale
-): ExprRef<ExprInputValue<TInput>, DeferredExprDepsForArgs<[TInput, TScale]>> {
+): ExprRef<ExprInputValue<TInput>> {
   if (scale === undefined) {
-    return fn<ExprInputValue<TInput>, [TInput]>("ROUND", value) as unknown as ExprRef<
-      ExprInputValue<TInput>,
-      DeferredExprDepsForArgs<[TInput, TScale]>
-    >;
+    return fn<ExprInputValue<TInput>, [TInput]>("ROUND", value);
   }
   return fn<ExprInputValue<TInput>, [TInput, NonNullable<TScale>]>(
     "ROUND",
     value,
     scale as NonNullable<TScale>
-  ) as unknown as ExprRef<ExprInputValue<TInput>, DeferredExprDepsForArgs<[TInput, TScale]>>;
+  );
 }

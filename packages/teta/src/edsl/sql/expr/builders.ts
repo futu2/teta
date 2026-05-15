@@ -8,10 +8,6 @@ import {
   type ExprInput,
   type ExprInputValue,
 } from "./core.ts";
-import type {
-  DeferredExprDeps,
-  DeferredExprDepsForArgs,
-} from "../../internal_deferred_expr.ts";
 import { group } from "./ops/aggregate.ts";
 
 export type CaseBranch<
@@ -22,24 +18,6 @@ export type CaseBranch<
   when: TCondition;
   then: TValue;
 };
-
-type CaseBranchInputs<TBranch> =
-  TBranch extends CaseBranch<unknown, infer TCondition, infer TValue>
-    ? [TCondition, TValue]
-    : [];
-
-type FlattenCaseBranchInputs<TBranches extends readonly CaseBranch<unknown>[]> =
-  TBranches extends readonly [
-    infer THead extends CaseBranch<unknown>,
-    ...infer TTail extends readonly CaseBranch<unknown>[],
-  ]
-    ? [...CaseBranchInputs<THead>, ...FlattenCaseBranchInputs<TTail>]
-    : [];
-
-type CaseExprDeps<
-  TBranches extends readonly CaseBranch<unknown>[],
-  TElse,
-> = DeferredExprDepsForArgs<[...FlattenCaseBranchInputs<TBranches>, TElse]>;
 
 type CaseBranchValue<TBranch> =
   TBranch extends CaseBranch<unknown, ExprInput<boolean>, infer TValue>
@@ -66,30 +44,27 @@ export function when<TCondition extends ExprInput<boolean>, TValue extends ExprI
 
 export function caseWhen<const TBranches extends readonly CaseBranch<unknown>[]>(
   branches: TBranches
-): ExprRef<CaseBranchesValue<TBranches> | null, CaseExprDeps<TBranches, undefined>>;
+): ExprRef<CaseBranchesValue<TBranches> | null>;
 export function caseWhen<
   const TBranches extends readonly CaseBranch<unknown>[],
   TElse extends ExprInput<CaseBranchesValue<TBranches>>,
 >(
   branches: TBranches,
   elseValue: TElse
-): ExprRef<CaseBranchesValue<TBranches> | CaseElseValue<TElse>, CaseExprDeps<TBranches, TElse>>;
+): ExprRef<CaseBranchesValue<TBranches> | CaseElseValue<TElse>>;
 export function caseWhen<
   const TBranches extends readonly CaseBranch<unknown>[],
   TElse extends ExprInput<CaseBranchesValue<TBranches>> | undefined = undefined,
 >(
   branches: TBranches,
   elseValue?: TElse
-): ExprRef<CaseBranchesValue<TBranches> | CaseElseValue<TElse> | null, CaseExprDeps<TBranches, TElse>> {
+): ExprRef<CaseBranchesValue<TBranches> | CaseElseValue<TElse> | null> {
   const whens = branches.map((branch) => ({
     when: toExprNode(branch.when),
     then: toExprNode(branch.then),
   }));
   const elseExpr = elseValue === undefined ? null : toExprNode(elseValue as ExprInput<unknown>);
-  return buildCaseExpr<
-    CaseBranchesValue<TBranches> | CaseElseValue<TElse>,
-    CaseExprDeps<TBranches, TElse>
-  >(whens, elseExpr);
+  return buildCaseExpr<CaseBranchesValue<TBranches> | CaseElseValue<TElse>>(whens, elseExpr);
 }
 
 export function mapShape<
@@ -107,7 +82,7 @@ export function mapShape<
 }
 
 export type GroupShapeResult<T extends Record<string, ExprRef<unknown>>> = {
-  [K in keyof T]: T[K] extends ExprRef<infer TValue, infer TDeps> ? ExprRef<TValue, TDeps> : never;
+  [K in keyof T]: T[K] extends ExprRef<infer TValue> ? ExprRef<TValue> : never;
 };
 
 export function groupShape<T extends Record<string, ExprRef<unknown>>>(
@@ -125,7 +100,7 @@ export function groupShape<T extends Record<string, ExprRef<unknown>>>(
 export function f<const TExprs extends readonly ExprInput<unknown>[]>(
   strings: TemplateStringsArray,
   ...exprs: TExprs
-): ExprRef<string, DeferredExprDepsForArgs<TExprs>> {
+): ExprRef<string> {
   const parts: ExprInput<unknown>[] = [];
   for (let i = 0; i < strings.length; i += 1) {
     const literal = strings[i] ?? "";
@@ -133,15 +108,15 @@ export function f<const TExprs extends readonly ExprInput<unknown>[]>(
     const expr = exprs[i];
     if (expr !== undefined) parts.push(expr);
   }
-  if (parts.length === 0) return lit("") as ExprRef<string, DeferredExprDepsForArgs<TExprs>>;
-  return fn<string>("CONCAT", ...parts) as ExprRef<string, DeferredExprDepsForArgs<TExprs>>;
+  if (parts.length === 0) return lit("") as ExprRef<string>;
+  return fn<string>("CONCAT", ...parts) as ExprRef<string>;
 }
 
-function buildCaseExpr<T, TDeps extends DeferredExprDeps>(
+function buildCaseExpr<T>(
   whens: CaseWhenNode[],
   elseExpr: ExprNode<unknown> | null
-): ExprRef<T | null, TDeps> {
-  return new ExprRef<T | null, TDeps>({
+): ExprRef<T | null> {
+  return new ExprRef<T | null>({
     kind: "case",
     whens,
     elseExpr,

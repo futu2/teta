@@ -1,7 +1,6 @@
 import type { ExprRef, SqlBigInt, SqlBytes, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlTimestamp, SqlUuid, } from "../mod.ts";
 import * as publicApi from "../mod.ts";
 import { between, filter, filterEq, filterNe, filterGt, filterGte, filterLt, filterLte, fullJoin, fullJoinMerge, identityStep, innerJoin, innerJoinMap, innerJoinMerge, isDistinctFrom, isNotIn, join, leftJoin, leftJoinMap, leftJoinMerge, rightJoin, rightJoinMerge, take, sort, param, map, rename, pipe, flow, table, t, fold, asc, desc, eq, gt, upper, add, mul, coalesce, count, group, loop, sum, and, or, isNotNull, sub, caseWhen, when, mapShape, groupShape, lt, unnest, unionAll, union, unlessStep, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, toString, toTimestamp, pick, drop, extend, select, alias, whenStep } from "../mod.ts";
-import { col as internalCol } from "../src/edsl/internal_deferred_expr.ts";
 type Equal<A, B> = ((<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false);
 type Expect<T extends true> = T;
 type ExprType<TExpr> = TExpr extends ExprRef<infer TValue> ? TValue : never;
@@ -545,12 +544,6 @@ pipe(users, filterGt((user) => user.name, 1));
 pipe(users, filterGte((user) => user.id, "1"));
 // @ts-expect-error filterEq callback operands must be valid expressions
 pipe(users, filterEq((user) => user.name, (user) => user.id));
-// @ts-expect-error deferred col operands are removed from filterEq
-pipe(users, filterEq(internalCol("name"), "Ada"));
-// @ts-expect-error deferred col operands are removed from filterGt
-pipe(users, filterGt(internalCol("id"), 1));
-// @ts-expect-error wrapped deferred col operands are removed from filterEq
-pipe(users, filterEq(add(internalCol("id"), 1), 2));
 pipe(users, map((user) => ({
     // @ts-expect-error callbacks reject unknown current-row columns in map context
     missing: user.missing,

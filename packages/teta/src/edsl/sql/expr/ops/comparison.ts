@@ -1,4 +1,5 @@
 import type { SqlDate, SqlNumber, SqlTimestamp } from "../../types.ts";
+import type { OrderItem } from "../../../core/types.ts";
 import {
   ExprRef,
   binaryExpr,
@@ -6,10 +7,6 @@ import {
   wrapExpr,
   type ExprInput,
 } from "../core.ts";
-import type {
-  DeferredExprDepsForArgs,
-  DeferredOrderItem,
-} from "../../../internal_deferred_expr.ts";
 import { userError } from "../../../errors.ts";
 
 type ComparableInput = SqlNumber | number | bigint | SqlDate | SqlTimestamp | null;
@@ -17,104 +14,104 @@ type ComparableInput = SqlNumber | number | bigint | SqlDate | SqlTimestamp | nu
 export function eq<T, TLeft extends ExprInput<T>, TRight extends ExprInput<T>>(
   left: TLeft,
   right: TRight
-): ExprRef<boolean, DeferredExprDepsForArgs<[TLeft, TRight]>> {
-  return binaryExpr<DeferredExprDepsForArgs<[TLeft, TRight]>>(
+): ExprRef<boolean> {
+  return binaryExpr(
     "=",
     toExprNode(left as ExprInput<T>),
     toExprNode(right as ExprInput<T>)
-  ) as ExprRef<boolean, DeferredExprDepsForArgs<[TLeft, TRight]>>;
+  ) as ExprRef<boolean>;
 }
 
 export function ne<T, TLeft extends ExprInput<T>, TRight extends ExprInput<T>>(
   left: TLeft,
   right: TRight
-): ExprRef<boolean, DeferredExprDepsForArgs<[TLeft, TRight]>> {
-  return binaryExpr<DeferredExprDepsForArgs<[TLeft, TRight]>>(
+): ExprRef<boolean> {
+  return binaryExpr(
     "!=",
     toExprNode(left as ExprInput<T>),
     toExprNode(right as ExprInput<T>)
-  ) as ExprRef<boolean, DeferredExprDepsForArgs<[TLeft, TRight]>>;
+  ) as ExprRef<boolean>;
 }
 
 export function gt<T extends ComparableInput, TLeft extends ExprInput<T>, TRight extends ExprInput<T>>(
   left: TLeft,
   right: TRight
-): ExprRef<boolean, DeferredExprDepsForArgs<[TLeft, TRight]>> {
-  return binaryExpr<DeferredExprDepsForArgs<[TLeft, TRight]>>(
+): ExprRef<boolean> {
+  return binaryExpr(
     ">",
     toExprNode(left as ExprInput<T>),
     toExprNode(right as ExprInput<T>)
-  ) as ExprRef<boolean, DeferredExprDepsForArgs<[TLeft, TRight]>>;
+  ) as ExprRef<boolean>;
 }
 
 export function gte<T extends ComparableInput, TLeft extends ExprInput<T>, TRight extends ExprInput<T>>(
   left: TLeft,
   right: TRight
-): ExprRef<boolean, DeferredExprDepsForArgs<[TLeft, TRight]>> {
-  return binaryExpr<DeferredExprDepsForArgs<[TLeft, TRight]>>(
+): ExprRef<boolean> {
+  return binaryExpr(
     ">=",
     toExprNode(left as ExprInput<T>),
     toExprNode(right as ExprInput<T>)
-  ) as ExprRef<boolean, DeferredExprDepsForArgs<[TLeft, TRight]>>;
+  ) as ExprRef<boolean>;
 }
 
 export function lt<T extends ComparableInput, TLeft extends ExprInput<T>, TRight extends ExprInput<T>>(
   left: TLeft,
   right: TRight
-): ExprRef<boolean, DeferredExprDepsForArgs<[TLeft, TRight]>> {
-  return binaryExpr<DeferredExprDepsForArgs<[TLeft, TRight]>>(
+): ExprRef<boolean> {
+  return binaryExpr(
     "<",
     toExprNode(left as ExprInput<T>),
     toExprNode(right as ExprInput<T>)
-  ) as ExprRef<boolean, DeferredExprDepsForArgs<[TLeft, TRight]>>;
+  ) as ExprRef<boolean>;
 }
 
 export function lte<T extends ComparableInput, TLeft extends ExprInput<T>, TRight extends ExprInput<T>>(
   left: TLeft,
   right: TRight
-): ExprRef<boolean, DeferredExprDepsForArgs<[TLeft, TRight]>> {
-  return binaryExpr<DeferredExprDepsForArgs<[TLeft, TRight]>>(
+): ExprRef<boolean> {
+  return binaryExpr(
     "<=",
     toExprNode(left as ExprInput<T>),
     toExprNode(right as ExprInput<T>)
-  ) as ExprRef<boolean, DeferredExprDepsForArgs<[TLeft, TRight]>>;
+  ) as ExprRef<boolean>;
 }
 
 export function like<TLeft extends ExprInput<string | null>, TRight extends ExprInput<string>>(
   left: TLeft,
   right: TRight
-): ExprRef<boolean, DeferredExprDepsForArgs<[TLeft, TRight]>> {
-  return binaryExpr<DeferredExprDepsForArgs<[TLeft, TRight]>>(
+): ExprRef<boolean> {
+  return binaryExpr(
     "LIKE",
     toExprNode(left as ExprInput<string | null>),
     toExprNode(right as ExprInput<string>)
-  ) as ExprRef<boolean, DeferredExprDepsForArgs<[TLeft, TRight]>>;
+  ) as ExprRef<boolean>;
 }
 
 export function isIn<T, TValue extends ExprInput<T>, const TValues extends readonly ExprInput<T>[]>(
   value: TValue,
   values: TValues
-): ExprRef<boolean, DeferredExprDepsForArgs<[TValue, ...TValues]>> {
+): ExprRef<boolean> {
   if (values.length === 0) {
     userError("INVALID_FUNCTION_NAME", "in requires at least one value");
   }
-  return binaryExpr<DeferredExprDepsForArgs<[TValue, ...TValues]>>("IN", toExprNode(value as ExprInput<T>), {
+  return binaryExpr("IN", toExprNode(value as ExprInput<T>), {
     kind: "list",
     items: values.map((item) => toExprNode(item as ExprInput<T>)),
-  }) as ExprRef<boolean, DeferredExprDepsForArgs<[TValue, ...TValues]>>;
+  }) as ExprRef<boolean>;
 }
 
 export function isNotIn<T, TValue extends ExprInput<T>, const TValues extends readonly ExprInput<T>[]>(
   value: TValue,
   values: TValues
-): ExprRef<boolean, DeferredExprDepsForArgs<[TValue, ...TValues]>> {
+): ExprRef<boolean> {
   if (values.length === 0) {
     userError("INVALID_FUNCTION_NAME", "notIn requires at least one value");
   }
-  return binaryExpr<DeferredExprDepsForArgs<[TValue, ...TValues]>>("NOT IN", toExprNode(value as ExprInput<T>), {
+  return binaryExpr("NOT IN", toExprNode(value as ExprInput<T>), {
     kind: "list",
     items: values.map((item) => toExprNode(item as ExprInput<T>)),
-  }) as ExprRef<boolean, DeferredExprDepsForArgs<[TValue, ...TValues]>>;
+  }) as ExprRef<boolean>;
 }
 
 export const notIn = isNotIn;
@@ -128,8 +125,8 @@ export function between<
   value: TValue,
   lower: TLower,
   upper: TUpper
-): ExprRef<boolean, DeferredExprDepsForArgs<[TValue, TLower, TUpper]>> {
-  return binaryExpr<DeferredExprDepsForArgs<[TValue, TLower, TUpper]>>(
+): ExprRef<boolean> {
+  return binaryExpr(
     "BETWEEN",
     toExprNode(value as ExprInput<T>),
     {
@@ -138,18 +135,18 @@ export function between<
       left: toExprNode(lower as ExprInput<T>),
       right: toExprNode(upper as ExprInput<T>),
     }
-  ) as ExprRef<boolean, DeferredExprDepsForArgs<[TValue, TLower, TUpper]>>;
+  ) as ExprRef<boolean>;
 }
 
 export function isDistinctFrom<T, TLeft extends ExprInput<T>, TRight extends ExprInput<T>>(
   left: TLeft,
   right: TRight
-): ExprRef<boolean, DeferredExprDepsForArgs<[TLeft, TRight]>> {
-  return binaryExpr<DeferredExprDepsForArgs<[TLeft, TRight]>>(
+): ExprRef<boolean> {
+  return binaryExpr(
     "IS DISTINCT FROM",
     toExprNode(left as ExprInput<T>),
     toExprNode(right as ExprInput<T>)
-  ) as ExprRef<boolean, DeferredExprDepsForArgs<[TLeft, TRight]>>;
+  ) as ExprRef<boolean>;
 }
 
 type BooleanInput = ExprInput<boolean | null>;
@@ -157,14 +154,14 @@ type NonEmptyBooleanInputs = readonly [BooleanInput, ...BooleanInput[]];
 
 export function and<const TValues extends NonEmptyBooleanInputs>(
   ...values: TValues
-): ExprRef<boolean, DeferredExprDepsForArgs<TValues>> {
-  return booleanChain("AND", "and", values) as ExprRef<boolean, DeferredExprDepsForArgs<TValues>>;
+): ExprRef<boolean> {
+  return booleanChain("AND", "and", values) as ExprRef<boolean>;
 }
 
 export function or<const TValues extends NonEmptyBooleanInputs>(
   ...values: TValues
-): ExprRef<boolean, DeferredExprDepsForArgs<TValues>> {
-  return booleanChain("OR", "or", values) as ExprRef<boolean, DeferredExprDepsForArgs<TValues>>;
+): ExprRef<boolean> {
+  return booleanChain("OR", "or", values) as ExprRef<boolean>;
 }
 
 function booleanChain(
@@ -193,8 +190,8 @@ function booleanChain(
 
 export function not<TValue extends ExprInput<boolean | null>>(
   value: TValue
-): ExprRef<boolean, DeferredExprDepsForArgs<[TValue]>> {
-  return new ExprRef<boolean, DeferredExprDepsForArgs<[TValue]>>({
+): ExprRef<boolean> {
+  return new ExprRef<boolean>({
     kind: "unary",
     op: "NOT",
     expr: toExprNode(value as ExprInput<boolean | null>),
@@ -203,32 +200,32 @@ export function not<TValue extends ExprInput<boolean | null>>(
 
 export function isNull<TValue extends ExprInput<unknown>>(
   value: TValue
-): ExprRef<boolean, DeferredExprDepsForArgs<[TValue]>> {
-  return binaryExpr<DeferredExprDepsForArgs<[TValue]>>(
+): ExprRef<boolean> {
+  return binaryExpr(
     "IS",
     toExprNode(value as ExprInput<unknown>),
     toExprNode(null)
-  ) as ExprRef<boolean, DeferredExprDepsForArgs<[TValue]>>;
+  ) as ExprRef<boolean>;
 }
 
 export function isNotNull<TValue extends ExprInput<unknown>>(
   value: TValue
-): ExprRef<boolean, DeferredExprDepsForArgs<[TValue]>> {
-  return binaryExpr<DeferredExprDepsForArgs<[TValue]>>(
+): ExprRef<boolean> {
+  return binaryExpr(
     "IS NOT",
     toExprNode(value as ExprInput<unknown>),
     toExprNode(null)
-  ) as ExprRef<boolean, DeferredExprDepsForArgs<[TValue]>>;
+  ) as ExprRef<boolean>;
 }
 
 export function asc<TValue extends ExprInput<unknown>>(
   value: TValue
-): DeferredOrderItem<DeferredExprDepsForArgs<[TValue]>> {
+): OrderItem {
   return { expr: toExprNode(value as ExprInput<unknown>), direction: "ASC" };
 }
 
 export function desc<TValue extends ExprInput<unknown>>(
   value: TValue
-): DeferredOrderItem<DeferredExprDepsForArgs<[TValue]>> {
+): OrderItem {
   return { expr: toExprNode(value as ExprInput<unknown>), direction: "DESC" };
 }

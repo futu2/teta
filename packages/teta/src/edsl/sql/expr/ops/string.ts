@@ -7,7 +7,6 @@ import {
   type ExprRef,
   type PropagateNull,
 } from "../core.ts";
-import type { DeferredExprDepsForArgs } from "../../../internal_deferred_expr.ts";
 
 type NullableString = string | null;
 
@@ -20,7 +19,7 @@ export function replace<
   value: TInput,
   search: TSearch,
   replacement: TReplacement
-): ExprRef<PropagateNull<ExprInputValue<TInput>, string>, DeferredExprDepsForArgs<[TInput, TSearch, TReplacement]>> {
+): ExprRef<PropagateNull<ExprInputValue<TInput>, string>> {
   return fn<PropagateNull<ExprInputValue<TInput>, string>, [TInput, TSearch, TReplacement]>(
     "REPLACE",
     value,
@@ -31,25 +30,25 @@ export function replace<
 
 export function upper<TInput extends ExprInput<NullableString>>(
   value: TInput
-): ExprRef<PropagateNull<ExprInputValue<TInput>, string>, DeferredExprDepsForArgs<[TInput]>> {
+): ExprRef<PropagateNull<ExprInputValue<TInput>, string>> {
   return fn<PropagateNull<ExprInputValue<TInput>, string>, [TInput]>("UPPER", value);
 }
 
 export function lower<TInput extends ExprInput<NullableString>>(
   value: TInput
-): ExprRef<PropagateNull<ExprInputValue<TInput>, string>, DeferredExprDepsForArgs<[TInput]>> {
+): ExprRef<PropagateNull<ExprInputValue<TInput>, string>> {
   return fn<PropagateNull<ExprInputValue<TInput>, string>, [TInput]>("LOWER", value);
 }
 
 export function reverse<TInput extends ExprInput<NullableString>>(
   value: TInput
-): ExprRef<PropagateNull<ExprInputValue<TInput>, string>, DeferredExprDepsForArgs<[TInput]>> {
+): ExprRef<PropagateNull<ExprInputValue<TInput>, string>> {
   return fn<PropagateNull<ExprInputValue<TInput>, string>, [TInput]>("REVERSE", value);
 }
 
 export function trim<TInput extends ExprInput<NullableString>>(
   value: TInput
-): ExprRef<PropagateNull<ExprInputValue<TInput>, string>, DeferredExprDepsForArgs<[TInput]>> {
+): ExprRef<PropagateNull<ExprInputValue<TInput>, string>> {
   return fn<PropagateNull<ExprInputValue<TInput>, string>, [TInput]>("TRIM", value);
 }
 
@@ -59,7 +58,7 @@ export function regexLike<
 >(
   value: TInput,
   pattern: TPattern
-): ExprRef<boolean, DeferredExprDepsForArgs<[TInput, TPattern]>> {
+): ExprRef<boolean> {
   return fn<boolean, [TInput, TPattern]>("REGEXP_LIKE", value, pattern);
 }
 
@@ -74,17 +73,14 @@ export function regexReplace<
   pattern: TPattern,
   replacement: TReplacement,
   flags?: TFlags
-): ExprRef<PropagateNull<ExprInputValue<TInput>, string>, DeferredExprDepsForArgs<[TInput, TPattern, TReplacement, TFlags]>> {
+): ExprRef<PropagateNull<ExprInputValue<TInput>, string>> {
   if (flags === undefined) {
     return fn<PropagateNull<ExprInputValue<TInput>, string>, [TInput, TPattern, TReplacement]>(
       "REGEXP_REPLACE",
       value,
       pattern,
       replacement
-    ) as unknown as ExprRef<
-      PropagateNull<ExprInputValue<TInput>, string>,
-      DeferredExprDepsForArgs<[TInput, TPattern, TReplacement, TFlags]>
-    >;
+    );
   }
   return fn<PropagateNull<ExprInputValue<TInput>, string>, [TInput, TPattern, TReplacement, NonNullable<TFlags>]>(
     "REGEXP_REPLACE",
@@ -92,10 +88,7 @@ export function regexReplace<
     pattern,
     replacement,
     flags as NonNullable<TFlags>
-  ) as unknown as ExprRef<
-    PropagateNull<ExprInputValue<TInput>, string>,
-    DeferredExprDepsForArgs<[TInput, TPattern, TReplacement, TFlags]>
-  >;
+  );
 }
 
 export function regexExtract<
@@ -107,26 +100,20 @@ export function regexExtract<
   value: TInput,
   pattern: TPattern,
   groupIndex?: TGroupIndex
-): ExprRef<PropagateNull<ExprInputValue<TInput>, string>, DeferredExprDepsForArgs<[TInput, TPattern, TGroupIndex]>> {
+): ExprRef<PropagateNull<ExprInputValue<TInput>, string>> {
   if (groupIndex === undefined) {
     return fn<PropagateNull<ExprInputValue<TInput>, string>, [TInput, TPattern]>(
       "REGEXP_EXTRACT",
       value,
       pattern
-    ) as unknown as ExprRef<
-      PropagateNull<ExprInputValue<TInput>, string>,
-      DeferredExprDepsForArgs<[TInput, TPattern, TGroupIndex]>
-    >;
+    );
   }
   return fn<PropagateNull<ExprInputValue<TInput>, string>, [TInput, TPattern, NonNullable<TGroupIndex>]>(
     "REGEXP_EXTRACT",
     value,
     pattern,
     groupIndex as NonNullable<TGroupIndex>
-  ) as unknown as ExprRef<
-    PropagateNull<ExprInputValue<TInput>, string>,
-    DeferredExprDepsForArgs<[TInput, TPattern, TGroupIndex]>
-  >;
+  );
 }
 
 export function substring<
@@ -138,26 +125,20 @@ export function substring<
   value: TInput,
   start: TStart,
   length?: TLength
-): ExprRef<PropagateNull<ExprInputValue<TInput>, string>, DeferredExprDepsForArgs<[TInput, TStart, TLength]>> {
+): ExprRef<PropagateNull<ExprInputValue<TInput>, string>> {
   if (length === undefined) {
     return fn<PropagateNull<ExprInputValue<TInput>, string>, [TInput, TStart]>(
       "SUBSTRING",
       value,
       start
-    ) as unknown as ExprRef<
-      PropagateNull<ExprInputValue<TInput>, string>,
-      DeferredExprDepsForArgs<[TInput, TStart, TLength]>
-    >;
+    );
   }
   return fn<PropagateNull<ExprInputValue<TInput>, string>, [TInput, TStart, NonNullable<TLength>]>(
     "SUBSTRING",
     value,
     start,
     length as NonNullable<TLength>
-  ) as unknown as ExprRef<
-    PropagateNull<ExprInputValue<TInput>, string>,
-    DeferredExprDepsForArgs<[TInput, TStart, TLength]>
-  >;
+  );
 }
 
 export function position<
@@ -167,7 +148,7 @@ export function position<
 >(
   value: TInput,
   needle: TNeedle
-): ExprRef<PropagateNull<ExprInputValue<TInput>, SqlInt>, DeferredExprDepsForArgs<[TNeedle, TInput]>> {
+): ExprRef<PropagateNull<ExprInputValue<TInput>, SqlInt>> {
   return fn<PropagateNull<ExprInputValue<TInput>, SqlInt>, [TNeedle, TInput]>("POSITION", needle, value);
 }
 
@@ -182,17 +163,14 @@ export function overlay<
   placing: TPlacing,
   start: TStart,
   length?: TLength
-): ExprRef<PropagateNull<ExprInputValue<TInput>, string>, DeferredExprDepsForArgs<[TInput, TPlacing, TStart, TLength]>> {
+): ExprRef<PropagateNull<ExprInputValue<TInput>, string>> {
   if (length === undefined) {
     return fn<PropagateNull<ExprInputValue<TInput>, string>, [TInput, TPlacing, TStart]>(
       "OVERLAY",
       value,
       placing,
       start
-    ) as unknown as ExprRef<
-      PropagateNull<ExprInputValue<TInput>, string>,
-      DeferredExprDepsForArgs<[TInput, TPlacing, TStart, TLength]>
-    >;
+    );
   }
   return fn<PropagateNull<ExprInputValue<TInput>, string>, [TInput, TPlacing, TStart, NonNullable<TLength>]>(
     "OVERLAY",
@@ -200,33 +178,30 @@ export function overlay<
     placing,
     start,
     length as NonNullable<TLength>
-  ) as unknown as ExprRef<
-    PropagateNull<ExprInputValue<TInput>, string>,
-    DeferredExprDepsForArgs<[TInput, TPlacing, TStart, TLength]>
-  >;
+  );
 }
 
 export function charLength<TInput extends ExprInput<NullableString>>(
   value: TInput
-): ExprRef<PropagateNull<ExprInputValue<TInput>, SqlInt>, DeferredExprDepsForArgs<[TInput]>> {
+): ExprRef<PropagateNull<ExprInputValue<TInput>, SqlInt>> {
   return fn<PropagateNull<ExprInputValue<TInput>, SqlInt>, [TInput]>("CHAR_LENGTH", value);
 }
 
 export function characterLength<TInput extends ExprInput<NullableString>>(
   value: TInput
-): ExprRef<PropagateNull<ExprInputValue<TInput>, SqlInt>, DeferredExprDepsForArgs<[TInput]>> {
+): ExprRef<PropagateNull<ExprInputValue<TInput>, SqlInt>> {
   return fn<PropagateNull<ExprInputValue<TInput>, SqlInt>, [TInput]>("CHARACTER_LENGTH", value);
 }
 
 export function octetLength<TInput extends ExprInput<NullableString>>(
   value: TInput
-): ExprRef<PropagateNull<ExprInputValue<TInput>, SqlInt>, DeferredExprDepsForArgs<[TInput]>> {
+): ExprRef<PropagateNull<ExprInputValue<TInput>, SqlInt>> {
   return fn<PropagateNull<ExprInputValue<TInput>, SqlInt>, [TInput]>("OCTET_LENGTH", value);
 }
 
 export function bitLength<TInput extends ExprInput<NullableString>>(
   value: TInput
-): ExprRef<PropagateNull<ExprInputValue<TInput>, SqlInt>, DeferredExprDepsForArgs<[TInput]>> {
+): ExprRef<PropagateNull<ExprInputValue<TInput>, SqlInt>> {
   return fn<PropagateNull<ExprInputValue<TInput>, SqlInt>, [TInput]>("BIT_LENGTH", value);
 }
 
@@ -236,7 +211,7 @@ export function left<
 >(
   value: TInput,
   length: TLength
-): ExprRef<PropagateNull<ExprInputValue<TInput>, string>, DeferredExprDepsForArgs<[TInput, TLength]>> {
+): ExprRef<PropagateNull<ExprInputValue<TInput>, string>> {
   return fn<PropagateNull<ExprInputValue<TInput>, string>, [TInput, TLength]>("LEFT", value, length);
 }
 
@@ -246,7 +221,7 @@ export function right<
 >(
   value: TInput,
   length: TLength
-): ExprRef<PropagateNull<ExprInputValue<TInput>, string>, DeferredExprDepsForArgs<[TInput, TLength]>> {
+): ExprRef<PropagateNull<ExprInputValue<TInput>, string>> {
   return fn<PropagateNull<ExprInputValue<TInput>, string>, [TInput, TLength]>("RIGHT", value, length);
 }
 
@@ -259,7 +234,7 @@ export function lpad<
   value: TInput,
   length: TLength,
   padding: TPadding = " " as TPadding
-): ExprRef<PropagateNull<ExprInputValue<TInput>, string>, DeferredExprDepsForArgs<[TInput, TLength, TPadding]>> {
+): ExprRef<PropagateNull<ExprInputValue<TInput>, string>> {
   return fn<PropagateNull<ExprInputValue<TInput>, string>, [TInput, TLength, TPadding]>(
     "LPAD",
     value,
@@ -277,7 +252,7 @@ export function rpad<
   value: TInput,
   length: TLength,
   padding: TPadding = " " as TPadding
-): ExprRef<PropagateNull<ExprInputValue<TInput>, string>, DeferredExprDepsForArgs<[TInput, TLength, TPadding]>> {
+): ExprRef<PropagateNull<ExprInputValue<TInput>, string>> {
   return fn<PropagateNull<ExprInputValue<TInput>, string>, [TInput, TLength, TPadding]>(
     "RPAD",
     value,
@@ -293,12 +268,9 @@ export function concat<
 >(
   value: TInput,
   ...parts: TParts
-): ExprRef<PropagateNull<ExprInputValue<TInput>, string>, DeferredExprDepsForArgs<[TInput, ...TParts]>> {
+): ExprRef<PropagateNull<ExprInputValue<TInput>, string>> {
   if (parts.length === 0) {
-    return wrapExpr(value) as ExprRef<
-      PropagateNull<ExprInputValue<TInput>, string>,
-      DeferredExprDepsForArgs<[TInput, ...TParts]>
-    >;
+    return wrapExpr(value) as ExprRef<PropagateNull<ExprInputValue<TInput>, string>>;
   }
   return fn<PropagateNull<ExprInputValue<TInput>, string>, [TInput, ...TParts]>("CONCAT", value, ...parts);
 }

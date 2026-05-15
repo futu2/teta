@@ -546,8 +546,8 @@ export function resolveJoinColumns<
   TRight extends Record<string, any>,
   TSelection extends JoinSelection,
 >(
-  leftColumns: ColumnRefs<TLeft>,
-  rightColumns: ColumnRefs<TRight>,
+  leftRefs: ColumnRefs<TLeft>,
+  rightRefs: ColumnRefs<TRight>,
   leftNames: readonly string[],
   rightNames: readonly string[],
   joinType: JoinType,
@@ -570,12 +570,12 @@ export function resolveJoinColumns<
     >;
   const mergeLeftColumns =
     joinType === "RIGHT" || joinType === "FULL"
-      ? (leftColumns as unknown as ColumnRefs<NullableColumns<TLeft>>)
-      : leftColumns;
+      ? (leftRefs as unknown as ColumnRefs<NullableColumns<TLeft>>)
+      : leftRefs;
   const mergeRightColumns =
     joinType === "LEFT" || joinType === "FULL"
-      ? (rightColumns as unknown as ColumnRefs<NullableColumns<TRight>>)
-      : rightColumns;
+      ? (rightRefs as unknown as ColumnRefs<NullableColumns<TRight>>)
+      : rightRefs;
   const mergedColumns = mergeResolver(
     mergeLeftColumns as unknown as ColumnRefs<Record<string, any>>,
     mergeRightColumns as unknown as ColumnRefs<Record<string, any>>
