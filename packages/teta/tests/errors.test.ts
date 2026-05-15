@@ -221,6 +221,44 @@ describe("error paths", () => {
             "LEGACY_SELECTION_ARRAY",
             LEGACY_SELECTION_ARRAY_ERROR
         );
+        expectUserError(
+            () => pipe(users, map(() => new Date() as never)),
+            "LEGACY_SELECTION_ARRAY",
+            LEGACY_SELECTION_ARRAY_ERROR
+        );
+        expectUserError(
+            () => pipe(orders, fold(() => new Date() as never)),
+            "LEGACY_SELECTION_ARRAY",
+            LEGACY_SELECTION_ARRAY_ERROR
+        );
+        expectUserError(
+            () => pipe(users, map(() => ({} as never))),
+            "LEGACY_SELECTION_ARRAY",
+            LEGACY_SELECTION_ARRAY_ERROR
+        );
+        expectUserError(
+            () => pipe(orders, fold(() => ({} as never))),
+            "LEGACY_SELECTION_ARRAY",
+            LEGACY_SELECTION_ARRAY_ERROR
+        );
+    });
+    test("rejects erased invalid extend callback returns with user errors", () => {
+        const users = createUsersTable();
+        expectUserError(
+            () => pipe(users, extend(() => undefined as never)),
+            "LEGACY_SELECTION_ARRAY",
+            LEGACY_SELECTION_ARRAY_ERROR
+        );
+        expectUserError(
+            () => pipe(users, extend(() => new Date() as never)),
+            "LEGACY_SELECTION_ARRAY",
+            LEGACY_SELECTION_ARRAY_ERROR
+        );
+        expectUserError(
+            () => pipe(users, extend(() => ({} as never))),
+            "LEGACY_SELECTION_ARRAY",
+            LEGACY_SELECTION_ARRAY_ERROR
+        );
     });
     test("rejects invalid select helper usage", () => {
         const users = createUsersTable();

@@ -1031,8 +1031,14 @@ function assertRowCallback(helper: string, value: unknown): asserts value is (..
   }
 }
 
-function assertProjectionShape(value: unknown): asserts value is ProjectionShape {
-  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+export function assertProjectionShape(value: unknown): asserts value is ProjectionShape {
+  if (
+    value === null
+    || typeof value !== "object"
+    || Array.isArray(value)
+    || Object.getPrototypeOf(value) !== Object.prototype
+    || Object.keys(value).length === 0
+  ) {
     userError("LEGACY_SELECTION_ARRAY", "map() and fold() now expect an object shape");
   }
 }

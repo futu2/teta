@@ -1,4 +1,4 @@
-import { map, Query } from "./builder.ts";
+import { assertProjectionShape, map, Query } from "./builder.ts";
 import type {
   ColumnRefs,
   ProjectionResult,
@@ -33,9 +33,16 @@ export function extend(...args: unknown[]): unknown {
   return (query: Query<QueryColumns>) => {
     return map((cols: ColumnRefs<QueryColumns>) => ({
       ...currentColumns(cols, query.columnNames),
-      ...(selectorOrSelection as (cols: ColumnRefs<QueryColumns>) => ProjectionShape)(cols),
+      ...resolveExtensionShape(
+        (selectorOrSelection as (cols: ColumnRefs<QueryColumns>) => ProjectionShape)(cols)
+      ),
     }))(query);
   };
+}
+
+function resolveExtensionShape(value: unknown): ProjectionShape {
+  assertProjectionShape(value);
+  return value;
 }
 
 function currentColumns(
