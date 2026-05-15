@@ -164,7 +164,7 @@ const pickedUsers = pipe(users, pick("id", "name"));
 const callbackFilteredUsers = pipe(users, filter((user) => eq(user.id, 1)));
 const filterEqCallbackNameUsers = pipe(users, filterEq((user) => user.name, "Ada"));
 const filterGteComputedUsers = pipe(users, filterGte((user) => add(mul(user.id, 2), 1), 3));
-const filterEqCallbackUsers = pipe(users, filterEq((user) => user.id, (user) => user.id));
+const filterEqCallbackUsers = pipe(users, filterEq((user) => user.id, (user) => add(user.id, 0)));
 const filterNeUsers = pipe(users, filterNe((user) => user.name, "deleted"));
 const filterGtUsers = pipe(users, filterGt((user) => user.id, 0));
 const filterLtUsers = pipe(users, filterLt((user) => user.id, 100));
@@ -282,7 +282,6 @@ const projectedProfiles = pipe(profiles, map((profile) => ({
 const uuidFilteredProfiles = pipe(profiles, filter((profile) => eq(profile.id, param("00000000-0000-0000-0000-000000000000"))));
 const bigintFilteredProfiles = pipe(profiles, filter((profile) => and(gt(profile.external_id, 0), eq(profile.external_id, 42n))));
 const nullableFilterGtCallbackUsers = pipe(profiles, filterGt((profile) => profile.credit_limit, 0));
-const nullableFilterGtCallbackLeftUsers = pipe(profiles, filterGt((profile) => profile.credit_limit, 0));
 const nullableFilterGtRightCallbackUsers = pipe(profiles, filterGt(0, (profile) => profile.credit_limit));
 const stringifiedUserId = toString(users.columns.id);
 const stringifiedNullableNickname = toString(profiles.columns.nickname);
@@ -404,7 +403,6 @@ type _ProjectedProfileMetadata = Expect<Equal<ExprType<typeof projectedProfiles.
 type _ProjectedProfileAvatar = Expect<Equal<ExprType<typeof projectedProfiles.columns.avatar>, SqlBytes | null>>;
 type _ProjectedProfileNickname = Expect<Equal<ExprType<typeof projectedProfiles.columns.nickname>, string>>;
 type _NullableFilterGtCallbackUsersCreditLimit = Expect<Equal<ExprType<typeof nullableFilterGtCallbackUsers.columns.credit_limit>, SqlDecimal | null>>;
-type _NullableFilterGtCallbackLeftUsersCreditLimit = Expect<Equal<ExprType<typeof nullableFilterGtCallbackLeftUsers.columns.credit_limit>, SqlDecimal | null>>;
 type _NullableFilterGtRightCallbackUsersCreditLimit = Expect<Equal<ExprType<typeof nullableFilterGtRightCallbackUsers.columns.credit_limit>, SqlDecimal | null>>;
 type _FlowNumberToString = Expect<Equal<ReturnType<typeof flowNumberToString>, string>>;
 type _FlowPipelineKeys = Expect<Equal<keyof typeof flowPipelineResult.columns, "id">>;
@@ -479,7 +477,6 @@ void projectedProfiles;
 void uuidFilteredProfiles;
 void bigintFilteredProfiles;
 void nullableFilterGtCallbackUsers;
-void nullableFilterGtCallbackLeftUsers;
 void nullableFilterGtRightCallbackUsers;
 void invalidPickedUsers;
 // @ts-expect-error filter predicates must return boolean expressions
