@@ -230,8 +230,12 @@ function isLiteralValue(value: unknown): value is Value {
 }
 
 function isParamNode(value: { kind?: unknown }): boolean {
-  const candidate = value as { name?: unknown };
-  return typeof candidate.name === "string" || candidate.name === null;
+  const candidate = value as { name?: unknown; value?: unknown };
+  return (
+    Object.prototype.hasOwnProperty.call(candidate, "value") &&
+    candidate.value !== undefined &&
+    (typeof candidate.name === "string" || candidate.name === null)
+  );
 }
 
 function isBinaryNode(value: { kind?: unknown }): boolean {

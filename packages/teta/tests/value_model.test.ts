@@ -4,6 +4,7 @@ import {
   isColumn,
   isExpr,
   lit,
+  param,
   table,
   t,
   toSql,
@@ -44,6 +45,9 @@ describe("tagged EDSL value model", () => {
   test("rejects malformed expression-like values", () => {
     expect(isExpr({ kind: "expr", node: null })).toBe(false);
     expect(isExpr({ kind: "expr", node: { kind: "bogus" } })).toBe(false);
+    expect(isExpr({ kind: "expr", node: { kind: "param", name: null } })).toBe(false);
+    expect(isExpr({ kind: "expr", node: { kind: "param", value: undefined, name: null } })).toBe(false);
+    expect(isExpr(param(null))).toBe(true);
     expect(() => toExprNode({ kind: "expr", node: null } as any)).toThrow(
       "Unsupported literal value"
     );
