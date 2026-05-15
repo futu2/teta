@@ -35,8 +35,8 @@ export {
   filterGte,
   filterLt,
   filterLte,
-} from "./query/filter_comparison.ts";
-export { drop, pick, rename } from "./query/projection_helpers.ts";
+} from "./helpers/filter_comparison.ts";
+export { drop, pick, rename } from "./helpers/projection.ts";
 export { alias, select } from "./query/select.ts";
 export { identityStep, unlessStep, whenStep } from "./query/steps.ts";
 export {
@@ -50,6 +50,6 @@ export {
   suffixAllLeft,
   suffixAllRight,
   usingCols,
-} from "./query/join.ts";
+} from "./helpers/join_merge.ts";
 export { loop } from "./query/loop.ts";
 export { t, table, values } from "./query/schema.ts";
