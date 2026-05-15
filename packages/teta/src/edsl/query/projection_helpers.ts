@@ -1,5 +1,6 @@
 import { userError } from "../errors.ts";
-import { map, Query } from "./builder.ts";
+import { map } from "./builder.ts";
+import type { Query } from "./builder.ts";
 import type { ColumnRefs } from "../expr.ts";
 import { mapColumnNames, selectColumnsByName } from "./projection_utils.ts";
 

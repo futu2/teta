@@ -3,6 +3,7 @@ import {
   eq,
   isColumn,
   isExpr,
+  isQuery,
   lit,
   param,
   table,
@@ -40,6 +41,18 @@ describe("tagged EDSL value model", () => {
     expect(Object.isFrozen(id)).toBe(true);
     expect(Object.isFrozen(id.node)).toBe(true);
     expect(id.name).toBe("id");
+  });
+
+  test("creates immutable tagged queries", () => {
+    const users = table("users", {
+      id: t.int(),
+    });
+
+    expect(users.kind).toBe("query");
+    expect(isQuery(users)).toBe(true);
+    expect(Object.isFrozen(users)).toBe(true);
+    expect(Object.isFrozen(users.state)).toBe(true);
+    expect(users.columnNames).toEqual(["id"]);
   });
 
   test("rejects malformed expression-like values", () => {

@@ -1,5 +1,4 @@
 export {
-  Query,
   explain,
   fold,
   filter,
@@ -20,6 +19,7 @@ export {
   take,
   sort,
   map,
+  isQuery,
   toAst,
   toIR,
   toSql,
@@ -27,7 +27,7 @@ export {
   union,
   unionAll,
 } from "./query/builder.ts";
-export type { QueryExplainResult, QueryIR, QueryStageKind, QueryStep } from "./query/builder.ts";
+export type { Query, QueryExplainResult, QueryIR, QueryStageKind, QueryStep } from "./query/builder.ts";
 export { extend } from "./query/extend.ts";
 export {
   filterEq,

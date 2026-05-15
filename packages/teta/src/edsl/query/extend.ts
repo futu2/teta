@@ -1,4 +1,5 @@
-import { assertProjectionShape, map, Query } from "./builder.ts";
+import { assertProjectionShape, map } from "./builder.ts";
+import type { Query } from "./builder.ts";
 import type {
   ColumnRefs,
   ProjectionResult,
@@ -18,24 +19,15 @@ export function extend<TColumns extends QueryColumns, const Sel extends Projecti
 ): (query: Query<TColumns>) => Query<ExtendResult<TColumns, ProjectionResult<Sel>>>;
 
 export function extend(...args: unknown[]): unknown {
-  if (args[0] instanceof Query) {
-    userError(
-      "QUERY_HELPER_CURRIED_ONLY",
-      "extend() is curried-only. Use pipe(query, extend(selector))."
-    );
-  }
-
-  const [selectorOrSelection] = args;
-  if (typeof selectorOrSelection !== "function") {
+  if (args.length !== 1 || typeof args[0] !== "function") {
     userError("QUERY_HELPER_INVALID_SELECTOR", "extend() expects a row callback");
   }
 
+  const selector = args[0] as (cols: ColumnRefs<QueryColumns>) => ProjectionShape;
   return (query: Query<QueryColumns>) => {
     return map((cols: ColumnRefs<QueryColumns>) => ({
       ...currentColumns(cols, query.columnNames),
-      ...resolveExtensionShape(
-        (selectorOrSelection as (cols: ColumnRefs<QueryColumns>) => ProjectionShape)(cols)
-      ),
+      ...resolveExtensionShape(selector(cols)),
     }))(query);
   };
 }

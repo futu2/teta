@@ -9,8 +9,7 @@ import * as pipeModule from "./src/edsl/pipe.ts";
 import * as language from "./src/edsl/sql/language.ts";
 import * as sql from "@teta/sql";
 
-/** Query builder class returned by query roots and stage helpers. */
-export const Query: typeof import("./src/edsl/query.ts").Query = query.Query;
+/** Query builder value returned by query roots and stage helpers. */
 export type Query<TColumns extends Record<string, any>> = import("./src/edsl/query.ts").Query<TColumns>;
 
 /** Explains a query's lowered stages, CTEs, and rendered SQL. */
@@ -196,6 +195,9 @@ export const isExpr: typeof import("./src/edsl/expr.ts").isExpr = expr.isExpr;
 
 /** Returns true for tagged SQL column expression values. */
 export const isColumn: typeof import("./src/edsl/expr.ts").isColumn = expr.isColumn;
+
+/** Returns true for tagged query values. */
+export const isQuery: typeof import("./src/edsl/query.ts").isQuery = query.isQuery;
 
 /** Builds an equality predicate. */
 export const eq: typeof import("./src/edsl/expr.ts").eq = expr.eq;

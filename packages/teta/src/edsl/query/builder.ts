@@ -176,34 +176,41 @@ export type QueryExplainResult<TColumns extends QueryColumns> = {
   parameterPrefix: SqlParameterPrefix;
 };
 
-/** Composable query builder with typed columns and SQL rendering. */
-export class Query<TColumns extends QueryColumns> implements QueryState<TColumns> {
-  constructor(
-    readonly source: QueryState<TColumns>["source"],
-    readonly stages: QueryState<TColumns>["stages"],
-    readonly columns: QueryState<TColumns>["columns"],
-    readonly columnNames: QueryState<TColumns>["columnNames"],
-    readonly sourceScopeId: QueryState<TColumns>["sourceScopeId"],
-    readonly scopeId: QueryState<TColumns>["scopeId"],
-    readonly withs: CteSpec[] = [],
-    readonly columnIdentifiers: Readonly<Record<string, SqlIdentifier>>
-  ) {}
-}
+/** Composable query builder value with typed columns and SQL rendering. */
+export type Query<TColumns extends QueryColumns> = Readonly<QueryState<TColumns> & {
+  kind: "query";
+  state: Readonly<QueryState<TColumns>>;
+}>;
 
 export function createQuery<TColumns extends QueryColumns>(
   init: QueryInit<TColumns>
 ): Query<TColumns> {
-  const resolved = resolveQueryInitDefaults(init);
-  return new Query(
-    resolved.source,
-    resolved.stages,
-    resolved.columns,
-    resolved.columnNames,
-    resolved.sourceScopeId,
-    resolved.scopeId,
-    resolved.withs,
-    resolved.columnIdentifiers
-  );
+  return queryOf(resolveQueryInitDefaults(init));
+}
+
+function queryOf<TColumns extends QueryColumns>(
+  state: QueryState<TColumns>
+): Query<TColumns> {
+  const frozenState = Object.freeze({
+    ...state,
+    stages: Object.freeze([...state.stages]) as QueryState<TColumns>["stages"],
+    columnNames: Object.freeze([...state.columnNames]),
+    withs: Object.freeze([...state.withs]) as QueryState<TColumns>["withs"],
+    columnIdentifiers: Object.freeze({ ...state.columnIdentifiers }),
+  }) as Readonly<QueryState<TColumns>>;
+
+  return Object.freeze({
+    kind: "query" as const,
+    state: frozenState,
+    source: frozenState.source,
+    stages: frozenState.stages,
+    columns: frozenState.columns,
+    columnNames: frozenState.columnNames,
+    sourceScopeId: frozenState.sourceScopeId,
+    scopeId: frozenState.scopeId,
+    withs: frozenState.withs,
+    columnIdentifiers: frozenState.columnIdentifiers,
+  });
 }
 
 function deriveQuery<
@@ -763,7 +770,7 @@ export function unnest<
 >;
 
 export function unnest(...args: unknown[]): unknown {
-  assertNotDataFirstQueryHelper("unnest", "unnest(selector, selection, options?)", args);
+  assertNotDataFirstQueryHelper("unnest", "unnest(selector, selection, options?)", args, 2, 3);
   const [selector, selection, options] = args;
   return (left: Query<QueryColumns>) =>
     _unnest(
@@ -838,9 +845,18 @@ function curriedOnlyError(helper: string, usage: string): never {
   );
 }
 
-function assertNotDataFirstQueryHelper(helper: string, usage: string, args: unknown[]): void {
-  if (args[0] instanceof Query) {
-    curriedOnlyError(helper, usage);
+function assertNotDataFirstQueryHelper(
+  helper: string,
+  usage: string,
+  args: unknown[],
+  minArgs = 1,
+  maxArgs = 1
+): void {
+  void usage;
+  if (args.length < minArgs || args.length > maxArgs) {
+    const expected =
+      minArgs === maxArgs ? "exactly one argument" : `${minArgs} or ${maxArgs} arguments`;
+    userError("QUERY_HELPER_INVALID_ARITY", `${helper}() expects ${expected}`);
   }
 }
 
@@ -901,9 +917,9 @@ function assertNotDataFirstJoinInvocation(
 ): void {
   const first = args[0];
   const second = args[1];
-  if (!(first instanceof Query)) return;
+  if (!isQuery(first)) return;
 
-  if (second instanceof Query) {
+  if (isQuery(second)) {
     curriedOnlyError(helper, usage);
   }
 
@@ -914,7 +930,7 @@ function assertNotDataFirstJoinInvocation(
       const probed = (second as (outer: ColumnRefs<QueryColumns>) => unknown)(
         qualifyOuterColumns(first.columns)
       );
-      if (probed instanceof Query) {
+      if (isQuery(probed)) {
         throw DATA_FIRST_JOIN_INVOCATION;
       }
     } catch (error) {
@@ -940,7 +956,7 @@ function parseJoinMergeAndOptions(
 }
 
 function isJoinMergeShape(value: unknown, maybeOptions: unknown): boolean {
-  if (!value || typeof value !== "object" || Array.isArray(value) || value instanceof Query) {
+  if (!value || typeof value !== "object" || Array.isArray(value) || isQuery(value)) {
     return false;
   }
   if (maybeOptions !== undefined) return true;
@@ -1040,7 +1056,7 @@ function assertFixedJoinOptions(helper: string, value: unknown): void {
     value === null
     || typeof value !== "object"
     || Array.isArray(value)
-    || value instanceof Query
+    || isQuery(value)
   ) {
     userError("DEFERRED_INPUT_INVALID", `${helper}() options must be { lateral?: boolean }`);
   }
@@ -1140,6 +1156,140 @@ export function explain<TColumns extends QueryColumns>(
   };
 }
 
-function isQuery(value: unknown): value is Query<QueryColumns> {
-  return value instanceof Query;
+export function isQuery(value: unknown): value is Query<QueryColumns> {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as {
+    kind?: unknown;
+    state?: unknown;
+    source?: unknown;
+    stages?: unknown;
+    columns?: unknown;
+    columnNames?: unknown;
+    sourceScopeId?: unknown;
+    scopeId?: unknown;
+    withs?: unknown;
+    columnIdentifiers?: unknown;
+  };
+
+  if (candidate.kind !== "query" || !isQueryState(candidate.state)) {
+    return false;
+  }
+
+  const state = candidate.state;
+  return candidate.source === state.source
+    && candidate.stages === state.stages
+    && candidate.columns === state.columns
+    && candidate.columnNames === state.columnNames
+    && candidate.sourceScopeId === state.sourceScopeId
+    && candidate.scopeId === state.scopeId
+    && candidate.withs === state.withs
+    && candidate.columnIdentifiers === state.columnIdentifiers;
+}
+
+function isQueryState(value: unknown): value is Readonly<QueryState<QueryColumns>> {
+  if (!isPlainObject(value)) return false;
+  const state = value as Partial<QueryState<QueryColumns>>;
+
+  return isSource(state.source)
+    && Array.isArray(state.stages)
+    && state.stages.every(isStage)
+    && isPlainObject(state.columns)
+    && isStringArray(state.columnNames)
+    && typeof state.sourceScopeId === "string"
+    && typeof state.scopeId === "string"
+    && Array.isArray(state.withs)
+    && state.withs.every(isCteSpec)
+    && isColumnIdentifiers(state.columnIdentifiers);
+}
+
+function isSource(value: unknown): boolean {
+  if (!isPlainObject(value)) return false;
+  if ((value as { kind?: unknown }).kind === "values") {
+    const rows = (value as { rows?: unknown }).rows;
+    return Array.isArray(rows) && rows.every(isPlainObject);
+  }
+
+  const source = value as {
+    db?: unknown;
+    schema?: unknown;
+    table?: unknown;
+    as?: unknown;
+  };
+  return (source.db === null || isSqlIdentifier(source.db))
+    && (source.schema === null || isSqlIdentifier(source.schema))
+    && isSqlIdentifier(source.table)
+    && (source.as === null || isSqlIdentifier(source.as));
+}
+
+function isStage(value: unknown): boolean {
+  if (!isPlainObject(value)) return false;
+  const kind = (value as { kind?: unknown }).kind;
+  return kind === "map"
+    || kind === "fold"
+    || kind === "filter"
+    || kind === "sort"
+    || kind === "take"
+    || kind === "join"
+    || kind === "unnest"
+    || kind === "union";
+}
+
+function isCteSpec(value: unknown): boolean {
+  if (!isPlainObject(value)) return false;
+  const cte = value as {
+    kind?: unknown;
+    name?: unknown;
+    query?: unknown;
+    columnNames?: unknown;
+    base?: unknown;
+    step?: unknown;
+  };
+  if (cte.kind === "query") {
+    return typeof cte.name === "string" && isQuerySpec(cte.query);
+  }
+  if (cte.kind === "recursive") {
+    return typeof cte.name === "string"
+      && isStringArray(cte.columnNames)
+      && isQuerySpec(cte.base)
+      && isQuerySpec(cte.step);
+  }
+  return false;
+}
+
+function isQuerySpec(value: unknown): boolean {
+  if (!isPlainObject(value)) return false;
+  const spec = value as {
+    source?: unknown;
+    stages?: unknown;
+    columnNames?: unknown;
+    columnIdentifiers?: unknown;
+    scopeId?: unknown;
+  };
+  return isSource(spec.source)
+    && Array.isArray(spec.stages)
+    && spec.stages.every(isStage)
+    && isStringArray(spec.columnNames)
+    && isColumnIdentifiers(spec.columnIdentifiers)
+    && typeof spec.scopeId === "string";
+}
+
+function isColumnIdentifiers(value: unknown): boolean {
+  return isPlainObject(value) && Object.values(value).every(isSqlIdentifier);
+}
+
+function isSqlIdentifier(value: unknown): value is SqlIdentifier {
+  return isPlainObject(value)
+    && typeof (value as { name?: unknown }).name === "string"
+    && typeof (value as { quoted?: unknown }).quoted === "boolean";
+}
+
+function isStringArray(value: unknown): value is readonly string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return !!value
+    && typeof value === "object"
+    && !Array.isArray(value)
+    && Object.getPrototypeOf(value) === Object.prototype;
 }
