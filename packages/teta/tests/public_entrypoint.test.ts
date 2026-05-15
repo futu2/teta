@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import ts from "typescript";
 
 const MOD_PATH = fileURLToPath(new URL("../mod.ts", import.meta.url));
-const JOIN_HELPERS_PATH = fileURLToPath(new URL("../src/edsl/query/join.ts", import.meta.url));
+const JOIN_HELPERS_PATH = fileURLToPath(new URL("../src/edsl/helpers/join_merge.ts", import.meta.url));
 
 function getModSourceFile(): ts.SourceFile {
   const program = ts.createProgram({
