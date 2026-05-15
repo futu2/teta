@@ -99,6 +99,18 @@ describe("error paths", () => {
             "JOIN_FIXED_MERGE_REMOVED",
             LEGACY_LEFT_JOIN_FIXED_MERGE_ERROR
         );
+        expectUserError(
+            () => pipe(
+                users,
+                (leftJoin as any)(
+                    orders,
+                    (user: typeof users.columns, order: typeof orders.columns) => eq(user.id, order.user_id),
+                    { merge: prefixOverlapLeft("user_"), lateral: true } as never
+                )
+            ),
+            "JOIN_FIXED_MERGE_REMOVED",
+            LEGACY_LEFT_JOIN_FIXED_MERGE_ERROR
+        );
     });
     test("rejects default joins with overlapping output columns", () => {
         const users = createUsersTable();

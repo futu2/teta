@@ -1172,6 +1172,9 @@ function parseFixedJoinInvocation(
     throw new Error("Wrong number of arguments");
   }
   const [right, on, options] = args;
+  if (hasLegacyJoinMergeOption(options)) {
+    fixedJoinLegacyMergeError(helper);
+  }
   assertNoLegacyJoinMergeOption(options);
   assertFixedJoinOptions(helper, options);
   return { right, on, merge: undefined, options };
@@ -1231,6 +1234,10 @@ function assertFixedJoinOptions(helper: string, value: unknown): void {
 
 function isFixedJoinLegacyMergeArgument(value: unknown, maybeOptions: unknown): boolean {
   return typeof value === "function" || isJoinMergeShape(value, maybeOptions);
+}
+
+function hasLegacyJoinMergeOption(value: unknown): boolean {
+  return !!value && typeof value === "object" && "merge" in value;
 }
 
 function fixedJoinLegacyMergeError(helper: string): never {
