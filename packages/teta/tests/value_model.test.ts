@@ -94,4 +94,18 @@ describe("tagged EDSL value model", () => {
       "SELECT users_0.id AS id FROM users AS users_0 WHERE users_0.id = 1"
     );
   });
+
+  test("throws when untyped code accesses an unknown callback column", () => {
+    const users = table("users", {
+      id: t.int(),
+      name: t.string(),
+    });
+
+    expect(() => {
+      pipe(
+        users,
+        filter((row) => eq((row as any).missing, 1))
+      );
+    }).toThrow("Unknown column 'missing'. Available columns: id, name.");
+  });
 });

@@ -8,7 +8,15 @@ import {
   type ColumnRefs,
   type ExprRefs,
 } from "./core.ts";
-import { internalError } from "../../errors.ts";
+import { internalError, userError } from "../../errors.ts";
+
+function assertKnownColumn(name: string, columns: readonly string[]): void {
+  if (columns.includes(name)) return;
+  userError(
+    "UNKNOWN_COLUMN_REF",
+    `Unknown column '${name}'. Available columns: ${columns.join(", ")}.`
+  );
+}
 
 export function createColumnRefs<TColumns extends Record<string, unknown>>(
   tableName: ScopeId | null,
@@ -29,6 +37,8 @@ export function createColumnRefs<TColumns extends Record<string, unknown>>(
     {
       get(_target, prop) {
         if (typeof prop !== "string") return undefined;
+        if (prop === "then" || prop === "toJSON" || prop === "inspect") return undefined;
+        assertKnownColumn(prop, columns);
         return getColumn(prop);
       },
       ownKeys() {
@@ -64,8 +74,8 @@ export function mergeColumnRefs<
   const getColumn = (prop: string) => {
     const leftHas = leftKeys.includes(prop);
     const rightHas = rightKeys.includes(prop);
-    const leftValue = Reflect.get(left, prop);
-    const rightValue = Reflect.get(right, prop);
+    const leftValue = leftHas ? Reflect.get(left, prop) : undefined;
+    const rightValue = rightHas ? Reflect.get(right, prop) : undefined;
     const leftRef = isExpr(leftValue) ? leftValue : undefined;
     const rightRef = isExpr(rightValue) ? rightValue : undefined;
     if (rightHas && !leftHas) return rightRef;
@@ -77,6 +87,8 @@ export function mergeColumnRefs<
     {
       get(_target, prop) {
         if (typeof prop !== "string") return undefined;
+        if (prop === "then" || prop === "toJSON" || prop === "inspect") return undefined;
+        assertKnownColumn(prop, mergedKeys);
         return getColumn(prop);
       },
       ownKeys() {
