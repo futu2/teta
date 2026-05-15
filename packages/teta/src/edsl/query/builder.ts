@@ -452,6 +452,7 @@ function buildMap<
   selector: (cols: ColumnRefs<TColumns>) => TSelection
 ): Query<ProjectionResult<TSelection>> {
   const selection = selector(query.columns);
+  assertProjectionShape(selection);
   return deriveQuery(query, resolveMapQuery(query, selection));
 }
 
@@ -463,6 +464,7 @@ function buildFold<
   selector: (cols: ColumnRefs<TColumns>) => TSelection
 ): Query<ProjectionResult<TSelection>> {
   const selection = selector(query.columns);
+  assertProjectionShape(selection);
   return deriveQuery(query, resolveFoldQuery(query, selection));
 }
 
@@ -1026,6 +1028,12 @@ function assertNotDataFirstQueryHelper(helper: string, usage: string, args: unkn
 function assertRowCallback(helper: string, value: unknown): asserts value is (...args: any[]) => unknown {
   if (typeof value !== "function") {
     userError("DEFERRED_INPUT_INVALID", `${helper}() expects a row callback`);
+  }
+}
+
+function assertProjectionShape(value: unknown): asserts value is ProjectionShape {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    userError("LEGACY_SELECTION_ARRAY", "map() and fold() now expect an object shape");
   }
 }
 

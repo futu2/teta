@@ -208,6 +208,20 @@ describe("error paths", () => {
             "fold() expects a row callback"
         );
     });
+    test("rejects erased invalid map and fold callback returns with user errors", () => {
+        const users = createUsersTable();
+        const orders = createOrdersTable();
+        expectUserError(
+            () => pipe(users, map(() => undefined as never)),
+            "LEGACY_SELECTION_ARRAY",
+            LEGACY_SELECTION_ARRAY_ERROR
+        );
+        expectUserError(
+            () => pipe(orders, fold(() => undefined as never)),
+            "LEGACY_SELECTION_ARRAY",
+            LEGACY_SELECTION_ARRAY_ERROR
+        );
+    });
     test("rejects invalid select helper usage", () => {
         const users = createUsersTable();
         expect(() => pipe(users, select((user: typeof users.columns) => [
