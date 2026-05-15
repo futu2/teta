@@ -185,7 +185,11 @@ export type QueryStep<TInputColumns extends Record<string, any>, TOutputColumns 
 
 /** Typed SQL expression value used throughout the query DSL. */
 export type Expr<T> = import("./src/edsl/expr.ts").Expr<T>;
+
+/** Typed SQL column expression value with its projected column name. */
 export type Column<T, Name extends string> = import("./src/edsl/expr.ts").Column<T, Name>;
+
+/** Input shape accepted anywhere an expression or column is expected. */
 export type ExprLike<T> = import("./src/edsl/expr.ts").ExprLike<T>;
 
 /** Returns true when a value is a Teta expression. */
