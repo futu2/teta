@@ -1,13 +1,14 @@
 import { filterResolved } from "./builder.ts";
 import type { Query, QueryStep } from "./builder.ts";
+import type { ExprNode } from "../core/types.ts";
 import type {
   ColumnRefs,
   ExprInput,
 } from "../expr.ts";
-import type { ExprRef } from "../expr.ts";
-import { eq, ne, gt, gte, lt, lte } from "../expr.ts";
+import { ExprRef, eq, ne, gt, gte, lt, lte } from "../expr.ts";
 import type { NormalizeNumericLiteral, SqlDate, SqlNumber, SqlTimestamp } from "../sql/types.ts";
 import type { QueryColumns } from "./deferred_types.ts";
+import { userError } from "../errors.ts";
 
 type ComparableInput = SqlNumber | number | bigint | SqlDate | SqlTimestamp | null;
 type IsAny<T> = 0 extends (1 & T) ? true : false;
@@ -47,9 +48,7 @@ type CompatibleExprInputValue<TLeft extends ExprInput<unknown>, TRight extends E
     NormalizeComparableLiteral<TLeft, TRight>
   >;
 type SameExprInputValue<TLeft extends ExprInput<unknown>, TRight extends ExprInput<unknown>> =
-  IsNever<ExprInputValueOf<TLeft>> extends true ? unknown
-  : IsNever<ExprInputValueOf<TRight>> extends true ? unknown
-  : CompatibleExprInputValue<TLeft, TRight> extends never
+  CompatibleExprInputValue<TLeft, TRight> extends never
     ? CompatibleExprInputValue<TRight, TLeft>
     : CompatibleExprInputValue<TLeft, TRight>;
 type SameExprInputValueRest<TLeft extends ExprInput<unknown>, TRight extends ExprInput<unknown>> =
@@ -58,8 +57,6 @@ type ComparableExprInput<TInput extends ExprInput<unknown>> =
   Exclude<ExprInputValueOf<TInput>, null> extends ComparableInput ? unknown : never;
 type ComparableExprInputRest<TInput extends ExprInput<unknown>> =
   ComparableExprInput<TInput> extends never ? [never] : [];
-
-type IsNever<T> = [T] extends [never] ? true : false;
 
 export function filterEq<
   TColumns extends QueryColumns,
@@ -331,13 +328,58 @@ function resolveOperand<TColumns extends QueryColumns, T>(
   query: Query<TColumns>,
   operand: Operand<TColumns, T>
 ): ExprInput<T> {
-  return isCallableOperand(operand)
+  const resolved = isCallableOperand(operand)
     ? operand(query.columns)
     : operand;
+  rejectDeferredOperand(resolved);
+  return resolved;
 }
 
 function isCallableOperand<TColumns extends QueryColumns, T>(
   operand: Operand<TColumns, T>
 ): operand is CallableOperand<TColumns, T> {
   return typeof operand === "function";
+}
+
+function rejectDeferredOperand(operand: ExprInput<unknown>): void {
+  if (operand instanceof ExprRef && containsDeferredColumn(operand.node)) {
+    userError(
+      "QUERY_FILTER_DEFERRED_OPERAND",
+      "Comparison filter helpers no longer accept deferred col() operands. Use a row callback instead."
+    );
+  }
+}
+
+function containsDeferredColumn(node: ExprNode<unknown>): boolean {
+  switch (node.kind) {
+    case "deferred_column":
+      return true;
+    case "binary":
+      return containsDeferredColumn(node.left) || containsDeferredColumn(node.right);
+    case "unary":
+    case "group":
+    case "cast":
+      return containsDeferredColumn(node.expr);
+    case "agg":
+      return containsDeferredColumn(node.arg);
+    case "func":
+      return node.args.some((arg) => containsDeferredColumn(arg));
+    case "list":
+    case "array":
+      return node.items.some((item) => containsDeferredColumn(item));
+    case "extract":
+      return containsDeferredColumn(node.source);
+    case "window":
+      return node.args.some((arg) => containsDeferredColumn(arg))
+        || (node.partitionBy?.some((item) => containsDeferredColumn(item)) ?? false)
+        || (node.orderBy?.some((item) => containsDeferredColumn(item.expr)) ?? false);
+    case "case":
+      return node.whens.some((branch) =>
+        containsDeferredColumn(branch.when) || containsDeferredColumn(branch.then)
+      ) || (node.elseExpr ? containsDeferredColumn(node.elseExpr) : false);
+    case "column":
+    case "literal":
+    case "param":
+      return false;
+  }
 }

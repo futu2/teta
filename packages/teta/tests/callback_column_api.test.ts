@@ -46,6 +46,7 @@ import {
   createUsersPipelineTable,
   createUsersTable,
 } from "./helpers/fixtures.ts";
+import { col as internalCol } from "../src/edsl/internal_deferred_expr.ts";
 
 function expectTetaUserError(fn: () => unknown, code: string): void {
   try {
@@ -376,6 +377,19 @@ describe("callback column api", () => {
         )
       ),
       "DEFERRED_INPUT_INVALID"
+    );
+  });
+
+  test("rejects deferred direct operands in comparison helpers at runtime", () => {
+    const users = createUsersTable();
+
+    expectTetaUserError(
+      () => pipe(users, filterEq(internalCol("name") as any, "Ada")),
+      "QUERY_FILTER_DEFERRED_OPERAND"
+    );
+    expectTetaUserError(
+      () => pipe(users, filterGt(internalCol("id") as any, 1)),
+      "QUERY_FILTER_DEFERRED_OPERAND"
     );
   });
 
