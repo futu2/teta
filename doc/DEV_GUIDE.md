@@ -1,13 +1,13 @@
 # Teta Dev Guide
 
-This guide explains the internal structure of the EDSL and how data flows from an `ExprRef` or `Query` to final SQL.
+This guide explains the internal structure of the EDSL and how data flows from an `Expr` or `Query` to final SQL.
 
 ## Mental model
 
 Teta is split into frontend and backend packages:
 
 1. **Frontend EDSL (`@teta/teta`)**
-   - User code builds `ExprRef` trees and `Query` pipelines.
+   - User code builds `Expr` trees and `Query` pipelines.
    - This layer is dialect-neutral and owns row-proxy ergonomics.
 
 2. **Backend IR (`@teta/sql`)**
@@ -44,7 +44,7 @@ In short:
     - `CteSpec`
     - `Source`
 - `packages/teta/src/edsl/core/expr/core.ts`
-  - Defines `ExprRef`, `ColumnRef`, and low-level expression constructors.
+  - Defines `Expr`, `ColumnRef`, and low-level expression constructors.
 - `packages/teta/src/edsl/core/expr.ts`
   - Re-exports core expression utilities.
 
@@ -105,7 +105,7 @@ It includes nodes like:
 - `array`
 - `list`
 
-`ExprRef<T>` is just a typed wrapper around an `ExprNode<T>`.
+`Expr<T>` is just a typed wrapper around an `ExprNode<T>`.
 
 ### `Query`
 
@@ -133,7 +133,7 @@ A query pipeline is a list of `Stage` values:
 
 This stage list is the main query IR that the render pipeline lowers later.
 
-## Flow: from `ExprRef` to final SQL
+## Flow: from `Expr` to final SQL
 
 Take something like:
 
@@ -152,7 +152,7 @@ For example:
 - builders from `src/edsl/sql/expr/builders.ts`
 - low-level constructors in `packages/teta/src/edsl/core/expr/core.ts`
 
-Eventually everything becomes an `ExprRef` containing an `ExprNode` tree.
+Eventually everything becomes an `Expr` containing an `ExprNode` tree.
 
 ### 2) `toSql(expr, options)` and `toSqlResult(expr, options)`
 
@@ -436,7 +436,7 @@ That resolved dialect is then used in three places:
 
 When something looks wrong, inspect from top to bottom:
 
-1. `ExprRef.node`
+1. `Expr.node`
    - is the expression tree what you expect?
 2. `toIR(query)`
    - are the stages right?
@@ -500,7 +500,7 @@ The most important idea is:
 So the main flow is:
 
 ```text
-@teta/teta ExprRef / Query
+@teta/teta Expr / Query
   -> @teta/sql ExprNode / QueryIR
   -> @teta/sql buildSqlOptions(...) + internal render state
   -> @teta/sql dialect rewrite + qualification

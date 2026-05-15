@@ -189,22 +189,22 @@ const usersByTag = pipe(users, unnest((user) => user.tags, {
 
 `union(...)` and `unionAll(...)` require both sides to have the same row shape and return that same shape.
 
-## 3) `ExprRef<T>` is the expression type
+## 3) `Expr<T>` is the expression type
 
 Inside query callbacks, columns are typed expression refs.
 
-- `user.id` is not a plain `number`; it is an expression with type `ExprRef<SqlInt>`
-- `user.email` is `ExprRef<string>`
-- `user.deleted_at` is `ExprRef<SqlTimestamp | null>`
+- `user.id` is not a plain `number`; it is an expression with type `Expr<SqlInt>`
+- `user.email` is `Expr<string>`
+- `user.deleted_at` is `Expr<SqlTimestamp | null>`
 
 This is why expression helpers compose safely: `eq(...)`, `add(...)`, `upper(...)`, `dateTrunc(...)`, and others all operate on typed expressions, not raw SQL strings.
 
-Most of the time you do not need to annotate `ExprRef<T>` yourself. It becomes useful when extracting reusable expression helpers.
+Most of the time you do not need to annotate `Expr<T>` yourself. It becomes useful when extracting reusable expression helpers.
 
 ```ts
-import { type ExprRef, type SqlInt, gte } from "@teta/teta";
+import { type Expr, type SqlInt, gte } from "@teta/teta";
 
-function isAdult(age: ExprRef<SqlInt>) {
+function isAdult(age: Expr<SqlInt>) {
   return gte(age, 18);
 }
 ```
@@ -324,7 +324,7 @@ One useful detail: dialect is not part of `Query<TColumns>`. Teta keeps the quer
 ## 8) Practical advice
 
 - Prefer inference first. Teta is designed so schemas and callbacks usually provide all the types you need.
-- Reach for `ExprRef<T>` when writing reusable expression helpers.
+- Reach for `Expr<T>` when writing reusable expression helpers.
 - Reach for `Query<TColumns>` or `QueryStep<TIn, TOut>` when writing reusable query utilities.
 - Use `null`, not `undefined`, for nullable SQL values.
 - Remember that `t.json<T>()` affects TypeScript types only; it does not validate JSON at runtime.
@@ -336,7 +336,7 @@ The most important public types for EDSL users are:
 
 - `Query`
 - `QueryStep`
-- `ExprRef`
+- `Expr`
 - `SqlInt`, `SqlFloat`, `SqlBigInt`, `SqlDecimal`, `SqlNumber`
 - `SqlDate`, `SqlTimestamp`, `SqlUuid`, `SqlBytes`, `SqlJson`
 - `SqlOptions`, `SqlResult`

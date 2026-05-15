@@ -234,7 +234,7 @@ const renamedJoin = pipe(
 );
 
 // right-side columns become nullable on a left join
-// joined rows later expose `total` as ExprRef<SqlFloat | null>
+// joined rows later expose `total` as Expr<SqlFloat | null>
 
 const usersWithTags = table("users", {
   id: t.int(),
