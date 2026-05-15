@@ -312,7 +312,7 @@ describe("toSql(query, options)", () => {
         expect(toSql(unioned, { dialect: "postgresql", format: "compact" })).toContain(" UNION ");
         expect(toSql(unionedAll, { dialect: "postgresql", format: "compact" })).toContain(" UNION ALL ");
     });
-    test("preserves arity errors for union helpers", () => {
+    test("validates current union helper shapes", () => {
         const users = table("users", {
             id: t.int(),
             name: t.string(),
@@ -322,12 +322,14 @@ describe("toSql(query, options)", () => {
             name: t.string(),
         });
 
-        expect(() => (union as any)()).toThrow("Wrong number of arguments");
-        expect(() => (union as any)(users, archivedUsers)).toThrow("union() is curried-only");
-        expect(() => (union as any)(users, archivedUsers, archivedUsers)).toThrow("union() is curried-only");
-        expect(() => (unionAll as any)()).toThrow("Wrong number of arguments");
-        expect(() => (unionAll as any)(users, archivedUsers)).toThrow("unionAll() is curried-only");
-        expect(() => (unionAll as any)(users, archivedUsers, archivedUsers)).toThrow("unionAll() is curried-only");
+        expect(() => (union as any)()).toThrow("union() expects union(right)");
+        expect(() => (union as any)("not a query")).toThrow("union() expects union(right)");
+        expect(() => (union as any)(users, archivedUsers)).toThrow("union() expects union(right)");
+        expect(() => (union as any)(users, archivedUsers, archivedUsers)).toThrow("union() expects union(right)");
+        expect(() => (unionAll as any)()).toThrow("unionAll() expects unionAll(right)");
+        expect(() => (unionAll as any)("not a query")).toThrow("unionAll() expects unionAll(right)");
+        expect(() => (unionAll as any)(users, archivedUsers)).toThrow("unionAll() expects unionAll(right)");
+        expect(() => (unionAll as any)(users, archivedUsers, archivedUsers)).toThrow("unionAll() expects unionAll(right)");
     });
     test("supports curried loop helper without external currying", () => {
         const seed = pipe(
@@ -340,16 +342,17 @@ describe("toSql(query, options)", () => {
         );
         expect(toSql(recursive, { dialect: "postgresql", format: "compact" })).toContain("WITH RECURSIVE");
     });
-    test("preserves arity errors for loop helper", () => {
+    test("validates current loop helper shape", () => {
         const seed = pipe(
             table("seed", { n: t.int() }),
             map((row) => ({ n: row.n }))
         );
         const step = (self: typeof seed) => pipe(self, filter((row) => gt(row.n, 0)));
 
-        expect(() => (loop as any)()).toThrow("Wrong number of arguments");
-        expect(() => (loop as any)(seed, step)).toThrow("loop() is curried-only");
-        expect(() => (loop as any)(seed, step, step)).toThrow("loop() is curried-only");
+        expect(() => (loop as any)()).toThrow("loop() expects loop(step)");
+        expect(() => (loop as any)("not a callback")).toThrow("loop() expects loop(step)");
+        expect(() => (loop as any)(seed, step)).toThrow("loop() expects loop(step)");
+        expect(() => (loop as any)(seed, step, step)).toThrow("loop() expects loop(step)");
     });
     test("renders structured schema-qualified sources", () => {
         const events = table({ schema: "analytics", table: "events" }, { id: t.int() });

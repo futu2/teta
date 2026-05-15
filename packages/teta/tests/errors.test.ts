@@ -42,6 +42,18 @@ describe("error paths", () => {
             "leftJoin() options must be { lateral?: boolean }"
         );
     });
+    test("fixed join helpers reject invalid right operands", () => {
+        const users = table("users", { id: t.int() });
+        const on = (_user: typeof users.columns, _right: typeof users.columns) => eq(_user.id, _right.id);
+        const selector = (_user: typeof users.columns, _right: typeof users.columns) => ({ id: _user.id });
+
+        expect(() => (leftJoin as any)("not a query", on)).toThrow(
+            "leftJoin() expects leftJoin(right, on, options?)"
+        );
+        expect(() => (innerJoinMerge as any)("not a query", on, selector)).toThrow(
+            "innerJoinMerge() expects innerJoinMerge(right, on, selector)"
+        );
+    });
     test("rejects default joins with overlapping output columns", () => {
         const users = createUsersTable();
         const profiles = values([

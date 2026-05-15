@@ -546,7 +546,7 @@ function _take<TColumns extends QueryColumns>(
 export function unionAll<TColumns extends QueryColumns>(right: Query<TColumns>): QueryStep<TColumns, TColumns>;
 
 export function unionAll(...args: unknown[]): unknown {
-  assertCurriedUnaryArity("unionAll", "unionAll(right)", args);
+  assertCurriedQueryOperand("unionAll", "unionAll(right)", args);
   const [right] = args;
   return (left: Query<QueryColumns>) => _unionAll(left, right as Query<QueryColumns>);
 }
@@ -561,7 +561,7 @@ function _unionAll<TColumns extends QueryColumns>(
 export function union<TColumns extends QueryColumns>(right: Query<TColumns>): QueryStep<TColumns, TColumns>;
 
 export function union(...args: unknown[]): unknown {
-  assertCurriedUnaryArity("union", "union(right)", args);
+  assertCurriedQueryOperand("union", "union(right)", args);
   const [right] = args;
   return (left: Query<QueryColumns>) => _union(left, right as Query<QueryColumns>);
 }
@@ -578,7 +578,7 @@ export function loop<TColumns extends QueryColumns>(
 ): QueryStep<TColumns, TColumns>;
 
 export function loop(...args: unknown[]): unknown {
-  assertCurriedUnaryArity("loop", "loop(step)", args);
+  assertCurriedCallbackOperand("loop", "loop(step)", args);
   const [step] = args;
   return (base: Query<QueryColumns>) =>
     _loop(base, step as (self: Query<QueryColumns>) => Query<QueryColumns>);
@@ -866,9 +866,24 @@ export function assertProjectionShape(value: unknown): asserts value is Projecti
   }
 }
 
-function assertCurriedUnaryArity(_helper: string, _usage: string, args: unknown[]): void {
-  if (args.length === 1) return;
-  throw new Error("Wrong number of arguments");
+function assertCurriedQueryOperand(
+  helper: string,
+  usage: string,
+  args: unknown[]
+): void {
+  if (args.length !== 1 || !isQuery(args[0])) {
+    userError("QUERY_HELPER_INVALID_ARGUMENTS", `${helper}() expects ${usage}`);
+  }
+}
+
+function assertCurriedCallbackOperand(
+  helper: string,
+  usage: string,
+  args: unknown[]
+): void {
+  if (args.length !== 1 || typeof args[0] !== "function") {
+    userError("QUERY_HELPER_INVALID_ARGUMENTS", `${helper}() expects ${usage}`);
+  }
 }
 
 type ParsedCurriedJoinInvocation = {
@@ -903,6 +918,7 @@ function parseFixedJoinInvocation(
     userError("QUERY_HELPER_INVALID_ARGUMENTS", `${helper}() expects ${helper}(right, on, options?)`);
   }
   const [right, on, options] = args;
+  assertJoinRight(helper, right, `${helper}(right, on, options?)`);
   assertRowCallback(helper, on);
   assertFixedJoinOptions(helper, options);
   return { right, on, merge: undefined, options };
@@ -933,9 +949,16 @@ function parseFixedJoinMapInvocation(
     userError("QUERY_HELPER_INVALID_ARGUMENTS", `${helper}() expects ${helper}(right, on, selector)`);
   }
   const [right, on, merge] = args;
+  assertJoinRight(helper, right, `${helper}(right, on, selector)`);
   assertRowCallback(helper, on);
   assertRowCallback(helper, merge);
   return { right, on, merge, options: undefined };
+}
+
+function assertJoinRight(helper: string, value: unknown, usage: string): void {
+  if (!isQuery(value) && typeof value !== "function") {
+    userError("QUERY_HELPER_INVALID_ARGUMENTS", `${helper}() expects ${usage}`);
+  }
 }
 
 function assertFixedJoinOptions(helper: string, value: unknown): void {
