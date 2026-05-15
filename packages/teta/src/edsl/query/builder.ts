@@ -584,46 +584,6 @@ function _loop<TColumns extends QueryColumns>(
   return buildLoop(base, step);
 }
 
-export function join<
-  TLeft extends QueryColumns,
-  TRight extends QueryColumns,
-  TType extends JoinTypeInput | undefined = undefined,
-  TMerged extends QueryColumns = JoinColumnsForType<
-    TLeft,
-    TRight,
-    CanonicalJoinType<TType>
-  >,
->(
-  right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
-  on: JoinOnNoMerge<TLeft, TRight>,
-  options?: JoinOptions<TType>
-): QueryStep<TLeft, TMerged>;
-
-export function join<
-  TLeft extends QueryColumns,
-  TRight extends QueryColumns,
-  TType extends JoinTypeInput | undefined = undefined,
-  const TSelection extends JoinSelection = JoinSelection,
->(
-  right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
-  on: JoinOnInput<TLeft, TRight>,
-  merge: JoinColumnMergerForType<TLeft, TRight, CanonicalJoinType<TType>, TSelection>,
-  options?: JoinOptions<TType>
-): QueryStep<TLeft, JoinSelectionResult<TSelection>>;
-
-export function join(...args: unknown[]): unknown {
-  const parsed = parseCurriedJoinInvocation(args, "join", "join(right, on, merge?, options?)");
-
-  return (left: Query<QueryColumns>) =>
-    _join(
-      left,
-      parsed.right as Query<QueryColumns> | ((outer: ColumnRefs<QueryColumns>) => Query<QueryColumns>),
-      parsed.on as JoinOnInput<QueryColumns, QueryColumns>,
-      parsed.merge as JoinMergeInput<QueryColumns, QueryColumns, "inner", JoinSelection> | undefined,
-      parsed.options as JoinOptions<JoinTypeInput | undefined> | undefined
-    );
-}
-
 export function innerJoin<
   TLeft extends QueryColumns,
   TRight extends QueryColumns,
@@ -872,7 +832,7 @@ function assertNoLegacyJoinMergeOption(options: unknown): void {
   if (options && typeof options === "object" && "merge" in options) {
     userError(
       "JOIN_MERGE_POSITIONAL_REQUIRED",
-      "join() no longer accepts { merge }. Pass merge as the next argument before options."
+      "Join helpers no longer accept { merge } in options. Use the fixed *JoinMerge(...) helper."
     );
   }
 }

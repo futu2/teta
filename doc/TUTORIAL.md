@@ -178,10 +178,10 @@ const labels = pipe(
 // }>
 ```
 
-### `join(...)` and `unnest(...)` refine types
+### Join helpers and `unnest(...)` refine types
 
 ```ts
-import { leftJoin, onEq, prefixOverlapLeft, table, t, pipe } from "@teta/teta";
+import { leftJoinMerge, onEq, prefixOverlapLeft, table, t, pipe } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -196,15 +196,15 @@ const profiles = table("profiles", {
 
 const usersWithProfiles = pipe(
   users,
-  leftJoin(profiles, onEq({ id: "user_id" }), prefixOverlapLeft("left_"))
+  leftJoinMerge(profiles, onEq({ id: "user_id" }), prefixOverlapLeft("left_"))
 );
 ```
 
 If both sides expose the same output column name, Teta now requires an explicit merge helper such as dropOverlapLeft() or prefixOverlapLeft("left_").
-Legacy `join(..., { merge })` is no longer supported. Pass the merge helper positionally before the options object, for example `join(right, on, dropOverlapLeft(), { type: "left" })`.
+Use a fixed merge helper such as `leftJoinMerge(right, on, dropOverlapLeft())`.
 
 ```ts
-import { join, leftJoin, onEq, prefixOverlapLeft, table, t, unnest, pipe } from "@teta/teta";
+import { innerJoin, leftJoin, leftJoinMerge, onEq, prefixOverlapLeft, table, t, unnest, pipe } from "@teta/teta";
 
 const orders = table("orders", {
   order_id: t.int(),
@@ -225,12 +225,12 @@ const leftJoined = pipe(
 
 const usersWithProfiles = pipe(
   users,
-  leftJoin(profiles, onEq({ id: "user_id" }), prefixOverlapLeft("left_"))
+  leftJoinMerge(profiles, onEq({ id: "user_id" }), prefixOverlapLeft("left_"))
 );
 
 const renamedJoin = pipe(
   users,
-  join(orders, onEq({ id: "user_id" }))
+  innerJoin(orders, onEq({ id: "user_id" }))
 );
 
 // right-side columns become nullable on a left join
@@ -442,14 +442,14 @@ const q = pipe(
 console.log(toSql(q, {}));
 ```
 
-Use `leftJoin(...)`, `rightJoin(...)`, `fullJoin(...)`, or the generic `join(..., { type })` form when you want one API for all join kinds.
+Use `innerJoin(...)`, `leftJoin(...)`, `rightJoin(...)`, or `fullJoin(...)` for the join kind you need.
 
 ### Lateral join
 
-Use `join(..., { lateral: true })` when the right-hand query needs to reference columns from the left side.
+Use a fixed join helper with `{ lateral: true }` when the right-hand query needs to reference columns from the left side.
 
 ```ts
-import { eq, filter, join, lit, map, table, t, toSql, pipe } from "@teta/teta";
+import { eq, filter, innerJoin, lit, map, table, t, toSql, pipe } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -464,7 +464,7 @@ const orders = table("orders", {
 
 const q = pipe(
   users,
-  join(
+  innerJoin(
     (u) => pipe(
       orders,
       filter((o) => eq(o.user_id, u.id)),
@@ -888,7 +888,7 @@ const allUsers = pipe(activeUsers, unionAll(inactiveUsers));
 ### Recursive loop (WITH RECURSIVE)
 
 ```ts
-import { eq, filter, isNull, join, loop, pick, pipe, table, t } from "@teta/teta";
+import { eq, filter, innerJoinMap, isNull, loop, pick, pipe, table, t } from "@teta/teta";
 
 const employees = table("employees", {
   id: t.int(),
@@ -906,8 +906,15 @@ const orgTree = pipe(
   base,
   loop((self) => pipe(
     employees,
-    join(self, (e, s) => eq(e.manager_id, s.id)),
-    pick("id", "name", "manager_id")
+    innerJoinMap(
+      self,
+      (e, s) => eq(e.manager_id, s.id),
+      (e) => ({
+        id: e.id,
+        name: e.name,
+        manager_id: e.manager_id,
+      })
+    )
   ))
 );
 

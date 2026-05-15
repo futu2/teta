@@ -16,6 +16,7 @@ describe("core entrypoint boundary", () => {
   });
 
   test("does not export proxy or deferred shorthand column refs", () => {
+    expect("join" in teta).toBe(false);
     expect("$" in teta).toBe(false);
     expect("$left" in teta).toBe(false);
     expect("$right" in teta).toBe(false);

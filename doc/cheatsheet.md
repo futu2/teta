@@ -5,7 +5,7 @@ Quick reference for the public API exported from `@teta/teta`.
 Teta is function-first. Row-transforming query helpers are curried query steps used with `pipe(...)`.
 
 ```ts
-import { add, alias, and, arrayAppend, arrayContains, arrayJoin, arrayLength, arrayPosition, arraySlice, asc, avg, bitLength, cast, charLength, characterLength, coalesce, concat, count, currentDate, currentTimestamp, dateAdd, dateDiff, dateFormat, dateLiteral, dateParse, dateTrunc, day, desc, drop, dropOverlapLeft, dropOverlapRight, eq, explain, ExprRef, extend, f, filter, filterEq, flow, fn, fold, fromUnixTime, fullJoin, group, gt, gte, hour, innerJoin, isIn, isNotNull, isNull, join, lag, lead, left, leftJoin, like, loop, lower, lt, lte, map, rename, max, min, minute, mod, month, mul, ne, not, ntile, nullIf, octetLength, onEq, over, overlay, param, percentRank, pick, pipe, position, pow, prefixAllLeft, prefixAllRight, prefixOverlapLeft, prefixOverlapRight, Query, rank, regexExtract, regexLike, regexReplace, replace, reverse, right, rightJoin, round, rowNumber, rpad, select, shape, sort, sqrt, sub, substring, suffixAllLeft, suffixAllRight, sum, sumOver, t, table, take, timestampLiteral, toAst, toDate, toFloat, toInt, toIR, toSql, toSqlResult, toUnixTime, trim, union, unionAll, unnest, upper, usingCols, values, when, windowFn, year } from "@teta/teta";
+import { add, alias, and, arrayAppend, arrayContains, arrayJoin, arrayLength, arrayPosition, arraySlice, asc, avg, bitLength, cast, charLength, characterLength, coalesce, concat, count, currentDate, currentTimestamp, dateAdd, dateDiff, dateFormat, dateLiteral, dateParse, dateTrunc, day, desc, drop, dropOverlapLeft, dropOverlapRight, eq, explain, ExprRef, extend, f, filter, filterEq, flow, fn, fold, fromUnixTime, fullJoin, group, gt, gte, hour, innerJoin, isIn, isNotNull, isNull, lag, lead, left, leftJoin, like, loop, lower, lt, lte, map, rename, max, min, minute, mod, month, mul, ne, not, ntile, nullIf, octetLength, onEq, over, overlay, param, percentRank, pick, pipe, position, pow, prefixAllLeft, prefixAllRight, prefixOverlapLeft, prefixOverlapRight, Query, rank, regexExtract, regexLike, regexReplace, replace, reverse, right, rightJoin, round, rowNumber, rpad, select, shape, sort, sqrt, sub, substring, suffixAllLeft, suffixAllRight, sum, sumOver, t, table, take, timestampLiteral, toAst, toDate, toFloat, toInt, toIR, toSql, toSqlResult, toUnixTime, trim, union, unionAll, unnest, upper, usingCols, values, when, windowFn, year } from "@teta/teta";
 ```
 
 ## 1) Query roots and composition
@@ -127,7 +127,7 @@ const base = pipe(table("seed", { n: t.int() }), map((s) => ({ n: s.n })));
 const q = pipe(base, loop((self) => pipe(self, map((s) => ({ n: add(s.n, 1) })))));
 ```
 
-### `join(...)`
+### Join helpers
 Join queries with `inner`, `left`, `right`, or `full` behavior.
 
 ```ts
@@ -145,22 +145,21 @@ const usersWithOrders = pipe(
 );
 ```
 
-Legacy `join(..., { merge })` is no longer supported. Pass the merge helper positionally before the options object:
+Use the `*JoinMerge(...)` helpers when a merge helper controls overlapping output columns:
 
 ```ts
 const q = pipe(
   left,
-  join(
+  leftJoinMerge(
     right,
     on,
-    dropOverlapLeft(),
-    { type: "left" }
+    dropOverlapLeft()
   )
 );
 ```
 
 ### Join-kind helpers
-Fixed join-kind helpers with the same `on` and optional merge-helper arguments as `join(...)`.
+Use `innerJoin(...)`, `leftJoin(...)`, `rightJoin(...)`, or `fullJoin(...)` for default merged shapes. Use `innerJoinMap(...)` or `innerJoinMerge(...)` style helpers for custom projections or explicit merge helpers.
 
 ### `fold(selector)`
 Use `group(expr)` inside the selector for grouping keys.
@@ -203,11 +202,12 @@ const uniqueUsers = pipe(activeUsers, union(inactiveUsers));
 - `filter(predicate)`
 - `sort(selector)`
 - `take(count)`
-- `join(...)` with `rightOrBuilder`, `on`, optional `merge`, and optional `{ type?, lateral? }`
-- `innerJoin(...)` with `rightOrBuilder`, `on`, optional `merge`, and optional `{ lateral? }`
-- `leftJoin(...)` with `rightOrBuilder`, `on`, optional `merge`, and optional `{ lateral? }`
-- `rightJoin(...)` with `rightOrBuilder`, `on`, optional `merge`, and optional `{ lateral? }`
-- `fullJoin(...)` with `rightOrBuilder`, `on`, optional `merge`, and optional `{ lateral? }`
+- `innerJoin(...)` with `rightOrBuilder`, `on`, and optional `{ lateral? }`
+- `leftJoin(...)` with `rightOrBuilder`, `on`, and optional `{ lateral? }`
+- `rightJoin(...)` with `rightOrBuilder`, `on`, and optional `{ lateral? }`
+- `fullJoin(...)` with `rightOrBuilder`, `on`, and optional `{ lateral? }`
+- `innerJoinMap(...)`, `leftJoinMap(...)`, `rightJoinMap(...)`, `fullJoinMap(...)`
+- `innerJoinMerge(...)`, `leftJoinMerge(...)`, `rightJoinMerge(...)`, `fullJoinMerge(...)`
 - `usingCols(name | names)`
 - `onEq({ leftName: rightName })`
 - `dropOverlapLeft()`
@@ -226,7 +226,7 @@ const uniqueUsers = pipe(activeUsers, union(inactiveUsers));
 - `whenStep(condition, step)`
 - `unlessStep(condition, step)`
 
-`map(...)`, `fold(...)`, `filter(...)`, `sort(...)`, `take(...)`, `join(...)`, `union(...)`, `unionAll(...)`, and `loop(...)`
+`map(...)`, `fold(...)`, `filter(...)`, `sort(...)`, `take(...)`, fixed join helpers, `union(...)`, `unionAll(...)`, and `loop(...)`
 all return `QueryStep` functions when called without the left query.
 
 ## 3) Rendering and introspection

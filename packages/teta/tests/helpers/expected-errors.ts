@@ -21,8 +21,6 @@ export const VALUES_EMPTY_ERROR =
 export const VALUES_COLUMN_MISMATCH_ERROR =
   "values() row 2 must have exactly the same columns as row 1";
 
-export const LEGACY_JOIN_MERGE_OPTION_ERROR =
-  "join() no longer accepts { merge }. Pass merge as the next argument before options.";
 
 export const LEGACY_LEFT_JOIN_FIXED_MERGE_ERROR =
   "leftJoin() no longer accepts a merge or projection argument. Use leftJoinMap(...) for custom output or leftJoinMerge(...) for merge helpers.";
@@ -45,8 +43,6 @@ export const SORT_CURRIED_ONLY_ERROR =
 export const TAKE_CURRIED_ONLY_ERROR =
   "take() is curried-only. Use pipe(query, take(count)).";
 
-export const JOIN_CURRIED_ONLY_ERROR =
-  "join() is curried-only. Use pipe(query, join(right, on, merge?, options?)).";
 
 export const INNER_JOIN_CURRIED_ONLY_ERROR =
   "innerJoin() is curried-only. Use pipe(query, innerJoin(right, on, options?)).";
@@ -70,7 +66,7 @@ export const SELECT_INVALID_SELECTION_ERROR =
   "select() items must be expressions";
 
 export const JOIN_OVERLAPPING_COLUMNS_ERROR =
-  "join() requires an explicit merge strategy for overlapping columns: id";
+  "Join helpers require an explicit merge strategy for overlapping columns: id";
 
 export const JOIN_MERGE_CONFLICT_ERROR =
   "join merge helper still overlaps after renaming: user_id";

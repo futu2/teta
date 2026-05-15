@@ -273,7 +273,7 @@ Examples:
   - stores order items
 - `take(...)`
   - stores the limit count
-- `join(...)`
+- fixed join helpers
   - stores join metadata + join predicate + output projection
 - `union(...)`
   - stores the right-hand query spec as a `union` stage

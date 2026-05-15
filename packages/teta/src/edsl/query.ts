@@ -8,7 +8,6 @@ export {
   innerJoin,
   innerJoinMap,
   innerJoinMerge,
-  join,
   leftJoin,
   leftJoinMap,
   leftJoinMerge,

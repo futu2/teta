@@ -19,9 +19,9 @@ import {
   param,
   gt,
   gte,
+  innerJoin,
   isNotNull,
   leftJoin,
-  join,
   lt,
   lte,
   map,
@@ -371,7 +371,7 @@ describe("callback column api", () => {
     expectTetaUserError(
       () => pipe(
         users,
-        join(
+        innerJoin(
           orders,
           undefined as never
         )

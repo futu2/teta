@@ -1,6 +1,6 @@
 import type { ExprLike, ExprRef, SqlBigInt, SqlBytes, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlTimestamp, SqlUuid, } from "../mod.ts";
 import * as publicApi from "../mod.ts";
-import { between, filter, filterEq, filterNe, filterGt, filterGte, filterLt, filterLte, fullJoin, fullJoinMerge, identityStep, innerJoin, innerJoinMap, innerJoinMerge, isDistinctFrom, isNotIn, join, leftJoin, leftJoinMap, leftJoinMerge, rightJoin, rightJoinMerge, take, sort, param, map, rename, pipe, flow, table, t, fold, asc, desc, eq, gt, upper, add, mul, coalesce, count, group, loop, sum, and, or, isNotNull, sub, caseWhen, when, mapShape, groupShape, lt, unnest, unionAll, union, unlessStep, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, toString, toTimestamp, pick, drop, extend, select, alias, whenStep } from "../mod.ts";
+import { between, filter, filterEq, filterNe, filterGt, filterGte, filterLt, filterLte, fullJoin, fullJoinMerge, identityStep, innerJoin, innerJoinMap, innerJoinMerge, isDistinctFrom, isNotIn, leftJoin, leftJoinMap, leftJoinMerge, rightJoin, rightJoinMerge, take, sort, param, map, rename, pipe, flow, table, t, fold, asc, desc, eq, gt, upper, add, mul, coalesce, count, group, loop, sum, and, or, isNotNull, sub, caseWhen, when, mapShape, groupShape, lt, unnest, unionAll, union, unlessStep, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, toString, toTimestamp, pick, drop, extend, select, alias, whenStep } from "../mod.ts";
 type Equal<A, B> = ((<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false);
 type Expect<T extends true> = T;
 type ExprType<TExpr> = TExpr extends ExprLike<infer TValue> ? TValue : never;
@@ -49,10 +49,9 @@ const fullJoined = pipe(users, fullJoin(
     orders,
     (user, order) => eq(user.id, order.user_id)
 ));
-const leftViaJoin = pipe(users, join(
+const leftViaJoin = pipe(users, leftJoin(
     orders,
-    (user, order) => eq(user.id, order.user_id),
-    { type: "left" }
+    (user, order) => eq(user.id, order.user_id)
 ));
 const renamedJoin = pipe(users, innerJoinMap(
     orders,
@@ -102,7 +101,7 @@ const droppedOverlapRight = pipe(users, innerJoinMerge(
     (user, profile) => eq(user.id, profile.id),
     dropOverlapRight()
 ));
-const usingJoin = pipe(users, join(
+const usingJoin = pipe(users, innerJoinMerge(
     profileRows,
     usingCols("id"),
     dropOverlapLeft()
@@ -488,15 +487,10 @@ pipe(users, filter((user) => user.name));
 and();
 // @ts-expect-error or requires at least one expression
 or();
-pipe(users, join(
+pipe(users, innerJoin(
     orders,
-    // @ts-expect-error join predicates must return boolean expressions
+    // @ts-expect-error innerJoin predicates must return boolean expressions
     (user, order) => order.total
-));
-pipe(users, join(
-    profileRows,
-    // @ts-expect-error default joins with overlapping output names require an explicit merge strategy
-    (user, profile) => eq(user.id, profile.id)
 ));
 pipe(users, innerJoin(
     profileRows,
@@ -680,10 +674,8 @@ unionAll(users, users);
 loop(loopBase, (self) => pipe(self, filter((row) => gt(row.id, 0))));
 // @ts-expect-error unnest is curried-only
 unnest(sessions, (session: typeof sessions.columns) => session.tags, { value: "tag" });
-// @ts-expect-error join is curried-only
-join(users, orders, (user, order) => eq(user.id, order.user_id));
-// @ts-expect-error lateral join is curried-only
-join(users, (user) => pipe(orders, filter((order) => eq(order.user_id, user.id))), (user, order) => eq(user.id, order.user_id));
+// @ts-expect-error removed from the public API
+publicApi.join;
 // @ts-expect-error innerJoin is curried-only
 innerJoin(users, orders, (user, order) => eq(user.id, order.user_id));
 // @ts-expect-error leftJoin is curried-only

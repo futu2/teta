@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { TetaUserError, alias, count, eq, extend, filter, fold, fullJoin, group, innerJoin, join, leftJoin, loop, map, prefixOverlapLeft, rightJoin, select, sort, take, toSql, values, pipe } from "../mod.ts";
-import { EXTEND_CURRIED_ONLY_ERROR, FILTER_CURRIED_ONLY_ERROR, FOLD_CURRIED_ONLY_ERROR, FULL_JOIN_CURRIED_ONLY_ERROR, GROUP_INSIDE_AGGREGATE_FUNCTION_ERROR, GROUP_OUTSIDE_AGGREGATE_ERROR, INNER_JOIN_CURRIED_ONLY_ERROR, JOIN_CURRIED_ONLY_ERROR, JOIN_MERGE_CONFLICT_ERROR, JOIN_OVERLAPPING_COLUMNS_ERROR, LEFT_JOIN_CURRIED_ONLY_ERROR, LEGACY_JOIN_MERGE_OPTION_ERROR, LEGACY_LEFT_JOIN_FIXED_MERGE_ERROR, LEGACY_SELECTION_ARRAY_ERROR, LOOP_COLUMN_MISMATCH_ERROR, MAP_CURRIED_ONLY_ERROR, NON_CANONICAL_POSTGRES_DIALECT_ERROR, RIGHT_JOIN_CURRIED_ONLY_ERROR, SELECT_ALIAS_EMPTY_ERROR, SELECT_DUPLICATE_COLUMN_ERROR, SELECT_INVALID_SELECTION_ERROR, SORT_CURRIED_ONLY_ERROR, TAKE_CURRIED_ONLY_ERROR, UNSUPPORTED_CROSS_JOIN_ERROR, VALUES_COLUMN_MISMATCH_ERROR, VALUES_EMPTY_ERROR } from "./helpers/expected-errors.ts";
+import { TetaUserError, alias, count, eq, extend, filter, fold, fullJoin, group, innerJoin, innerJoinMerge, leftJoin, loop, map, prefixOverlapLeft, rightJoin, select, sort, take, toSql, values, pipe } from "../mod.ts";
+import { EXTEND_CURRIED_ONLY_ERROR, FILTER_CURRIED_ONLY_ERROR, FOLD_CURRIED_ONLY_ERROR, FULL_JOIN_CURRIED_ONLY_ERROR, GROUP_INSIDE_AGGREGATE_FUNCTION_ERROR, GROUP_OUTSIDE_AGGREGATE_ERROR, INNER_JOIN_CURRIED_ONLY_ERROR, JOIN_MERGE_CONFLICT_ERROR, JOIN_OVERLAPPING_COLUMNS_ERROR, LEFT_JOIN_CURRIED_ONLY_ERROR, LEGACY_LEFT_JOIN_FIXED_MERGE_ERROR, LEGACY_SELECTION_ARRAY_ERROR, LOOP_COLUMN_MISMATCH_ERROR, MAP_CURRIED_ONLY_ERROR, NON_CANONICAL_POSTGRES_DIALECT_ERROR, RIGHT_JOIN_CURRIED_ONLY_ERROR, SELECT_ALIAS_EMPTY_ERROR, SELECT_DUPLICATE_COLUMN_ERROR, SELECT_INVALID_SELECTION_ERROR, SORT_CURRIED_ONLY_ERROR, TAKE_CURRIED_ONLY_ERROR, VALUES_COLUMN_MISMATCH_ERROR, VALUES_EMPTY_ERROR } from "./helpers/expected-errors.ts";
 import { createOrdersTable, createUsersTable } from "./helpers/fixtures.ts";
 describe("error paths", () => {
     function expectUserError(fn: () => unknown, code: string, message: string): void {
@@ -26,35 +26,6 @@ describe("error paths", () => {
         expect(() => pipe(users, fold((user) => ({
             bad: count(group(user.id)),
         })))).toThrow(GROUP_INSIDE_AGGREGATE_FUNCTION_ERROR);
-    });
-    test("rejects unsupported join types through the query API", () => {
-        const users = createUsersTable();
-        const orders = createOrdersTable();
-        expect(() => pipe(
-            users,
-            join(
-                orders,
-                (user, order) => eq(user.id, order.user_id),
-                { type: "cross" as never }
-            )
-        )).toThrow(UNSUPPORTED_CROSS_JOIN_ERROR);
-    });
-    test("rejects legacy join merge options at runtime", () => {
-        const users = createUsersTable();
-        const orders = createOrdersTable();
-        expect(() => pipe(
-            users,
-            join(
-                orders,
-                (user, order) => eq(user.id, order.user_id),
-                {
-                    merge: (user: typeof users.columns, order: typeof orders.columns) => ({
-                        id: user.id,
-                        total: order.total,
-                    }),
-                } as never
-            )
-        )).toThrow(LEGACY_JOIN_MERGE_OPTION_ERROR);
     });
     test("guides fixed join migration for removed merge and projection arguments", () => {
         const users = createUsersTable();
@@ -120,7 +91,7 @@ describe("error paths", () => {
         ]);
         expect(() => pipe(
             users,
-            (join as any)(
+            (innerJoin as any)(
             profiles,
             (user: typeof users.columns, profile: typeof profiles.columns) => eq(user.id, profile.id)
             )
@@ -134,7 +105,7 @@ describe("error paths", () => {
         ]);
         expect(() => pipe(
             users,
-            (join as any)(
+            (innerJoinMerge as any)(
             profiles,
             (user: typeof users.columns, profile: typeof profiles.columns) => eq(user.id, profile.user_id),
             prefixOverlapLeft("user_")
@@ -178,11 +149,6 @@ describe("error paths", () => {
             TAKE_CURRIED_ONLY_ERROR
         );
         expectUserError(
-            () => (join as any)(users, orders, (user: typeof users.columns, order: typeof orders.columns) => eq(user.id, order.user_id)),
-            "QUERY_HELPER_CURRIED_ONLY",
-            JOIN_CURRIED_ONLY_ERROR
-        );
-        expectUserError(
             () => (innerJoin as any)(users, orders, (user: typeof users.columns, order: typeof orders.columns) => eq(user.id, order.user_id)),
             "QUERY_HELPER_CURRIED_ONLY",
             INNER_JOIN_CURRIED_ONLY_ERROR
@@ -201,23 +167,6 @@ describe("error paths", () => {
             () => (fullJoin as any)(users, orders, (user: typeof users.columns, order: typeof orders.columns) => eq(user.id, order.user_id)),
             "QUERY_HELPER_CURRIED_ONLY",
             FULL_JOIN_CURRIED_ONLY_ERROR
-        );
-    });
-    test("rejects removed data-first lateral join callbacks at runtime", () => {
-        const users = createUsersTable();
-        const orders = createOrdersTable();
-        expectUserError(
-            () => (join as any)(
-                users,
-                (user: typeof users.columns) =>
-                    pipe(
-                        orders,
-                        filter((order: typeof orders.columns) => eq(order.user_id, user.id))
-                    ),
-                (user: typeof users.columns, order: typeof orders.columns) => eq(user.id, order.user_id)
-            ),
-            "QUERY_HELPER_CURRIED_ONLY",
-            JOIN_CURRIED_ONLY_ERROR
         );
     });
     test("rejects removed fixed data-first lateral join with callback on expression at runtime", () => {

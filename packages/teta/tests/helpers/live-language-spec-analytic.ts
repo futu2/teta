@@ -1,6 +1,6 @@
 import { employeeTable, metricsTable, rankTable } from "./live-language-spec-shared.ts";
 import type { LiveSpecCase } from "./live-language-spec-shared.ts";
-import { fold, filter, join, map, asc, avg, count, denseRank, desc, eq, group, isNull, lag, lead, max, min, ntile, sort, percentRank, rank, rowNumber, sum, sumOver, loop, over, pipe } from "../../mod.ts";
+import { fold, filter, innerJoinMap, map, asc, avg, count, denseRank, desc, eq, group, isNull, lag, lead, max, min, ntile, sort, percentRank, rank, rowNumber, sum, sumOver, loop, over, pipe } from "../../mod.ts";
 export const LIVE_LANGUAGE_ANALYTIC_CASES: LiveSpecCase[] = [
     {
         name: "aggregates",
@@ -168,7 +168,7 @@ export const LIVE_LANGUAGE_ANALYTIC_CASES: LiveSpecCase[] = [
                 })),
                 loop((self) => pipe(
                     employees,
-                    join(
+                    innerJoinMap(
                         self,
                         (employee, current) => eq(employee.manager_id, current.id),
                         (employee) => ({

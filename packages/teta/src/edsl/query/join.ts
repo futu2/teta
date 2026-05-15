@@ -558,7 +558,7 @@ export function resolveJoinColumns<
     if (overlapping.length > 0) {
       userError(
         "JOIN_OVERLAPPING_COLUMNS",
-        `join() requires an explicit merge strategy for overlapping columns: ${overlapping.join(", ")}`
+        `Join helpers require an explicit merge strategy for overlapping columns: ${overlapping.join(", ")}`
       );
     }
   }

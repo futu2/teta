@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { add, charLength, eq, filter, isNotNull, isNull, join, loop, map, not, t, table, toSql, pipe } from "../mod.ts";
+import { add, charLength, eq, filter, innerJoinMap, isNotNull, isNull, loop, map, not, t, table, toSql, pipe } from "../mod.ts";
 import { buildOrgTreeQuery, createEmployeesTable } from "./helpers/fixtures.ts";
 
 describe("recursive loop queries", () => {
@@ -50,7 +50,7 @@ describe("recursive loop queries", () => {
         base,
         loop((self) => pipe(
             employees,
-            join(
+            innerJoinMap(
               self,
               (employee, current) => eq(employee.manager_id, current.id),
               (employee) => ({
@@ -90,7 +90,7 @@ describe("recursive loop queries", () => {
         directSup,
         loop((self) => pipe(
           self,
-          join(
+          innerJoinMap(
             directSup,
             (current, parent) => eq(current.sup_orgId, parent.orgId),
             (current, parent) => ({
@@ -133,7 +133,7 @@ describe("recursive loop queries", () => {
         orgInfo,
         loop((self) => pipe(
           self,
-          join(
+          innerJoinMap(
             orgInfo,
             (u, o) => eq(u.sup_stru, o.stru_id),
             (u, o) => ({

@@ -90,9 +90,6 @@ export const fullJoinMap: typeof import("./src/edsl/query.ts").fullJoinMap = que
 /** Joins two query inputs as a full join with an explicit merge helper. */
 export const fullJoinMerge: typeof import("./src/edsl/query.ts").fullJoinMerge = query.fullJoinMerge;
 
-/** Joins two query inputs with an explicit join condition. */
-export const join: typeof import("./src/edsl/query.ts").join = query.join;
-
 /** Builds a join predicate by equating same-named columns. */
 export const usingCols: typeof import("./src/edsl/query.ts").usingCols = query.usingCols;
 

@@ -4,7 +4,7 @@ import {
   eq,
   filter,
   gt,
-  join,
+  innerJoin,
   map,
   t,
   table,
@@ -53,7 +53,7 @@ describe("values(query root)", () => {
 
     const query = pipe(
       users,
-      join(
+      innerJoin(
         labels,
         (user, labelRow) => eq(user.id, labelRow.user_id)
       ),
