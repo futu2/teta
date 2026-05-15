@@ -419,12 +419,22 @@ function containsDeferredColumn(node: unknown): boolean {
       return validateArray(exprNode.whens).some((branch) => {
         const caseBranch = validateCaseBranch(branch);
         return containsDeferredColumn(caseBranch.when) || containsDeferredColumn(caseBranch.then);
-      }) || (exprNode.elseExpr ? containsDeferredColumn(exprNode.elseExpr) : false);
+      }) || hasDeferredElseExpr(exprNode.elseExpr);
     case "column":
+      validateColumnNode(exprNode);
+      return false;
     case "literal":
+      validateLiteralNode(exprNode);
+      return false;
     case "param":
+      validateParamNode(exprNode);
       return false;
   }
+}
+
+function hasDeferredElseExpr(value: unknown): boolean {
+  if (value === null || value === undefined) return false;
+  return containsDeferredColumn(value);
 }
 
 function validateArray(value: unknown): unknown[] {
@@ -443,7 +453,11 @@ function validateOrderItem(value: unknown): { expr: unknown } {
   if (value === null || typeof value !== "object") {
     invalidExpressionOperand();
   }
-  return value as { expr: unknown };
+  const item = value as { direction?: unknown; expr?: unknown };
+  if (item.direction !== "ASC" && item.direction !== "DESC") {
+    invalidExpressionOperand();
+  }
+  return item as { expr: unknown };
 }
 
 function validateCaseBranch(value: unknown): { when: unknown; then: unknown } {
@@ -451,4 +465,30 @@ function validateCaseBranch(value: unknown): { when: unknown; then: unknown } {
     invalidExpressionOperand();
   }
   return value as { when: unknown; then: unknown };
+}
+
+function validateColumnNode(node: ExprNode<unknown>): void {
+  const column = node as { table?: unknown; name?: unknown };
+  if (typeof column.name !== "string") {
+    invalidExpressionOperand();
+  }
+  if (column.table !== null && typeof column.table !== "string") {
+    invalidExpressionOperand();
+  }
+}
+
+function validateLiteralNode(node: ExprNode<unknown>): void {
+  if (!Object.hasOwn(node, "value")) {
+    invalidExpressionOperand();
+  }
+}
+
+function validateParamNode(node: ExprNode<unknown>): void {
+  const paramNode = node as { value?: unknown; name?: unknown };
+  if (!Object.hasOwn(paramNode, "value") || paramNode.value === undefined) {
+    invalidExpressionOperand();
+  }
+  if (paramNode.name !== null && typeof paramNode.name !== "string") {
+    invalidExpressionOperand();
+  }
 }

@@ -402,6 +402,7 @@ describe("callback column api", () => {
       new ExprRef(null as any),
       new ExprRef("bad" as any),
       new ExprRef({ kind: "bogus" } as any),
+      new ExprRef({ kind: "column" } as any),
       new ExprRef({
         kind: "binary",
         op: "=",
@@ -414,14 +415,28 @@ describe("callback column api", () => {
         left: { kind: "bogus" },
         right: { kind: "literal", value: "Ada" },
       } as any),
+      new ExprRef({
+        kind: "binary",
+        op: "=",
+        left: { kind: "column" },
+        right: { kind: "literal", value: "Ada" },
+      } as any),
       new ExprRef({ kind: "func", name: "BAD", args: null } as any),
       new ExprRef({ kind: "case", whens: null, elseExpr: null } as any),
+      new ExprRef({ kind: "case", whens: [], elseExpr: 0 } as any),
       new ExprRef({
         kind: "window",
         name: "BAD",
         args: [],
         partitionBy: null,
         orderBy: [null],
+      } as any),
+      new ExprRef({
+        kind: "window",
+        name: "BAD",
+        args: [],
+        partitionBy: null,
+        orderBy: [{ direction: "SIDEWAYS", expr: { kind: "literal", value: "Ada" } }],
       } as any),
     ];
 
