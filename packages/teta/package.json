@@ -1,7 +1,7 @@
 {
   "name": "@teta/teta",
   "module": "./mod.ts",
-  "version": "0.5.0",
+  "version": "0.4.9",
   "exports": {
     ".": "./mod.ts"
   },
