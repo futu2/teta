@@ -533,6 +533,12 @@ export function take(...args: unknown[]): unknown {
   if (typeof count !== "number") {
     userError("QUERY_HELPER_INVALID_ARGUMENTS", "take() expects take(count)");
   }
+  if (!Number.isInteger(count) || count < 0) {
+    userError(
+      "QUERY_HELPER_INVALID_ARGUMENTS",
+      "take() expects a finite non-negative integer count"
+    );
+  }
   return (query: Query<QueryColumns>) => _take(query, count as number);
 }
 

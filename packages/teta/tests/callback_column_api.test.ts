@@ -2,7 +2,6 @@ import { describe, expect, test } from "bun:test";
 import {
   TetaUserError,
   add,
-  alias,
   and,
   caseWhen,
   coalesce,
@@ -34,7 +33,6 @@ import {
   pipe,
   rename,
   replace,
-  select,
   sort,
   t,
   table,
@@ -131,15 +129,10 @@ describe("callback column api", () => {
     );
   });
 
-  test("treats bare strings in filterEq as SQL literals", () => {
-    const users = table("users", {
-      status: t.string(),
-    });
-    const expected = pipe(users, filter(() => eq("status", "status")));
-    const actual = pipe(users, filterEq("status", "status"));
-
-    expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
-      toSql(expected, { dialect: "postgresql", format: "compact" })
+  test("rejects comparison filters without a row callback", () => {
+    expectTetaUserError(
+      () => (filterEq as any)("status", "status"),
+      "QUERY_HELPER_INVALID_ARGUMENTS"
     );
   });
 
@@ -167,48 +160,6 @@ describe("callback column api", () => {
         toSql(expected, { dialect: "postgresql", format: "compact" })
       );
     }
-  });
-
-  test("supports select with callback column lists", () => {
-    const users = createUsersPipelineTable();
-    const expected = pipe(users, map((user) => ({
-      id: user.id,
-      name: user.name,
-    })));
-    const actual = pipe(users, select((user) => [user.id, user.name]));
-
-    expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
-      toSql(expected, { dialect: "postgresql", format: "compact" })
-    );
-  });
-
-  test("supports select aliases and generated names", () => {
-    const users = createUsersPipelineTable();
-    const expected = pipe(users, map((user) => ({
-      old_id: user.id,
-      col_1: add(user.age, 1),
-      name: user.name,
-      col_2: add(user.age, 2),
-    })));
-    const actual = pipe(users, select((user) => [
-      pipe(user.id, alias("old_id")),
-      add(user.age, 1),
-      user.name,
-      add(user.age, 2),
-    ]));
-
-    expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
-      toSql(expected, { dialect: "postgresql", format: "compact" })
-    );
-  });
-
-  test("rejects duplicate select output names", () => {
-    const users = createUsersPipelineTable();
-
-    expectTetaUserError(
-      () => pipe(users, select((user: typeof users.columns) => [user.id, pipe(user.name, alias("id"))]) as never),
-      "SELECT_DUPLICATE_COLUMN"
-    );
   });
 
   test("supports drop as a direct query step", () => {
@@ -380,7 +331,7 @@ describe("callback column api", () => {
     );
   });
 
-  test("rejects malformed direct expression operands in comparison helpers at runtime", () => {
+  test("rejects malformed expression operands in comparison helpers at runtime", () => {
     const users = createUsersTable();
     const cases = [
       { kind: "expr", node: { kind: "bogus", value: undefined } },
@@ -442,12 +393,12 @@ describe("callback column api", () => {
 
     for (const malformed of cases) {
       expectTetaUserError(
-        () => pipe(users, filterEq(malformed as any, "Ada")),
+        () => pipe(users, filterEq(() => malformed as any, "Ada")),
         "QUERY_FILTER_INVALID_OPERAND"
       );
     }
 
-    const valid = pipe(users, filterEq(param("Ada"), "Ada"));
+    const valid = pipe(users, filterEq(() => param("Ada"), "Ada"));
     expect(toSql(valid, { dialect: "postgresql", format: "compact" })).toContain("$1 = 'Ada'");
   });
 

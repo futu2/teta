@@ -6,6 +6,8 @@ test("does not export public constructor values", () => {
 
   expect("Query" in publicApi).toBe(false);
   expect(removedExprRefExport in publicApi).toBe(false);
+  expect("select" in publicApi).toBe(false);
+  expect("alias" in publicApi).toBe(false);
   expect(typeof publicApi.isQuery).toBe("function");
   expect(typeof publicApi.isExpr).toBe("function");
   expect(typeof publicApi.isColumn).toBe("function");

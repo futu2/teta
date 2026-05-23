@@ -367,18 +367,17 @@ Typical patterns:
 
 - `pick(...)` for reusable column subsets
 - `drop(...)` when it is easier to name columns to remove
-- `select(...)` for list-style projections where plain column refs keep their names
-- explicit object literals when you want to reshape columns and add computed fields
+- `map(...)` with explicit object literals when you want to reshape columns and add computed fields
 - `rename(...)` for systematic renaming like prefixes or namespaces
 - `pipe(...)` when the reshaping reads better as query steps
 
-`select(...)` projects from an expression list. Plain column refs keep their source names, and `alias(...)` names computed expressions:
+`map(...)` projects from an explicit object shape:
 
 ```ts
-const q = pipe(users, select((user) => [
-  user.id,
-  pipe(upper(user.name), alias("name_upper")),
-]));
+const q = pipe(users, map((user) => ({
+  id: user.id,
+  name_upper: upper(user.name),
+})));
 ```
 
 Type note:
@@ -410,7 +409,7 @@ const publicActiveUsers = flow(
 const q = publicActiveUsers(users);
 ```
 
-Comparison filter helpers accept literals, expressions, and row callbacks on either side. Bare strings are string literals, not column names.
+Comparison filter helpers require at least one row callback. Use callbacks for column operands and direct values only for literal/expression operands on the other side.
 
 ### Join (auto alias)
 

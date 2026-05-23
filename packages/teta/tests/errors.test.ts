@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { TetaUserError, alias, count, eq, extend, filter, fold, fullJoin, group, innerJoin, innerJoinMerge, leftJoin, loop, map, prefixOverlapLeft, rightJoin, select, sort, t, table, take, toSql, values, pipe } from "../mod.ts";
-import { GROUP_INSIDE_AGGREGATE_FUNCTION_ERROR, GROUP_OUTSIDE_AGGREGATE_ERROR, JOIN_MERGE_CONFLICT_ERROR, JOIN_OVERLAPPING_COLUMNS_ERROR, LEGACY_SELECTION_ARRAY_ERROR, LOOP_COLUMN_MISMATCH_ERROR, NON_CANONICAL_POSTGRES_DIALECT_ERROR, SELECT_ALIAS_EMPTY_ERROR, SELECT_DUPLICATE_COLUMN_ERROR, SELECT_INVALID_SELECTION_ERROR, VALUES_COLUMN_MISMATCH_ERROR, VALUES_EMPTY_ERROR } from "./helpers/expected-errors.ts";
+import { TetaUserError, count, eq, extend, filter, fold, fullJoin, group, innerJoin, innerJoinMerge, leftJoin, loop, map, prefixOverlapLeft, rightJoin, sort, t, table, take, toSql, values, pipe } from "../mod.ts";
+import { GROUP_INSIDE_AGGREGATE_FUNCTION_ERROR, GROUP_OUTSIDE_AGGREGATE_ERROR, JOIN_MERGE_CONFLICT_ERROR, JOIN_OVERLAPPING_COLUMNS_ERROR, LEGACY_SELECTION_ARRAY_ERROR, LOOP_COLUMN_MISMATCH_ERROR, NON_CANONICAL_POSTGRES_DIALECT_ERROR, VALUES_COLUMN_MISMATCH_ERROR, VALUES_EMPTY_ERROR } from "./helpers/expected-errors.ts";
 import { createOrdersTable, createUsersTable } from "./helpers/fixtures.ts";
 describe("error paths", () => {
     function expectUserError(fn: () => unknown, code: string, message: string): void {
@@ -31,6 +31,15 @@ describe("error paths", () => {
         expect(() => (map as any)()).toThrow("map() expects map(selector)");
         expect(() => (filter as any)("not a callback")).toThrow("filter() expects a row callback");
         expect(() => (take as any)()).toThrow("take() expects take(count)");
+    });
+    test("take rejects invalid counts", () => {
+        for (const count of [-1, 1.5, Number.POSITIVE_INFINITY, Number.NaN]) {
+            expectUserError(
+                () => take(count),
+                "QUERY_HELPER_INVALID_ARGUMENTS",
+                "take() expects a finite non-negative integer count"
+            );
+        }
     });
     test("fixed join helpers reject invalid options without probing callbacks", () => {
         const users = table("users", { id: t.int() });
@@ -218,17 +227,6 @@ describe("error paths", () => {
             "LEGACY_SELECTION_ARRAY",
             LEGACY_SELECTION_ARRAY_ERROR
         );
-    });
-    test("rejects invalid select helper usage", () => {
-        const users = createUsersTable();
-        expect(() => pipe(users, select((user: typeof users.columns) => [
-            user.id,
-            pipe(user.name, alias("id")),
-        ]) as never)).toThrow(SELECT_DUPLICATE_COLUMN_ERROR);
-        expect(() => alias("")).toThrow(SELECT_ALIAS_EMPTY_ERROR);
-        expect(() => pipe(users, select(([
-            alias("bad") as never,
-        ]) as never))).toThrow(SELECT_INVALID_SELECTION_ERROR);
     });
     test("rejects non-canonical built-in dialect names", () => {
         const users = createUsersTable();

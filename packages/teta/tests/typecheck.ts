@@ -1,6 +1,6 @@
 import type { Column, Expr, SqlBigInt, SqlBytes, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlTimestamp, SqlUuid, } from "../mod.ts";
 import * as publicApi from "../mod.ts";
-import { between, filter, filterEq, filterNe, filterGt, filterGte, filterLt, filterLte, fullJoin, fullJoinMerge, identityStep, innerJoin, innerJoinMap, innerJoinMerge, isDistinctFrom, isNotIn, leftJoin, leftJoinMap, leftJoinMerge, rightJoin, rightJoinMerge, take, sort, param, map, rename, pipe, flow, table, t, fold, asc, desc, eq, gt, upper, add, mul, coalesce, count, group, loop, sum, and, or, isNotNull, sub, caseWhen, when, mapShape, groupShape, lt, unnest, unionAll, union, unlessStep, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, toString, toTimestamp, pick, drop, extend, select, alias, whenStep } from "../mod.ts";
+import { between, filter, filterEq, filterNe, filterGt, filterGte, filterLt, filterLte, fullJoin, fullJoinMerge, identityStep, innerJoin, innerJoinMap, innerJoinMerge, isDistinctFrom, isNotIn, leftJoin, leftJoinMap, leftJoinMerge, rightJoin, rightJoinMerge, take, sort, param, map, rename, pipe, flow, table, t, fold, asc, desc, eq, gt, upper, add, mul, coalesce, count, group, loop, sum, and, or, isNotNull, sub, caseWhen, when, mapShape, groupShape, lt, unnest, unionAll, union, unlessStep, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, toString, toTimestamp, pick, drop, extend, whenStep } from "../mod.ts";
 type Equal<A, B> = ((<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false);
 type Expect<T extends true> = T;
 type ExprType<TExpr> = TExpr extends Expr<infer TValue> ? TValue : TExpr extends Column<infer TValue, string> ? TValue : never;
@@ -130,29 +130,14 @@ const projectedUsers = pipe(filteredUsers, map((user: typeof filteredUsers.colum
     id: user.id,
     name: upper(user.name),
 })));
-const selectedUsers = pipe(users, select((user) => [user.id, user.name]));
-const aliasedSelectedUsers = pipe(users, select((user) => [
-    pipe(user.id, alias("old_id")),
-    pipe(upper(user.name), alias("name_upper")),
-]));
-const generatedSelectedUsers = pipe(users, select((user) => [
-    user.id,
-    add(user.id, 1),
-    user.name,
-    add(user.id, 2),
-]));
-const generatedExpressionSelectedUsers = pipe(users, select((user) => [
-    user.id,
-    add(user.id, 1),
-]));
 const mappedSelectedUsers = pipe(users, map((user) => ({
     id: user.id,
     name: user.name,
-})), select((user) => [user.id, user.name]));
+})));
 const mappedSortedTakenSelectedUsers = pipe(users, map((user) => ({
     id: user.id,
     name: user.name,
-})), sort((user) => [desc(user.id)]), take(5), select((user) => [user.id, user.name]));
+})), sort((user) => [desc(user.id)]), take(5));
 const extendedUsers = pipe(users, extend((user) => ({
     name_upper: upper(user.name),
 })));
@@ -169,7 +154,6 @@ const filterNeUsers = pipe(users, filterNe((user) => user.name, "deleted"));
 const filterGtUsers = pipe(users, filterGt((user) => user.id, 0));
 const filterLtUsers = pipe(users, filterLt((user) => user.id, 100));
 const filterLteUsers = pipe(users, filterLte((user) => user.id, 100));
-const literalStringFilter = pipe(users, filterEq("status", "active"));
 const variadicAndFilteredUsers = pipe(users, filter((user) => and(eq(user.id, 1), gt(user.id, 0), isNotNull(user.name))));
 const variadicOrFilteredUsers = pipe(users, filter((user) => or(eq(user.name, "Ada"), eq(user.name, "Grace"), eq(user.name, "Linus"))));
 const conditionalStepUsers = pipe(users, identityStep(), whenStep(true, filterEq((user) => user.name, "Ada")), unlessStep(false, take(10)));
@@ -303,17 +287,6 @@ type _FullJoinTotal = Expect<Equal<ExprType<typeof fullJoined.columns.total>, Sq
 type _LeftViaJoinTotal = Expect<Equal<ExprType<typeof leftViaJoin.columns.total>, SqlFloat | null>>;
 type _ProjectedUsersId = Expect<Equal<ExprType<typeof projectedUsers.columns.id>, SqlInt>>;
 type _ProjectedUsersName = Expect<Equal<ExprType<typeof projectedUsers.columns.name>, string>>;
-type _SelectedUsersKeys = Expect<Equal<keyof typeof selectedUsers.columns, "id" | "name">>;
-type _SelectedUsersId = Expect<Equal<ExprType<typeof selectedUsers.columns.id>, SqlInt>>;
-type _SelectedUsersName = Expect<Equal<ExprType<typeof selectedUsers.columns.name>, string>>;
-type _AliasedSelectedUsersKeys = Expect<Equal<keyof typeof aliasedSelectedUsers.columns, "old_id" | "name_upper">>;
-type _AliasedSelectedUsersOldId = Expect<Equal<ExprType<typeof aliasedSelectedUsers.columns.old_id>, SqlInt>>;
-type _AliasedSelectedUsersNameUpper = Expect<Equal<ExprType<typeof aliasedSelectedUsers.columns.name_upper>, string>>;
-type _GeneratedSelectedUsersKeys = Expect<Equal<keyof typeof generatedSelectedUsers.columns, "id" | "col_1" | "name" | "col_2">>;
-type _GeneratedSelectedUsersCol1 = Expect<Equal<ExprType<typeof generatedSelectedUsers.columns.col_1>, SqlInt>>;
-type _GeneratedSelectedUsersCol2 = Expect<Equal<ExprType<typeof generatedSelectedUsers.columns.col_2>, SqlInt>>;
-type _GeneratedExpressionSelectedUsersKeys = Expect<Equal<keyof typeof generatedExpressionSelectedUsers.columns, "id" | "col_1">>;
-type _GeneratedExpressionSelectedUsersCol1 = Expect<Equal<ExprType<typeof generatedExpressionSelectedUsers.columns.col_1>, SqlInt>>;
 type _MappedSelectedUsersKeys = Expect<Equal<keyof typeof mappedSelectedUsers.columns, "id" | "name">>;
 type _MappedSelectedUsersId = Expect<Equal<ExprType<typeof mappedSelectedUsers.columns.id>, SqlInt>>;
 type _MappedSelectedUsersName = Expect<Equal<ExprType<typeof mappedSelectedUsers.columns.name>, string>>;
@@ -334,7 +307,6 @@ type _FilterNeUsersName = Expect<Equal<ExprType<typeof filterNeUsers.columns.nam
 type _FilterGtUsersId = Expect<Equal<ExprType<typeof filterGtUsers.columns.id>, SqlInt>>;
 type _FilterLtUsersId = Expect<Equal<ExprType<typeof filterLtUsers.columns.id>, SqlInt>>;
 type _FilterLteUsersId = Expect<Equal<ExprType<typeof filterLteUsers.columns.id>, SqlInt>>;
-type _LiteralStringFilterName = Expect<Equal<ExprType<typeof literalStringFilter.columns.name>, string>>;
 type _CallbackSortedUsersName = Expect<Equal<ExprType<typeof callbackSortedUsers.columns.name>, string>>;
 type _CallbackAggregatedOrdersTotalSpend = Expect<Equal<ExprType<typeof callbackAggregatedOrders.columns.total_spend>, SqlFloat>>;
 type _CallbackExplodedSessionsTag = Expect<Equal<ExprType<typeof callbackExplodedSessions.columns.tag>, string>>;
@@ -441,10 +413,6 @@ void droppedOverlapRight;
 void usingJoin;
 void mappedJoin;
 void callbackMergedJoin;
-void selectedUsers;
-void aliasedSelectedUsers;
-void generatedSelectedUsers;
-void generatedExpressionSelectedUsers;
 void extendedUsers;
 void replacedExtendedUsers;
 void callbackFilteredUsers;
@@ -456,7 +424,6 @@ void filterNeUsers;
 void filterGtUsers;
 void filterLtUsers;
 void filterLteUsers;
-void literalStringFilter;
 void variadicAndFilteredUsers;
 void variadicOrFilteredUsers;
 void conditionalStepUsers;
@@ -528,7 +495,9 @@ pipe(users, filter(
 pipe(users, filterEq((user) => user.missing, 1));
 // @ts-expect-error filterEq rejects mismatched callback operand types
 pipe(users, filterEq((user) => user.name, 1));
-// @ts-expect-error filterEq rejects mismatched literal operand types
+// @ts-expect-error filterEq requires at least one callback operand
+pipe(users, filterEq("name", "Ada"));
+// @ts-expect-error filterEq requires at least one callback operand
 pipe(users, filterEq("name", 1));
 // @ts-expect-error filterGt rejects non-comparable string callback operands
 pipe(users, filterGt((user) => user.name, "Ada"));
@@ -544,20 +513,6 @@ pipe(users, map((user) => ({
 })));
 // @ts-expect-error extend rejects unknown callback columns when applied to a typed query
 pipe(users, extend((user) => ({ broken: user.missing })));
-// @ts-expect-error select rejects unknown callback current columns
-pipe(users, select((user) => [user.missing]));
-// @ts-expect-error select rejects mixed valid and unknown callback current columns
-pipe(users, select((user) => [user.id, user.missing]));
-// @ts-expect-error select rejects duplicate output names from repeated columns
-pipe(users, select((user) => [user.id, user.id]));
-// @ts-expect-error select rejects duplicate output names from alias collisions
-pipe(users, select((user) => [user.id, pipe(user.name, alias("id"))]));
-// @ts-expect-error select rejects unknown callback current columns after map
-pipe(users, map((user) => ({ id: user.id, name: user.name })), select((user) => [user.id, user.missing]));
-// @ts-expect-error select rejects unknown callback current columns after map, sort, and take
-pipe(users, map((user) => ({ id: user.id, name: user.name })), sort((user) => [desc(user.id)]), take(5), select((user) => [user.id, user.missing]));
-// @ts-expect-error alias must wrap a select expression item through pipe
-pipe(users, select((user) => [alias("bad")]));
 pipe(orders, fold((order) => ({
     // @ts-expect-error callbacks reject unknown current-row columns in fold context
     total: sum(order.missing),

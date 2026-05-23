@@ -62,20 +62,20 @@ const activePublicUsers = flow(
 );
 ```
 
-Bare strings in comparison filter helpers are literals; use row callbacks for columns.
+Comparison filter helpers require at least one row callback; direct values are allowed only as the other operand.
 `whenStep(...)` and `unlessStep(...)` use host-language booleans to include or skip schema-preserving steps while building a query; use `filter(...)` and predicate expressions for conditions evaluated by SQL.
 
-Use `select(...)` for list-style projections. Plain column refs keep their names, and `alias(...)` names computed outputs:
+Use `map(...)` for explicit object-shaped projections:
 
 ```ts
-import { alias, select, upper } from "@teta/teta";
+import { map, upper } from "@teta/teta";
 
 const publicUsers = pipe(
   users,
-  select((user) => [
-    user.id,
-    pipe(upper(user.email), alias("email_upper")),
-  ])
+  map((user) => ({
+    id: user.id,
+    email_upper: upper(user.email),
+  }))
 );
 ```
 

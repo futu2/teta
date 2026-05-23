@@ -21,15 +21,6 @@ export const VALUES_EMPTY_ERROR =
 export const VALUES_COLUMN_MISMATCH_ERROR =
   "values() row 2 must have exactly the same columns as row 1";
 
-export const SELECT_DUPLICATE_COLUMN_ERROR =
-  "Duplicate selected column name: id";
-
-export const SELECT_ALIAS_EMPTY_ERROR =
-  "alias name cannot be empty";
-
-export const SELECT_INVALID_SELECTION_ERROR =
-  "select() items must be expressions";
-
 export const JOIN_OVERLAPPING_COLUMNS_ERROR =
   "Join helpers require an explicit merge strategy for overlapping columns: id";
 

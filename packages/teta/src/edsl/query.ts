@@ -37,7 +37,6 @@ export {
   filterLte,
 } from "./helpers/filter_comparison.ts";
 export { drop, pick, rename } from "./helpers/projection.ts";
-export { alias, select } from "./query/select.ts";
 export { identityStep, unlessStep, whenStep } from "./query/steps.ts";
 export {
   dropOverlapLeft,

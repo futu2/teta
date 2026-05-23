@@ -78,17 +78,11 @@ export function filterEq<TColumns extends QueryColumns, T, TLeft extends ExprInp
   right: CallableOperand<TColumns, NoInfer<T>>
 ): QueryStep<TColumns, TColumns>;
 
-export function filterEq<TLeft extends DirectOperand<unknown>, TRight extends DirectOperand<unknown>>(
-  left: TLeft & NotFunction<TLeft>,
-  right: TRight & NotFunction<TRight>,
-  ...guard: SameExprInputValueRest<TLeft, TRight>
-): <TColumns extends QueryColumns>(query: Query<TColumns>) => Query<TColumns>;
-
 export function filterEq<TColumns extends QueryColumns, T>(
   left: Operand<TColumns, T>,
   right: Operand<TColumns, T>
 ): QueryStep<TColumns, TColumns> {
-  return comparisonFilter(left, right, eq);
+  return comparisonFilter("filterEq", left, right, eq);
 }
 
 export function filterNe<
@@ -111,17 +105,11 @@ export function filterNe<TColumns extends QueryColumns, T, TLeft extends ExprInp
   right: CallableOperand<TColumns, NoInfer<T>>
 ): QueryStep<TColumns, TColumns>;
 
-export function filterNe<TLeft extends DirectOperand<unknown>, TRight extends DirectOperand<unknown>>(
-  left: TLeft & NotFunction<TLeft>,
-  right: TRight & NotFunction<TRight>,
-  ...guard: SameExprInputValueRest<TLeft, TRight>
-): <TColumns extends QueryColumns>(query: Query<TColumns>) => Query<TColumns>;
-
 export function filterNe<TColumns extends QueryColumns, T>(
   left: Operand<TColumns, T>,
   right: Operand<TColumns, T>
 ): QueryStep<TColumns, TColumns> {
-  return comparisonFilter(left, right, ne);
+  return comparisonFilter("filterNe", left, right, ne);
 }
 
 export function filterGt<
@@ -153,22 +141,12 @@ export function filterGt<
   left: TLeft & NotFunction<TLeft>,
   right: (cols: ColumnRefs<TColumns>) => TRight
 ): QueryStep<TColumns, TColumns>;
-
-export function filterGt<TLeft extends DirectOperand<unknown>, TRight extends DirectOperand<unknown>>(
-  left: TLeft & NotFunction<TLeft>,
-  right: TRight & NotFunction<TRight>,
-  ...guard: [
-    ...SameExprInputValueRest<TLeft, TRight>,
-    ...ComparableExprInputRest<TLeft>,
-    ...ComparableExprInputRest<TRight>,
-  ]
-): <TColumns extends QueryColumns>(query: Query<TColumns>) => Query<TColumns>;
 
 export function filterGt<TColumns extends QueryColumns, T extends ComparableInput>(
   left: Operand<TColumns, T>,
   right: Operand<TColumns, T>
 ): QueryStep<TColumns, TColumns> {
-  return comparisonFilter(left, right, gt);
+  return comparisonFilter("filterGt", left, right, gt);
 }
 
 export function filterGte<
@@ -200,22 +178,12 @@ export function filterGte<
   left: TLeft & NotFunction<TLeft>,
   right: (cols: ColumnRefs<TColumns>) => TRight
 ): QueryStep<TColumns, TColumns>;
-
-export function filterGte<TLeft extends DirectOperand<unknown>, TRight extends DirectOperand<unknown>>(
-  left: TLeft & NotFunction<TLeft>,
-  right: TRight & NotFunction<TRight>,
-  ...guard: [
-    ...SameExprInputValueRest<TLeft, TRight>,
-    ...ComparableExprInputRest<TLeft>,
-    ...ComparableExprInputRest<TRight>,
-  ]
-): <TColumns extends QueryColumns>(query: Query<TColumns>) => Query<TColumns>;
 
 export function filterGte<TColumns extends QueryColumns, T extends ComparableInput>(
   left: Operand<TColumns, T>,
   right: Operand<TColumns, T>
 ): QueryStep<TColumns, TColumns> {
-  return comparisonFilter(left, right, gte);
+  return comparisonFilter("filterGte", left, right, gte);
 }
 
 export function filterLt<
@@ -247,22 +215,12 @@ export function filterLt<
   left: TLeft & NotFunction<TLeft>,
   right: (cols: ColumnRefs<TColumns>) => TRight
 ): QueryStep<TColumns, TColumns>;
-
-export function filterLt<TLeft extends DirectOperand<unknown>, TRight extends DirectOperand<unknown>>(
-  left: TLeft & NotFunction<TLeft>,
-  right: TRight & NotFunction<TRight>,
-  ...guard: [
-    ...SameExprInputValueRest<TLeft, TRight>,
-    ...ComparableExprInputRest<TLeft>,
-    ...ComparableExprInputRest<TRight>,
-  ]
-): <TColumns extends QueryColumns>(query: Query<TColumns>) => Query<TColumns>;
 
 export function filterLt<TColumns extends QueryColumns, T extends ComparableInput>(
   left: Operand<TColumns, T>,
   right: Operand<TColumns, T>
 ): QueryStep<TColumns, TColumns> {
-  return comparisonFilter(left, right, lt);
+  return comparisonFilter("filterLt", left, right, lt);
 }
 
 export function filterLte<
@@ -295,28 +253,25 @@ export function filterLte<
   right: (cols: ColumnRefs<TColumns>) => TRight
 ): QueryStep<TColumns, TColumns>;
 
-export function filterLte<TLeft extends DirectOperand<unknown>, TRight extends DirectOperand<unknown>>(
-  left: TLeft & NotFunction<TLeft>,
-  right: TRight & NotFunction<TRight>,
-  ...guard: [
-    ...SameExprInputValueRest<TLeft, TRight>,
-    ...ComparableExprInputRest<TLeft>,
-    ...ComparableExprInputRest<TRight>,
-  ]
-): <TColumns extends QueryColumns>(query: Query<TColumns>) => Query<TColumns>;
-
 export function filterLte<TColumns extends QueryColumns, T extends ComparableInput>(
   left: Operand<TColumns, T>,
   right: Operand<TColumns, T>
 ): QueryStep<TColumns, TColumns> {
-  return comparisonFilter(left, right, lte);
+  return comparisonFilter("filterLte", left, right, lte);
 }
 
 function comparisonFilter<TColumns extends QueryColumns, T>(
+  helper: string,
   left: Operand<TColumns, T>,
   right: Operand<TColumns, T>,
   op: (left: ExprInput<T>, right: ExprInput<T>) => ExprRef<boolean>
 ): QueryStep<TColumns, TColumns> {
+  if (!isCallableOperand(left) && !isCallableOperand(right)) {
+    userError(
+      "QUERY_HELPER_INVALID_ARGUMENTS",
+      `${helper}() expects at least one row callback operand`
+    );
+  }
   return (query: Query<TColumns>) => {
     const resolvedLeft = resolveOperand(query, left);
     const resolvedRight = resolveOperand(query, right);
