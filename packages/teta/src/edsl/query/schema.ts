@@ -1,5 +1,6 @@
 import type {
   ColumnType,
+  ColumnTypeName,
   InferSchema,
   TableSourceInput,
   Value,
@@ -45,26 +46,39 @@ type TableColumnHelpers = {
 };
 
 export const t: TableColumnHelpers = {
-  string: () => ({ kind: "column_type" } as ColumnType<string>),
-  int: () => ({ kind: "column_type" } as ColumnType<SqlInt>),
-  float: () => ({ kind: "column_type" } as ColumnType<SqlFloat>),
-  bigint: () => ({ kind: "column_type" } as ColumnType<SqlBigInt>),
-  decimal: () => ({ kind: "column_type" } as ColumnType<SqlDecimal>),
-  boolean: () => ({ kind: "column_type" } as ColumnType<boolean>),
-  date: () => ({ kind: "column_type" } as ColumnType<SqlDate>),
-  timestamp: () => ({ kind: "column_type" } as ColumnType<SqlTimestamp>),
-  uuid: () => ({ kind: "column_type" } as ColumnType<SqlUuid>),
-  json: <T = unknown>() => ({ kind: "column_type" } as ColumnType<SqlJson<T>>),
-  bytes: () => ({ kind: "column_type" } as ColumnType<SqlBytes>),
+  string: () => columnType<string>("string"),
+  int: () => columnType<SqlInt>("int"),
+  float: () => columnType<SqlFloat>("float"),
+  bigint: () => columnType<SqlBigInt>("bigint"),
+  decimal: () => columnType<SqlDecimal>("decimal"),
+  boolean: () => columnType<boolean>("boolean"),
+  date: () => columnType<SqlDate>("date"),
+  timestamp: () => columnType<SqlTimestamp>("timestamp"),
+  uuid: () => columnType<SqlUuid>("uuid"),
+  json: <T = unknown>() => columnType<SqlJson<T>>("json"),
+  bytes: () => columnType<SqlBytes>("bytes"),
   array: <T>(column: ColumnType<T>): ColumnType<T[]> => {
-    void column;
-    return { kind: "column_type" } as ColumnType<T[]>;
+    return columnType<T[]>("array", { arrayOf: column as ColumnType<unknown> });
   },
   nullable: <T>(column: ColumnType<T>): ColumnType<T | null> => {
-    void column;
-    return { kind: "column_type" } as ColumnType<T | null>;
+    return {
+      ...column,
+      nullable: true,
+    } as ColumnType<T | null>;
   },
 };
+
+function columnType<T>(
+  type: ColumnTypeName,
+  options: { arrayOf?: ColumnType<unknown> } = {}
+): ColumnType<T> {
+  return Object.freeze({
+    kind: "column_type" as const,
+    type,
+    nullable: false,
+    ...options,
+  }) as ColumnType<T>;
+}
 
 /** Define a table with a schema and return a typed query builder. */
 export function table<S extends Record<string, ColumnType<any>>>(

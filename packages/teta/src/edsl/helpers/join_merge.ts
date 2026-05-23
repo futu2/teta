@@ -92,7 +92,7 @@ export function usingCols<const TName extends string>(
 >(
   left: ColumnRefs<TLeft>,
   right: ColumnRefs<TRight>
-) => ExprRef<boolean>;
+) => ExprRef<boolean | null>;
 export function usingCols<const TNames extends readonly string[]>(
   names: TNames
 ): <
@@ -101,7 +101,7 @@ export function usingCols<const TNames extends readonly string[]>(
 >(
   left: ColumnRefs<TLeft>,
   right: ColumnRefs<TRight>
-) => ExprRef<boolean>;
+) => ExprRef<boolean | null>;
 export function usingCols(nameOrNames: string | readonly string[]) {
   const names = Array.isArray(nameOrNames) ? nameOrNames : [nameOrNames];
 
@@ -111,8 +111,8 @@ export function usingCols(nameOrNames: string | readonly string[]) {
   >(
     left: ColumnRefs<TLeft>,
     right: ColumnRefs<TRight>
-  ): ExprRef<boolean> {
-    let predicate: ExprRef<boolean> | undefined;
+  ): ExprRef<boolean | null> {
+    let predicate: ExprRef<boolean | null> | undefined;
 
     for (const name of names) {
       const next = eq(
@@ -137,7 +137,7 @@ export function onEq<const TMapping extends Record<string, string>>(
 >(
   left: ColumnRefs<TLeft>,
   right: ColumnRefs<TRight>
-) => ExprRef<boolean>;
+) => ExprRef<boolean | null>;
 export function onEq<const TMapping extends Record<string, string>>(
   mapping: TMapping
 ) {
@@ -150,8 +150,8 @@ export function onEq<const TMapping extends Record<string, string>>(
   >(
     left: ColumnRefs<TLeft>,
     right: ColumnRefs<TRight>
-  ): ExprRef<boolean> {
-    let predicate: ExprRef<boolean> | undefined;
+  ): ExprRef<boolean | null> {
+    let predicate: ExprRef<boolean | null> | undefined;
 
     for (const [leftName, rightName] of Object.entries(mapping) as Array<[LeftKey, RightKey]>) {
       const next = eq(

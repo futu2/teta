@@ -122,7 +122,7 @@ const userCounts = pipe(
 
 ### Shape-merging helpers
 
-Fixed join helpers combine the left and right query shapes.
+`join(...)` combines the left and right query shapes.
 
 - `inner` join keeps both sides as-is
 - `left` join makes right-side columns nullable
@@ -132,7 +132,7 @@ Fixed join helpers combine the left and right query shapes.
 ```ts
 import {
   dropOverlapLeft,
-  leftJoinMerge,
+  join,
   onEq,
   prefixOverlapLeft,
   table,
@@ -148,12 +148,16 @@ const orders = table("orders", {
 
 const usersWithOrders = pipe(
   users,
-  leftJoinMerge(orders, onEq({ id: "user_id" }), dropOverlapLeft())
+  join(orders, {
+    type: "left",
+    on: onEq({ id: "user_id" }),
+    select: dropOverlapLeft(),
+  })
 );
 // order columns are inferred as nullable because this is a left join
 ```
 
-Default joins only infer a merged shape when the left and right output names do not overlap. If names overlap, use an explicit merge helper such as `leftJoinMerge(right, on, dropOverlapLeft())` or `innerJoinMerge(right, on, prefixOverlapLeft("left_"))`.
+`join(...)` is the primitive join step. Default joins only infer a merged shape when the left and right output names do not overlap. If names overlap, use `select` with an explicit merge helper such as `dropOverlapLeft()` or `prefixOverlapLeft("left_")`. Fixed helpers such as `leftJoinMerge(right, on, dropOverlapLeft())` remain available as wrappers around `join(...)`.
 
 ```ts
 const profiles = table("profiles", {
@@ -164,7 +168,11 @@ const profiles = table("profiles", {
 
 const renamed = pipe(
   users,
-  leftJoinMerge(profiles, onEq({ id: "user_id" }), prefixOverlapLeft("left_"))
+  join(profiles, {
+    type: "left",
+    on: onEq({ id: "user_id" }),
+    select: prefixOverlapLeft("left_"),
+  })
 );
 ```
 

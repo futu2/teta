@@ -150,7 +150,7 @@ Convenience date-part helpers over `extract(...)`:
 
 | Spec item | Preferred functional entry | PostgreSQL | MySQL | SQLite | HetuEngine DQL | Other built-ins |
 |---|---|---|---|---|---|---|
-| `LATERAL_JOIN` | `pipe(left, innerJoin(right, on, { lateral: true }))` | Direct (`LATERAL` kept) | Direct (MySQL 8+, engine-dependent) | Keyword removed when unsupported | Direct | Direct |
+| `LATERAL_JOIN` | `pipe(left, join(right, { on, lateral: true }))` | Direct (`LATERAL` kept) | Direct (MySQL 8+, engine-dependent) | Keyword removed when unsupported | Direct | Direct |
 | `RECURSIVE_CTE` | `pipe(base, loop(step))` | Direct | Direct (MySQL 8+) | Direct | Direct | Direct |
 
 If `dialect.features.recursiveCte = false`, SQL rendering throws an explicit error.

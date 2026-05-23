@@ -6,113 +6,118 @@ import {
   toExprNode,
   wrapExpr,
   type ExprInput,
+  type ExprInputValue,
   type ExprRef,
 } from "../core.ts";
 import { userError } from "../../../errors.ts";
 
 type ComparableInput = SqlNumber | number | bigint | SqlDate | SqlTimestamp | null;
+type PredicateResult<TValue> = null extends TValue ? boolean | null : boolean;
+type BinaryPredicateResult<TLeft, TRight> = PredicateResult<
+  ExprInputValue<TLeft> | ExprInputValue<TRight>
+>;
 
 export function eq<T, TLeft extends ExprInput<T>, TRight extends ExprInput<T>>(
   left: TLeft,
   right: TRight
-): ExprRef<boolean> {
+): ExprRef<BinaryPredicateResult<TLeft, TRight>> {
   return binaryExpr(
     "=",
     toExprNode(left as ExprInput<T>),
     toExprNode(right as ExprInput<T>)
-  ) as ExprRef<boolean>;
+  ) as ExprRef<BinaryPredicateResult<TLeft, TRight>>;
 }
 
 export function ne<T, TLeft extends ExprInput<T>, TRight extends ExprInput<T>>(
   left: TLeft,
   right: TRight
-): ExprRef<boolean> {
+): ExprRef<BinaryPredicateResult<TLeft, TRight>> {
   return binaryExpr(
     "!=",
     toExprNode(left as ExprInput<T>),
     toExprNode(right as ExprInput<T>)
-  ) as ExprRef<boolean>;
+  ) as ExprRef<BinaryPredicateResult<TLeft, TRight>>;
 }
 
 export function gt<T extends ComparableInput, TLeft extends ExprInput<T>, TRight extends ExprInput<T>>(
   left: TLeft,
   right: TRight
-): ExprRef<boolean> {
+): ExprRef<BinaryPredicateResult<TLeft, TRight>> {
   return binaryExpr(
     ">",
     toExprNode(left as ExprInput<T>),
     toExprNode(right as ExprInput<T>)
-  ) as ExprRef<boolean>;
+  ) as ExprRef<BinaryPredicateResult<TLeft, TRight>>;
 }
 
 export function gte<T extends ComparableInput, TLeft extends ExprInput<T>, TRight extends ExprInput<T>>(
   left: TLeft,
   right: TRight
-): ExprRef<boolean> {
+): ExprRef<BinaryPredicateResult<TLeft, TRight>> {
   return binaryExpr(
     ">=",
     toExprNode(left as ExprInput<T>),
     toExprNode(right as ExprInput<T>)
-  ) as ExprRef<boolean>;
+  ) as ExprRef<BinaryPredicateResult<TLeft, TRight>>;
 }
 
 export function lt<T extends ComparableInput, TLeft extends ExprInput<T>, TRight extends ExprInput<T>>(
   left: TLeft,
   right: TRight
-): ExprRef<boolean> {
+): ExprRef<BinaryPredicateResult<TLeft, TRight>> {
   return binaryExpr(
     "<",
     toExprNode(left as ExprInput<T>),
     toExprNode(right as ExprInput<T>)
-  ) as ExprRef<boolean>;
+  ) as ExprRef<BinaryPredicateResult<TLeft, TRight>>;
 }
 
 export function lte<T extends ComparableInput, TLeft extends ExprInput<T>, TRight extends ExprInput<T>>(
   left: TLeft,
   right: TRight
-): ExprRef<boolean> {
+): ExprRef<BinaryPredicateResult<TLeft, TRight>> {
   return binaryExpr(
     "<=",
     toExprNode(left as ExprInput<T>),
     toExprNode(right as ExprInput<T>)
-  ) as ExprRef<boolean>;
+  ) as ExprRef<BinaryPredicateResult<TLeft, TRight>>;
 }
 
 export function like<TLeft extends ExprInput<string | null>, TRight extends ExprInput<string>>(
   left: TLeft,
   right: TRight
-): ExprRef<boolean> {
+): ExprRef<BinaryPredicateResult<TLeft, TRight>> {
   return binaryExpr(
     "LIKE",
     toExprNode(left as ExprInput<string | null>),
     toExprNode(right as ExprInput<string>)
-  ) as ExprRef<boolean>;
+  ) as ExprRef<BinaryPredicateResult<TLeft, TRight>>;
 }
 
 export function isIn<T, TValue extends ExprInput<T>, const TValues extends readonly ExprInput<T>[]>(
   value: TValue,
   values: TValues
-): ExprRef<boolean> {
+): ExprRef<PredicateResult<ExprInputValue<TValue> | ExprInputValue<TValues[number]>>> {
   if (values.length === 0) {
     userError("INVALID_FUNCTION_NAME", "in requires at least one value");
   }
   return binaryExpr("IN", toExprNode(value as ExprInput<T>), {
     kind: "list",
     items: values.map((item) => toExprNode(item as ExprInput<T>)),
-  }) as ExprRef<boolean>;
+  }) as ExprRef<PredicateResult<ExprInputValue<TValue> | ExprInputValue<TValues[number]>>>;
 }
 
 export function isNotIn<T, TValue extends ExprInput<T>, const TValues extends readonly ExprInput<T>[]>(
   value: TValue,
   values: TValues
-): ExprRef<boolean> {
+): ExprRef<PredicateResult<ExprInputValue<TValue> | ExprInputValue<TValues[number]>>> {
   if (values.length === 0) {
     userError("INVALID_FUNCTION_NAME", "notIn requires at least one value");
   }
   return binaryExpr("NOT IN", toExprNode(value as ExprInput<T>), {
     kind: "list",
     items: values.map((item) => toExprNode(item as ExprInput<T>)),
-  }) as ExprRef<boolean>;
+  }) as ExprRef<PredicateResult<ExprInputValue<TValue> | ExprInputValue<TValues[number]>>>;
 }
 
 export const notIn = isNotIn;
@@ -126,7 +131,9 @@ export function between<
   value: TValue,
   lower: TLower,
   upper: TUpper
-): ExprRef<boolean> {
+): ExprRef<PredicateResult<
+  ExprInputValue<TValue> | ExprInputValue<TLower> | ExprInputValue<TUpper>
+>> {
   return binaryExpr(
     "BETWEEN",
     toExprNode(value as ExprInput<T>),
@@ -136,7 +143,9 @@ export function between<
       left: toExprNode(lower as ExprInput<T>),
       right: toExprNode(upper as ExprInput<T>),
     }
-  ) as ExprRef<boolean>;
+  ) as ExprRef<PredicateResult<
+    ExprInputValue<TValue> | ExprInputValue<TLower> | ExprInputValue<TUpper>
+  >>;
 }
 
 export function isDistinctFrom<T, TLeft extends ExprInput<T>, TRight extends ExprInput<T>>(
@@ -152,32 +161,34 @@ export function isDistinctFrom<T, TLeft extends ExprInput<T>, TRight extends Exp
 
 type BooleanInput = ExprInput<boolean | null>;
 type NonEmptyBooleanInputs = readonly [BooleanInput, ...BooleanInput[]];
+type BooleanChainResult<TValues extends readonly BooleanInput[]> =
+  null extends ExprInputValue<TValues[number]> ? boolean | null : boolean;
 
 export function and<const TValues extends NonEmptyBooleanInputs>(
   ...values: TValues
-): ExprRef<boolean> {
-  return booleanChain("AND", "and", values) as ExprRef<boolean>;
+): ExprRef<BooleanChainResult<TValues>> {
+  return booleanChain("AND", "and", values) as ExprRef<BooleanChainResult<TValues>>;
 }
 
 export function or<const TValues extends NonEmptyBooleanInputs>(
   ...values: TValues
-): ExprRef<boolean> {
-  return booleanChain("OR", "or", values) as ExprRef<boolean>;
+): ExprRef<BooleanChainResult<TValues>> {
+  return booleanChain("OR", "or", values) as ExprRef<BooleanChainResult<TValues>>;
 }
 
 function booleanChain(
   op: "AND" | "OR",
   name: "and" | "or",
   values: readonly BooleanInput[]
-): ExprRef<boolean> {
+): ExprRef<boolean | null> {
   if (values.length === 0) {
     userError("INVALID_FUNCTION_NAME", `${name} requires at least one expression`);
   }
   if (values.length === 1) {
-    return wrapExpr(values[0] as BooleanInput) as ExprRef<boolean>;
+    return wrapExpr(values[0] as BooleanInput) as ExprRef<boolean | null>;
   }
 
-  let current = toExprNode(values[0] as BooleanInput) as ReturnType<typeof toExprNode<boolean>>;
+  let current = toExprNode(values[0] as BooleanInput);
   for (const value of values.slice(1)) {
     current = {
       kind: "binary",
@@ -186,13 +197,13 @@ function booleanChain(
       right: toExprNode(value as BooleanInput),
     };
   }
-  return exprOf<boolean>(current);
+  return exprOf<boolean | null>(current);
 }
 
 export function not<TValue extends ExprInput<boolean | null>>(
   value: TValue
-): ExprRef<boolean> {
-  return exprOf<boolean>({
+): ExprRef<PredicateResult<ExprInputValue<TValue>>> {
+  return exprOf<PredicateResult<ExprInputValue<TValue>>>({
     kind: "unary",
     op: "NOT",
     expr: toExprNode(value as ExprInput<boolean | null>),

@@ -264,7 +264,7 @@ function comparisonFilter<TColumns extends QueryColumns, T>(
   helper: string,
   left: Operand<TColumns, T>,
   right: Operand<TColumns, T>,
-  op: (left: ExprInput<T>, right: ExprInput<T>) => ExprRef<boolean>
+  op: (left: ExprInput<T>, right: ExprInput<T>) => ExprRef<boolean | null>
 ): QueryStep<TColumns, TColumns> {
   if (!isCallableOperand(left) && !isCallableOperand(right)) {
     userError(

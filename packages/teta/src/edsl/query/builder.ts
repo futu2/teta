@@ -96,7 +96,7 @@ export type QueryExplainCte = {
 export type QueryStageKind = "map" | "fold" | "filter" | "sort" | "take" | "join" | "unnest" | "union";
 
 type PredicateInput<TColumns extends QueryColumns> =
-  (cols: ColumnRefs<TColumns>) => ExprRef<boolean>;
+  (cols: ColumnRefs<TColumns>) => ExprRef<boolean | null>;
 
 type SortInput<TColumns extends QueryColumns> =
   (cols: ColumnRefs<TColumns>) => OrderItem | OrderItem[];
@@ -148,6 +148,30 @@ type UnnestOptions<TOuter extends boolean | undefined = undefined> = {
 
 type FixedJoinOptions = {
   lateral?: boolean;
+};
+
+type JoinConfigWithoutSelect<
+  TLeft extends QueryColumns,
+  TRight extends QueryColumns,
+  TType extends JoinTypeInput | undefined,
+> = JoinOptions<TType> & {
+  on: JoinOnNoMerge<TLeft, TRight>;
+  select?: undefined;
+};
+
+type JoinConfigWithSelect<
+  TLeft extends QueryColumns,
+  TRight extends QueryColumns,
+  TType extends JoinTypeInput | undefined,
+  TSelection extends JoinSelection,
+> = JoinOptions<TType> & {
+  on: JoinOnInput<TLeft, TRight>;
+  select: JoinColumnMergerForType<
+    TLeft,
+    TRight,
+    CanonicalJoinType<TType>,
+    TSelection
+  >;
 };
 
 type UnnestGeneratedColumns<
@@ -480,7 +504,7 @@ function _fold<TColumns extends QueryColumns, const Sel extends ProjectionShape>
 }
 
 export function filter<TColumns extends QueryColumns>(
-  predicate: (cols: ColumnRefs<TColumns>) => ExprRef<boolean>
+  predicate: (cols: ColumnRefs<TColumns>) => ExprRef<boolean | null>
 ): QueryStep<TColumns, TColumns>;
 
 export function filter(...args: unknown[]): unknown {
@@ -500,7 +524,7 @@ function _filter<TColumns extends QueryColumns>(
 }
 
 export function filterResolved<TColumns extends QueryColumns>(
-  predicate: ExprRef<boolean>
+  predicate: ExprRef<boolean | null>
 ): QueryStep<TColumns, TColumns> {
   return (query) => deriveQuery(query, resolveFilterQuery(query, predicate.node));
 }
@@ -595,6 +619,30 @@ function _loop<TColumns extends QueryColumns>(
   step: (self: Query<TColumns>) => Query<TColumns>
 ): Query<TColumns> {
   return buildLoop(base, step);
+}
+
+export function join<
+  TLeft extends QueryColumns,
+  TRight extends QueryColumns,
+  TType extends JoinTypeInput | undefined = undefined,
+>(
+  right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
+  config: JoinConfigWithoutSelect<TLeft, TRight, TType>
+): QueryStep<TLeft, JoinColumnsForType<TLeft, TRight, CanonicalJoinType<TType>>>;
+
+export function join<
+  TLeft extends QueryColumns,
+  TRight extends QueryColumns,
+  TType extends JoinTypeInput | undefined = undefined,
+  const TSelection extends JoinSelection = JoinSelection,
+>(
+  right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
+  config: JoinConfigWithSelect<TLeft, TRight, TType, TSelection>
+): QueryStep<TLeft, JoinSelectionResult<TSelection>>;
+
+export function join(...args: unknown[]): unknown {
+  const parsed = parseJoinInvocation(args);
+  return buildJoinStep(parsed);
 }
 
 export function innerJoin<
@@ -899,21 +947,89 @@ type ParsedCurriedJoinInvocation = {
   options: unknown;
 };
 
+type ParsedJoinInvocation = ParsedCurriedJoinInvocation;
+
+function buildJoinStep(parsed: ParsedJoinInvocation): QueryStep<QueryColumns, QueryColumns> {
+  return (left: Query<QueryColumns>) =>
+    _join(
+      left,
+      parsed.right as Query<QueryColumns> | ((outer: ColumnRefs<QueryColumns>) => Query<QueryColumns>),
+      parsed.on as JoinOnInput<QueryColumns, QueryColumns>,
+      parsed.merge as JoinMergeInput<QueryColumns, QueryColumns, "inner" | "left" | "right" | "full", JoinSelection> | undefined,
+      parsed.options as JoinOptions<JoinTypeInput | undefined> | undefined
+    );
+}
+
+function parseJoinInvocation(args: unknown[]): ParsedJoinInvocation {
+  const usage = "join(right, { type?, on, select?, lateral? })";
+  if (args.length !== 2) {
+    userError("QUERY_HELPER_INVALID_ARGUMENTS", `join() expects ${usage}`);
+  }
+
+  const [right, config] = args;
+  assertJoinRight("join", right, usage);
+  assertJoinConfig(config);
+
+  return {
+    right,
+    on: config.on,
+    merge: config.select,
+    options: {
+      type: config.type,
+      lateral: config.lateral,
+    },
+  };
+}
+
+function assertJoinConfig(value: unknown): asserts value is {
+  type?: JoinTypeInput;
+  on: (...args: any[]) => unknown;
+  select?: (...args: any[]) => unknown;
+  lateral?: boolean;
+} {
+  if (!isPlainObject(value) || isQuery(value)) {
+    userError(
+      "QUERY_HELPER_INVALID_ARGUMENTS",
+      "join() expects join(right, { type?, on, select?, lateral? })"
+    );
+  }
+
+  const keys = Object.keys(value);
+  if (keys.some((key) => key !== "type" && key !== "on" && key !== "select" && key !== "lateral")) {
+    userError(
+      "DEFERRED_INPUT_INVALID",
+      "join() options must be { type?, on, select?, lateral? }"
+    );
+  }
+
+  if (typeof value.on !== "function") {
+    userError("DEFERRED_INPUT_INVALID", "join() expects a row callback in options.on");
+  }
+  if (value.select !== undefined && typeof value.select !== "function") {
+    userError("DEFERRED_INPUT_INVALID", "join() options.select must be a row callback");
+  }
+  if (value.type !== undefined && !isJoinTypeInputValue(value.type)) {
+    userError("DEFERRED_INPUT_INVALID", "join() options.type must be inner, left, right, or full");
+  }
+  if (value.lateral !== undefined && typeof value.lateral !== "boolean") {
+    userError("DEFERRED_INPUT_INVALID", "join() options.lateral must be boolean");
+  }
+}
+
 function buildFixedJoinOverload(
   args: unknown[],
   type: "inner" | "left" | "right" | "full"
 ): unknown {
   const helper = fixedJoinHelperName(type);
   const parsed = parseFixedJoinInvocation(args, helper);
-
-  return (left: Query<QueryColumns>) =>
-    _join(
-      left,
-      parsed.right as Query<QueryColumns> | ((outer: ColumnRefs<QueryColumns>) => Query<QueryColumns>),
-      parsed.on as JoinOnInput<QueryColumns, QueryColumns>,
-      undefined,
-      { ...(parsed.options as FixedJoinOptions | undefined), type }
-    );
+  return join(
+    parsed.right as Query<QueryColumns> | ((outer: ColumnRefs<QueryColumns>) => Query<QueryColumns>),
+    {
+      ...(parsed.options as FixedJoinOptions | undefined),
+      type,
+      on: parsed.on as JoinOnNoMerge<QueryColumns, QueryColumns>,
+    }
+  );
 }
 
 function parseFixedJoinInvocation(
@@ -936,15 +1052,14 @@ function buildFixedJoinMapOverload(
   helper: string
 ): unknown {
   const parsed = parseFixedJoinMapInvocation(args, helper);
-
-  return (left: Query<QueryColumns>) =>
-    _join(
-      left,
-      parsed.right as Query<QueryColumns> | ((outer: ColumnRefs<QueryColumns>) => Query<QueryColumns>),
-      parsed.on as JoinOnInput<QueryColumns, QueryColumns>,
-      parsed.merge as JoinMergeInput<QueryColumns, QueryColumns, typeof type, JoinSelection>,
-      { type }
-    );
+  return join(
+    parsed.right as Query<QueryColumns> | ((outer: ColumnRefs<QueryColumns>) => Query<QueryColumns>),
+    {
+      type,
+      on: parsed.on as JoinOnInput<QueryColumns, QueryColumns>,
+      select: parsed.merge as JoinColumnMergerForType<QueryColumns, QueryColumns, typeof type, JoinSelection>,
+    }
+  );
 }
 
 function parseFixedJoinMapInvocation(
@@ -999,6 +1114,17 @@ function fixedJoinHelperName(type: "inner" | "left" | "right" | "full"): string 
     case "full":
       return "fullJoin";
   }
+}
+
+function isJoinTypeInputValue(value: unknown): value is JoinTypeInput {
+  return value === "inner"
+    || value === "left"
+    || value === "right"
+    || value === "full"
+    || value === "INNER"
+    || value === "LEFT"
+    || value === "RIGHT"
+    || value === "FULL";
 }
 
 export function toIR<TColumns extends QueryColumns>(query: Query<TColumns>): QueryIR<TColumns> {
@@ -1300,8 +1426,7 @@ function isStringArray(value: unknown): value is readonly string[] {
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return !!value
-    && typeof value === "object"
-    && !Array.isArray(value)
-    && Object.getPrototypeOf(value) === Object.prototype;
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
 }

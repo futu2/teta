@@ -35,7 +35,7 @@ export function handlePostProjectionFilterStage(
     qualifyExpr: ExprNode<unknown> | null
   ) => CompiledSegment,
   recurseWindow: (
-    outerWindow: ExprNode<boolean>,
+    outerWindow: ExprNode<boolean | null>,
     inner: CompiledSegment
   ) => CompiledSegment | null
 ): PostProjectionFilterOutcome {

@@ -48,7 +48,7 @@ import { toQuerySpec } from "./state.ts";
 type JoinOnInput<
   TLeft extends Record<string, any>,
   TRight extends Record<string, any>,
-> = (left: ColumnRefs<TLeft>, right: ColumnRefs<TRight>) => ExprRef<boolean>;
+> = (left: ColumnRefs<TLeft>, right: ColumnRefs<TRight>) => ExprRef<boolean | null>;
 
 type JoinMergeInput<
   TSelection extends JoinSelection,
@@ -93,7 +93,7 @@ export function resolveFoldQuery<
 
 export function resolveFilterQuery<TColumns extends Record<string, any>>(
   query: QueryState<TColumns>,
-  predicate: ExprNode<boolean>
+  predicate: ExprNode<boolean | null>
 ): QueryDeriveInit<TColumns> {
   const lastStage = query.stages[query.stages.length - 1];
   if (lastStage?.kind === "filter") {

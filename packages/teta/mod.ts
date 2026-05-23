@@ -54,6 +54,9 @@ export const whenStep: typeof import("./src/edsl/query.ts").whenStep = query.whe
 /** Applies a schema-preserving query step when a host-language condition is false. */
 export const unlessStep: typeof import("./src/edsl/query.ts").unlessStep = query.unlessStep;
 
+/** Joins two query inputs with configurable join type, predicate, projection, and lateral mode. */
+export const join: typeof import("./src/edsl/query.ts").join = query.join;
+
 /** Joins two query inputs as an inner join. */
 export const innerJoin: typeof import("./src/edsl/query.ts").innerJoin = query.innerJoin;
 

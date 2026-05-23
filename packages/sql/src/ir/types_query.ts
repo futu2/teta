@@ -142,7 +142,7 @@ export type TakeStage = {
 /** One lowered query pipeline operation. */
 export type Stage =
   | ProjectionStage
-  | { kind: "filter"; predicate: ExprNode<boolean>; projectAll: ProjectionItem[] }
+  | { kind: "filter"; predicate: ExprNode<boolean | null>; projectAll: ProjectionItem[] }
   | SortStage
   | TakeStage
   | UnnestStage
@@ -152,7 +152,7 @@ export type Stage =
       lateral?: boolean;
       source: JoinSource;
       as: string | null;
-      on: ExprNode<boolean>;
+      on: ExprNode<boolean | null>;
       projectAll: ProjectionItem[];
       rightScopeId: ScopeId;
       outputScopeId: ScopeId;
@@ -183,8 +183,29 @@ export type CteSpec =
       step: QuerySpec;
     };
 
+/** Runtime schema type names carried by frontend column type declarations. */
+export type ColumnTypeName =
+  | "array"
+  | "bigint"
+  | "boolean"
+  | "bytes"
+  | "date"
+  | "decimal"
+  | "float"
+  | "int"
+  | "json"
+  | "string"
+  | "timestamp"
+  | "uuid";
+
 /** Schema marker used by frontends to infer query column types. */
-export type ColumnType<T> = { kind: "column_type"; _type?: T };
+export type ColumnType<T> = Readonly<{
+  kind: "column_type";
+  type: ColumnTypeName;
+  nullable: boolean;
+  arrayOf?: ColumnType<unknown>;
+  _type?: T;
+}>;
 
 /** Infer a row shape from a schema object made of `ColumnType` values. */
 export type InferSchema<S extends Record<string, ColumnType<any>>> = {

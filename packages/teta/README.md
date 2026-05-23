@@ -79,6 +79,32 @@ const publicUsers = pipe(
 );
 ```
 
+Use `join(...)` for joins; the older join-kind helpers are convenience wrappers over the same primitive:
+
+```ts
+import { eq, join } from "@teta/teta";
+
+const orders = table("orders", {
+  order_id: t.int(),
+  user_id: t.int(),
+  total: t.float(),
+});
+
+const usersWithOrders = pipe(
+  users,
+  join(orders, {
+    type: "left",
+    on: (user, order) => eq(user.id, order.user_id),
+    select: (user, order) => ({
+      user_id: user.id,
+      order_total: order.total,
+    }),
+  })
+);
+```
+
+Predicates involving nullable expressions are typed as `Expr<boolean | null>` and are accepted by `filter(...)`, matching SQL's three-valued boolean behavior.
+
 For explicit frontend/backend use, lower the query to IR and render it through `@teta/sql`:
 
 ```ts

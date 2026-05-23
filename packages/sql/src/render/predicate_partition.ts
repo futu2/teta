@@ -44,24 +44,24 @@ export function partitionAggregatePredicate(
 }
 
 export function partitionWindowPredicate(
-  predicate: ExprNode<boolean>,
+  predicate: ExprNode<boolean | null>,
   bindPredicate: (expr: ExprNode<unknown>) => ExprNode<unknown>
 ): {
   window: ExprNode<unknown> | null;
   nonWindow: ExprNode<unknown> | null;
-  outerWindow: ExprNode<boolean> | null;
+  outerWindow: ExprNode<boolean | null> | null;
 } {
   const factorized = factorSharedPredicateConjuncts(predicate);
   const window: ExprNode<unknown>[] = [];
   const nonWindow: ExprNode<unknown>[] = [];
-  const outerWindow: ExprNode<boolean>[] = [];
+  const outerWindow: ExprNode<boolean | null>[] = [];
 
   if (factorized.shared) {
     for (const conjunct of splitPredicateConjuncts(factorized.shared)) {
       const bound = bindPredicate(conjunct);
       if (containsWindow(bound)) {
         window.push(bound);
-        outerWindow.push(conjunct as ExprNode<boolean>);
+        outerWindow.push(conjunct as ExprNode<boolean | null>);
       } else {
         nonWindow.push(bound);
       }
@@ -72,7 +72,7 @@ export function partitionWindowPredicate(
     const bound = bindPredicate(factorized.residual);
     if (containsWindow(bound)) {
       window.push(bound);
-      outerWindow.push(factorized.residual as ExprNode<boolean>);
+      outerWindow.push(factorized.residual as ExprNode<boolean | null>);
     } else {
       nonWindow.push(bound);
     }
@@ -81,7 +81,7 @@ export function partitionWindowPredicate(
   return {
     window: mergePredicateList(window),
     nonWindow: mergePredicateList(nonWindow),
-    outerWindow: mergePredicateList(outerWindow) as ExprNode<boolean> | null,
+    outerWindow: mergePredicateList(outerWindow) as ExprNode<boolean | null> | null,
   };
 }
 

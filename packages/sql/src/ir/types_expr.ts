@@ -153,7 +153,7 @@ export type WindowNode = {
 
 /** One branch of a SQL `CASE` expression. */
 export type CaseWhenNode = {
-  when: ExprNode<boolean>;
+  when: ExprNode<boolean | null>;
   then: ExprNode<any>;
 };
 

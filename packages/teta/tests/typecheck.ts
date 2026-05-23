@@ -111,7 +111,7 @@ const mappedProfileRows = table("profiles_mapped", {
     user_id: t.int(),
     bio: t.string(),
 });
-const mappedProfileOnEq: (user: typeof users.columns, profile: typeof mappedProfileRows.columns) => Expr<boolean> = onEq({ id: "user_id" });
+const mappedProfileOnEq: (user: typeof users.columns, profile: typeof mappedProfileRows.columns) => Expr<boolean | null> = onEq({ id: "user_id" });
 const mappedJoin = pipe(users, leftJoinMerge(
     mappedProfileRows,
     mappedProfileOnEq,
@@ -629,7 +629,6 @@ unionAll(users, users);
 loop(loopBase, (self) => pipe(self, filter((row) => gt(row.id, 0))));
 // @ts-expect-error unnest is curried-only
 unnest(sessions, (session: typeof sessions.columns) => session.tags, { value: "tag" });
-// @ts-expect-error removed from the public API
 publicApi.join;
 // @ts-expect-error innerJoin is curried-only
 innerJoin(users, orders, (user, order) => eq(user.id, order.user_id));

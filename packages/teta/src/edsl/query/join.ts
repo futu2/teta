@@ -23,7 +23,7 @@ export type JoinNoMergeGuard<
 export type JoinOn<
   TLeft extends Record<string, any>,
   TRight extends Record<string, any>,
-> = (left: ColumnRefs<TLeft>, right: ColumnRefs<TRight>) => ExprRef<boolean>;
+> = (left: ColumnRefs<TLeft>, right: ColumnRefs<TRight>) => ExprRef<boolean | null>;
 
 export type JoinOnNoMerge<
   TLeft extends Record<string, any>,

@@ -78,7 +78,7 @@ export function normalizePredicateExpr(
       return {
         ...predicate,
         whens: predicate.whens.map((item) => ({
-          when: normalizePredicateExpr(item.when) as ExprNode<boolean>,
+          when: normalizePredicateExpr(item.when) as ExprNode<boolean | null>,
           then: normalizePredicateExpr(item.then),
         })),
         elseExpr: predicate.elseExpr

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { between, filter, filterEq, identityStep, isDistinctFrom, isNotIn, take, sort, map, toSql, asc, desc, eq, gte, replace, and, coalesce, leftJoin, leftJoinMerge, onEq, prefixOverlapLeft, table, t, pipe, flow, unlessStep, unionAll, union, unnest, whenStep } from "../mod.ts";
+import { between, filter, filterEq, identityStep, isDistinctFrom, isNotIn, take, sort, map, toSql, asc, desc, eq, gte, replace, and, coalesce, join, leftJoin, leftJoinMerge, onEq, prefixOverlapLeft, table, t, pipe, flow, unlessStep, unionAll, union, unnest, whenStep } from "../mod.ts";
 import { USER_PIPELINE_POSTGRES_COMPACT, USERS_ORDERS_LEFT_JOIN_SELECT_POSTGRES_COMPACT } from "./helpers/expected-sql.ts";
 import { createOrdersTable, createUsersPipelineTable, createUsersTable } from "./helpers/fixtures.ts";
 describe("function-first query api", () => {
@@ -89,6 +89,23 @@ describe("function-first query api", () => {
             }))
         );
         expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe(USERS_ORDERS_LEFT_JOIN_SELECT_POSTGRES_COMPACT);
+    });
+    test("supports join primitive with explicit type and select", () => {
+        const users = createUsersTable();
+        const orders = createOrdersTable();
+        const query = pipe(
+            users,
+            join(orders, {
+                type: "left",
+                on: (user, order) => eq(user.id, order.user_id),
+                select: (user, order) => ({
+                    user_id: user.id,
+                    total: order.total,
+                }),
+            })
+        );
+
+        expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe("SELECT users_0.id AS user_id, orders_1.total AS total FROM users AS users_0 LEFT JOIN orders AS orders_1 ON users_0.id = orders_1.user_id");
     });
     test("supports leftJoin with onEq mapping in function-first pipeline", () => {
         const users = table("users", {

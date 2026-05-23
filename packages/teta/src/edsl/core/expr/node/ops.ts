@@ -116,7 +116,7 @@ export function unwrapGroupExpr(
       return {
         ...expr,
         whens: expr.whens.map((item) => ({
-          when: unwrapGroupExpr(item.when, groupBy, inAgg) as ExprNode<boolean>,
+          when: unwrapGroupExpr(item.when, groupBy, inAgg) as ExprNode<boolean | null>,
           then: unwrapGroupExpr(item.then, groupBy, inAgg),
         })),
         elseExpr: expr.elseExpr

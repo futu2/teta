@@ -5,6 +5,7 @@ export {
   fullJoin,
   fullJoinMap,
   fullJoinMerge,
+  join,
   innerJoin,
   innerJoinMap,
   innerJoinMerge,

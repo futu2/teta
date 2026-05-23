@@ -14,7 +14,7 @@ import { group } from "./ops/aggregate.ts";
 
 export type CaseBranch<
   T,
-  TCondition extends ExprInput<boolean> = ExprInput<boolean>,
+  TCondition extends ExprInput<boolean | null> = ExprInput<boolean | null>,
   TValue extends ExprInput<unknown> = ExprInput<T>,
 > = {
   when: TCondition;
@@ -34,7 +34,7 @@ type CaseElseValue<TElse> =
     ? NormalizeExpressionLiteral<ExprInputValue<TElse>>
     : never;
 
-export function when<TCondition extends ExprInput<boolean>, TValue extends ExprInput<unknown>>(
+export function when<TCondition extends ExprInput<boolean | null>, TValue extends ExprInput<unknown>>(
   condition: TCondition,
   value: TValue
 ): CaseBranch<NormalizeExpressionLiteral<ExprInputValue<TValue>>, TCondition, TValue> {

@@ -58,8 +58,12 @@ export function regexLike<
 >(
   value: TInput,
   pattern: TPattern
-): ExprRef<boolean> {
-  return fn<boolean, [TInput, TPattern]>("REGEXP_LIKE", value, pattern);
+): ExprRef<PropagateNull<ExprInputValue<TInput>, boolean>> {
+  return fn<PropagateNull<ExprInputValue<TInput>, boolean>, [TInput, TPattern]>(
+    "REGEXP_LIKE",
+    value,
+    pattern
+  );
 }
 
 export function regexReplace<

@@ -1,15 +1,26 @@
 import type { SqlInt } from "../../types.ts";
-import { fn, wrapExpr, type ExprInput, type ExprRef } from "../core.ts";
+import {
+  fn,
+  wrapExpr,
+  type ExprInput,
+  type ExprInputValue,
+  type ExprRef,
+  type PropagateNull,
+} from "../core.ts";
 
 export function arrayLength(value: ExprInput<unknown>): ExprRef<SqlInt> {
   return fn<SqlInt>("ARRAY_LENGTH", value);
 }
 
-export function arrayContains(
-  value: ExprInput<unknown>,
-  item: ExprInput<unknown>
-): ExprRef<boolean> {
-  return fn<boolean>("ARRAY_CONTAINS", value, item);
+export function arrayContains<TInput extends ExprInput<unknown>, TItem extends ExprInput<unknown>>(
+  value: TInput,
+  item: TItem
+): ExprRef<PropagateNull<ExprInputValue<TInput> | ExprInputValue<TItem>, boolean>> {
+  return fn<PropagateNull<ExprInputValue<TInput> | ExprInputValue<TItem>, boolean>>(
+    "ARRAY_CONTAINS",
+    value,
+    item
+  );
 }
 
 export function arrayPosition(
