@@ -47,7 +47,7 @@ export type ExprInputTuple<T extends readonly unknown[]> = {
 export type NonNull<T> = Exclude<T, null>;
 export type PropagateNull<TInput, TResult> = null extends TInput ? TResult | null : TResult;
 export type WindowSpecInput = {
-  partitionBy?: ExprRef<unknown> | ExprRef<unknown>[];
+  partitionBy?: ExprLike<unknown> | ExprLike<unknown>[];
   orderBy?: OrderItem | OrderItem[];
 };
 
@@ -448,7 +448,7 @@ function isTemporalLiteral(value: unknown): value is DateLiteral | TimestampLite
 export { containsGroup, unwrapGroupExpr, dedupeExprs, shouldAlias };
 
 export function toExprNodeList(
-  input?: ExprRef<unknown> | ExprRef<unknown>[]
+  input?: ExprLike<unknown> | ExprLike<unknown>[]
 ): ExprNode<unknown>[] | null {
   if (!input) return null;
   const items = Array.isArray(input) ? input : [input];
