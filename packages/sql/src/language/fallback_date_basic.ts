@@ -2,6 +2,7 @@ import type { ExprNode } from "../ir/types.ts";
 import type { DialectLanguageFallback } from "../types.ts";
 import {
   castExpr,
+  extractFieldAsInt,
   extractFieldExpr,
   func,
   literal,
@@ -34,6 +35,22 @@ export function rewriteBasicDateFallback(
       }
       return func("STRFTIME", [formatExpr, valueExpr]);
     }
+    case "date_format_via_to_char": {
+      const valueExpr = args[0];
+      const formatExpr = args[1];
+      if (!valueExpr || !formatExpr) {
+        return func(functionName, args);
+      }
+      return func("TO_CHAR", [valueExpr, rewritePostgresDateFormat(formatExpr)]);
+    }
+    case "date_parse_via_to_timestamp": {
+      const valueExpr = args[0];
+      const formatExpr = args[1];
+      if (!valueExpr || !formatExpr) {
+        return func(functionName, args);
+      }
+      return func("TO_TIMESTAMP", [valueExpr, rewritePostgresDateFormat(formatExpr)]);
+    }
     case "date_parse_via_datetime": {
       const valueExpr = args[0];
       if (!valueExpr) {
@@ -54,6 +71,15 @@ export function rewriteBasicDateFallback(
         return func(functionName, args);
       }
       return castExpr(func("STRFTIME", [literal(format), valueExpr]), "INTEGER");
+    }
+    case "extract_via_integer_cast": {
+      const fieldExpr = args[0];
+      const valueExpr = args[1];
+      const field = fieldExpr ? literalString(fieldExpr) : null;
+      if (!field || !valueExpr) {
+        return func(functionName, args);
+      }
+      return extractFieldAsInt(field, valueExpr);
     }
     case "date_trunc_via_strftime": {
       const unitExpr = args[0];
@@ -96,3 +122,21 @@ export function rewriteBasicDateFallback(
       return null;
   }
 }
+
+function rewritePostgresDateFormat(formatExpr: ExprNode<any>): ExprNode<any> {
+  const format = literalString(formatExpr);
+  if (!format) {
+    return formatExpr;
+  }
+  return literal(format.replace(/%[YymdHMS]/g, (token) => POSTGRES_DATE_FORMATS[token] ?? token));
+}
+
+const POSTGRES_DATE_FORMATS: Record<string, string> = {
+  "%Y": "YYYY",
+  "%y": "YY",
+  "%m": "MM",
+  "%d": "DD",
+  "%H": "HH24",
+  "%M": "MI",
+  "%S": "SS",
+};

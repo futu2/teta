@@ -107,6 +107,14 @@ export function rewriteArrayFallback(
       }
       return binaryExpr("||", arrayExpr(valueExpr), arrayValue);
     }
+    case "array_prepend_via_function": {
+      const arrayValue = args[0];
+      const valueExpr = args[1];
+      if (!arrayValue || !valueExpr) {
+        return func(functionName, args);
+      }
+      return func("ARRAY_PREPEND", [valueExpr, arrayValue]);
+    }
     case "array_prepend_via_list_concat": {
       const arrayValue = args[0];
       const valueExpr = args[1];
@@ -114,6 +122,16 @@ export function rewriteArrayFallback(
         return func(functionName, args);
       }
       return func("LIST_CONCAT", [func("LIST_VALUE", [valueExpr]), arrayValue]);
+    }
+    case "array_concat_via_concat_operator": {
+      const [first, ...rest] = args;
+      if (!first || rest.length === 0) {
+        return func(functionName, args);
+      }
+      return rest.reduce<ExprNode<any>>(
+        (current, item) => binaryExpr("||", current, item),
+        first
+      );
     }
     default:
       return null;

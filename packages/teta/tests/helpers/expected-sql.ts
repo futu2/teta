@@ -57,7 +57,7 @@ export const ORDERS_GROUPED_TOTALS_WHERE_HAVING_POSTGRES_COMPACT =
   "SELECT orders_0.user_id, SUM(orders_0.total) AS total_spend FROM orders AS orders_0 WHERE orders_0.user_id > 10 GROUP BY orders_0.user_id HAVING SUM(orders_0.total) > 100";
 export const DIALECT_MATRIX_SQL = {
   postgresql:
-    "SELECT char_length(users_0.name) AS len, bit_length(users_0.name) AS bit_len, to_char(users_0.created_at, '%Y-%m-%d') AS fmt FROM users AS users_0",
+    "SELECT char_length(users_0.name) AS len, bit_length(users_0.name) AS bit_len, to_char(users_0.created_at, 'YYYY-MM-DD') AS fmt FROM users AS users_0",
   mysql:
     "SELECT character_length(users_0.name) AS len, bit_length(users_0.name) AS bit_len, date_format(users_0.created_at, '%Y-%m-%d') AS fmt FROM users AS users_0",
   duckdb:

@@ -28,6 +28,12 @@ export const LIVE_LANGUAGE_ANALYTIC_CASES: LiveSpecCase[] = [
                     { grp: "b", count_v: 2, sum_v: 70, avg_v: 35, min_v: 30, max_v: 40 },
                 ],
             },
+            postgresql: {
+                rows: [
+                    { grp: "a", count_v: 2, sum_v: 30, avg_v: "15.0000000000000000", min_v: 10, max_v: 20 },
+                    { grp: "b", count_v: 2, sum_v: 70, avg_v: "35.0000000000000000", min_v: 30, max_v: 40 },
+                ],
+            },
         },
     },
     {
@@ -152,6 +158,58 @@ export const LIVE_LANGUAGE_ANALYTIC_CASES: LiveSpecCase[] = [
                     },
                 ],
             },
+            postgresql: {
+                rows: [
+                    {
+                        seq: 1,
+                        amount: 40,
+                        rank_v: 1,
+                        dense_rank_v: 1,
+                        row_number_v: 1,
+                        lag_v: 0,
+                        lead_v: 20,
+                        percent_rank_v: 0,
+                        ntile_v: 1,
+                        sum_over_v: 40,
+                    },
+                    {
+                        seq: 2,
+                        amount: 20,
+                        rank_v: 2,
+                        dense_rank_v: 2,
+                        row_number_v: 2,
+                        lag_v: 40,
+                        lead_v: 20,
+                        percent_rank_v: 0.3333333333333333,
+                        ntile_v: 1,
+                        sum_over_v: 60,
+                    },
+                    {
+                        seq: 3,
+                        amount: 20,
+                        rank_v: 2,
+                        dense_rank_v: 2,
+                        row_number_v: 3,
+                        lag_v: 20,
+                        lead_v: 10,
+                        percent_rank_v: 0.3333333333333333,
+                        ntile_v: 2,
+                        sum_over_v: 80,
+                    },
+                    {
+                        seq: 4,
+                        amount: 10,
+                        rank_v: 4,
+                        dense_rank_v: 3,
+                        row_number_v: 4,
+                        lag_v: 20,
+                        lead_v: 0,
+                        percent_rank_v: 1,
+                        ntile_v: 2,
+                        sum_over_v: 90,
+                    },
+                ],
+            },
         },
     },
     {
@@ -190,6 +248,13 @@ export const LIVE_LANGUAGE_ANALYTIC_CASES: LiveSpecCase[] = [
                 ],
             },
             duckdb: {
+                rows: [
+                    { id: 1, name: "CEO" },
+                    { id: 2, name: "CTO" },
+                    { id: 3, name: "DEV" },
+                ],
+            },
+            postgresql: {
                 rows: [
                     { id: 1, name: "CEO" },
                     { id: 2, name: "CTO" },

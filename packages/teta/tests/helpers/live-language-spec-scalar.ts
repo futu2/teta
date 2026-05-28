@@ -61,6 +61,25 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
                     },
                 ],
             },
+            postgresql: {
+                rows: [
+                    {
+                        add_v: 7,
+                        sub_v: 3,
+                        mul_v: 10,
+                        div_v: 3,
+                        mod_v: 1,
+                        abs_v: 5,
+                        ceil_v: 3,
+                        floor_v: 2,
+                        sqrt_v: 3,
+                        pow_v: 8,
+                        round_v: "2.35",
+                        greatest_v: 8,
+                        least_v: 2,
+                    },
+                ],
+            },
         },
     },
     {
@@ -113,6 +132,21 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
                     },
                 ],
             },
+            postgresql: {
+                rows: [
+                    {
+                        concat_v: "HelloWorldWorld",
+                        upper_v: "HELLOWORLD",
+                        lower_v: "helloworld",
+                        trim_v: "HelloWorld",
+                        substring_v: "elloW",
+                        char_length_v: 10,
+                        character_length_v: 10,
+                        bit_length_v: 80,
+                        replace_v: "HelloDuck",
+                    },
+                ],
+            },
         },
     },
     {
@@ -124,6 +158,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
         outcomes: {
             sqlite: { rows: [{ value: 10 }] },
             duckdb: { rows: [{ value: 10 }] },
+            postgresql: { rows: [{ value: 10 }] },
         },
     },
     {
@@ -135,6 +170,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
         outcomes: {
             sqlite: { rows: [{ value: 6 }] },
             duckdb: { rows: [{ value: 6 }] },
+            postgresql: { rows: [{ value: 6 }] },
         },
     },
     {
@@ -146,6 +182,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
         outcomes: {
             sqlite: { error: SQLITE_UNSUPPORTED },
             duckdb: { rows: [{ value: "HelloDuck" }] },
+            postgresql: { rows: [{ value: "HelloDuck" }] },
         },
     },
     {
@@ -157,6 +194,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
         outcomes: {
             sqlite: { error: SQLITE_UNSUPPORTED },
             duckdb: { rows: [{ value: "dlroWolleH" }] },
+            postgresql: { rows: [{ value: "dlroWolleH" }] },
         },
     },
     {
@@ -168,6 +206,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
         outcomes: {
             sqlite: { error: SQLITE_UNSUPPORTED },
             duckdb: { rows: [{ value: "Hello" }] },
+            postgresql: { rows: [{ value: "Hello" }] },
         },
     },
     {
@@ -179,6 +218,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
         outcomes: {
             sqlite: { error: SQLITE_UNSUPPORTED },
             duckdb: { rows: [{ value: "World" }] },
+            postgresql: { rows: [{ value: "World" }] },
         },
     },
     {
@@ -190,6 +230,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
         outcomes: {
             sqlite: { error: SQLITE_UNSUPPORTED },
             duckdb: { rows: [{ value: "__HelloWorld" }] },
+            postgresql: { rows: [{ value: "__HelloWorld" }] },
         },
     },
     {
@@ -201,6 +242,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
         outcomes: {
             sqlite: { error: SQLITE_UNSUPPORTED },
             duckdb: { rows: [{ value: "HelloWorld__" }] },
+            postgresql: { rows: [{ value: "HelloWorld__" }] },
         },
     },
     {
@@ -212,6 +254,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
         outcomes: {
             sqlite: { error: SQLITE_UNSUPPORTED },
             duckdb: { rows: [{ value: true }] },
+            postgresql: { rows: [{ value: true }] },
         },
     },
     {
@@ -223,6 +266,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
         outcomes: {
             sqlite: { error: SQLITE_UNSUPPORTED },
             duckdb: { rows: [{ value: "HelloDuck" }] },
+            postgresql: { rows: [{ value: "HelloDuck" }] },
         },
     },
     {
@@ -234,6 +278,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
         outcomes: {
             sqlite: { error: SQLITE_UNSUPPORTED },
             duckdb: { rows: [{ value: "World" }] },
+            postgresql: { rows: [{ value: "World" }] },
         },
     },
     {
@@ -273,6 +318,23 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
                 ],
             },
             duckdb: {
+                rows: [
+                    {
+                        eq_v: true,
+                        ne_v: true,
+                        lt_v: true,
+                        lte_v: true,
+                        gt_v: true,
+                        gte_v: true,
+                        and_v: true,
+                        or_v: true,
+                        not_v: true,
+                        like_v: true,
+                        in_v: true,
+                    },
+                ],
+            },
+            postgresql: {
                 rows: [
                     {
                         eq_v: true,
@@ -338,6 +400,21 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
                     },
                 ],
             },
+            postgresql: {
+                rows: [
+                    {
+                        current_date_ok: true,
+                        current_ts_ok: true,
+                        date_trunc_v: "2024-01-02 00:00:00",
+                        date_add_v: "2024-01-04 03:04:05",
+                        date_diff_v: 1,
+                        date_parse_v: "2024-02-03 04:05:06",
+                        date_format_v: "2024-01-02",
+                        to_unixtime_v: 0,
+                        from_unixtime_v: "1970-01-01 00:00:00",
+                    },
+                ],
+            },
         },
     },
     {
@@ -369,6 +446,19 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
                 ],
             },
             duckdb: {
+                rows: [
+                    {
+                        extract_year_v: 2024,
+                        year_v: 2024,
+                        month_v: 1,
+                        day_v: 2,
+                        hour_v: 3,
+                        minute_v: 4,
+                        second_v: 5,
+                    },
+                ],
+            },
+            postgresql: {
                 rows: [
                     {
                         extract_year_v: 2024,
@@ -416,6 +506,21 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
                 ],
             },
             duckdb: {
+                rows: [
+                    {
+                        cast_v: 42,
+                        to_int_v: 8,
+                        to_float_v: 8,
+                        to_string_v: "5",
+                        to_date_v: "2024-01-02",
+                        coalesce_v: "World",
+                        nullif_is_null_v: true,
+                        is_null_v: true,
+                        is_not_null_v: true,
+                    },
+                ],
+            },
+            postgresql: {
                 rows: [
                     {
                         cast_v: 42,

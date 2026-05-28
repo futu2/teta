@@ -1,7 +1,7 @@
 {
   "name": "@teta/teta",
   "module": "./mod.ts",
-  "version": "0.4.11",
+  "version": "0.4.12",
   "exports": {
     ".": "./mod.ts"
   },
@@ -20,6 +20,7 @@
   },
   "devDependencies": {
     "@duckdb/node-api": "^1.4.4-r.3",
+    "@electric-sql/pglite": "^0.4.6",
     "@types/bun": "latest",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"

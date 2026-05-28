@@ -76,3 +76,4 @@ export function employeeTable() {
 }
 
 export const SQLITE_UNSUPPORTED = /no such function|syntax error|wrong number of arguments|no such table/i;
+export const POSTGRESQL_UNSUPPORTED = /does not exist|syntax error/i;

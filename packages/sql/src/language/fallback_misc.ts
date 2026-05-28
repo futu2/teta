@@ -55,6 +55,14 @@ export function rewriteMiscFallback(
       }
       return func("REGEXP", [patternExpr, valueExpr]);
     }
+    case "regex_extract_via_substring": {
+      const valueExpr = args[0];
+      const patternExpr = args[1];
+      if (!valueExpr || !patternExpr) {
+        return func(functionName, args);
+      }
+      return func("SUBSTRING", [valueExpr, patternExpr]);
+    }
     default:
       return null;
   }

@@ -1,6 +1,6 @@
 import { Database } from "bun:sqlite";
 
-export type LiveDialect = "sqlite" | "duckdb";
+export type LiveDialect = "sqlite" | "duckdb" | "postgresql";
 export type LiveRow = Record<string, unknown>;
 
 export interface LiveDialectAdapter {
@@ -215,6 +215,109 @@ const DUCKDB_SCHEMA = [
     (3, 'DEV', 2);`,
 ] as const;
 
+const POSTGRESQL_SCHEMA = [
+  `CREATE TABLE spec_scalar (
+    i INTEGER NOT NULL,
+    j INTEGER NOT NULL,
+    k INTEGER NOT NULL,
+    neg_i INTEGER NOT NULL,
+    x DOUBLE PRECISION NOT NULL,
+    y DOUBLE PRECISION NOT NULL,
+    ceil_src DOUBLE PRECISION NOT NULL,
+    floor_src DOUBLE PRECISION NOT NULL,
+    sqrt_src DOUBLE PRECISION NOT NULL,
+    pow_base DOUBLE PRECISION NOT NULL,
+    pow_exp DOUBLE PRECISION NOT NULL,
+    round_src NUMERIC NOT NULL,
+    txt VARCHAR NOT NULL,
+    txt2 VARCHAR NOT NULL,
+    nullable_txt VARCHAR,
+    num_txt VARCHAR NOT NULL,
+    ts TIMESTAMP NOT NULL,
+    ts_next TIMESTAMP NOT NULL,
+    parse_txt VARCHAR NOT NULL
+  );`,
+  `INSERT INTO spec_scalar
+    (
+      i,
+      j,
+      k,
+      neg_i,
+      x,
+      y,
+      ceil_src,
+      floor_src,
+      sqrt_src,
+      pow_base,
+      pow_exp,
+      round_src,
+      txt,
+      txt2,
+      nullable_txt,
+      num_txt,
+      ts,
+      ts_next,
+      parse_txt
+    )
+    VALUES
+    (
+      5,
+      2,
+      8,
+      -5,
+      7.5,
+      2.5,
+      2.25,
+      2.75,
+      9,
+      2,
+      3,
+      2.345,
+      '  HelloWorld  ',
+      'World',
+      NULL,
+      '42',
+      TIMESTAMP '2024-01-02 03:04:05',
+      TIMESTAMP '2024-01-03 03:04:05',
+      '2024-02-03 04:05:06'
+    );`,
+  `CREATE TABLE spec_array (
+    text_arr VARCHAR[] NOT NULL,
+    num_arr INTEGER[] NOT NULL,
+    more_num_arr INTEGER[] NOT NULL
+  );`,
+  `INSERT INTO spec_array (text_arr, num_arr, more_num_arr)
+    VALUES (ARRAY['red', 'blue', 'red'], ARRAY[1, 2, 3], ARRAY[4, 5]);`,
+  `CREATE TABLE spec_metrics (
+    grp VARCHAR NOT NULL,
+    seq INTEGER NOT NULL,
+    amount INTEGER NOT NULL
+  );`,
+  `INSERT INTO spec_metrics (grp, seq, amount) VALUES
+    ('a', 1, 10),
+    ('a', 2, 20),
+    ('b', 1, 30),
+    ('b', 2, 40);`,
+  `CREATE TABLE spec_rank (
+    seq INTEGER NOT NULL,
+    amount INTEGER NOT NULL
+  );`,
+  `INSERT INTO spec_rank (seq, amount) VALUES
+    (1, 40),
+    (2, 20),
+    (3, 20),
+    (4, 10);`,
+  `CREATE TABLE spec_employees (
+    id INTEGER NOT NULL,
+    name VARCHAR NOT NULL,
+    manager_id INTEGER
+  );`,
+  `INSERT INTO spec_employees (id, name, manager_id) VALUES
+    (1, 'CEO', NULL),
+    (2, 'CTO', 1),
+    (3, 'DEV', 2);`,
+] as const;
+
 export async function createSqliteAdapter(): Promise<LiveDialectAdapter> {
   const database = new Database(":memory:");
   for (const statement of SQLITE_SCHEMA) {
@@ -248,6 +351,26 @@ export async function createDuckDbAdapter(
     },
     async close(): Promise<void> {
       connection.disconnectSync();
+    },
+  };
+}
+
+export async function createPostgresqlAdapter(
+  PGlite: (typeof import("@electric-sql/pglite"))["PGlite"]
+): Promise<LiveDialectAdapter> {
+  const database = await PGlite.create("memory://");
+  await database.query("SET TIME ZONE 'UTC'");
+  for (const statement of POSTGRESQL_SCHEMA) {
+    await database.query(statement);
+  }
+
+  return {
+    dialect: "postgresql",
+    async run(sql: string): Promise<LiveRow[]> {
+      return (await database.query(sql)).rows as LiveRow[];
+    },
+    async close(): Promise<void> {
+      await database.close();
     },
   };
 }

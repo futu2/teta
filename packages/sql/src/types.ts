@@ -107,12 +107,17 @@ export type DialectLanguageFallback =
   | "array_append_via_json_insert_end"
   | "array_append_via_concat_operator"
   | "array_prepend_via_concat_operator"
+  | "array_prepend_via_function"
   | "array_prepend_via_list_concat"
+  | "array_concat_via_concat_operator"
   | "position_via_instr"
   | "overlay_via_concat_substring"
   | "cast_date_via_date_function"
+  | "extract_via_integer_cast"
   | "extract_via_strftime"
   | "date_format_via_strftime"
+  | "date_format_via_to_char"
+  | "date_parse_via_to_timestamp"
   | "date_parse_via_datetime"
   | "date_trunc_via_strftime"
   | "date_add_via_datetime"
@@ -124,7 +129,8 @@ export type DialectLanguageFallback =
   | "to_unixtime_via_extract_epoch"
   | "from_unixtime_via_datetime"
   | "regex_like_via_regexp_match"
-  | "regex_like_via_regexp_function";
+  | "regex_like_via_regexp_function"
+  | "regex_extract_via_substring";
 
 /** Function names, fallback rewrites, and unsupported functions for a dialect. */
 export type DialectLanguageConfig = {

@@ -1,4 +1,4 @@
-import { SQLITE_UNSUPPORTED, arrayTable } from "./live-language-spec-shared.ts";
+import { POSTGRESQL_UNSUPPORTED, SQLITE_UNSUPPORTED, arrayTable } from "./live-language-spec-shared.ts";
 import type { LiveSpecCase } from "./live-language-spec-shared.ts";
 import { map, arrayAppend, arrayConcat, arrayContains, arrayDistinct, arrayJoin, arrayLength, arrayPosition, arrayPrepend, arraySlice, pipe } from "../../mod.ts";
 export const LIVE_LANGUAGE_ARRAY_CASES: LiveSpecCase[] = [
@@ -34,6 +34,16 @@ export const LIVE_LANGUAGE_ARRAY_CASES: LiveSpecCase[] = [
                     },
                 ],
             },
+            postgresql: {
+                rows: [
+                    {
+                        length_v: 3,
+                        contains_v: true,
+                        join_v: "red|blue|red",
+                        append_v: [1, 2, 3, 4],
+                    },
+                ],
+            },
         },
     },
     {
@@ -45,6 +55,7 @@ export const LIVE_LANGUAGE_ARRAY_CASES: LiveSpecCase[] = [
         outcomes: {
             sqlite: { rows: [{ value: 8 }] },
             duckdb: { rows: [{ value: 2 }] },
+            postgresql: { rows: [{ value: 2 }] },
         },
     },
     {
@@ -56,6 +67,7 @@ export const LIVE_LANGUAGE_ARRAY_CASES: LiveSpecCase[] = [
         outcomes: {
             sqlite: { error: SQLITE_UNSUPPORTED },
             duckdb: { rows: [{ value: [2, 3] }] },
+            postgresql: { error: POSTGRESQL_UNSUPPORTED },
         },
     },
     {
@@ -67,6 +79,7 @@ export const LIVE_LANGUAGE_ARRAY_CASES: LiveSpecCase[] = [
         outcomes: {
             sqlite: { error: SQLITE_UNSUPPORTED },
             duckdb: { rows: [{ value: [0, 1, 2, 3] }] },
+            postgresql: { rows: [{ value: [0, 1, 2, 3] }] },
         },
     },
     {
@@ -80,6 +93,7 @@ export const LIVE_LANGUAGE_ARRAY_CASES: LiveSpecCase[] = [
         outcomes: {
             sqlite: { error: SQLITE_UNSUPPORTED },
             duckdb: { rows: [{ value: [1, 2, 3, 4, 5] }] },
+            postgresql: { rows: [{ value: [1, 2, 3, 4, 5] }] },
         },
     },
     {
@@ -91,6 +105,7 @@ export const LIVE_LANGUAGE_ARRAY_CASES: LiveSpecCase[] = [
         outcomes: {
             sqlite: { error: SQLITE_UNSUPPORTED },
             duckdb: { rows: [{ value: ["blue", "red"] }] },
+            postgresql: { error: POSTGRESQL_UNSUPPORTED },
         },
     },
 ];
