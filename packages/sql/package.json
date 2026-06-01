@@ -1,7 +1,7 @@
 {
   "name": "@teta/sql",
   "module": "./mod.ts",
-  "version": "0.4.13",
+  "version": "0.1.4",
   "exports": {
     ".": "./mod.ts"
   },
