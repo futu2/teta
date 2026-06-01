@@ -1,23 +1,35 @@
 import { describe, expect, test } from "bun:test";
-import { fold, caseWhen, groupShape, lt, map, sum, table, t, toSql, when, pipe } from "../mod.ts";
+import {
+  fold,
+  groupShape,
+  lt,
+  map,
+  pipe,
+  sum,
+  table,
+  t,
+  toSql,
+  when,
+} from "../mod.ts";
 
 describe("functional expression builders", () => {
-  test("renders caseWhen from plain branch data", () => {
+  test("renders when from alternating condition/value pairs", () => {
     const users = table("users", {
       id: t.int(),
       age: t.int(),
     });
 
     const query = pipe(users, map((user) => ({
-      age_group: caseWhen([
-        when(lt(user.age, 18), "minor"),
-        when(lt(user.age, 65), "adult"),
-      ], "senior"),
+      age_group: when(
+        lt(user.age, 18), "minor",
+        lt(user.age, 65), "adult",
+        true, "senior"
+      ),
     })));
 
     const sql = toSql(query, { dialect: "postgresql", format: "compact" });
 
-    expect(sql).toContain("CASE WHEN users_0.age < 18 THEN 'minor' WHEN users_0.age < 65 THEN 'adult' ELSE 'senior' END AS age_group");
+    expect(sql).toContain("CASE WHEN users_0.age < 18 THEN 'minor' WHEN users_0.age < 65 THEN 'adult' WHEN TRUE THEN 'senior' END AS age_group");
   });
 
   test("renders groupShape without shape methods", () => {

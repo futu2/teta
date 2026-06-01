@@ -12,61 +12,50 @@ import {
 } from "./core.ts";
 import { group } from "./ops/aggregate.ts";
 
-export type CaseBranch<
-  T,
-  TCondition extends ExprInput<boolean | null> = ExprInput<boolean | null>,
-  TValue extends ExprInput<unknown> = ExprInput<T>,
-> = {
-  when: TCondition;
-  then: TValue;
-};
+export type WhenArgs<TArgs extends readonly unknown[]> =
+  TArgs extends readonly [
+    infer TCondition,
+    infer TValue,
+    ...infer TRest,
+  ]
+    ? TCondition extends ExprInput<boolean | null>
+      ? TValue extends ExprInput<unknown>
+        ? readonly [TCondition, TValue, ...WhenArgs<TRest>]
+        : never
+      : never
+    : TArgs extends readonly []
+      ? readonly []
+      : never;
 
-type CaseBranchValue<TBranch> =
-  TBranch extends CaseBranch<unknown, ExprInput<boolean>, infer TValue>
-    ? NormalizeExpressionLiteral<ExprInputValue<TValue>>
+type WhenValue<TArgs extends readonly unknown[]> =
+  TArgs extends readonly [
+    ExprInput<boolean | null>,
+    infer TValue extends ExprInput<unknown>,
+    ...infer TRest,
+  ]
+    ? NormalizeExpressionLiteral<ExprInputValue<TValue>> | WhenValue<TRest>
     : never;
 
-type CaseBranchesValue<TBranches extends readonly CaseBranch<unknown>[]> =
-  CaseBranchValue<TBranches[number]>;
+type WhenHasDefault<TArgs extends readonly unknown[]> =
+  TArgs extends readonly [
+    infer TCondition,
+    ExprInput<unknown>,
+    ...infer TRest,
+  ]
+    ? TCondition extends true
+      ? true
+      : WhenHasDefault<TRest>
+    : false;
 
-type CaseElseValue<TElse> =
-  TElse extends ExprInput<unknown>
-    ? NormalizeExpressionLiteral<ExprInputValue<TElse>>
-    : never;
+export type WhenResult<TArgs extends readonly unknown[]> =
+  WhenHasDefault<TArgs> extends true
+    ? WhenValue<TArgs>
+    : WhenValue<TArgs> | null;
 
-export function when<TCondition extends ExprInput<boolean | null>, TValue extends ExprInput<unknown>>(
-  condition: TCondition,
-  value: TValue
-): CaseBranch<NormalizeExpressionLiteral<ExprInputValue<TValue>>, TCondition, TValue> {
-  return {
-    when: condition,
-    then: value,
-  };
-}
-
-export function caseWhen<const TBranches extends readonly CaseBranch<unknown>[]>(
-  branches: TBranches
-): ExprRef<CaseBranchesValue<TBranches> | null>;
-export function caseWhen<
-  const TBranches extends readonly CaseBranch<unknown>[],
-  TElse extends ExprInput<CaseBranchesValue<TBranches>>,
->(
-  branches: TBranches,
-  elseValue: TElse
-): ExprRef<CaseBranchesValue<TBranches> | CaseElseValue<TElse>>;
-export function caseWhen<
-  const TBranches extends readonly CaseBranch<unknown>[],
-  TElse extends ExprInput<CaseBranchesValue<TBranches>> | undefined = undefined,
->(
-  branches: TBranches,
-  elseValue?: TElse
-): ExprRef<CaseBranchesValue<TBranches> | CaseElseValue<TElse> | null> {
-  const whens = branches.map((branch) => ({
-    when: toExprNode(branch.when),
-    then: toExprNode(branch.then),
-  }));
-  const elseExpr = elseValue === undefined ? null : toExprNode(elseValue as ExprInput<unknown>);
-  return buildCaseExpr<CaseBranchesValue<TBranches> | CaseElseValue<TElse>>(whens, elseExpr);
+export function when<const TArgs extends readonly [unknown, unknown, ...unknown[]]>(
+  ...args: TArgs & WhenArgs<TArgs>
+): ExprRef<WhenResult<TArgs>> {
+  return buildWhenExpr(args) as ExprRef<WhenResult<TArgs>>;
 }
 
 export function mapShape<
@@ -123,4 +112,15 @@ function buildCaseExpr<T>(
     whens,
     elseExpr,
   });
+}
+
+function buildWhenExpr(args: readonly unknown[]): ExprRef<unknown> {
+  const whens: CaseWhenNode[] = [];
+  for (let i = 0; i < args.length; i += 2) {
+    whens.push({
+      when: toExprNode(args[i] as ExprInput<boolean | null>),
+      then: toExprNode(args[i + 1] as ExprInput<unknown>),
+    });
+  }
+  return buildCaseExpr<unknown>(whens, null);
 }

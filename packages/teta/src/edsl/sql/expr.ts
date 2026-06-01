@@ -1,4 +1,11 @@
-export { caseWhen, f, groupShape, mapShape, when, type CaseBranch } from "./expr/builders.ts";
+export {
+  f,
+  groupShape,
+  mapShape,
+  when,
+  type WhenArgs,
+  type WhenResult,
+} from "./expr/builders.ts";
 export * from "./expr/ops/aggregate.ts";
 export * from "./expr/ops/array.ts";
 export * from "./expr/ops/comparison.ts";

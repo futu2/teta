@@ -189,6 +189,12 @@ export type Column<T, Name extends string> = import("./src/edsl/expr.ts").Column
 /** Input shape accepted anywhere an expression or column is expected. */
 export type ExprLike<T> = import("./src/edsl/expr.ts").ExprLike<T>;
 
+/** Alternating condition/value pairs accepted by `when(...)`. */
+export type WhenArgs<TArgs extends readonly unknown[]> = import("./src/edsl/expr.ts").WhenArgs<TArgs>;
+
+/** Result value type inferred from alternating `when(...)` pairs. */
+export type WhenResult<TArgs extends readonly unknown[]> = import("./src/edsl/expr.ts").WhenResult<TArgs>;
+
 /** Returns true when a value is a Teta expression. */
 export const isExpr: typeof import("./src/edsl/expr.ts").isExpr = expr.isExpr;
 
@@ -513,10 +519,7 @@ export const windowFn: typeof import("./src/edsl/expr.ts").windowFn = expr.windo
 /** Applies a window specification to a window function. */
 export const over: typeof import("./src/edsl/expr.ts").over = expr.over;
 
-/** Builds a `CASE WHEN` expression. */
-export const caseWhen: typeof import("./src/edsl/expr.ts").caseWhen = expr.caseWhen;
-
-/** Creates a single branch for `caseWhen(...)`. */
+/** Builds a `CASE WHEN` expression from alternating condition/value pairs. */
 export const when: typeof import("./src/edsl/expr.ts").when = expr.when;
 
 /** Maps every expression in an object shape through a transform. */

@@ -860,7 +860,7 @@ const q = pipe(
 ### CASE WHEN
 
 ```ts
-import { caseWhen, lt, map, table, t, when, pipe } from "@teta/teta";
+import { lt, map, table, t, when, pipe } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -871,10 +871,11 @@ const q = pipe(
   users,
   map((u) => ({
     id: u.id,
-    age_group: caseWhen([
-      when(lt(u.age, 18), "minor"),
-      when(lt(u.age, 65), "adult"),
-    ], "senior"),
+    age_group: when(
+      lt(u.age, 18), "minor",
+      lt(u.age, 65), "adult",
+      true, "senior"
+    ),
   }))
 );
 ```

@@ -1,6 +1,6 @@
 import type { Column, Expr, SqlBigInt, SqlBytes, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlTimestamp, SqlUuid, } from "../mod.ts";
 import * as publicApi from "../mod.ts";
-import { between, filter, filterEq, filterNe, filterGt, filterGte, filterLt, filterLte, fullJoin, fullJoinMerge, identityStep, innerJoin, innerJoinMap, innerJoinMerge, isDistinctFrom, isNotIn, leftJoin, leftJoinMap, leftJoinMerge, rightJoin, rightJoinMerge, take, sort, param, map, rename, pipe, flow, table, t, fold, asc, desc, eq, gt, upper, add, mul, coalesce, count, group, loop, sum, and, or, isNotNull, sub, caseWhen, when, mapShape, groupShape, lt, unnest, unionAll, union, unlessStep, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, toString, toTimestamp, pick, drop, extend, whenStep } from "../mod.ts";
+import { between, filter, filterEq, filterNe, filterGt, filterGte, filterLt, filterLte, fullJoin, fullJoinMerge, identityStep, innerJoin, innerJoinMap, innerJoinMerge, isDistinctFrom, isNotIn, leftJoin, leftJoinMap, leftJoinMerge, rightJoin, rightJoinMerge, take, sort, param, map, rename, pipe, flow, table, t, fold, asc, desc, eq, gt, upper, add, mul, coalesce, count, group, loop, sum, and, or, isNotNull, sub, when, mapShape, groupShape, lt, unnest, unionAll, union, unlessStep, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, toString, toTimestamp, pick, drop, extend, whenStep } from "../mod.ts";
 type Equal<A, B> = ((<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false);
 type Expect<T extends true> = T;
 type ExprType<TExpr> = TExpr extends Expr<infer TValue> ? TValue : TExpr extends Column<infer TValue, string> ? TValue : never;
@@ -241,14 +241,21 @@ const looped = pipe(loopBase, loop((self) => pipe(self, filter((row) => gt(row.i
 const loopStepUsers = pipe(loopBase, loop((self) => pipe(self, filter((row) => gt(row.id, 0)))));
 const projectedWithCase = pipe(users, map((user) => ({
     id: user.id,
-    age_bucket: caseWhen([
-        when(lt(user.id, 10), "small"),
-        when(lt(user.id, 100), "medium"),
-    ], "large"),
+    age_bucket: when(
+        lt(user.id, 10), "small",
+        lt(user.id, 100), "medium",
+        true, "large"
+    ),
+    age_bucket_nullable: when(
+        lt(user.id, 10), "small",
+        lt(user.id, 100), "medium"
+    ),
     ...mapShape({
         bumped_id: user.id,
     }, (value) => add(value, 1)),
 })));
+type CaseDefaultType = Expect<Equal<ExprType<typeof projectedWithCase.columns.age_bucket>, string>>;
+type CaseNullableType = Expect<Equal<ExprType<typeof projectedWithCase.columns.age_bucket_nullable>, string | null>>;
 const aggregatedWithGroupShape = pipe(orders, fold((order) => ({
     ...groupShape({
         user_id: order.user_id,

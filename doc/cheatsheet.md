@@ -425,8 +425,7 @@ const explicitSql = irToSql(ir, { dialect: "postgresql" });
 - `fn(name, ...args)`
 - `windowFn(name, ...args)`
 - `over(window, spec)`
-- `when(condition, value)` -> build a CASE branch
-- `caseWhen(branches, elseValue?)` -> build `CASE WHEN ... THEN ... [ELSE ...] END`
+- `when(condition, value, ...pairs)` -> build `CASE WHEN ... THEN ... END`; use `true, value` as the fallback pair
 - `mapShape(obj, mapper)` -> map each expression in a shape
 - `groupShape(obj)` -> apply `group(...)` to each expression in a shape
 - ``f`prefix ${expr} suffix` ``

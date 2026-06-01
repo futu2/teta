@@ -3,7 +3,6 @@ import {
   TetaUserError,
   add,
   and,
-  caseWhen,
   coalesce,
   eq,
   extend,
@@ -201,10 +200,10 @@ describe("callback column api", () => {
       name: user.name,
       age: user.age,
       active: user.active,
-      active_label: caseWhen([when(user.active, "active")], "inactive"),
+      active_label: when(user.active, "active", true, "inactive"),
     })));
     const actual = pipe(users, extend((user) => ({
-      active_label: caseWhen([when(user.active, "active")], "inactive"),
+      active_label: when(user.active, "active", true, "inactive"),
     })));
 
     expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
