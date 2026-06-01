@@ -10,12 +10,15 @@ import {
   type Value,
 } from "../types.ts";
 import type {
+  NormalizeExpressionLiteral,
   NormalizeNumericLiteral,
   NormalizeNumericLiteralTuple,
+  SqlBoolean,
   SqlDate,
   SqlFloat,
   SqlInt,
   SqlNumber,
+  SqlString,
   SqlTimestamp,
   SqlUuid,
 } from "../../sql/types.ts";
@@ -27,7 +30,7 @@ import {
 } from "./node/ops.ts";
 import { userError } from "../../errors.ts";
 
-type StringLiteralCompatible = string | SqlDate | SqlTimestamp | SqlUuid;
+type StringLiteralCompatible = string | SqlString | SqlDate | SqlTimestamp | SqlUuid;
 
 type LiteralInput<T> = T extends number
   ? number
@@ -35,7 +38,9 @@ type LiteralInput<T> = T extends number
     ? number | bigint
   : T extends StringLiteralCompatible
     ? string
-    : T;
+  : T extends SqlBoolean
+    ? boolean
+  : T;
 export type ExprInput<T> = ExprLike<T> | LiteralInput<T>;
 export type ExprInputValue<TInput> =
   TInput extends ExprRef<infer TValue> ? TValue
@@ -357,8 +362,8 @@ export type ExprRefs<T extends Record<string, unknown>> = {
   [K in KnownStringKeyOf<T>]: ExprLike<T[K]>;
 };
 
-export function lit<T extends Value>(value: T): ExprRef<T> {
-  return exprOf<T>({ kind: "literal", value });
+export function lit<T extends Value>(value: T): ExprRef<NormalizeExpressionLiteral<T>> {
+  return exprOf<NormalizeExpressionLiteral<T>>({ kind: "literal", value });
 }
 
 export function param<T>(value: T, name: string | null = null): ExprRef<T> {

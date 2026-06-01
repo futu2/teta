@@ -39,6 +39,7 @@ import {
   type JoinSelection,
   type JoinSelectionResult,
 } from "./join.ts";
+import type { SqlBoolean } from "../types.ts";
 import type {
   QueryDeriveInit,
   QueryState,
@@ -48,7 +49,7 @@ import { toQuerySpec } from "./state.ts";
 type JoinOnInput<
   TLeft extends Record<string, any>,
   TRight extends Record<string, any>,
-> = (left: ColumnRefs<TLeft>, right: ColumnRefs<TRight>) => ExprRef<boolean | null>;
+> = (left: ColumnRefs<TLeft>, right: ColumnRefs<TRight>) => ExprRef<SqlBoolean | null>;
 
 type JoinMergeInput<
   TSelection extends JoinSelection,

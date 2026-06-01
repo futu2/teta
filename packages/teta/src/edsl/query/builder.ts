@@ -8,6 +8,7 @@ import type {
 import type {
   Dialect,
   QueryDialect,
+  SqlBoolean,
   SqlFormat,
   SqlInt,
   SqlOptions,
@@ -96,7 +97,7 @@ export type QueryExplainCte = {
 export type QueryStageKind = "map" | "fold" | "filter" | "sort" | "take" | "join" | "unnest" | "union";
 
 type PredicateInput<TColumns extends QueryColumns> =
-  (cols: ColumnRefs<TColumns>) => ExprRef<boolean | null>;
+  (cols: ColumnRefs<TColumns>) => ExprRef<SqlBoolean | null>;
 
 type SortInput<TColumns extends QueryColumns> =
   (cols: ColumnRefs<TColumns>) => OrderItem | OrderItem[];
@@ -504,7 +505,7 @@ function _fold<TColumns extends QueryColumns, const Sel extends ProjectionShape>
 }
 
 export function filter<TColumns extends QueryColumns>(
-  predicate: (cols: ColumnRefs<TColumns>) => ExprRef<boolean | null>
+  predicate: (cols: ColumnRefs<TColumns>) => ExprRef<SqlBoolean | null>
 ): QueryStep<TColumns, TColumns>;
 
 export function filter(...args: unknown[]): unknown {
@@ -524,7 +525,7 @@ function _filter<TColumns extends QueryColumns>(
 }
 
 export function filterResolved<TColumns extends QueryColumns>(
-  predicate: ExprRef<boolean | null>
+  predicate: ExprRef<SqlBoolean | null>
 ): QueryStep<TColumns, TColumns> {
   return (query) => deriveQuery(query, resolveFilterQuery(query, predicate.node));
 }

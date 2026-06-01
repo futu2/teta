@@ -39,20 +39,20 @@ That gives you a query with this inferred shape:
 ```ts
 // Query<{
 //   id: SqlInt;
-//   email: string;
+//   email: SqlString;
 //   age: SqlInt;
-//   active: boolean;
+//   active: SqlBoolean;
 //   created_at: SqlTimestamp;
 //   deleted_at: SqlTimestamp | null;
-//   tags: string[];
+//   tags: SqlString[];
 //   profile: SqlJson<{ theme: string; locale: string }>;
 // }>
 ```
 
 Common schema helpers:
 
-- `t.string()` -> `string`
-- `t.boolean()` -> `boolean`
+- `t.string()` -> `SqlString`
+- `t.boolean()` -> `SqlBoolean`
 - `t.int()` -> `SqlInt`
 - `t.float()` -> `SqlFloat`
 - `t.bigint()` -> `SqlBigInt`
@@ -103,7 +103,7 @@ const publicUsers = pipe(
     email: user.email,
   }))
 );
-// Query<{ id: SqlInt; email: string }>
+// Query<{ id: SqlInt; email: SqlString }>
 ```
 
 With `fold(...)`, the returned object also becomes the new row shape, but it is meant for grouped or aggregated output.
@@ -187,7 +187,7 @@ const usersByTag = pipe(users, unnest((user) => user.tags, {
   value: "tag",
   ordinality: "tag_index",
 }));
-// original user columns + { tag: string, tag_index: SqlInt }
+// original user columns + { tag: SqlString, tag_index: SqlInt }
 ```
 
 ### Set operations
@@ -199,7 +199,7 @@ const usersByTag = pipe(users, unnest((user) => user.tags, {
 Inside query callbacks, columns are typed expression values.
 
 - `user.id` is not a plain `number`; it is an expression with type `Expr<SqlInt>`
-- `user.email` is `Expr<string>`
+- `user.email` is `Expr<SqlString>`
 - `user.deleted_at` is `Expr<SqlTimestamp | null>`
 
 This is why expression helpers compose safely: `eq(...)`, `add(...)`, `upper(...)`, `dateTrunc(...)`, and others all operate on typed expressions, not raw SQL strings.
@@ -231,14 +231,17 @@ Teta uses branded types to distinguish SQL-oriented values that share the same J
 For example:
 
 - `SqlInt`, `SqlFloat`, and `SqlDecimal` are all numeric at runtime
-- `SqlDate`, `SqlTimestamp`, and `SqlUuid` are all string-based at runtime
+- `SqlString`, `SqlDate`, `SqlTimestamp`, and `SqlUuid` are all string-based at runtime
+- `SqlBoolean` is boolean at runtime
 - `SqlJson<T>` keeps your JSON payload type attached to the expression
 
 These brands exist only at type-check time. At runtime:
 
 - `SqlInt` behaves like a `number`
 - `SqlBigInt` behaves like a `bigint`
+- `SqlString` behaves like a `string`
 - `SqlTimestamp` behaves like a `string`
+- `SqlBoolean` behaves like a `boolean`
 - `SqlBytes` behaves like a `Uint8Array`
 
 This lets Teta make useful distinctions without forcing wrapper objects into user code.

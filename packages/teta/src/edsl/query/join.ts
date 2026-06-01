@@ -2,6 +2,7 @@ import type { JoinType, JoinTypeInput } from "../core/types.ts";
 import { mergeColumnNames } from "../expr.ts";
 import type { ColumnRefs, ExprLike, ExprRef, ExprRefs } from "../expr.ts";
 import { userError } from "../errors.ts";
+import type { SqlBoolean } from "../types.ts";
 
 export type JoinSelection = Record<string, ExprLike<unknown>>;
 
@@ -23,7 +24,7 @@ export type JoinNoMergeGuard<
 export type JoinOn<
   TLeft extends Record<string, any>,
   TRight extends Record<string, any>,
-> = (left: ColumnRefs<TLeft>, right: ColumnRefs<TRight>) => ExprRef<boolean | null>;
+> = (left: ColumnRefs<TLeft>, right: ColumnRefs<TRight>) => ExprRef<SqlBoolean | null>;
 
 export type JoinOnNoMerge<
   TLeft extends Record<string, any>,

@@ -1,5 +1,5 @@
 import type { CaseWhenNode, ExprNode } from "../../core/types.ts";
-import type { NormalizeExpressionLiteral } from "../types.ts";
+import type { NormalizeExpressionLiteral, SqlString } from "../types.ts";
 import {
   exprOf,
   fn,
@@ -91,7 +91,7 @@ export function groupShape<T extends Record<string, ExprLike<unknown>>>(
 export function f<const TExprs extends readonly ExprInput<unknown>[]>(
   strings: TemplateStringsArray,
   ...exprs: TExprs
-): ExprRef<string> {
+): ExprRef<SqlString> {
   const parts: ExprInput<unknown>[] = [];
   for (let i = 0; i < strings.length; i += 1) {
     const literal = strings[i] ?? "";
@@ -99,8 +99,8 @@ export function f<const TExprs extends readonly ExprInput<unknown>[]>(
     const expr = exprs[i];
     if (expr !== undefined) parts.push(expr);
   }
-  if (parts.length === 0) return lit("") as ExprRef<string>;
-  return fn<string>("CONCAT", ...parts) as ExprRef<string>;
+  if (parts.length === 0) return lit("") as ExprRef<SqlString>;
+  return fn<SqlString>("CONCAT", ...parts) as ExprRef<SqlString>;
 }
 
 function buildCaseExpr<T>(

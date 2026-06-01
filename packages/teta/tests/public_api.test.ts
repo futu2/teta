@@ -12,3 +12,12 @@ test("does not export public constructor values", () => {
   expect(typeof publicApi.isExpr).toBe("function");
   expect(typeof publicApi.isColumn).toBe("function");
 });
+
+test("schema helpers use short names only", () => {
+  expect(typeof publicApi.t.string).toBe("function");
+  expect(typeof publicApi.t.boolean).toBe("function");
+  expect(typeof publicApi.t.int).toBe("function");
+  expect("sqlString" in publicApi.t).toBe(false);
+  expect("sqlBoolean" in publicApi.t).toBe(false);
+  expect("sqlInt" in publicApi.t).toBe(false);
+});

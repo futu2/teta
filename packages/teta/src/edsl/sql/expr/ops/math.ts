@@ -1,4 +1,4 @@
-import type { NormalizeNumericLiteral, SqlFloat, SqlInt, SqlNumber } from "../../types.ts";
+import type { NormalizeNumericLiteral, SqlFloat, SqlInt, SqlNumber, SqlString } from "../../types.ts";
 import {
   binaryExpr,
   exprOf,
@@ -174,8 +174,8 @@ export function toFloat<TValue extends NullableSqlNumber, TInput extends ExprInp
 
 export function toString<TInput extends ExprInput<unknown>>(
   value: TInput
-): ExprRef<PropagateNull<ExprInputValue<TInput>, string>> {
-  return cast<PropagateNull<ExprInputValue<TInput>, string>, TInput>(value, "VARCHAR");
+): ExprRef<PropagateNull<ExprInputValue<TInput>, SqlString>> {
+  return cast<PropagateNull<ExprInputValue<TInput>, SqlString>, TInput>(value, "VARCHAR");
 }
 
 export function round<

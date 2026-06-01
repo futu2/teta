@@ -600,6 +600,12 @@ export type SqlDecimal = import("./src/edsl/types.ts").SqlDecimal;
 /** Union of numeric SQL type markers. */
 export type SqlNumber = import("./src/edsl/types.ts").SqlNumber;
 
+/** Type marker for SQL text expressions and columns. */
+export type SqlString = import("./src/edsl/types.ts").SqlString;
+
+/** Type marker for SQL boolean expressions and columns. */
+export type SqlBoolean = import("./src/edsl/types.ts").SqlBoolean;
+
 /** Type marker for SQL date expressions and columns. */
 export type SqlDate = import("./src/edsl/types.ts").SqlDate;
 

@@ -1,5 +1,5 @@
-import type { SqlDate, SqlNumber, SqlTimestamp } from "../../types.ts";
-import type { OrderItem } from "../../../core/types.ts";
+import type { SqlBoolean, SqlDate, SqlNumber, SqlTimestamp } from "../../types.ts";
+import type { ExprNode, OrderItem } from "../../../core/types.ts";
 import {
   binaryExpr,
   exprOf,
@@ -12,7 +12,7 @@ import {
 import { userError } from "../../../errors.ts";
 
 type ComparableInput = SqlNumber | number | bigint | SqlDate | SqlTimestamp | null;
-type PredicateResult<TValue> = null extends TValue ? boolean | null : boolean;
+type PredicateResult<TValue> = null extends TValue ? SqlBoolean | null : SqlBoolean;
 type BinaryPredicateResult<TLeft, TRight> = PredicateResult<
   ExprInputValue<TLeft> | ExprInputValue<TRight>
 >;
@@ -151,18 +151,18 @@ export function between<
 export function isDistinctFrom<T, TLeft extends ExprInput<T>, TRight extends ExprInput<T>>(
   left: TLeft,
   right: TRight
-): ExprRef<boolean> {
+): ExprRef<SqlBoolean> {
   return binaryExpr(
     "IS DISTINCT FROM",
     toExprNode(left as ExprInput<T>),
     toExprNode(right as ExprInput<T>)
-  ) as ExprRef<boolean>;
+  ) as ExprRef<SqlBoolean>;
 }
 
-type BooleanInput = ExprInput<boolean | null>;
+type BooleanInput = ExprInput<boolean | SqlBoolean | null>;
 type NonEmptyBooleanInputs = readonly [BooleanInput, ...BooleanInput[]];
 type BooleanChainResult<TValues extends readonly BooleanInput[]> =
-  null extends ExprInputValue<TValues[number]> ? boolean | null : boolean;
+  null extends ExprInputValue<TValues[number]> ? SqlBoolean | null : SqlBoolean;
 
 export function and<const TValues extends NonEmptyBooleanInputs>(
   ...values: TValues
@@ -180,12 +180,12 @@ function booleanChain(
   op: "AND" | "OR",
   name: "and" | "or",
   values: readonly BooleanInput[]
-): ExprRef<boolean | null> {
+): ExprRef<SqlBoolean | null> {
   if (values.length === 0) {
     userError("INVALID_FUNCTION_NAME", `${name} requires at least one expression`);
   }
   if (values.length === 1) {
-    return wrapExpr(values[0] as BooleanInput) as ExprRef<boolean | null>;
+    return wrapExpr(values[0] as BooleanInput) as ExprRef<SqlBoolean | null>;
   }
 
   let current = toExprNode(values[0] as BooleanInput);
@@ -197,37 +197,37 @@ function booleanChain(
       right: toExprNode(value as BooleanInput),
     };
   }
-  return exprOf<boolean | null>(current);
+  return exprOf<SqlBoolean | null>(current as unknown as ExprNode<SqlBoolean | null>);
 }
 
-export function not<TValue extends ExprInput<boolean | null>>(
+export function not<TValue extends ExprInput<boolean | SqlBoolean | null>>(
   value: TValue
 ): ExprRef<PredicateResult<ExprInputValue<TValue>>> {
   return exprOf<PredicateResult<ExprInputValue<TValue>>>({
     kind: "unary",
     op: "NOT",
-    expr: toExprNode(value as ExprInput<boolean | null>),
+    expr: toExprNode(value as ExprInput<boolean | SqlBoolean | null>),
   });
 }
 
 export function isNull<TValue extends ExprInput<unknown>>(
   value: TValue
-): ExprRef<boolean> {
+): ExprRef<SqlBoolean> {
   return binaryExpr(
     "IS",
     toExprNode(value as ExprInput<unknown>),
     toExprNode(null)
-  ) as ExprRef<boolean>;
+  ) as ExprRef<SqlBoolean>;
 }
 
 export function isNotNull<TValue extends ExprInput<unknown>>(
   value: TValue
-): ExprRef<boolean> {
+): ExprRef<SqlBoolean> {
   return binaryExpr(
     "IS NOT",
     toExprNode(value as ExprInput<unknown>),
     toExprNode(null)
-  ) as ExprRef<boolean>;
+  ) as ExprRef<SqlBoolean>;
 }
 
 export function asc<TValue extends ExprInput<unknown>>(

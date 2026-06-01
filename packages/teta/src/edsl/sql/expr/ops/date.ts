@@ -4,6 +4,7 @@ import type {
   SqlFloat,
   SqlInt,
   SqlNumber,
+  SqlString,
   SqlTimestamp,
 } from "../../types.ts";
 import {
@@ -85,8 +86,8 @@ export function dateDiff<
 export function dateFormat<TValue extends NullableDateLike>(
   value: ExprInput<TValue>,
   format: ExprInput<string>
-): ExprRef<PropagateNull<TValue, string>> {
-  return fn<PropagateNull<TValue, string>>("DATE_FORMAT", value, format);
+): ExprRef<PropagateNull<TValue, SqlString>> {
+  return fn<PropagateNull<TValue, SqlString>>("DATE_FORMAT", value, format);
 }
 
 export function dateParse<TValue extends string | null>(

@@ -6,7 +6,7 @@ import type {
   ExprInput,
 } from "../expr.ts";
 import { eq, gt, gte, isExpr, lt, lte, ne, type ExprRef } from "../expr.ts";
-import type { NormalizeNumericLiteral, SqlDate, SqlNumber, SqlTimestamp } from "../sql/types.ts";
+import type { NormalizeNumericLiteral, SqlBoolean, SqlDate, SqlNumber, SqlTimestamp } from "../sql/types.ts";
 type QueryColumns = Record<string, any>;
 import { userError } from "../errors.ts";
 
@@ -264,7 +264,7 @@ function comparisonFilter<TColumns extends QueryColumns, T>(
   helper: string,
   left: Operand<TColumns, T>,
   right: Operand<TColumns, T>,
-  op: (left: ExprInput<T>, right: ExprInput<T>) => ExprRef<boolean | null>
+  op: (left: ExprInput<T>, right: ExprInput<T>) => ExprRef<SqlBoolean | null>
 ): QueryStep<TColumns, TColumns> {
   if (!isCallableOperand(left) && !isCallableOperand(right)) {
     userError(

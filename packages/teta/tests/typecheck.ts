@@ -1,4 +1,4 @@
-import type { Column, Expr, SqlBigInt, SqlBytes, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlTimestamp, SqlUuid, } from "../mod.ts";
+import type { Column, Expr, SqlBigInt, SqlBoolean, SqlBytes, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlNumber, SqlString, SqlTimestamp, SqlUuid, } from "../mod.ts";
 import * as publicApi from "../mod.ts";
 import { between, filter, filterEq, filterNe, filterGt, filterGte, filterLt, filterLte, fullJoin, fullJoinMerge, identityStep, innerJoin, innerJoinMap, innerJoinMerge, isDistinctFrom, isNotIn, leftJoin, leftJoinMap, leftJoinMerge, rightJoin, rightJoinMerge, take, sort, param, map, rename, pipe, flow, table, t, fold, asc, desc, eq, gt, upper, add, mul, coalesce, count, group, loop, sum, and, or, isNotNull, sub, when, mapShape, groupShape, lt, unnest, unionAll, union, unlessStep, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, toString, toTimestamp, pick, drop, extend, whenStep } from "../mod.ts";
 type Equal<A, B> = ((<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false);
@@ -111,7 +111,7 @@ const mappedProfileRows = table("profiles_mapped", {
     user_id: t.int(),
     bio: t.string(),
 });
-const mappedProfileOnEq: (user: typeof users.columns, profile: typeof mappedProfileRows.columns) => Expr<boolean | null> = onEq({ id: "user_id" });
+const mappedProfileOnEq: (user: typeof users.columns, profile: typeof mappedProfileRows.columns) => Expr<SqlBoolean | null> = onEq({ id: "user_id" });
 const mappedJoin = pipe(users, leftJoinMerge(
     mappedProfileRows,
     mappedProfileOnEq,
@@ -254,8 +254,8 @@ const projectedWithCase = pipe(users, map((user) => ({
         bumped_id: user.id,
     }, (value) => add(value, 1)),
 })));
-type CaseDefaultType = Expect<Equal<ExprType<typeof projectedWithCase.columns.age_bucket>, string>>;
-type CaseNullableType = Expect<Equal<ExprType<typeof projectedWithCase.columns.age_bucket_nullable>, string | null>>;
+type CaseDefaultType = Expect<Equal<ExprType<typeof projectedWithCase.columns.age_bucket>, SqlString>>;
+type CaseNullableType = Expect<Equal<ExprType<typeof projectedWithCase.columns.age_bucket_nullable>, SqlString | null>>;
 const aggregatedWithGroupShape = pipe(orders, fold((order) => ({
     ...groupShape({
         user_id: order.user_id,
@@ -286,53 +286,53 @@ const rawTimestampRows = values([
 const eventDateTimestamp = toTimestamp(events.columns.event_date);
 const nullableEventTimestamp = toTimestamp(events.columns.event_ts);
 type _LeftJoinTotal = Expect<Equal<ExprType<typeof leftJoined.columns.total>, SqlFloat | null>>;
-type _ExplodedTag = Expect<Equal<ExprType<typeof explodedSessions.columns.tag>, string>>;
+type _ExplodedTag = Expect<Equal<ExprType<typeof explodedSessions.columns.tag>, SqlString>>;
 type _ExplodedTagIndex = Expect<Equal<ExprType<typeof explodedSessions.columns.tag_index>, SqlInt>>;
-type _OuterExplodedTag = Expect<Equal<ExprType<typeof outerExplodedSessions.columns.tag>, string | null>>;
+type _OuterExplodedTag = Expect<Equal<ExprType<typeof outerExplodedSessions.columns.tag>, SqlString | null>>;
 type _RightJoinId = Expect<Equal<ExprType<typeof rightJoined.columns.id>, SqlInt | null>>;
 type _FullJoinTotal = Expect<Equal<ExprType<typeof fullJoined.columns.total>, SqlFloat | null>>;
 type _LeftViaJoinTotal = Expect<Equal<ExprType<typeof leftViaJoin.columns.total>, SqlFloat | null>>;
 type _ProjectedUsersId = Expect<Equal<ExprType<typeof projectedUsers.columns.id>, SqlInt>>;
-type _ProjectedUsersName = Expect<Equal<ExprType<typeof projectedUsers.columns.name>, string>>;
+type _ProjectedUsersName = Expect<Equal<ExprType<typeof projectedUsers.columns.name>, SqlString>>;
 type _MappedSelectedUsersKeys = Expect<Equal<keyof typeof mappedSelectedUsers.columns, "id" | "name">>;
 type _MappedSelectedUsersId = Expect<Equal<ExprType<typeof mappedSelectedUsers.columns.id>, SqlInt>>;
-type _MappedSelectedUsersName = Expect<Equal<ExprType<typeof mappedSelectedUsers.columns.name>, string>>;
+type _MappedSelectedUsersName = Expect<Equal<ExprType<typeof mappedSelectedUsers.columns.name>, SqlString>>;
 type _MappedSortedTakenSelectedUsersKeys = Expect<Equal<keyof typeof mappedSortedTakenSelectedUsers.columns, "id" | "name">>;
 type _MappedSortedTakenSelectedUsersId = Expect<Equal<ExprType<typeof mappedSortedTakenSelectedUsers.columns.id>, SqlInt>>;
-type _MappedSortedTakenSelectedUsersName = Expect<Equal<ExprType<typeof mappedSortedTakenSelectedUsers.columns.name>, string>>;
+type _MappedSortedTakenSelectedUsersName = Expect<Equal<ExprType<typeof mappedSortedTakenSelectedUsers.columns.name>, SqlString>>;
 type _ExtendedUsersKeys = Expect<Equal<keyof typeof extendedUsers.columns, "id" | "name" | "name_upper">>;
-type _ExtendedUsersNameUpper = Expect<Equal<ExprType<typeof extendedUsers.columns.name_upper>, string>>;
+type _ExtendedUsersNameUpper = Expect<Equal<ExprType<typeof extendedUsers.columns.name_upper>, SqlString>>;
 type _ReplacedExtendedUsersKeys = Expect<Equal<keyof typeof replacedExtendedUsers.columns, "id" | "name">>;
-type _ReplacedExtendedUsersId = Expect<Equal<ExprType<typeof replacedExtendedUsers.columns.id>, string>>;
-type _ReplacedExtendedUsersName = Expect<Equal<ExprType<typeof replacedExtendedUsers.columns.name>, string>>;
+type _ReplacedExtendedUsersId = Expect<Equal<ExprType<typeof replacedExtendedUsers.columns.id>, SqlString>>;
+type _ReplacedExtendedUsersName = Expect<Equal<ExprType<typeof replacedExtendedUsers.columns.name>, SqlString>>;
 type _CallbackFilteredUsersId = Expect<Equal<ExprType<typeof callbackFilteredUsers.columns.id>, SqlInt>>;
-type _FilterEqCallbackNameUsersName = Expect<Equal<ExprType<typeof filterEqCallbackNameUsers.columns.name>, string>>;
+type _FilterEqCallbackNameUsersName = Expect<Equal<ExprType<typeof filterEqCallbackNameUsers.columns.name>, SqlString>>;
 type _FilterEqCallbackIdUsersId = Expect<Equal<ExprType<typeof filterEqCallbackIdUsers.columns.id>, SqlInt>>;
 type _FilterGteComputedUsersId = Expect<Equal<ExprType<typeof filterGteComputedUsers.columns.id>, SqlInt>>;
 type _FilterEqCallbackUsersId = Expect<Equal<ExprType<typeof filterEqCallbackUsers.columns.id>, SqlInt>>;
-type _FilterNeUsersName = Expect<Equal<ExprType<typeof filterNeUsers.columns.name>, string>>;
+type _FilterNeUsersName = Expect<Equal<ExprType<typeof filterNeUsers.columns.name>, SqlString>>;
 type _FilterGtUsersId = Expect<Equal<ExprType<typeof filterGtUsers.columns.id>, SqlInt>>;
 type _FilterLtUsersId = Expect<Equal<ExprType<typeof filterLtUsers.columns.id>, SqlInt>>;
 type _FilterLteUsersId = Expect<Equal<ExprType<typeof filterLteUsers.columns.id>, SqlInt>>;
-type _CallbackSortedUsersName = Expect<Equal<ExprType<typeof callbackSortedUsers.columns.name>, string>>;
+type _CallbackSortedUsersName = Expect<Equal<ExprType<typeof callbackSortedUsers.columns.name>, SqlString>>;
 type _CallbackAggregatedOrdersTotalSpend = Expect<Equal<ExprType<typeof callbackAggregatedOrders.columns.total_spend>, SqlFloat>>;
-type _CallbackExplodedSessionsTag = Expect<Equal<ExprType<typeof callbackExplodedSessions.columns.tag>, string>>;
+type _CallbackExplodedSessionsTag = Expect<Equal<ExprType<typeof callbackExplodedSessions.columns.tag>, SqlString>>;
 type _CallbackMergedJoinUserId = Expect<Equal<ExprType<typeof callbackMergedJoin.columns.user_id>, SqlInt>>;
 type _CallbackMergedJoinTotal = Expect<Equal<ExprType<typeof callbackMergedJoin.columns.total>, SqlFloat | null>>;
 type _VariadicAndFilteredUsersId = Expect<Equal<ExprType<typeof variadicAndFilteredUsers.columns.id>, SqlInt>>;
-type _VariadicOrFilteredUsersName = Expect<Equal<ExprType<typeof variadicOrFilteredUsers.columns.name>, string>>;
-type _ConditionalStepUsersName = Expect<Equal<ExprType<typeof conditionalStepUsers.columns.name>, string>>;
-type _UnionStepUsersName = Expect<Equal<ExprType<typeof unionStepUsers.columns.name>, string>>;
+type _VariadicOrFilteredUsersName = Expect<Equal<ExprType<typeof variadicOrFilteredUsers.columns.name>, SqlString>>;
+type _ConditionalStepUsersName = Expect<Equal<ExprType<typeof conditionalStepUsers.columns.name>, SqlString>>;
+type _UnionStepUsersName = Expect<Equal<ExprType<typeof unionStepUsers.columns.name>, SqlString>>;
 type _LoopStepUsersId = Expect<Equal<ExprType<typeof loopStepUsers.columns.id>, SqlInt>>;
-type _UnnestStepSessionsTag = Expect<Equal<ExprType<typeof unnestStepSessions.columns.tag>, string>>;
-type _PredicateConvenienceUsersName = Expect<Equal<ExprType<typeof predicateConvenienceUsers.columns.name>, string>>;
-type _SingleAndExpr = Expect<Equal<ExprType<typeof singleAndExpr>, boolean>>;
-type _SingleOrExpr = Expect<Equal<ExprType<typeof singleOrExpr>, boolean>>;
+type _UnnestStepSessionsTag = Expect<Equal<ExprType<typeof unnestStepSessions.columns.tag>, SqlString>>;
+type _PredicateConvenienceUsersName = Expect<Equal<ExprType<typeof predicateConvenienceUsers.columns.name>, SqlString>>;
+type _SingleAndExpr = Expect<Equal<ExprType<typeof singleAndExpr>, SqlBoolean>>;
+type _SingleOrExpr = Expect<Equal<ExprType<typeof singleOrExpr>, SqlBoolean>>;
 type _PickedUsersId = Expect<Equal<ExprType<typeof pickedUsers.columns.id>, SqlInt>>;
-type _PickedUsersName = Expect<Equal<ExprType<typeof pickedUsers.columns.name>, string>>;
-type _InlineRowsId = Expect<Equal<ExprType<typeof inlineRows.columns.id>, number>>;
-type _InlineRowsName = Expect<Equal<ExprType<typeof inlineRows.columns.name>, string>>;
-type _ProfileRowsBio = Expect<Equal<ExprType<typeof profileRows.columns.bio>, string>>;
+type _PickedUsersName = Expect<Equal<ExprType<typeof pickedUsers.columns.name>, SqlString>>;
+type _InlineRowsId = Expect<Equal<ExprType<typeof inlineRows.columns.id>, SqlNumber>>;
+type _InlineRowsName = Expect<Equal<ExprType<typeof inlineRows.columns.name>, SqlString>>;
+type _ProfileRowsBio = Expect<Equal<ExprType<typeof profileRows.columns.bio>, SqlString>>;
 type _CurriedJoinTotal = Expect<Equal<ExprType<typeof curriedJoin.columns.total>, SqlFloat | null>>;
 type _DirectPickedKeys = Expect<Equal<keyof typeof directPickedSelection.columns, "id">>;
 type _DirectPickedId = Expect<Equal<ExprType<typeof directPickedSelection.columns.id>, SqlInt>>;
@@ -342,7 +342,7 @@ type _DirectDroppedProfilesKeys = Expect<Equal<keyof typeof directDroppedProfile
 type _DirectDroppedProfilesId = Expect<Equal<ExprType<typeof directDroppedProfiles.columns.id>, SqlUuid>>;
 type _DirectDroppedProfilesExternalId = Expect<Equal<ExprType<typeof directDroppedProfiles.columns.external_id>, SqlBigInt>>;
 type _DirectKeyMappedId = Expect<Equal<ExprType<typeof directKeyMappedSelection.columns.prefix1_id>, SqlInt>>;
-type _DirectKeyMappedName = Expect<Equal<ExprType<typeof directKeyMappedSelection.columns.prefix1_name>, string>>;
+type _DirectKeyMappedName = Expect<Equal<ExprType<typeof directKeyMappedSelection.columns.prefix1_name>, SqlString>>;
 type _DroppedUsersUsageId = Expect<Equal<ExprType<typeof droppedUsersUsage.columns.id>, SqlInt>>;
 type _ManualOmittedAggregateUserId = Expect<Equal<ExprType<typeof manualOmittedAggregate.columns.user_id>, SqlInt>>;
 type _ManualOmittedAggregateOrderCount = Expect<Equal<ExprType<typeof manualOmittedAggregate.columns.order_count>, SqlInt>>;
@@ -352,23 +352,23 @@ type _LeftJoinCoalescedSub = Expect<Equal<ExprType<typeof leftJoinTotalRemaining
 type _RenamedJoinUserId = Expect<Equal<ExprType<typeof renamedJoin.columns.user_id>, SqlInt>>;
 type _RenamedJoinOrderTotal = Expect<Equal<ExprType<typeof renamedJoin.columns.order_total>, SqlFloat>>;
 type _OverlapPrefixedLeftUserId = Expect<Equal<ExprType<typeof overlapPrefixedLeft.columns.user_id>, SqlInt>>;
-type _OverlapPrefixedLeftRightId = Expect<Equal<ExprType<typeof overlapPrefixedLeft.columns.id>, number>>;
-type _OverlapPrefixedRightProfileId = Expect<Equal<ExprType<typeof overlapPrefixedRight.columns.profile_id>, number>>;
+type _OverlapPrefixedLeftRightId = Expect<Equal<ExprType<typeof overlapPrefixedLeft.columns.id>, SqlNumber>>;
+type _OverlapPrefixedRightProfileId = Expect<Equal<ExprType<typeof overlapPrefixedRight.columns.profile_id>, SqlNumber>>;
 type _AllPrefixedLeftId = Expect<Equal<ExprType<typeof allPrefixedLeft.columns.left_id>, SqlInt>>;
 type _AllPrefixedRightTotal = Expect<Equal<ExprType<typeof allPrefixedRight.columns.order_total>, SqlFloat | null>>;
 type _AllSuffixedLeftId = Expect<Equal<ExprType<typeof allSuffixedLeft.columns.id_user>, SqlInt | null>>;
 type _AllSuffixedRightTotal = Expect<Equal<ExprType<typeof allSuffixedRight.columns.total_order>, SqlFloat | null>>;
-type _DroppedOverlapLeftId = Expect<Equal<ExprType<typeof droppedOverlapLeft.columns.id>, number>>;
+type _DroppedOverlapLeftId = Expect<Equal<ExprType<typeof droppedOverlapLeft.columns.id>, SqlNumber>>;
 type _DroppedOverlapRightId = Expect<Equal<ExprType<typeof droppedOverlapRight.columns.id>, SqlInt>>;
-type _UsingJoinId = Expect<Equal<ExprType<typeof usingJoin.columns.id>, number>>;
-type _UsingJoinBio = Expect<Equal<ExprType<typeof usingJoin.columns.bio>, string>>;
+type _UsingJoinId = Expect<Equal<ExprType<typeof usingJoin.columns.id>, SqlNumber>>;
+type _UsingJoinBio = Expect<Equal<ExprType<typeof usingJoin.columns.bio>, SqlString>>;
 type _MappedJoinLeftId = Expect<Equal<ExprType<typeof mappedJoin.columns.left_id>, SqlInt>>;
-type _MappedJoinBio = Expect<Equal<ExprType<typeof mappedJoin.columns.bio>, string | null>>;
+type _MappedJoinBio = Expect<Equal<ExprType<typeof mappedJoin.columns.bio>, SqlString | null>>;
 type _ProjectedWithQuotedKey = Expect<Equal<ExprType<typeof projectedWithQuotedKey.columns["User Id"]>, SqlInt>>;
 type _AggregatedWithQuotedKey = Expect<Equal<ExprType<typeof aggregatedWithQuotedKey.columns["Total Spend"]>, SqlFloat>>;
 type _AggregatedTotals = Expect<Equal<ExprType<typeof aggregatedTotals.columns.totals>, SqlFloat[]>>;
 type _LoopedId = Expect<Equal<ExprType<typeof looped.columns.id>, SqlInt>>;
-type _ProjectedWithCaseAgeBucket = Expect<Equal<ExprType<typeof projectedWithCase.columns.age_bucket>, string>>;
+type _ProjectedWithCaseAgeBucket = Expect<Equal<ExprType<typeof projectedWithCase.columns.age_bucket>, SqlString>>;
 type _ProjectedWithCaseBumpedId = Expect<Equal<ExprType<typeof projectedWithCase.columns.bumped_id>, SqlInt>>;
 type _AggregatedWithGroupShapeUserId = Expect<Equal<ExprType<typeof aggregatedWithGroupShape.columns.user_id>, SqlInt>>;
 type _ProfileId = Expect<Equal<ExprType<typeof profiles.columns.id>, SqlUuid>>;
@@ -376,19 +376,19 @@ type _ProfileExternalId = Expect<Equal<ExprType<typeof profiles.columns.external
 type _ProfileCreditLimit = Expect<Equal<ExprType<typeof profiles.columns.credit_limit>, SqlDecimal | null>>;
 type _ProfileMetadata = Expect<Equal<ExprType<typeof profiles.columns.metadata>, SqlJson<ProfileMeta>>>;
 type _ProfileAvatar = Expect<Equal<ExprType<typeof profiles.columns.avatar>, SqlBytes | null>>;
-type _ProfileNickname = Expect<Equal<ExprType<typeof profiles.columns.nickname>, string | null>>;
+type _ProfileNickname = Expect<Equal<ExprType<typeof profiles.columns.nickname>, SqlString | null>>;
 type _ProjectedProfileExternalId = Expect<Equal<ExprType<typeof projectedProfiles.columns.external_id>, SqlBigInt>>;
 type _ProjectedProfileCreditLimit = Expect<Equal<ExprType<typeof projectedProfiles.columns.credit_limit>, SqlDecimal>>;
 type _ProjectedProfileMetadata = Expect<Equal<ExprType<typeof projectedProfiles.columns.metadata>, SqlJson<ProfileMeta>>>;
 type _ProjectedProfileAvatar = Expect<Equal<ExprType<typeof projectedProfiles.columns.avatar>, SqlBytes | null>>;
-type _ProjectedProfileNickname = Expect<Equal<ExprType<typeof projectedProfiles.columns.nickname>, string>>;
+type _ProjectedProfileNickname = Expect<Equal<ExprType<typeof projectedProfiles.columns.nickname>, SqlString>>;
 type _NullableFilterGtCallbackUsersCreditLimit = Expect<Equal<ExprType<typeof nullableFilterGtCallbackUsers.columns.credit_limit>, SqlDecimal | null>>;
 type _NullableFilterGtRightCallbackUsersCreditLimit = Expect<Equal<ExprType<typeof nullableFilterGtRightCallbackUsers.columns.credit_limit>, SqlDecimal | null>>;
 type _FlowNumberToString = Expect<Equal<ReturnType<typeof flowNumberToString>, string>>;
 type _FlowPipelineKeys = Expect<Equal<keyof typeof flowPipelineResult.columns, "id">>;
 type _FlowPipelineId = Expect<Equal<ExprType<typeof flowPipelineResult.columns.id>, SqlInt>>;
-type _StringifiedUserId = Expect<Equal<ExprType<typeof stringifiedUserId>, string>>;
-type _StringifiedNullableNickname = Expect<Equal<ExprType<typeof stringifiedNullableNickname>, string | null>>;
+type _StringifiedUserId = Expect<Equal<ExprType<typeof stringifiedUserId>, SqlString>>;
+type _StringifiedNullableNickname = Expect<Equal<ExprType<typeof stringifiedNullableNickname>, SqlString | null>>;
 type _EventDateTimestamp = Expect<Equal<ExprType<typeof eventDateTimestamp>, SqlTimestamp>>;
 type _NullableEventTimestamp = Expect<Equal<ExprType<typeof nullableEventTimestamp>, SqlTimestamp | null>>;
 void leftSelected;

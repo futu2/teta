@@ -10,12 +10,14 @@ import { userError } from "../errors.ts";
 import type {
   NormalizeExpressionLiteral,
   SqlBigInt,
+  SqlBoolean,
   SqlBytes,
   SqlDate,
   SqlDecimal,
   SqlFloat,
   SqlInt,
   SqlJson,
+  SqlString,
   SqlTimestamp,
   SqlUuid,
 } from "../sql/types.ts";
@@ -30,12 +32,12 @@ type ValuesColumns<TRows extends readonly ValuesRow[]> = {
 };
 
 type TableColumnHelpers = {
-  string: () => ColumnType<string>;
+  string: () => ColumnType<SqlString>;
   int: () => ColumnType<SqlInt>;
   float: () => ColumnType<SqlFloat>;
   bigint: () => ColumnType<SqlBigInt>;
   decimal: () => ColumnType<SqlDecimal>;
-  boolean: () => ColumnType<boolean>;
+  boolean: () => ColumnType<SqlBoolean>;
   date: () => ColumnType<SqlDate>;
   timestamp: () => ColumnType<SqlTimestamp>;
   uuid: () => ColumnType<SqlUuid>;
@@ -46,12 +48,12 @@ type TableColumnHelpers = {
 };
 
 export const t: TableColumnHelpers = {
-  string: () => columnType<string>("string"),
+  string: () => columnType<SqlString>("string"),
   int: () => columnType<SqlInt>("int"),
   float: () => columnType<SqlFloat>("float"),
   bigint: () => columnType<SqlBigInt>("bigint"),
   decimal: () => columnType<SqlDecimal>("decimal"),
-  boolean: () => columnType<boolean>("boolean"),
+  boolean: () => columnType<SqlBoolean>("boolean"),
   date: () => columnType<SqlDate>("date"),
   timestamp: () => columnType<SqlTimestamp>("timestamp"),
   uuid: () => columnType<SqlUuid>("uuid"),

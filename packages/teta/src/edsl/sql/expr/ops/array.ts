@@ -1,4 +1,4 @@
-import type { SqlInt } from "../../types.ts";
+import type { SqlBoolean, SqlInt, SqlString } from "../../types.ts";
 import {
   fn,
   wrapExpr,
@@ -15,8 +15,8 @@ export function arrayLength(value: ExprInput<unknown>): ExprRef<SqlInt> {
 export function arrayContains<TInput extends ExprInput<unknown>, TItem extends ExprInput<unknown>>(
   value: TInput,
   item: TItem
-): ExprRef<PropagateNull<ExprInputValue<TInput> | ExprInputValue<TItem>, boolean>> {
-  return fn<PropagateNull<ExprInputValue<TInput> | ExprInputValue<TItem>, boolean>>(
+): ExprRef<PropagateNull<ExprInputValue<TInput> | ExprInputValue<TItem>, SqlBoolean>> {
+  return fn<PropagateNull<ExprInputValue<TInput> | ExprInputValue<TItem>, SqlBoolean>>(
     "ARRAY_CONTAINS",
     value,
     item
@@ -43,8 +43,8 @@ export function arraySlice(
 export function arrayJoin(
   value: ExprInput<unknown>,
   separator: ExprInput<string>
-): ExprRef<string> {
-  return fn<string>("ARRAY_JOIN", value, separator);
+): ExprRef<SqlString> {
+  return fn<SqlString>("ARRAY_JOIN", value, separator);
 }
 
 export function arrayAppend(

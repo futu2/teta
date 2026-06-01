@@ -1,6 +1,7 @@
 import { and, eq } from "../expr.ts";
 import type { ColumnRefs, ExprLike, ExprRef, ExprRefs } from "../expr.ts";
 import { userError } from "../errors.ts";
+import type { SqlBoolean } from "../types.ts";
 
 type JoinSelection = Record<string, ExprLike<unknown>>;
 
@@ -92,7 +93,7 @@ export function usingCols<const TName extends string>(
 >(
   left: ColumnRefs<TLeft>,
   right: ColumnRefs<TRight>
-) => ExprRef<boolean | null>;
+) => ExprRef<SqlBoolean | null>;
 export function usingCols<const TNames extends readonly string[]>(
   names: TNames
 ): <
@@ -101,7 +102,7 @@ export function usingCols<const TNames extends readonly string[]>(
 >(
   left: ColumnRefs<TLeft>,
   right: ColumnRefs<TRight>
-) => ExprRef<boolean | null>;
+) => ExprRef<SqlBoolean | null>;
 export function usingCols(nameOrNames: string | readonly string[]) {
   const names = Array.isArray(nameOrNames) ? nameOrNames : [nameOrNames];
 
@@ -111,8 +112,8 @@ export function usingCols(nameOrNames: string | readonly string[]) {
   >(
     left: ColumnRefs<TLeft>,
     right: ColumnRefs<TRight>
-  ): ExprRef<boolean | null> {
-    let predicate: ExprRef<boolean | null> | undefined;
+  ): ExprRef<SqlBoolean | null> {
+    let predicate: ExprRef<SqlBoolean | null> | undefined;
 
     for (const name of names) {
       const next = eq(
@@ -137,7 +138,7 @@ export function onEq<const TMapping extends Record<string, string>>(
 >(
   left: ColumnRefs<TLeft>,
   right: ColumnRefs<TRight>
-) => ExprRef<boolean | null>;
+) => ExprRef<SqlBoolean | null>;
 export function onEq<const TMapping extends Record<string, string>>(
   mapping: TMapping
 ) {
@@ -150,8 +151,8 @@ export function onEq<const TMapping extends Record<string, string>>(
   >(
     left: ColumnRefs<TLeft>,
     right: ColumnRefs<TRight>
-  ): ExprRef<boolean | null> {
-    let predicate: ExprRef<boolean | null> | undefined;
+  ): ExprRef<SqlBoolean | null> {
+    let predicate: ExprRef<SqlBoolean | null> | undefined;
 
     for (const [leftName, rightName] of Object.entries(mapping) as Array<[LeftKey, RightKey]>) {
       const next = eq(

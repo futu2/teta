@@ -4,6 +4,8 @@ declare const __sqlInt: unique symbol;
 declare const __sqlFloat: unique symbol;
 declare const __sqlBigInt: unique symbol;
 declare const __sqlDecimal: unique symbol;
+declare const __sqlString: unique symbol;
+declare const __sqlBoolean: unique symbol;
 declare const __sqlDate: unique symbol;
 declare const __sqlTimestamp: unique symbol;
 declare const __sqlUuid: unique symbol;
@@ -20,6 +22,10 @@ export type SqlBigInt = bigint & { readonly [__sqlBigInt]: true };
 export type SqlDecimal = number & { readonly [__sqlDecimal]: true };
 /** Union of numeric SQL-branded values. */
 export type SqlNumber = SqlInt | SqlFloat | SqlBigInt | SqlDecimal;
+/** Branded SQL text value. */
+export type SqlString = string & { readonly [__sqlString]: true };
+/** Branded SQL boolean value. */
+export type SqlBoolean = boolean & { readonly [__sqlBoolean]: true };
 /** Branded SQL date value. */
 export type SqlDate = string & { readonly [__sqlDate]: true };
 /** Branded SQL timestamp value. */
@@ -50,22 +56,16 @@ export type NormalizeNumericLiteralTuple<
 
 /** Normalize TypeScript literal values to their corresponding SQL expression value types. */
 export type NormalizeExpressionLiteral<TValue> =
-  TValue extends SqlNumber | SqlDate | SqlTimestamp | SqlUuid | SqlBytes
+  TValue extends SqlNumber | SqlString | SqlBoolean | SqlDate | SqlTimestamp | SqlUuid | SqlBytes
     ? TValue
   : TValue extends number
-    ? number extends TValue
-      ? TValue
-      : SqlNumber
+    ? SqlNumber
   : TValue extends bigint
-    ? bigint extends TValue
-      ? TValue
-      : SqlBigInt
+    ? SqlBigInt
   : TValue extends string
-    ? string extends TValue
-      ? TValue
-      : string
+    ? SqlString
   : TValue extends boolean
-    ? boolean
+    ? SqlBoolean
   : TValue;
 
 /** Canonical built-in dialect names supported by the renderer. */

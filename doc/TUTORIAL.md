@@ -156,9 +156,9 @@ const users = table("users", {
 // users is inferred as:
 // Query<{
 //   id: SqlInt;
-//   name: string;
+//   name: SqlString;
 //   age: SqlInt;
-//   active: boolean;
+//   active: SqlBoolean;
 // }>
 ```
 
@@ -177,7 +177,7 @@ const labels = pipe(
 
 // Query<{
 //   user_id: SqlInt;
-//   label: string;
+//   label: SqlString;
 // }>
 ```
 
@@ -264,7 +264,7 @@ const exploded = pipe(usersWithTags, unnest((user) => user.tags, {
 }));
 
 // adds inferred columns:
-// tag: string
+// tag: SqlString
 // tag_index: SqlInt
 ```
 
@@ -559,7 +559,7 @@ Teta language spec categories:
 The expression API is function-first, so query code stays friendly to pipelines and ordinary function composition.
 
 ```ts
-import { arrayContains, arrayJoin, arrayLength, cast, dateDiff, dateFormat, dateParse, dateTrunc, regexLike, regexReplace, map, table, t, toSql, toUnixTime, pipe } from "@teta/teta";
+import { arrayContains, arrayJoin, arrayLength, cast, dateDiff, dateFormat, dateParse, dateTrunc, regexLike, regexReplace, map, type SqlString, table, t, toSql, toUnixTime, pipe } from "@teta/teta";
 
 const sessions = table("sessions", {
   id: t.int(),
@@ -576,7 +576,7 @@ const q = pipe(
     started_fmt: dateFormat(s.started_at, "%Y-%m-%d"),
     duration_sec: dateDiff(s.started_at, "second", s.ended_at),
     started_epoch: toUnixTime(s.started_at),
-    parsed_start: dateParse(cast<string>(s.started_at, "TEXT"), "%Y-%m-%d %H:%M:%S"),
+    parsed_start: dateParse(cast<SqlString>(s.started_at, "TEXT"), "%Y-%m-%d %H:%M:%S"),
     has_prod: arrayContains(s.tags, "prod"),
     tag_count: arrayLength(s.tags),
     tag_label: arrayJoin(s.tags, "|"),
@@ -692,7 +692,7 @@ console.log(toSql(q, { dialect: "postgresql", format: "pretty" }));
 ### Custom SQL functions (UDF)
 
 ```ts
-import { desc, fn, over, map, table, t, toSql, windowFn, pipe } from "@teta/teta";
+import { desc, fn, over, map, type SqlFloat, type SqlString, table, t, toSql, windowFn, pipe } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -703,8 +703,8 @@ const q = pipe(
   users,
   map((u) => ({
     id: u.id,
-    name_hash: fn<string>("my_hash_udf", u.name),
-    score_rank: over(windowFn<number>("percent_rank"), { orderBy: desc(u.id) }),
+    name_hash: fn<SqlString>("my_hash_udf", u.name),
+    score_rank: over(windowFn<SqlFloat>("percent_rank"), { orderBy: desc(u.id) }),
   }))
 );
 
@@ -820,7 +820,7 @@ Use `cast(expr, type)` to emit `CAST(expr AS type)`.
 Use `toDate(expr)` as a convenience when you want `CAST(expr AS DATE)`.
 
 ```ts
-import { cast, map, table, t, toDate, pipe } from "@teta/teta";
+import { cast, map, type SqlString, table, t, toDate, pipe } from "@teta/teta";
 
 const orders = table("orders", {
   id: t.int(),
@@ -831,14 +831,14 @@ const orders = table("orders", {
 const q = pipe(
   orders,
   map((o) => ({
-    total_text: cast<string>(o.total, "TEXT"),
+    total_text: cast<SqlString>(o.total, "TEXT"),
     created_date: toDate(o.created_at),
   }))
 );
 ```
 
 ```ts
-import { cast, filter, gt, map, table, t, pipe } from "@teta/teta";
+import { cast, filter, gt, map, type SqlInt, type SqlString, table, t, pipe } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -848,11 +848,11 @@ const users = table("users", {
 
 const q = pipe(
   users,
-  filter((u) => gt(cast<number>(u.age_text, "INTEGER"), 18)),
+  filter((u) => gt(cast<SqlInt>(u.age_text, "INTEGER"), 18)),
   map((u) => ({
     id: u.id,
-    age_int: cast<number>(u.age_text, "INTEGER"),
-    created_day: cast<string>(u.created_at, "DATE"),
+    age_int: cast<SqlInt>(u.age_text, "INTEGER"),
+    created_day: cast<SqlString>(u.created_at, "DATE"),
   }))
 );
 ```

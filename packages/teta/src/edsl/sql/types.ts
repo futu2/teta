@@ -10,6 +10,7 @@ export type {
   NormalizeNumericLiteralTuple,
   QueryDialect,
   SqlBigInt,
+  SqlBoolean,
   SqlBytes,
   SqlDate,
   SqlDecimal,
@@ -24,6 +25,7 @@ export type {
   SqlParameterPrefix,
   SqlRenderStrategy,
   SqlResult,
+  SqlString,
   SqlTimestamp,
   SqlUuid,
 } from "@teta/sql";

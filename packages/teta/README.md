@@ -103,7 +103,7 @@ const usersWithOrders = pipe(
 );
 ```
 
-Predicates involving nullable expressions are typed as `Expr<boolean | null>` and are accepted by `filter(...)`, matching SQL's three-valued boolean behavior.
+Predicates involving nullable expressions are typed as `Expr<SqlBoolean | null>` and are accepted by `filter(...)`, matching SQL's three-valued boolean behavior.
 
 For explicit frontend/backend use, lower the query to IR and render it through `@teta/sql`:
 
