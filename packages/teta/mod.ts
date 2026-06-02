@@ -490,19 +490,37 @@ export const sumOver: typeof import("./src/edsl/expr.ts").sumOver = expr.sumOver
 export const cast: typeof import("./src/edsl/expr.ts").cast = expr.cast;
 
 /** Builds a cast-to-integer expression. */
-export const toInt: typeof import("./src/edsl/expr.ts").toInt = expr.toInt;
+export const asInt: typeof import("./src/edsl/expr.ts").asInt = expr.asInt;
 
 /** Builds a cast-to-float expression. */
-export const toFloat: typeof import("./src/edsl/expr.ts").toFloat = expr.toFloat;
+export const asFloat: typeof import("./src/edsl/expr.ts").asFloat = expr.asFloat;
 
 /** Builds a cast-to-string expression. */
-export const toString: typeof import("./src/edsl/expr.ts").toString = expr.toString;
+export const asString: typeof import("./src/edsl/expr.ts").asString = expr.asString;
+
+/** Builds a cast-to-bigint expression. */
+export const asBigInt: typeof import("./src/edsl/expr.ts").asBigInt = expr.asBigInt;
+
+/** Builds a cast-to-decimal expression. */
+export const asDecimal: typeof import("./src/edsl/expr.ts").asDecimal = expr.asDecimal;
+
+/** Builds a cast-to-boolean expression. */
+export const asBoolean: typeof import("./src/edsl/expr.ts").asBoolean = expr.asBoolean;
 
 /** Builds a cast-to-date expression. */
-export const toDate: typeof import("./src/edsl/expr.ts").toDate = expr.toDate;
+export const asDate: typeof import("./src/edsl/expr.ts").asDate = expr.asDate;
 
 /** Builds a cast-to-timestamp expression. */
-export const toTimestamp: typeof import("./src/edsl/expr.ts").toTimestamp = expr.toTimestamp;
+export const asTimestamp: typeof import("./src/edsl/expr.ts").asTimestamp = expr.asTimestamp;
+
+/** Builds a cast-to-UUID expression. */
+export const asUuid: typeof import("./src/edsl/expr.ts").asUuid = expr.asUuid;
+
+/** Builds a cast-to-bytes expression. */
+export const asBytes: typeof import("./src/edsl/expr.ts").asBytes = expr.asBytes;
+
+/** Builds a cast-to-JSON expression. */
+export const asJson: typeof import("./src/edsl/expr.ts").asJson = expr.asJson;
 
 /** Builds a rounding expression. */
 export const round: typeof import("./src/edsl/expr.ts").round = expr.round;

@@ -1,6 +1,6 @@
 import { SQLITE_UNSUPPORTED, currentDate, currentTimestamp, scalarTable, } from "./live-language-spec-shared.ts";
 import type { LiveSpecCase } from "./live-language-spec-shared.ts";
-import { isNotNull, map, abs, add, cast, ceil, coalesce, dateAdd, dateDiff, dateFormat, dateParse, dateTrunc, day, div, eq, extract, floor, greatest, gt, gte, hour, isIn, isNull, least, lt, lte, minute, mod, month, mul, ne, nullIf, pow, round, second, sqrt, sub, toDate, toInt, toString, trim, year, and, bitLength, charLength, characterLength, concat, fromUnixTime, left, like, lower, lpad, not, octetLength, or, overlay, position, regexExtract, regexLike, regexReplace, replace, reverse, right, rpad, substring, toFloat, upper, toUnixTime, pipe } from "../../mod.ts";
+import { isNotNull, map, abs, add, cast, ceil, coalesce, dateAdd, dateDiff, dateFormat, dateParse, dateTrunc, day, div, eq, extract, floor, greatest, gt, gte, hour, isIn, isNull, least, lt, lte, minute, mod, month, mul, ne, nullIf, pow, round, second, sqrt, sub, asDate, asFloat, asInt, asString, trim, year, and, bitLength, charLength, characterLength, concat, fromUnixTime, left, like, lower, lpad, not, octetLength, or, overlay, position, regexExtract, regexLike, regexReplace, replace, reverse, right, rpad, substring, upper, toUnixTime, pipe } from "../../mod.ts";
 export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
     {
         name: "math functions",
@@ -365,7 +365,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
                 date_diff_v: dateDiff(ts, "day", ts_next),
                 date_parse_v: dateFormat(dateParse(parse_txt, "%Y-%m-%d %H:%M:%S"), "%Y-%m-%d %H:%M:%S"),
                 date_format_v: dateFormat(ts, "%Y-%m-%d"),
-                to_unixtime_v: toInt(toUnixTime(fromUnixTime(sub(i, 5)))),
+                to_unixtime_v: asInt(toUnixTime(fromUnixTime(sub(i, 5)))),
                 from_unixtime_v: dateFormat(fromUnixTime(sub(i, 5)), "%Y-%m-%d %H:%M:%S"),
             })));
         },
@@ -479,10 +479,10 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
             const scalar = scalarTable();
             return pipe(scalar, map(({ i, nullable_txt, num_txt, ts, txt, txt2, x }) => ({
                 cast_v: cast(num_txt, "INTEGER"),
-                to_int_v: toInt(x),
-                to_float_v: toFloat(toInt(x)),
-                to_string_v: toString(i),
-                to_date_v: dateFormat(toDate(ts), "%Y-%m-%d"),
+                to_int_v: asInt(x),
+                to_float_v: asFloat(asInt(x)),
+                to_string_v: asString(i),
+                to_date_v: dateFormat(asDate(ts), "%Y-%m-%d"),
                 coalesce_v: coalesce(nullable_txt, txt2),
                 nullif_is_null_v: isNull(nullIf(txt2, "World")),
                 is_null_v: isNull(nullable_txt),

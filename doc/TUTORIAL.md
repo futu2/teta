@@ -817,10 +817,10 @@ const q = pipe(
 ### CAST helpers
 
 Use `cast(expr, type)` to emit `CAST(expr AS type)`.
-Use `toDate(expr)` as a convenience when you want `CAST(expr AS DATE)`.
+Use helpers like `asInt(expr)`, `asDate(expr)`, and `asTimestamp(expr)` when you want a typed shorthand for common casts.
 
 ```ts
-import { cast, map, type SqlString, table, t, toDate, pipe } from "@teta/teta";
+import { asDate, asString, cast, map, type SqlString, table, t, pipe } from "@teta/teta";
 
 const orders = table("orders", {
   id: t.int(),
@@ -832,13 +832,14 @@ const q = pipe(
   orders,
   map((o) => ({
     total_text: cast<SqlString>(o.total, "TEXT"),
-    created_date: toDate(o.created_at),
+    total_string: asString(o.total),
+    created_date: asDate(o.created_at),
   }))
 );
 ```
 
 ```ts
-import { cast, filter, gt, map, type SqlInt, type SqlString, table, t, pipe } from "@teta/teta";
+import { asDate, asInt, cast, filter, gt, map, type SqlInt, table, t, pipe } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -851,8 +852,8 @@ const q = pipe(
   filter((u) => gt(cast<SqlInt>(u.age_text, "INTEGER"), 18)),
   map((u) => ({
     id: u.id,
-    age_int: cast<SqlInt>(u.age_text, "INTEGER"),
-    created_day: cast<SqlString>(u.created_at, "DATE"),
+    age_int: asInt(u.age_text),
+    created_day: asDate(u.created_at),
   }))
 );
 ```

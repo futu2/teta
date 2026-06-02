@@ -21,3 +21,13 @@ test("schema helpers use short names only", () => {
   expect("sqlBoolean" in publicApi.t).toBe(false);
   expect("sqlInt" in publicApi.t).toBe(false);
 });
+
+test("cast helpers use as-prefix names only", () => {
+  expect(typeof publicApi.asInt).toBe("function");
+  expect(typeof publicApi.asDate).toBe("function");
+  expect("toInt" in publicApi).toBe(false);
+  expect("toFloat" in publicApi).toBe(false);
+  expect("toString" in publicApi).toBe(false);
+  expect("toDate" in publicApi).toBe(false);
+  expect("toTimestamp" in publicApi).toBe(false);
+});

@@ -13,6 +13,7 @@ import {
   funcExpr,
   toExprNode,
   type ExprInput,
+  type ExprInputValue,
   type ExprRef,
   type PropagateNull,
 } from "../core.ts";
@@ -20,8 +21,6 @@ import { userError } from "../../../errors.ts";
 import { cast } from "./math.ts";
 
 type NullableDateLike = SqlDate | SqlTimestamp | string | null;
-type NullableTimestamp = SqlTimestamp | null;
-type NullableTimestampCast = SqlDate | SqlTimestamp | null;
 type NullableSqlNumber = SqlNumber | null;
 
 export function currentDate(): ExprRef<SqlDate> {
@@ -133,12 +132,14 @@ export function second<TValue>(value: ExprInput<TValue>): ExprRef<PropagateNull<
   return cast<PropagateNull<TValue, SqlInt>>(extract(value, "second"), "INTEGER");
 }
 
-export function toDate<TValue extends NullableTimestamp>(value: ExprInput<TValue>): ExprRef<PropagateNull<TValue, SqlDate>> {
-  return cast<PropagateNull<TValue, SqlDate>>(value, "DATE");
+export function asDate<TInput extends ExprInput<unknown>>(
+  value: TInput
+): ExprRef<PropagateNull<ExprInputValue<TInput>, SqlDate>> {
+  return cast<PropagateNull<ExprInputValue<TInput>, SqlDate>, TInput>(value, "DATE");
 }
 
-export function toTimestamp<TValue extends NullableTimestampCast>(
-  value: ExprInput<TValue>
-): ExprRef<PropagateNull<TValue, SqlTimestamp>> {
-  return cast<PropagateNull<TValue, SqlTimestamp>>(value, "TIMESTAMP");
+export function asTimestamp<TInput extends ExprInput<unknown>>(
+  value: TInput
+): ExprRef<PropagateNull<ExprInputValue<TInput>, SqlTimestamp>> {
+  return cast<PropagateNull<ExprInputValue<TInput>, SqlTimestamp>, TInput>(value, "TIMESTAMP");
 }

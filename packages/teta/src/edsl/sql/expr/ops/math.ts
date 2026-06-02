@@ -1,4 +1,16 @@
-import type { NormalizeNumericLiteral, SqlFloat, SqlInt, SqlNumber, SqlString } from "../../types.ts";
+import type {
+  NormalizeNumericLiteral,
+  SqlBigInt,
+  SqlBoolean,
+  SqlBytes,
+  SqlDecimal,
+  SqlFloat,
+  SqlInt,
+  SqlJson,
+  SqlNumber,
+  SqlString,
+  SqlUuid,
+} from "../../types.ts";
 import {
   binaryExpr,
   exprOf,
@@ -160,22 +172,58 @@ export function cast<TTarget = unknown, TInput extends ExprInput<unknown> = Expr
   });
 }
 
-export function toInt<TValue extends NullableSqlNumber, TInput extends ExprInput<TValue>>(
+export function asInt<TInput extends ExprInput<unknown>>(
   value: TInput
 ): ExprRef<PropagateNull<ExprInputValue<TInput>, SqlInt>> {
   return cast<PropagateNull<ExprInputValue<TInput>, SqlInt>, TInput>(value, "INTEGER");
 }
 
-export function toFloat<TValue extends NullableSqlNumber, TInput extends ExprInput<TValue>>(
+export function asFloat<TInput extends ExprInput<unknown>>(
   value: TInput
 ): ExprRef<PropagateNull<ExprInputValue<TInput>, SqlFloat>> {
   return cast<PropagateNull<ExprInputValue<TInput>, SqlFloat>, TInput>(value, "FLOAT");
 }
 
-export function toString<TInput extends ExprInput<unknown>>(
+export function asString<TInput extends ExprInput<unknown>>(
   value: TInput
 ): ExprRef<PropagateNull<ExprInputValue<TInput>, SqlString>> {
   return cast<PropagateNull<ExprInputValue<TInput>, SqlString>, TInput>(value, "VARCHAR");
+}
+
+export function asBigInt<TInput extends ExprInput<unknown>>(
+  value: TInput
+): ExprRef<PropagateNull<ExprInputValue<TInput>, SqlBigInt>> {
+  return cast<PropagateNull<ExprInputValue<TInput>, SqlBigInt>, TInput>(value, "BIGINT");
+}
+
+export function asDecimal<TInput extends ExprInput<unknown>>(
+  value: TInput
+): ExprRef<PropagateNull<ExprInputValue<TInput>, SqlDecimal>> {
+  return cast<PropagateNull<ExprInputValue<TInput>, SqlDecimal>, TInput>(value, "DECIMAL");
+}
+
+export function asBoolean<TInput extends ExprInput<unknown>>(
+  value: TInput
+): ExprRef<PropagateNull<ExprInputValue<TInput>, SqlBoolean>> {
+  return cast<PropagateNull<ExprInputValue<TInput>, SqlBoolean>, TInput>(value, "BOOLEAN");
+}
+
+export function asUuid<TInput extends ExprInput<unknown>>(
+  value: TInput
+): ExprRef<PropagateNull<ExprInputValue<TInput>, SqlUuid>> {
+  return cast<PropagateNull<ExprInputValue<TInput>, SqlUuid>, TInput>(value, "UUID");
+}
+
+export function asBytes<TInput extends ExprInput<unknown>>(
+  value: TInput
+): ExprRef<PropagateNull<ExprInputValue<TInput>, SqlBytes>> {
+  return cast<PropagateNull<ExprInputValue<TInput>, SqlBytes>, TInput>(value, "BLOB");
+}
+
+export function asJson<TInput extends ExprInput<unknown>>(
+  value: TInput
+): ExprRef<PropagateNull<ExprInputValue<TInput>, SqlJson>> {
+  return cast<PropagateNull<ExprInputValue<TInput>, SqlJson>, TInput>(value, "JSON");
 }
 
 export function round<

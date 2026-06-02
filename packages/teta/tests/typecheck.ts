@@ -1,6 +1,6 @@
-import type { Column, Expr, SqlBigInt, SqlBoolean, SqlBytes, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlNumber, SqlString, SqlTimestamp, SqlUuid, } from "../mod.ts";
+import type { Column, Expr, SqlBigInt, SqlBoolean, SqlBytes, SqlDate, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlNumber, SqlString, SqlTimestamp, SqlUuid, } from "../mod.ts";
 import * as publicApi from "../mod.ts";
-import { between, filter, filterEq, filterNe, filterGt, filterGte, filterLt, filterLte, fullJoin, fullJoinMerge, identityStep, innerJoin, innerJoinMap, innerJoinMerge, isDistinctFrom, isNotIn, leftJoin, leftJoinMap, leftJoinMerge, rightJoin, rightJoinMerge, take, sort, param, map, rename, pipe, flow, table, t, fold, asc, desc, eq, gt, upper, add, mul, coalesce, count, group, loop, sum, and, or, isNotNull, sub, when, mapShape, groupShape, lt, unnest, unionAll, union, unlessStep, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, toString, toTimestamp, pick, drop, extend, whenStep } from "../mod.ts";
+import { between, filter, filterEq, filterNe, filterGt, filterGte, filterLt, filterLte, fullJoin, fullJoinMerge, identityStep, innerJoin, innerJoinMap, innerJoinMerge, isDistinctFrom, isNotIn, leftJoin, leftJoinMap, leftJoinMerge, rightJoin, rightJoinMerge, take, sort, param, map, rename, pipe, flow, table, t, fold, asc, desc, eq, gt, upper, add, mul, coalesce, count, group, loop, sum, and, or, isNotNull, sub, when, mapShape, groupShape, lt, unnest, unionAll, union, unlessStep, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, asBigInt, asBoolean, asBytes, asDate, asDecimal, asFloat, asInt, asJson, asString, asTimestamp, asUuid, pick, drop, extend, whenStep } from "../mod.ts";
 type Equal<A, B> = ((<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false);
 type Expect<T extends true> = T;
 type ExprType<TExpr> = TExpr extends Expr<infer TValue> ? TValue : TExpr extends Column<infer TValue, string> ? TValue : never;
@@ -142,7 +142,7 @@ const extendedUsers = pipe(users, extend((user) => ({
     name_upper: upper(user.name),
 })));
 const replacedExtendedUsers = pipe(users, extend((user) => ({
-    id: toString(user.id),
+    id: asString(user.id),
 })));
 const pickedUsers = pipe(users, pick("id", "name"));
 const callbackFilteredUsers = pipe(users, filter((user) => eq(user.id, 1)));
@@ -274,8 +274,19 @@ const uuidFilteredProfiles = pipe(profiles, filter((profile) => eq(profile.id, p
 const bigintFilteredProfiles = pipe(profiles, filter((profile) => and(gt(profile.external_id, 0), eq(profile.external_id, 42n))));
 const nullableFilterGtCallbackUsers = pipe(profiles, filterGt((profile) => profile.credit_limit, 0));
 const nullableFilterGtRightCallbackUsers = pipe(profiles, filterGt(0, (profile) => profile.credit_limit));
-const stringifiedUserId = toString(users.columns.id);
-const stringifiedNullableNickname = toString(profiles.columns.nickname);
+const stringifiedUserId = asString(users.columns.id);
+const stringifiedNullableNickname = asString(profiles.columns.nickname);
+const asStringifiedUserId = asString(users.columns.id);
+const asStringifiedNullableNickname = asString(profiles.columns.nickname);
+const asUserIdInt = asInt(users.columns.id);
+const asNullableNicknameInt = asInt(profiles.columns.nickname);
+const asUserIdBigInt = asBigInt(users.columns.id);
+const asUserIdFloat = asFloat(users.columns.id);
+const asUserIdDecimal = asDecimal(users.columns.id);
+const asNameBoolean = asBoolean(users.columns.name);
+const asProfileIdUuid = asUuid(profiles.columns.nickname);
+const asProfileAvatarBytes = asBytes(profiles.columns.nickname);
+const asProfileMetadataJson = asJson(profiles.columns.nickname);
 const events = table("events", {
     event_date: t.date(),
     event_ts: t.nullable(t.timestamp()),
@@ -283,8 +294,11 @@ const events = table("events", {
 const rawTimestampRows = values([
     { raw_ts: "2024-01-02 03:04:05" as string },
 ]);
-const eventDateTimestamp = toTimestamp(events.columns.event_date);
-const nullableEventTimestamp = toTimestamp(events.columns.event_ts);
+const eventDateTimestamp = asTimestamp(events.columns.event_date);
+const nullableEventTimestamp = asTimestamp(events.columns.event_ts);
+const rawTimestampDate = asDate(rawTimestampRows.columns.raw_ts);
+const rawTimestampTimestamp = asTimestamp(rawTimestampRows.columns.raw_ts);
+const nullableEventDate = asDate(events.columns.event_ts);
 type _LeftJoinTotal = Expect<Equal<ExprType<typeof leftJoined.columns.total>, SqlFloat | null>>;
 type _ExplodedTag = Expect<Equal<ExprType<typeof explodedSessions.columns.tag>, SqlString>>;
 type _ExplodedTagIndex = Expect<Equal<ExprType<typeof explodedSessions.columns.tag_index>, SqlInt>>;
@@ -389,8 +403,22 @@ type _FlowPipelineKeys = Expect<Equal<keyof typeof flowPipelineResult.columns, "
 type _FlowPipelineId = Expect<Equal<ExprType<typeof flowPipelineResult.columns.id>, SqlInt>>;
 type _StringifiedUserId = Expect<Equal<ExprType<typeof stringifiedUserId>, SqlString>>;
 type _StringifiedNullableNickname = Expect<Equal<ExprType<typeof stringifiedNullableNickname>, SqlString | null>>;
+type _AsStringifiedUserId = Expect<Equal<ExprType<typeof asStringifiedUserId>, SqlString>>;
+type _AsStringifiedNullableNickname = Expect<Equal<ExprType<typeof asStringifiedNullableNickname>, SqlString | null>>;
+type _AsUserIdInt = Expect<Equal<ExprType<typeof asUserIdInt>, SqlInt>>;
+type _AsNullableNicknameInt = Expect<Equal<ExprType<typeof asNullableNicknameInt>, SqlInt | null>>;
+type _AsUserIdBigInt = Expect<Equal<ExprType<typeof asUserIdBigInt>, SqlBigInt>>;
+type _AsUserIdFloat = Expect<Equal<ExprType<typeof asUserIdFloat>, SqlFloat>>;
+type _AsUserIdDecimal = Expect<Equal<ExprType<typeof asUserIdDecimal>, SqlDecimal>>;
+type _AsNameBoolean = Expect<Equal<ExprType<typeof asNameBoolean>, SqlBoolean>>;
+type _AsProfileIdUuid = Expect<Equal<ExprType<typeof asProfileIdUuid>, SqlUuid | null>>;
+type _AsProfileAvatarBytes = Expect<Equal<ExprType<typeof asProfileAvatarBytes>, SqlBytes | null>>;
+type _AsProfileMetadataJson = Expect<Equal<ExprType<typeof asProfileMetadataJson>, SqlJson | null>>;
 type _EventDateTimestamp = Expect<Equal<ExprType<typeof eventDateTimestamp>, SqlTimestamp>>;
 type _NullableEventTimestamp = Expect<Equal<ExprType<typeof nullableEventTimestamp>, SqlTimestamp | null>>;
+type _RawTimestampDate = Expect<Equal<ExprType<typeof rawTimestampDate>, SqlDate>>;
+type _RawTimestampTimestamp = Expect<Equal<ExprType<typeof rawTimestampTimestamp>, SqlTimestamp>>;
+type _NullableEventDate = Expect<Equal<ExprType<typeof nullableEventDate>, SqlDate | null>>;
 void leftSelected;
 void rightSelected;
 void fullSelected;
@@ -564,8 +592,6 @@ pipe(users,
 filter((user) => eq(user.missing, 1))(users);
 // @ts-expect-error callbacks reject unknown current-row columns when applying sort step directly
 sort((user) => asc(user.missing))(users);
-// @ts-expect-error toTimestamp should reject arbitrary strings
-toTimestamp(rawTimestampRows.columns.raw_ts);
 const profileRowsWithUserId = values([
     { id: 1 as number, user_id: 1 as number, bio: "A" as string },
     { id: 2 as number, user_id: 2 as number, bio: "B" as string },

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { dateFormat, map, table, t, toSql, toTimestamp, pipe } from "../mod.ts";
+import { asTimestamp, dateFormat, map, table, t, toSql, pipe } from "../mod.ts";
 import { buildLiveDialectQuery } from "./helpers/fixtures.ts";
 let DuckDBConnection: (typeof import("@duckdb/node-api"))["DuckDBConnection"] | null = null;
 try {
@@ -69,7 +69,7 @@ describe("live duckdb dialect", () => {
             event_date: t.date(),
         });
         const query = pipe(events, map((event) => ({
-            event_ts: dateFormat(toTimestamp(event.event_date), "%Y-%m-%d %H:%M:%S"),
+            event_ts: dateFormat(asTimestamp(event.event_date), "%Y-%m-%d %H:%M:%S"),
         })));
         const sql = toSql(query, { dialect: "duckdb", format: "compact" });
         const rows = await (await connection.run(sql)).getRowObjectsJS();

@@ -107,7 +107,7 @@ Convenience date-part helpers over `extract(...)`:
 
 | Spec item | Preferred functional entry | PostgreSQL | MySQL | SQLite | HetuEngine DQL | Other built-ins |
 |---|---|---|---|---|---|---|
-| `CAST` | `cast(value, type)`, `toInt(value)`, `toFloat(value)`, `toDate(value)` | Direct | Direct | Direct | Direct | Direct |
+| `CAST` | `cast(value, type)`, `asXxx(value)` | Direct | Direct | Direct | Direct | Direct |
 | `COALESCE` | `coalesce(value, ...values)` | Direct | Direct | Direct | Direct | Direct |
 | `NULLIF` | `nullIf(value, other)` | Direct | Direct | Direct | Direct | Direct |
 | `IS NULL` | `isNull(value)` | Direct | Direct | Direct | Direct | Direct |

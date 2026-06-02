@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { Parser } from "node-sql-parser";
-import { lit, table, t, filter, innerJoin, innerJoinMap, innerJoinMerge, leftJoin, map, toAst, toSql, asc, bitLength, characterLength, dateAdd, eq, gt, replace, rowNumber, upper, sort, over, and, take, not, or, group, unnest, dropOverlapLeft, usingCols, toString, toTimestamp, pipe, loop, union, unionAll, pick } from "../mod.ts";
+import { lit, table, t, filter, innerJoin, innerJoinMap, innerJoinMerge, leftJoin, map, toAst, toSql, asc, bitLength, characterLength, dateAdd, eq, gt, replace, rowNumber, upper, sort, over, and, take, not, or, group, unnest, dropOverlapLeft, usingCols, asBigInt, asBoolean, asBytes, asDate, asDecimal, asFloat, asInt, asJson, asString, asTimestamp, asUuid, pipe, loop, union, unionAll, pick } from "../mod.ts";
 import { USER_PIPELINE_POSTGRES_COMPACT, USER_PIPELINE_POSTGRES_PRETTY, USERS_NAME_LENGTH_SQLITE_COMPACT, EMPLOYEES_SELF_JOIN_POSTGRES_COMPACT, USERS_ORDERS_LEFT_JOIN_SELECT_POSTGRES_COMPACT, USERS_SELECT_FILTER_POSTGRES_COMPACT, ANALYTICS_EVENTS_SELECT_POSTGRES_COMPACT, QUOTED_ANALYTICS_EVENTS_SELECT_POSTGRES_COMPACT, QUOTED_ANALYTICS_EVENTS_SELECT_BIGQUERY_COMPACT, QUOTED_USERS_ALIAS_SELECT_POSTGRES_COMPACT, QUOTED_USERS_PROJECTED_ALIAS_BIGQUERY_COMPACT, QUOTED_ROW_NUMBER_ALIAS_FILTER_POSTGRES_COMPACT, ORDERS_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT, ORDERS_ROW_NUMBER_FILTER_POSTGRES_COMPACT, ORDERS_ROW_NUMBER_FILTER_ORDER_LIMIT_POSTGRES_COMPACT, ORDERS_TOTAL_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT, ORDERS_TOTAL_ROW_NUMBER_FILTER_POSTGRES_COMPACT, ORDERS_TOTAL_SHARED_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT, ORDERS_TOTAL_SHARED_ROW_NUMBER_FILTER_POSTGRES_COMPACT, ORDERS_TOTAL_NOT_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT, ORDERS_TOTAL_NOT_ROW_NUMBER_FILTER_POSTGRES_COMPACT, ORDERS_SHARED_DISJUNCTION_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT } from "./helpers/expected-sql.ts";
 import { buildUserPipelineQuery, createOrdersTable, createUsersTable } from "./helpers/fixtures.ts";
 describe("toSql(query, options)", () => {
@@ -272,13 +272,40 @@ describe("toSql(query, options)", () => {
             event_ts: t.timestamp(),
         });
         const query = pipe(events, map((event) => ({
-            user_id_txt: toString(event.user_id),
-            event_ts: toTimestamp(event.event_date),
-            passthrough_ts: toTimestamp(event.event_ts),
+            user_id_txt: asString(event.user_id),
+            event_ts: asTimestamp(event.event_date),
+            passthrough_ts: asTimestamp(event.event_ts),
         })));
         const expectedSql = "SELECT CAST(events_0.user_id AS VARCHAR) AS user_id_txt, CAST(events_0.event_date AS TIMESTAMP) AS event_ts, CAST(events_0.event_ts AS TIMESTAMP) AS passthrough_ts FROM events AS events_0";
         expect(toSql(query, { dialect: "duckdb", format: "compact" })).toBe(expectedSql);
         expect(toSql(query, { dialect: "sqlite", format: "compact" })).toBe(expectedSql);
+    });
+    test("renders as-cast helpers as plain CAST expressions", () => {
+        const events = table("events", {
+            user_id: t.int(),
+            raw_count: t.string(),
+            raw_total: t.string(),
+            raw_flag: t.string(),
+            raw_date: t.string(),
+            raw_ts: t.string(),
+            raw_uuid: t.string(),
+            raw_blob: t.string(),
+            raw_json: t.string(),
+        });
+        const query = pipe(events, map((event) => ({
+            user_id_txt: asString(event.user_id),
+            count_int: asInt(event.raw_count),
+            count_bigint: asBigInt(event.raw_count),
+            total_float: asFloat(event.raw_total),
+            total_decimal: asDecimal(event.raw_total),
+            flag_bool: asBoolean(event.raw_flag),
+            created_date: asDate(event.raw_date),
+            created_ts: asTimestamp(event.raw_ts),
+            event_uuid: asUuid(event.raw_uuid),
+            payload_bytes: asBytes(event.raw_blob),
+            payload_json: asJson(event.raw_json),
+        })));
+        expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe("SELECT CAST(events_0.user_id AS VARCHAR) AS user_id_txt, CAST(events_0.raw_count AS INTEGER) AS count_int, CAST(events_0.raw_count AS BIGINT) AS count_bigint, CAST(events_0.raw_total AS FLOAT) AS total_float, CAST(events_0.raw_total AS DECIMAL) AS total_decimal, CAST(events_0.raw_flag AS BOOLEAN) AS flag_bool, CAST(events_0.raw_date AS DATE) AS created_date, CAST(events_0.raw_ts AS TIMESTAMP) AS created_ts, CAST(events_0.raw_uuid AS UUID) AS event_uuid, CAST(events_0.raw_blob AS BLOB) AS payload_bytes, CAST(events_0.raw_json AS JSON) AS payload_json FROM events AS events_0");
     });
     test("renders Hive dateAdd through Hive-supported primitives", () => {
         const events = table("events", {
