@@ -181,6 +181,35 @@ const labels = pipe(
 // }>
 ```
 
+### Literal expressions and cast helpers
+
+Use `lit(value)` when you want to build an expression from a host-language literal.
+Primitive literals are typed as their SQL expression family:
+
+```ts
+import { lit, type Expr, type SqlBoolean, type SqlBigInt, type SqlNumber, type SqlString } from "@teta/teta";
+
+const name: Expr<SqlString> = lit("Ada");
+const active: Expr<SqlBoolean> = lit(true);
+const id: Expr<SqlNumber> = lit(1);
+const externalId: Expr<SqlBigInt> = lit(1n);
+const missing: Expr<null> = lit(null);
+```
+
+`SqlNumber` is a TypeScript union marker for SQL numeric expressions (`SqlInt | SqlFloat | SqlBigInt | SqlDecimal`).
+It does not render as a concrete SQL type by itself; `lit(1)` renders as the numeric literal `1`, and the database applies its normal numeric-literal inference.
+
+Use `asInt(...)`, `asFloat(...)`, `asDecimal(...)`, `asString(...)`, and the other `asXxx(...)` helpers when you want to emit an explicit `CAST(...)` and get a narrower expression type:
+
+```ts
+import { asFloat, lit, type Expr, type SqlFloat } from "@teta/teta";
+
+const inferredNumber = lit(1); // Expr<SqlNumber>
+const explicitFloat: Expr<SqlFloat> = asFloat(1); // CAST(1 AS FLOAT)
+```
+
+If you only need a type marker and do not want a rendered `CAST(...)`, you can pass a branded value to `lit(...)`, such as `lit(1 as SqlFloat)`. Prefer `asFloat(1)` in query code when the SQL should actually be typed as a float.
+
 ### Join helpers and `unnest(...)` refine types
 
 ```ts
@@ -818,6 +847,7 @@ const q = pipe(
 
 Use `cast(expr, type)` to emit `CAST(expr AS type)`.
 Use helpers like `asInt(expr)`, `asDate(expr)`, and `asTimestamp(expr)` when you want a typed shorthand for common casts.
+For uncast literal expressions, use `lit(value)`; for example `lit(1)` is `Expr<SqlNumber>`, while `asFloat(1)` emits `CAST(1 AS FLOAT)` and returns `Expr<SqlFloat>`.
 
 ```ts
 import { asDate, asString, cast, map, type SqlString, table, t, pipe } from "@teta/teta";

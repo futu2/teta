@@ -3,6 +3,6 @@
   "version": "0.1.2",
   "exports": "./mod.ts",
   "imports": {
-    "@teta/teta": "jsr:@teta/teta@^0.4.14"
+    "@teta/teta": "jsr:@teta/teta@^0.4.15"
   }
 }

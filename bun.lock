@@ -33,7 +33,7 @@
     },
     "packages/teta": {
       "name": "@teta/teta",
-      "version": "0.4.14",
+      "version": "0.4.15",
       "dependencies": {
         "@teta/sql": "workspace:*",
         "node-sql-parser": "^5.4.0",

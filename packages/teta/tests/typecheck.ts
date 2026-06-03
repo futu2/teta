@@ -1,6 +1,6 @@
 import type { Column, Expr, SqlBigInt, SqlBoolean, SqlBytes, SqlDate, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlNumber, SqlString, SqlTimestamp, SqlUuid, } from "../mod.ts";
 import * as publicApi from "../mod.ts";
-import { between, filter, filterEq, filterNe, filterGt, filterGte, filterLt, filterLte, fullJoin, fullJoinMerge, identityStep, innerJoin, innerJoinMap, innerJoinMerge, isDistinctFrom, isNotIn, leftJoin, leftJoinMap, leftJoinMerge, rightJoin, rightJoinMerge, take, sort, param, map, rename, pipe, flow, table, t, fold, asc, desc, eq, gt, upper, add, mul, coalesce, count, group, loop, sum, and, or, isNotNull, sub, when, mapShape, groupShape, lt, unnest, unionAll, union, unlessStep, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, asBigInt, asBoolean, asBytes, asDate, asDecimal, asFloat, asInt, asJson, asString, asTimestamp, asUuid, pick, drop, extend, whenStep } from "../mod.ts";
+import { between, filter, filterEq, filterNe, filterGt, filterGte, filterLt, filterLte, fullJoin, fullJoinMerge, identityStep, innerJoin, innerJoinMap, innerJoinMerge, isDistinctFrom, isNotIn, leftJoin, leftJoinMap, leftJoinMerge, rightJoin, rightJoinMerge, take, sort, param, lit, map, rename, pipe, flow, table, t, fold, asc, desc, eq, gt, upper, add, mul, coalesce, count, group, loop, sum, and, or, isNotNull, sub, when, mapShape, groupShape, lt, unnest, unionAll, union, unlessStep, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, asBigInt, asBoolean, asBytes, asDate, asDecimal, asFloat, asInt, asJson, asString, asTimestamp, asUuid, pick, drop, extend, whenStep } from "../mod.ts";
 type Equal<A, B> = ((<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false);
 type Expect<T extends true> = T;
 type ExprType<TExpr> = TExpr extends Expr<infer TValue> ? TValue : TExpr extends Column<infer TValue, string> ? TValue : never;
@@ -8,6 +8,13 @@ const users = table("users", {
     id: t.int(),
     name: t.string(),
 });
+const stringLiteralExpr = lit("some_string");
+const numberLiteralExpr = lit(1);
+const bigintLiteralExpr = lit(1n);
+const booleanLiteralExpr = lit(true);
+const nullLiteralExpr = lit(null);
+const dateLiteralExpr = lit({ kind: "date_literal", value: "2026-06-03" });
+const timestampLiteralExpr = lit({ kind: "timestamp_literal", value: "2026-06-03 12:00:00" });
 const orders = table("orders", {
     order_id: t.int(),
     user_id: t.int(),
@@ -342,6 +349,13 @@ type _UnnestStepSessionsTag = Expect<Equal<ExprType<typeof unnestStepSessions.co
 type _PredicateConvenienceUsersName = Expect<Equal<ExprType<typeof predicateConvenienceUsers.columns.name>, SqlString>>;
 type _SingleAndExpr = Expect<Equal<ExprType<typeof singleAndExpr>, SqlBoolean>>;
 type _SingleOrExpr = Expect<Equal<ExprType<typeof singleOrExpr>, SqlBoolean>>;
+type _StringLiteralExpr = Expect<Equal<ExprType<typeof stringLiteralExpr>, SqlString>>;
+type _NumberLiteralExpr = Expect<Equal<ExprType<typeof numberLiteralExpr>, SqlNumber>>;
+type _BigintLiteralExpr = Expect<Equal<ExprType<typeof bigintLiteralExpr>, SqlBigInt>>;
+type _BooleanLiteralExpr = Expect<Equal<ExprType<typeof booleanLiteralExpr>, SqlBoolean>>;
+type _NullLiteralExpr = Expect<Equal<ExprType<typeof nullLiteralExpr>, null>>;
+type _DateLiteralExpr = Expect<Equal<ExprType<typeof dateLiteralExpr>, SqlDate>>;
+type _TimestampLiteralExpr = Expect<Equal<ExprType<typeof timestampLiteralExpr>, SqlTimestamp>>;
 type _PickedUsersId = Expect<Equal<ExprType<typeof pickedUsers.columns.id>, SqlInt>>;
 type _PickedUsersName = Expect<Equal<ExprType<typeof pickedUsers.columns.name>, SqlString>>;
 type _InlineRowsId = Expect<Equal<ExprType<typeof inlineRows.columns.id>, SqlNumber>>;

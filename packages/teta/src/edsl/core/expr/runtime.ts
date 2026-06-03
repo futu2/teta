@@ -13,6 +13,7 @@ import type {
   NormalizeExpressionLiteral,
   NormalizeNumericLiteral,
   NormalizeNumericLiteralTuple,
+  SqlBigInt,
   SqlBoolean,
   SqlDate,
   SqlFloat,
@@ -362,8 +363,19 @@ export type ExprRefs<T extends Record<string, unknown>> = {
   [K in KnownStringKeyOf<T>]: ExprLike<T[K]>;
 };
 
-export function lit<T extends Value>(value: T): ExprRef<NormalizeExpressionLiteral<T>> {
-  return exprOf<NormalizeExpressionLiteral<T>>({ kind: "literal", value });
+export function lit<T extends SqlNumber | SqlString | SqlBoolean | SqlDate | SqlTimestamp | SqlUuid>(
+  value: T
+): ExprRef<T>;
+export function lit(value: string): ExprRef<SqlString>;
+export function lit(value: number): ExprRef<SqlNumber>;
+export function lit(value: bigint): ExprRef<SqlBigInt>;
+export function lit(value: boolean): ExprRef<SqlBoolean>;
+export function lit(value: null): ExprRef<null>;
+export function lit(value: DateLiteral): ExprRef<SqlDate>;
+export function lit(value: TimestampLiteral): ExprRef<SqlTimestamp>;
+export function lit<T extends Value>(value: T): ExprRef<NormalizeExpressionLiteral<T>>;
+export function lit(value: Value): ExprRef<NormalizeExpressionLiteral<Value>> {
+  return exprOf<NormalizeExpressionLiteral<Value>>({ kind: "literal", value });
 }
 
 export function param<T>(value: T, name: string | null = null): ExprRef<T> {

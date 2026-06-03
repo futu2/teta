@@ -1,4 +1,5 @@
 import type { Option, Parser } from "node-sql-parser";
+import type { DateLiteral, TimestampLiteral } from "./ir/types.ts";
 
 declare const __sqlInt: unique symbol;
 declare const __sqlFloat: unique symbol;
@@ -66,6 +67,10 @@ export type NormalizeExpressionLiteral<TValue> =
     ? SqlString
   : TValue extends boolean
     ? SqlBoolean
+  : TValue extends DateLiteral
+    ? SqlDate
+  : TValue extends TimestampLiteral
+    ? SqlTimestamp
   : TValue;
 
 /** Canonical built-in dialect names supported by the renderer. */
