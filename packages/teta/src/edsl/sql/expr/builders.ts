@@ -7,8 +7,7 @@ import {
   toExprNode,
   type ExprInput,
   type ExprInputValue,
-  type ExprLike,
-  type ExprRef,
+  type Expr,
 } from "./core.ts";
 import { group } from "./ops/aggregate.ts";
 
@@ -54,13 +53,13 @@ export type WhenResult<TArgs extends readonly unknown[]> =
 
 export function when<const TArgs extends readonly [unknown, unknown, ...unknown[]]>(
   ...args: TArgs & WhenArgs<TArgs>
-): ExprRef<WhenResult<TArgs>> {
-  return buildWhenExpr(args) as ExprRef<WhenResult<TArgs>>;
+): Expr<WhenResult<TArgs>> {
+  return buildWhenExpr(args) as Expr<WhenResult<TArgs>>;
 }
 
 export function mapShape<
-  T extends Record<string, ExprLike<unknown>>,
-  TOutput extends ExprLike<unknown>,
+  T extends Record<string, Expr<unknown>>,
+  TOutput extends Expr<unknown>,
 >(
   value: T,
   mapper: (value: T[keyof T]) => TOutput
@@ -72,11 +71,11 @@ export function mapShape<
   return result as { [K in keyof T]: TOutput };
 }
 
-export type GroupShapeResult<T extends Record<string, ExprLike<unknown>>> = {
-  [K in keyof T]: T[K] extends ExprLike<infer TValue> ? ExprRef<TValue> : never;
+export type GroupShapeResult<T extends Record<string, Expr<unknown>>> = {
+  [K in keyof T]: T[K] extends Expr<infer TValue> ? Expr<TValue> : never;
 };
 
-export function groupShape<T extends Record<string, ExprLike<unknown>>>(
+export function groupShape<T extends Record<string, Expr<unknown>>>(
   value: T
 ): GroupShapeResult<T> {
   const result: Partial<GroupShapeResult<T>> = {};
@@ -91,7 +90,7 @@ export function groupShape<T extends Record<string, ExprLike<unknown>>>(
 export function f<const TExprs extends readonly ExprInput<unknown>[]>(
   strings: TemplateStringsArray,
   ...exprs: TExprs
-): ExprRef<SqlString> {
+): Expr<SqlString> {
   const parts: ExprInput<unknown>[] = [];
   for (let i = 0; i < strings.length; i += 1) {
     const literal = strings[i] ?? "";
@@ -99,14 +98,14 @@ export function f<const TExprs extends readonly ExprInput<unknown>[]>(
     const expr = exprs[i];
     if (expr !== undefined) parts.push(expr);
   }
-  if (parts.length === 0) return lit("") as ExprRef<SqlString>;
-  return fn<SqlString>("CONCAT", ...parts) as ExprRef<SqlString>;
+  if (parts.length === 0) return lit("") as Expr<SqlString>;
+  return fn<SqlString>("CONCAT", ...parts) as Expr<SqlString>;
 }
 
 function buildCaseExpr<T>(
   whens: CaseWhenNode[],
   elseExpr: ExprNode<unknown> | null
-): ExprRef<T | null> {
+): Expr<T | null> {
   return exprOf<T | null>({
     kind: "case",
     whens,
@@ -114,7 +113,7 @@ function buildCaseExpr<T>(
   });
 }
 
-function buildWhenExpr(args: readonly unknown[]): ExprRef<unknown> {
+function buildWhenExpr(args: readonly unknown[]): Expr<unknown> {
   const whens: CaseWhenNode[] = [];
   for (let i = 0; i < args.length; i += 2) {
     whens.push({

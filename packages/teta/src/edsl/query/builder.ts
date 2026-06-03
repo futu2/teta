@@ -17,12 +17,11 @@ import type {
   SqlRenderStrategy,
   SqlResult,
 } from "../sql/types.ts";
-import { createColumnRefs, isExprNode } from "../expr.ts";
+import { createColumnRefs, isExprNode, toExprNode } from "../expr.ts";
 import type {
   ColumnRefs,
-  ExprLike,
-  ExprRef,
-  ExprRefs,
+  Expr,
+  Exprs,
   ProjectionResult,
   ProjectionShape,
 } from "../expr.ts";
@@ -97,7 +96,7 @@ export type QueryExplainCte = {
 export type QueryStageKind = "map" | "fold" | "filter" | "sort" | "take" | "join" | "unnest" | "union";
 
 type PredicateInput<TColumns extends QueryColumns> =
-  (cols: ColumnRefs<TColumns>) => ExprRef<SqlBoolean | null>;
+  (cols: ColumnRefs<TColumns>) => Expr<SqlBoolean | null>;
 
 type SortInput<TColumns extends QueryColumns> =
   (cols: ColumnRefs<TColumns>) => OrderItem | OrderItem[];
@@ -105,7 +104,7 @@ type SortInput<TColumns extends QueryColumns> =
 type UnnestSelectorInput<
   TLeft extends QueryColumns,
   TCollection extends readonly unknown[] | unknown[] | null,
-> = (cols: ColumnRefs<TLeft>) => ExprLike<TCollection>;
+> = (cols: ColumnRefs<TLeft>) => Expr<TCollection>;
 
 type JoinOnInput<
   TLeft extends QueryColumns,
@@ -291,7 +290,7 @@ function buildJoin<
   TLeft extends QueryColumns,
   TRight extends QueryColumns,
   TType extends JoinTypeInput | undefined = undefined,
-  TSelection extends JoinSelection = ExprRefs<JoinColumnsForType<
+  TSelection extends JoinSelection = Exprs<JoinColumnsForType<
     TLeft,
     TRight,
     CanonicalJoinType<TType>
@@ -505,7 +504,7 @@ function _fold<TColumns extends QueryColumns, const Sel extends ProjectionShape>
 }
 
 export function filter<TColumns extends QueryColumns>(
-  predicate: (cols: ColumnRefs<TColumns>) => ExprRef<SqlBoolean | null>
+  predicate: (cols: ColumnRefs<TColumns>) => Expr<SqlBoolean | null>
 ): QueryStep<TColumns, TColumns>;
 
 export function filter(...args: unknown[]): unknown {
@@ -525,9 +524,9 @@ function _filter<TColumns extends QueryColumns>(
 }
 
 export function filterResolved<TColumns extends QueryColumns>(
-  predicate: ExprRef<SqlBoolean | null>
+  predicate: Expr<SqlBoolean | null>
 ): QueryStep<TColumns, TColumns> {
-  return (query) => deriveQuery(query, resolveFilterQuery(query, predicate.node));
+  return (query) => deriveQuery(query, resolveFilterQuery(query, toExprNode(predicate)));
 }
 
 export function sort<TColumns extends QueryColumns>(
@@ -817,7 +816,7 @@ export function unnest<
   TOrdinalityName extends string | undefined = undefined,
   TOuter extends boolean | undefined = undefined,
 >(
-  selector: (cols: ColumnRefs<TLeft>) => ExprLike<TCollection>,
+  selector: (cols: ColumnRefs<TLeft>) => Expr<TCollection>,
   selection: UnnestSelection<TValueName, TOrdinalityName>,
   options?: UnnestOptions<TOuter>
 ): QueryStep<
@@ -870,7 +869,7 @@ function _join<
   TLeft extends QueryColumns,
   TRight extends QueryColumns,
   TType extends JoinTypeInput | undefined = undefined,
-  TSelection extends JoinSelection = ExprRefs<JoinColumnsForType<
+  TSelection extends JoinSelection = Exprs<JoinColumnsForType<
     TLeft,
     TRight,
     CanonicalJoinType<TType>

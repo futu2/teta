@@ -42,10 +42,9 @@ type LiteralInput<T> = T extends number
   : T extends SqlBoolean
     ? boolean
   : T;
-export type ExprInput<T> = ExprLike<T> | LiteralInput<T>;
+export type ExprInput<T> = Expr<T> | LiteralInput<T>;
 export type ExprInputValue<TInput> =
-  TInput extends ExprRef<infer TValue> ? TValue
-  : TInput extends ColumnRef<infer TValue, string> ? TValue
+  TInput extends Expr<infer TValue> ? TValue
   : TInput;
 export type ExprInputTuple<T extends readonly unknown[]> = {
   [K in keyof T]: ExprInput<T[K]>;
@@ -53,7 +52,7 @@ export type ExprInputTuple<T extends readonly unknown[]> = {
 export type NonNull<T> = Exclude<T, null>;
 export type PropagateNull<TInput, TResult> = null extends TInput ? TResult | null : TResult;
 export type WindowSpecInput = {
-  partitionBy?: ExprLike<unknown> | ExprLike<unknown>[];
+  partitionBy?: Expr<unknown> | Expr<unknown>[];
   orderBy?: OrderItem | OrderItem[];
 };
 
@@ -94,18 +93,10 @@ export type Expr<T> = Readonly<{
 
 export type ColumnTableRef = ScopeId | typeof OUTER_TABLE_ALIAS | null;
 
-export type Column<T, Name extends string> = Readonly<{
-  kind: "column";
-  node: ExprNode<T>;
+export type Column<T, Name extends string> = Expr<T> & Readonly<{
   table: ColumnTableRef;
   name: Name;
 }>;
-
-export type ExprRef<T> = Expr<T>;
-
-export type ColumnRef<T, Name extends string> = Column<T, Name>;
-
-export type ExprLike<T> = ExprRef<T> | ColumnRef<T, string>;
 
 export type WindowExpr<T> = Readonly<{
   kind: "window_builder";
@@ -126,7 +117,7 @@ export function columnOf<T, Name extends string>(
 ): Column<T, Name> {
   const node = freezeExprNode({ kind: "column", table, name } as ExprNode<T>);
   return Object.freeze({
-    kind: "column" as const,
+    kind: "expr" as const,
     node,
     table,
     name,
@@ -144,13 +135,10 @@ export function windowBuilderOf<T>(
   });
 }
 
-export function isExpr(value: unknown): value is ExprLike<unknown> {
+export function isExpr(value: unknown): value is Expr<unknown> {
   if (!value || typeof value !== "object") return false;
   const candidate = value as { kind?: unknown; node?: unknown };
-  return (
-    (candidate.kind === "expr" || candidate.kind === "column") &&
-    isExprNode(candidate.node)
-  );
+  return candidate.kind === "expr" && isExprNode(candidate.node);
 }
 
 export function isColumn(value: unknown): value is Column<unknown, string> {
@@ -161,7 +149,7 @@ export function isColumn(value: unknown): value is Column<unknown, string> {
     table?: unknown;
     name?: unknown;
   };
-  if (candidate.kind !== "column" || !isColumnNode(candidate.node as { kind?: unknown })) {
+  if (candidate.kind !== "expr" || !isColumnNode(candidate.node as { kind?: unknown })) {
     return false;
   }
   const node = candidate.node as { table: unknown; name: unknown };
@@ -357,28 +345,28 @@ type KnownStringKeyOf<T extends Record<string, unknown>> = Extract<{
 }[keyof T], string>;
 
 export type ColumnRefs<T extends Record<string, unknown>> = {
-  [K in KnownStringKeyOf<T>]: ColumnRef<T[K], K>;
+  [K in KnownStringKeyOf<T>]: Column<T[K], K>;
 };
-export type ExprRefs<T extends Record<string, unknown>> = {
-  [K in KnownStringKeyOf<T>]: ExprLike<T[K]>;
+export type Exprs<T extends Record<string, unknown>> = {
+  [K in KnownStringKeyOf<T>]: Expr<T[K]>;
 };
 
 export function lit<T extends SqlNumber | SqlString | SqlBoolean | SqlDate | SqlTimestamp | SqlUuid>(
   value: T
-): ExprRef<T>;
-export function lit(value: string): ExprRef<SqlString>;
-export function lit(value: number): ExprRef<SqlNumber>;
-export function lit(value: bigint): ExprRef<SqlBigInt>;
-export function lit(value: boolean): ExprRef<SqlBoolean>;
-export function lit(value: null): ExprRef<null>;
-export function lit(value: DateLiteral): ExprRef<SqlDate>;
-export function lit(value: TimestampLiteral): ExprRef<SqlTimestamp>;
-export function lit<T extends Value>(value: T): ExprRef<NormalizeExpressionLiteral<T>>;
-export function lit(value: Value): ExprRef<NormalizeExpressionLiteral<Value>> {
+): Expr<T>;
+export function lit(value: string): Expr<SqlString>;
+export function lit(value: number): Expr<SqlNumber>;
+export function lit(value: bigint): Expr<SqlBigInt>;
+export function lit(value: boolean): Expr<SqlBoolean>;
+export function lit(value: null): Expr<null>;
+export function lit(value: DateLiteral): Expr<SqlDate>;
+export function lit(value: TimestampLiteral): Expr<SqlTimestamp>;
+export function lit<T extends Value>(value: T): Expr<NormalizeExpressionLiteral<T>>;
+export function lit(value: Value): Expr<NormalizeExpressionLiteral<Value>> {
   return exprOf<NormalizeExpressionLiteral<Value>>({ kind: "literal", value });
 }
 
-export function param<T>(value: T, name: string | null = null): ExprRef<T> {
+export function param<T>(value: T, name: string | null = null): Expr<T> {
   if (value === undefined) {
     userError("INVALID_PARAM_VALUE", "Unsupported parameter value: undefined");
   }
@@ -388,7 +376,7 @@ export function param<T>(value: T, name: string | null = null): ExprRef<T> {
   return exprOf<T>({ kind: "param", value, name });
 }
 
-export function array<T = unknown>(...values: ExprInput<T>[]): ExprRef<T[]> {
+export function array<T = unknown>(...values: ExprInput<T>[]): Expr<T[]> {
   return exprOf<T[]>({
     kind: "array",
     items: values.map((value) => toExprNode(value)),
@@ -401,7 +389,7 @@ export function fn<
 >(
   name: string,
   ...args: TArgs
-): ExprRef<T> {
+): Expr<T> {
   if (!name.trim()) {
     userError("INVALID_FUNCTION_NAME", "fn requires a function name");
   }
@@ -418,15 +406,15 @@ export function windowFn<T = unknown>(
   return windowBuilderOf<T>(name, args.map((arg) => toExprNode(arg)));
 }
 
-export function wrapExpr<T>(value: ExprInput<T>): ExprRef<T> {
-  if (isExpr(value)) return value as ExprRef<T>;
+export function wrapExpr<T>(value: ExprInput<T>): Expr<T> {
+  if (isExpr(value)) return value as Expr<T>;
   return exprOf<T>(toExprNode(value));
 }
 
 export function aggregateExpr<T, TArg extends ExprInput<unknown>>(
   name: AggFunc,
   arg: TArg
-): ExprRef<T> {
+): Expr<T> {
   return exprOf<T>({
     kind: "agg",
     name,
@@ -465,7 +453,7 @@ function isTemporalLiteral(value: unknown): value is DateLiteral | TimestampLite
 export { containsGroup, unwrapGroupExpr, dedupeExprs, shouldAlias };
 
 export function toExprNodeList(
-  input?: ExprLike<unknown> | ExprLike<unknown>[]
+  input?: Expr<unknown> | Expr<unknown>[]
 ): ExprNode<unknown>[] | null {
   if (!input) return null;
   const items = Array.isArray(input) ? input : [input];
@@ -477,7 +465,7 @@ export function toOrderItems(input?: OrderItem | OrderItem[]): OrderItem[] | nul
   return Array.isArray(input) ? input : [input];
 }
 
-export function over<T>(window: WindowBuilder<T>, spec: WindowSpecInput = {}): ExprRef<T> {
+export function over<T>(window: WindowBuilder<T>, spec: WindowSpecInput = {}): Expr<T> {
   const partitionBy = toExprNodeList(spec.partitionBy);
   const orderBy = toOrderItems(spec.orderBy);
   return exprOf<T>({
@@ -493,10 +481,10 @@ export function binaryExpr(
   op: BinaryOp,
   left: ExprNode<unknown>,
   right: ExprNode<unknown>
-): ExprRef<unknown> {
+): Expr<unknown> {
   return exprOf<unknown>({ kind: "binary", op, left, right });
 }
 
-export function funcExpr<T>(name: string, args: ExprNode<unknown>[]): ExprRef<T> {
+export function funcExpr<T>(name: string, args: ExprNode<unknown>[]): Expr<T> {
   return exprOf<T>({ kind: "func", name, args });
 }

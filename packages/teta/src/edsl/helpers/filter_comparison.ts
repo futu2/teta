@@ -5,7 +5,7 @@ import type {
   ColumnRefs,
   ExprInput,
 } from "../expr.ts";
-import { eq, gt, gte, isExpr, lt, lte, ne, type ExprRef } from "../expr.ts";
+import { eq, gt, gte, isExpr, lt, lte, ne, type Expr } from "../expr.ts";
 import type { NormalizeNumericLiteral, SqlBoolean, SqlDate, SqlNumber, SqlTimestamp } from "../sql/types.ts";
 type QueryColumns = Record<string, any>;
 import { userError } from "../errors.ts";
@@ -24,7 +24,7 @@ type Operand<TColumns extends QueryColumns, TValue> =
   | DirectOperand<TValue>
   | CallableOperand<TColumns, TValue>;
 type ExprInputValueOf<TExpr> =
-  TExpr extends ExprRef<infer TValue> ? TValue
+  TExpr extends Expr<infer TValue> ? TValue
   : TExpr extends ExprInput<infer TValue> ? TValue
   : never;
 type WidenLiteral<T> =
@@ -264,7 +264,7 @@ function comparisonFilter<TColumns extends QueryColumns, T>(
   helper: string,
   left: Operand<TColumns, T>,
   right: Operand<TColumns, T>,
-  op: (left: ExprInput<T>, right: ExprInput<T>) => ExprRef<SqlBoolean | null>
+  op: (left: ExprInput<T>, right: ExprInput<T>) => Expr<SqlBoolean | null>
 ): QueryStep<TColumns, TColumns> {
   if (!isCallableOperand(left) && !isCallableOperand(right)) {
     userError(
@@ -307,7 +307,7 @@ function validateOperand(operand: ExprInput<unknown>): void {
 function isTaggedExpressionLike(value: unknown): boolean {
   if (!value || typeof value !== "object") return false;
   const candidate = value as { kind?: unknown };
-  return candidate.kind === "expr" || candidate.kind === "column";
+  return candidate.kind === "expr";
 }
 
 function validateOperandNode(node: unknown): ExprNode<unknown> {

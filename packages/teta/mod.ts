@@ -186,9 +186,6 @@ export type Expr<T> = import("./src/edsl/expr.ts").Expr<T>;
 /** Typed SQL column expression value with its projected column name. */
 export type Column<T, Name extends string> = import("./src/edsl/expr.ts").Column<T, Name>;
 
-/** Input shape accepted anywhere an expression or column is expected. */
-export type ExprLike<T> = import("./src/edsl/expr.ts").ExprLike<T>;
-
 /** Alternating condition/value pairs accepted by `when(...)`. */
 export type WhenArgs<TArgs extends readonly unknown[]> = import("./src/edsl/expr.ts").WhenArgs<TArgs>;
 

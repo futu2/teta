@@ -7,7 +7,7 @@ import type {
   SqlTimestamp,
   SqlUuid,
 } from "../../types.ts";
-import type { ExprInput, ExprInputTuple, ExprRef, NonNull } from "../core.ts";
+import type { ExprInput, ExprInputTuple, Expr, NonNull } from "../core.ts";
 import { fn } from "../core.ts";
 import { userError } from "../../../errors.ts";
 
@@ -29,7 +29,7 @@ type NormalizeCoalesceTuple<TContext, TValues extends readonly unknown[]> = {
 export function coalesce<TValue, TValues extends readonly unknown[]>(
   value: ExprInput<TValue>,
   ...values: ExprInputTuple<NormalizeCoalesceTuple<TValue, TValues>>
-): ExprRef<NonNull<TValue | NormalizeCoalesceValue<TValue, TValues[number]>>> {
+): Expr<NonNull<TValue | NormalizeCoalesceValue<TValue, TValues[number]>>> {
   if (values.length === 0) {
     userError("INVALID_FUNCTION_NAME", "coalesce requires at least one fallback value");
   }
@@ -40,6 +40,6 @@ export function coalesce<TValue, TValues extends readonly unknown[]>(
   );
 }
 
-export function nullIf<T>(value: ExprInput<T>, other: ExprInput<T>): ExprRef<T | null> {
+export function nullIf<T>(value: ExprInput<T>, other: ExprInput<T>): Expr<T | null> {
   return fn<T | null>("NULLIF", value, other);
 }

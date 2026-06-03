@@ -173,6 +173,9 @@ const predicateConvenienceUsers = pipe(users, filter((user) => and(
 )));
 const singleAndExpr = and(eq(users.columns.id, 1));
 const singleOrExpr = or(eq(users.columns.id, 1));
+const idAsExpr: Expr<SqlInt> = users.columns.id;
+const keepIntExpr = (value: Expr<SqlInt>): Expr<SqlInt> => value;
+const keptUserIdExpr = keepIntExpr(users.columns.id);
 const callbackSortedUsers = pipe(users, sort((user) => [asc(user.name), desc(user.id)]));
 const callbackAggregatedOrders = pipe(orders, fold((order) => ({
     user_id: group(order.user_id),

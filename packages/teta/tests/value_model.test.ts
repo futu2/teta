@@ -35,7 +35,7 @@ describe("tagged EDSL value model", () => {
 
     const id = users.columns.id;
 
-    expect(id.kind).toBe("column");
+    expect(id.kind).toBe("expr");
     expect(isExpr(id)).toBe(true);
     expect(isColumn(id)).toBe(true);
     expect(Object.isFrozen(id)).toBe(true);
@@ -65,7 +65,7 @@ describe("tagged EDSL value model", () => {
     expect(isExpr({ kind: "expr", node: null })).toBe(false);
     expect(isExpr({ kind: "expr", node: { kind: "bogus" } })).toBe(false);
     expect(isColumn({
-      kind: "column",
+      kind: "expr",
       node: { kind: "literal", value: 1 },
       table: null,
       name: "id",

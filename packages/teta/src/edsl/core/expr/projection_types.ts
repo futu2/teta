@@ -1,12 +1,10 @@
 import type { Value } from "../types.ts";
-import type { ExprLike, ExprRef } from "./runtime.ts";
+import type { Expr } from "./runtime.ts";
 import type { NormalizeExpressionLiteral } from "../../sql/types.ts";
 
-export type ProjectionValue = ExprLike<unknown> | Value;
+export type ProjectionValue = Expr<unknown> | Value;
 
-export type ProjectionValueResult<V> = V extends ExprRef<infer T>
-  ? T
-  : V extends ExprLike<infer T>
+export type ProjectionValueResult<V> = V extends Expr<infer T>
   ? T
   : NormalizeExpressionLiteral<V>;
 

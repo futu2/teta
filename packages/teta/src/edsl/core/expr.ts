@@ -1,9 +1,3 @@
-export type {
-  ColumnRef,
-  ExprRef,
-  WindowBuilder,
-} from "./expr/core.ts";
-
 export {
   lit,
   param,
@@ -31,11 +25,10 @@ export {
   isColumn,
   type ColumnRefs,
   type Expr,
-  type ExprLike,
   type ExprInput,
   type ExprInputTuple,
   type ExprInputValue,
-  type ExprRefs,
+  type Exprs,
   type NonNull,
   type PropagateNull,
   type ProjectionResult,
@@ -46,5 +39,6 @@ export {
   type Column,
   type WindowSpecInput,
   type WindowExpr,
+  type WindowBuilder,
 } from "./expr/core.ts";
 export { createColumnRefs, mergeColumnRefs, mergeColumnNames, projectAllItems } from "./expr/columns.ts";

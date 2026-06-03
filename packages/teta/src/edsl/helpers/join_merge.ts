@@ -1,9 +1,9 @@
 import { and, eq } from "../expr.ts";
-import type { ColumnRefs, ExprLike, ExprRef, ExprRefs } from "../expr.ts";
+import type { ColumnRefs, Expr, Exprs } from "../expr.ts";
 import { userError } from "../errors.ts";
 import type { SqlBoolean } from "../types.ts";
 
-type JoinSelection = Record<string, ExprLike<unknown>>;
+type JoinSelection = Record<string, Expr<unknown>>;
 
 type JoinOverlappingColumnNames<
   TLeft extends Record<string, any>,
@@ -65,7 +65,7 @@ type JoinHelperSelection<
   TLeft extends Record<string, any>,
   TRight extends Record<string, any>,
   TExtraConflicts extends string = never,
-> = ExprRefs<TLeft & TRight> & JoinMergeConflictGuard<TLeft, TRight, TExtraConflicts>;
+> = Exprs<TLeft & TRight> & JoinMergeConflictGuard<TLeft, TRight, TExtraConflicts>;
 
 type PrefixOverlapLeftSelfConflicts<
   TLeft extends Record<string, any>,
@@ -93,7 +93,7 @@ export function usingCols<const TName extends string>(
 >(
   left: ColumnRefs<TLeft>,
   right: ColumnRefs<TRight>
-) => ExprRef<SqlBoolean | null>;
+) => Expr<SqlBoolean | null>;
 export function usingCols<const TNames extends readonly string[]>(
   names: TNames
 ): <
@@ -102,7 +102,7 @@ export function usingCols<const TNames extends readonly string[]>(
 >(
   left: ColumnRefs<TLeft>,
   right: ColumnRefs<TRight>
-) => ExprRef<SqlBoolean | null>;
+) => Expr<SqlBoolean | null>;
 export function usingCols(nameOrNames: string | readonly string[]) {
   const names = Array.isArray(nameOrNames) ? nameOrNames : [nameOrNames];
 
@@ -112,13 +112,13 @@ export function usingCols(nameOrNames: string | readonly string[]) {
   >(
     left: ColumnRefs<TLeft>,
     right: ColumnRefs<TRight>
-  ): ExprRef<SqlBoolean | null> {
-    let predicate: ExprRef<SqlBoolean | null> | undefined;
+  ): Expr<SqlBoolean | null> {
+    let predicate: Expr<SqlBoolean | null> | undefined;
 
     for (const name of names) {
       const next = eq(
-        left[name as keyof typeof left] as ExprLike<any>,
-        right[name as keyof typeof right] as ExprLike<any>
+        left[name as keyof typeof left] as Expr<any>,
+        right[name as keyof typeof right] as Expr<any>
       );
       predicate = predicate ? and(predicate, next) : next;
     }
@@ -138,7 +138,7 @@ export function onEq<const TMapping extends Record<string, string>>(
 >(
   left: ColumnRefs<TLeft>,
   right: ColumnRefs<TRight>
-) => ExprRef<SqlBoolean | null>;
+) => Expr<SqlBoolean | null>;
 export function onEq<const TMapping extends Record<string, string>>(
   mapping: TMapping
 ) {
@@ -151,13 +151,13 @@ export function onEq<const TMapping extends Record<string, string>>(
   >(
     left: ColumnRefs<TLeft>,
     right: ColumnRefs<TRight>
-  ): ExprRef<SqlBoolean | null> {
-    let predicate: ExprRef<SqlBoolean | null> | undefined;
+  ): Expr<SqlBoolean | null> {
+    let predicate: Expr<SqlBoolean | null> | undefined;
 
     for (const [leftName, rightName] of Object.entries(mapping) as Array<[LeftKey, RightKey]>) {
       const next = eq(
-        left[leftName as keyof typeof left] as ExprLike<any>,
-        right[rightName as unknown as keyof typeof right] as ExprLike<any>
+        left[leftName as keyof typeof left] as Expr<any>,
+        right[rightName as unknown as keyof typeof right] as Expr<any>
       );
       predicate = predicate ? and(predicate, next) : next;
     }
@@ -449,7 +449,7 @@ function getOverlappingColumnNames(
 function assignJoinMergeColumn(
   target: JoinSelection,
   key: string,
-  value: ExprLike<unknown>
+  value: Expr<unknown>
 ): void {
   if (Object.prototype.hasOwnProperty.call(target, key)) {
     userError("JOIN_MERGE_CONFLICT", `join merge helper still overlaps after renaming: ${key}`);

@@ -1,10 +1,10 @@
 import type { JoinType, JoinTypeInput } from "../core/types.ts";
 import { mergeColumnNames } from "../expr.ts";
-import type { ColumnRefs, ExprLike, ExprRef, ExprRefs } from "../expr.ts";
+import type { ColumnRefs, Expr, Exprs } from "../expr.ts";
 import { userError } from "../errors.ts";
 import type { SqlBoolean } from "../types.ts";
 
-export type JoinSelection = Record<string, ExprLike<unknown>>;
+export type JoinSelection = Record<string, Expr<unknown>>;
 
 export type JoinOverlappingColumnNames<
   TLeft extends Record<string, any>,
@@ -24,7 +24,7 @@ export type JoinNoMergeGuard<
 export type JoinOn<
   TLeft extends Record<string, any>,
   TRight extends Record<string, any>,
-> = (left: ColumnRefs<TLeft>, right: ColumnRefs<TRight>) => ExprRef<SqlBoolean | null>;
+> = (left: ColumnRefs<TLeft>, right: ColumnRefs<TRight>) => Expr<SqlBoolean | null>;
 
 export type JoinOnNoMerge<
   TLeft extends Record<string, any>,
@@ -32,13 +32,13 @@ export type JoinOnNoMerge<
 > = JoinOn<TLeft, TRight> & JoinNoMergeGuard<TLeft, TRight>;
 
 export type JoinSelectionResult<TSelection extends JoinSelection> = {
-  [K in keyof TSelection]: TSelection[K] extends ExprLike<infer TValue> ? TValue : never;
+  [K in keyof TSelection]: TSelection[K] extends Expr<infer TValue> ? TValue : never;
 };
 
 export type JoinColumnMerger<
   TLeft extends Record<string, any>,
   TRight extends Record<string, any>,
-  TSelection extends JoinSelection = ExprRefs<TLeft & TRight>
+  TSelection extends JoinSelection = Exprs<TLeft & TRight>
 > = (
   left: ColumnRefs<TLeft>,
   right: ColumnRefs<TRight>
@@ -163,8 +163,8 @@ export function resolveJoinColumns<
 function defaultJoinColumnMerger<
   TLeft extends Record<string, any>,
   TRight extends Record<string, any>
->(left: ColumnRefs<TLeft>, right: ColumnRefs<TRight>): ExprRefs<TLeft & TRight> {
-  return { ...left, ...right } as unknown as ExprRefs<TLeft & TRight>;
+>(left: ColumnRefs<TLeft>, right: ColumnRefs<TRight>): Exprs<TLeft & TRight> {
+  return { ...left, ...right } as unknown as Exprs<TLeft & TRight>;
 }
 
 function resolveMergedColumnNames(

@@ -10,11 +10,11 @@ import {
   createColumnRefs,
   dedupeExprs,
   projectAllItems,
+  toExprNode,
 } from "../expr.ts";
 import type {
   ColumnRefs,
-  ExprLike,
-  ExprRef,
+  Expr,
   ProjectionResult,
   ProjectionShape,
 } from "../expr.ts";
@@ -49,7 +49,7 @@ import { toQuerySpec } from "./state.ts";
 type JoinOnInput<
   TLeft extends Record<string, any>,
   TRight extends Record<string, any>,
-> = (left: ColumnRefs<TLeft>, right: ColumnRefs<TRight>) => ExprRef<SqlBoolean | null>;
+> = (left: ColumnRefs<TLeft>, right: ColumnRefs<TRight>) => Expr<SqlBoolean | null>;
 
 type JoinMergeInput<
   TSelection extends JoinSelection,
@@ -160,7 +160,7 @@ export function resolveJoinQuery<
   const alias = autoAlias(sourceAliasBase(rightQuery.source), leftQuery.stages);
   const rightKeys = [...rightQuery.columnNames];
   const rightRefs = createColumnRefs<TRight>(rightQuery.scopeId, rightKeys);
-  const predicate = on(leftQuery.columns, rightRefs).node;
+  const predicate = toExprNode(on(leftQuery.columns, rightRefs));
   const resolvedMergeColumns =
     typeof mergeColumns === "function" || mergeColumns === undefined
       ? mergeColumns
@@ -215,7 +215,7 @@ export function resolveUnnestQuery<
   TGenerated extends Record<string, any>,
 >(
   leftQuery: QueryState<TLeft>,
-  collection: ExprLike<unknown>,
+  collection: Expr<unknown>,
   selection: { value: string; ordinality?: string },
   options: { outer?: boolean } = {}
 ): QueryDeriveInit<TLeft & TGenerated> {

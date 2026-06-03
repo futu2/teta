@@ -4,9 +4,9 @@ import {
   isExpr,
   shouldAlias,
   toExprNode,
-  type ColumnRef,
+  type Column,
   type ColumnRefs,
-  type ExprRefs,
+  type Exprs,
 } from "./core.ts";
 import { internalError, userError } from "../../errors.ts";
 
@@ -26,7 +26,7 @@ export function createColumnRefs<TColumns extends Record<string, unknown>>(
   tableName: ScopeId | null,
   columnNames: readonly string[]
 ): ColumnRefs<TColumns> {
-  const cache = new Map<string, ColumnRef<unknown, string>>();
+  const cache = new Map<string, Column<unknown, string>>();
   const columns = [...columnNames];
   const getColumn = (name: string) => {
     const existing = cache.get(name);
@@ -137,7 +137,7 @@ export function mergeColumnNames(
 }
 
 export function projectAllItems<TColumns extends Record<string, unknown>>(
-  columns: ExprRefs<TColumns>,
+  columns: Exprs<TColumns>,
   columnNames: readonly string[],
   columnIdentifiers?: Readonly<Record<string, SqlIdentifier>>
 ): ProjectionItem[] {

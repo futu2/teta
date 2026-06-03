@@ -7,7 +7,7 @@ import {
   windowExpr,
   type ExprInput,
   type ExprInputValue,
-  type ExprRef,
+  type Expr,
   type PropagateNull,
   type WindowBuilder,
   type WindowSpecInput,
@@ -17,7 +17,7 @@ type NullableSqlNumber = SqlNumber | null;
 
 export function group<TInput extends ExprInput<unknown>>(
   value: TInput
-): ExprRef<ExprInputValue<TInput>> {
+): Expr<ExprInputValue<TInput>> {
   return exprOf<ExprInputValue<TInput>>({
     kind: "group",
     expr: toExprNode(value as ExprInput<unknown>) as any,
@@ -26,37 +26,37 @@ export function group<TInput extends ExprInput<unknown>>(
 
 export function count<TInput extends ExprInput<unknown>>(
   value: TInput
-): ExprRef<SqlInt> {
+): Expr<SqlInt> {
   return aggregateExpr<SqlInt, TInput>("COUNT", value);
 }
 
 export function sum<TInput extends ExprInput<NullableSqlNumber>>(
   value: TInput
-): ExprRef<ExprInputValue<TInput>> {
+): Expr<ExprInputValue<TInput>> {
   return aggregateExpr<ExprInputValue<TInput>, TInput>("SUM", value);
 }
 
 export function avg<TInput extends ExprInput<NullableSqlNumber>>(
   value: TInput
-): ExprRef<PropagateNull<ExprInputValue<TInput>, SqlFloat>> {
+): Expr<PropagateNull<ExprInputValue<TInput>, SqlFloat>> {
   return aggregateExpr<PropagateNull<ExprInputValue<TInput>, SqlFloat>, TInput>("AVG", value);
 }
 
 export function min<TInput extends ExprInput<unknown>>(
   value: TInput
-): ExprRef<ExprInputValue<TInput>> {
+): Expr<ExprInputValue<TInput>> {
   return aggregateExpr<ExprInputValue<TInput>, TInput>("MIN", value);
 }
 
 export function max<TInput extends ExprInput<unknown>>(
   value: TInput
-): ExprRef<ExprInputValue<TInput>> {
+): Expr<ExprInputValue<TInput>> {
   return aggregateExpr<ExprInputValue<TInput>, TInput>("MAX", value);
 }
 
 export function arrayAgg<TInput extends ExprInput<unknown>>(
   value: TInput
-): ExprRef<ExprInputValue<TInput>[]> {
+): Expr<ExprInputValue<TInput>[]> {
   return aggregateExpr<ExprInputValue<TInput>[], TInput>("ARRAY_AGG", value);
 }
 
@@ -114,6 +114,6 @@ export function ntile(
 export function sumOver<TValue extends NullableSqlNumber>(
   value: ExprInput<TValue>,
   spec: WindowSpecInput = {}
-): ExprRef<TValue> {
+): Expr<TValue> {
   return over(windowExpr<TValue>("SUM", value), spec);
 }
