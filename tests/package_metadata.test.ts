@@ -68,7 +68,7 @@ test("teta jsr manifest maps workspace dependencies to jsr packages", () => {
   }>("packages/teta/jsr.json");
 
   expect(tetaPackage.dependencies?.["@teta/sql"]).toEqual("workspace:*");
-  expect(tetaJsr.imports?.["@teta/sql"]).toEqual("jsr:@teta/sql@^0.4.14");
+  expect(tetaJsr.imports?.["@teta/sql"]).toEqual("jsr:@teta/sql@^0.1.5");
 });
 
 test("ci workflow checks and validates the sql package", () => {

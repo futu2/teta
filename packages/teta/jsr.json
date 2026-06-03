@@ -7,7 +7,7 @@
     ".": "./mod.ts"
   },
   "imports": {
-    "@teta/sql": "jsr:@teta/sql@^0.4.14"
+    "@teta/sql": "jsr:@teta/sql@^0.1.5"
   },
   "compatibility": {
     "deno": true,
