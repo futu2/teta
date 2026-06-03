@@ -8,8 +8,8 @@
   "types": "./mod.ts",
   "type": "module",
   "scripts": {
-    "test": "bun test tests",
-    "test:all": "bun test",
+    "test": "bun test --parallel tests",
+    "test:all": "bun test --parallel",
     "test:runtime:bun": "bun run tests/runtime_smoke.ts",
     "test:runtime:node": "tsx tests/runtime_smoke.ts",
     "test:runtime:deno": "deno run --node-modules-dir=auto tests/runtime_smoke.ts",

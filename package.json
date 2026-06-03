@@ -5,7 +5,7 @@
     "packages/*"
   ],
   "scripts": {
-    "test": "bun run test:metadata && bun run test:sql && bun run test:teta && bun run test:dev",
+    "test": "bun run --parallel test:metadata test:sql test:teta test:dev",
     "test:metadata": "bun test tests/package_metadata.test.ts",
     "test:sql": "bun run --cwd packages/sql test",
     "test:teta": "bun run --cwd packages/teta test",

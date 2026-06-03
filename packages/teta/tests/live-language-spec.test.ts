@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
 import { toSql, type SqlCompilable } from "../mod.ts";
 import { createDuckDbAdapter, createPostgresqlAdapter, createSqliteAdapter, normalizeLiveRows, type LiveDialect, type LiveDialectAdapter } from "./helpers/live-db.ts";
@@ -33,17 +33,26 @@ async function runCase(
 ): Promise<void> {
   const adapter = await adapterFactory();
   try {
-    const sql = toSql(build(), { dialect, format: "compact" });
-    if (isErrorOutcome(outcome)) {
-      await expect(adapter.run(sql)).rejects.toThrow(outcome.error);
-      return;
-    }
-
-    const rows = normalizeLiveRows(await adapter.run(sql));
-    expect(rows).toEqual(outcome.rows);
+    await runCaseWithAdapter(adapter, dialect, outcome, build);
   } finally {
     await adapter.close();
   }
+}
+
+async function runCaseWithAdapter(
+  adapter: LiveDialectAdapter,
+  dialect: LiveDialect,
+  outcome: LiveOutcome,
+  build: () => SqlCompilable
+): Promise<void> {
+  const sql = toSql(build(), { dialect, format: "compact" });
+  if (isErrorOutcome(outcome)) {
+    await expect(adapter.run(sql)).rejects.toThrow(outcome.error);
+    return;
+  }
+
+  const rows = normalizeLiveRows(await adapter.run(sql));
+  expect(rows).toEqual(outcome.rows);
 }
 
 describe("live language spec coverage", () => {
@@ -80,16 +89,28 @@ describe("live language spec coverage", () => {
   });
 
   describe("postgresql", () => {
-    const livePostgresqlTest = PGlite ? test : test.skip;
+    const livePostgresqlTest = PGlite ? test.concurrent : test.skip;
+    let postgresqlAdapter: LiveDialectAdapter | null = null;
+
+    beforeAll(async () => {
+      if (PGlite) {
+        postgresqlAdapter = await createPostgresqlAdapter(PGlite);
+      }
+    });
+
+    afterAll(async () => {
+      await postgresqlAdapter?.close();
+      postgresqlAdapter = null;
+    });
 
     for (const specCase of LIVE_LANGUAGE_SPEC_CASES) {
       livePostgresqlTest(specCase.name, async () => {
-        if (!PGlite) {
-          throw new Error("PGlite is unavailable");
+        if (!postgresqlAdapter) {
+          throw new Error("PostgreSQL adapter is unavailable");
         }
 
-        await runCase(
-          () => createPostgresqlAdapter(PGlite),
+        await runCaseWithAdapter(
+          postgresqlAdapter,
           "postgresql",
           specCase.outcomes.postgresql,
           specCase.build

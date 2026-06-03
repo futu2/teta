@@ -8,8 +8,8 @@
   "types": "./mod.ts",
   "type": "module",
   "scripts": {
-    "test": "bun test tests --pass-with-no-tests",
-    "test:all": "bun test",
+    "test": "bun test --parallel tests --pass-with-no-tests",
+    "test:all": "bun test --parallel",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "check": "bun run test && bun run typecheck"
   },
