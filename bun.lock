@@ -10,7 +10,7 @@
     },
     "packages/dev": {
       "name": "@teta/dev",
-      "version": "0.1.1",
+      "version": "0.4.14",
       "dependencies": {
         "@mariozechner/clipboard": "^0.3.2",
         "@teta/teta": "workspace:*",
@@ -22,7 +22,7 @@
     },
     "packages/sql": {
       "name": "@teta/sql",
-      "version": "0.1.4",
+      "version": "0.4.14",
       "dependencies": {
         "node-sql-parser": "^5.4.0",
       },
@@ -33,7 +33,7 @@
     },
     "packages/teta": {
       "name": "@teta/teta",
-      "version": "0.4.13",
+      "version": "0.4.14",
       "dependencies": {
         "@teta/sql": "workspace:*",
         "node-sql-parser": "^5.4.0",

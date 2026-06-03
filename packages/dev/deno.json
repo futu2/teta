@@ -1,8 +1,8 @@
 {
   "name": "@teta/dev",
-  "version": "0.1.1",
+  "version": "0.4.14",
   "exports": "./mod.ts",
   "imports": {
-    "@teta/teta": "jsr:@teta/teta@^0.4.0"
+    "@teta/teta": "jsr:@teta/teta@^0.4.14"
   }
 }
