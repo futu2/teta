@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { between, filter, filterEq, identityStep, isDistinctFrom, isNotIn, take, sort, map, toSql, asc, desc, eq, gte, replace, and, coalesce, join, leftJoin, leftJoinMerge, onEq, prefixOverlapLeft, table, t, pipe, flow, unlessStep, unionAll, union, unnest, whenStep } from "../mod.ts";
+import { between, filter, filterEq, identityStep, isDistinctFrom, isNotIn, take, takeWithin, sort, map, toSql, asc, desc, eq, gte, replace, and, coalesce, join, leftJoin, leftJoinMerge, onEq, prefixOverlapLeft, table, t, pipe, flow, unlessStep, unionAll, union, unnest, whenStep } from "../mod.ts";
 import { USER_PIPELINE_POSTGRES_COMPACT, USERS_ORDERS_LEFT_JOIN_SELECT_POSTGRES_COMPACT } from "./helpers/expected-sql.ts";
 import { createOrdersTable, createUsersPipelineTable, createUsersTable } from "./helpers/fixtures.ts";
 describe("function-first query api", () => {
@@ -44,6 +44,24 @@ describe("function-first query api", () => {
         );
 
         expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe("SELECT users_0.id AS id, users_0.name AS name, users_0.age AS age, users_0.active AS active FROM users AS users_0 WHERE users_0.active = TRUE LIMIT 5");
+    });
+    test("takes rows within a partition using row_number", () => {
+        const employees = table("employees", {
+            id: t.int(),
+            name: t.string(),
+            role: t.string(),
+            join_date: t.date(),
+        });
+        const query = pipe(
+            employees,
+            takeWithin({
+                partitionBy: (employee) => employee.role,
+                orderBy: (employee) => asc(employee.join_date),
+                count: 1,
+            })
+        );
+
+        expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe("SELECT t_0.id, t_0.name, t_0.role, t_0.join_date FROM (SELECT employees_0.id, employees_0.name, employees_0.role, employees_0.join_date, row_number() OVER (PARTITION BY employees_0.role ORDER BY employees_0.join_date ASC) AS __teta_take_within_row_number FROM employees AS employees_0) AS t_0 WHERE t_0.__teta_take_within_row_number <= 1");
     });
     test("uses curried aliases for union and unnest helpers", () => {
         const users = table("users", {

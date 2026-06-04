@@ -129,6 +129,9 @@ export const unnest: typeof import("./src/edsl/query.ts").unnest = query.unnest;
 /** Limits the number of rows returned by a query. */
 export const take: typeof import("./src/edsl/query.ts").take = query.take;
 
+/** Keeps the first N rows within each partition according to a window ordering. */
+export const takeWithin: typeof import("./src/edsl/query.ts").takeWithin = query.takeWithin;
+
 /** Builds a recursive query from a base query and recursive step. */
 export const loop: typeof import("./src/edsl/query.ts").loop = query.loop;
 
@@ -179,6 +182,9 @@ export type QueryStageKind = import("./src/edsl/query.ts").QueryStageKind;
 
 /** Single step in the lowered query plan. */
 export type QueryStep<TInputColumns extends Record<string, any>, TOutputColumns extends Record<string, any>> = import("./src/edsl/query.ts").QueryStep<TInputColumns, TOutputColumns>;
+
+/** Options accepted by `takeWithin(...)`. */
+export type TakeWithinSpec<TColumns extends Record<string, any>> = import("./src/edsl/query.ts").TakeWithinSpec<TColumns>;
 
 /** Typed SQL expression value used throughout the query DSL. */
 export type Expr<T> = import("./src/edsl/expr.ts").Expr<T>;

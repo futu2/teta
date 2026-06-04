@@ -29,6 +29,7 @@ export {
 } from "./query/builder.ts";
 export type { Query, QueryExplainResult, QueryIR, QueryStageKind, QueryStep } from "./query/builder.ts";
 export { extend } from "./query/extend.ts";
+export { takeWithin, type TakeWithinSpec } from "./query/take_within.ts";
 export {
   filterEq,
   filterNe,

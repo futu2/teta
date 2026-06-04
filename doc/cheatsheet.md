@@ -5,7 +5,7 @@ Quick reference for the public API exported from `@teta/teta`.
 Teta is function-first. Row-transforming query helpers are curried query steps used with `pipe(...)`.
 
 ```ts
-import { add, and, arrayAppend, arrayContains, arrayJoin, arrayLength, arrayPosition, arraySlice, asBigInt, asBoolean, asBytes, asDate, asDecimal, asFloat, asInt, asJson, asString, asTimestamp, asUuid, asc, avg, bitLength, cast, charLength, characterLength, coalesce, concat, count, currentDate, currentTimestamp, dateAdd, dateDiff, dateFormat, dateLiteral, dateParse, dateTrunc, day, desc, drop, dropOverlapLeft, dropOverlapRight, eq, explain, Expr, extend, f, filter, filterEq, flow, fn, fold, fromUnixTime, fullJoin, group, gt, gte, hour, innerJoin, isIn, isNotNull, isNull, join, lag, lead, left, leftJoin, like, loop, lower, lt, lte, map, rename, max, min, minute, mod, month, mul, ne, not, ntile, nullIf, octetLength, onEq, over, overlay, param, percentRank, pick, pipe, position, pow, prefixAllLeft, prefixAllRight, prefixOverlapLeft, prefixOverlapRight, Query, rank, regexExtract, regexLike, regexReplace, replace, reverse, right, rightJoin, round, rowNumber, rpad, shape, sort, sqrt, sub, substring, suffixAllLeft, suffixAllRight, sum, sumOver, t, table, take, timestampLiteral, toAst, toIR, toSql, toSqlResult, toUnixTime, trim, union, unionAll, unnest, upper, usingCols, values, when, windowFn, year } from "@teta/teta";
+import { add, and, arrayAppend, arrayContains, arrayJoin, arrayLength, arrayPosition, arraySlice, asBigInt, asBoolean, asBytes, asDate, asDecimal, asFloat, asInt, asJson, asString, asTimestamp, asUuid, asc, avg, bitLength, cast, charLength, characterLength, coalesce, concat, count, currentDate, currentTimestamp, dateAdd, dateDiff, dateFormat, dateLiteral, dateParse, dateTrunc, day, desc, drop, dropOverlapLeft, dropOverlapRight, eq, explain, Expr, extend, f, filter, filterEq, flow, fn, fold, fromUnixTime, fullJoin, group, gt, gte, hour, innerJoin, isIn, isNotNull, isNull, join, lag, lead, left, leftJoin, like, loop, lower, lt, lte, map, rename, max, min, minute, mod, month, mul, ne, not, ntile, nullIf, octetLength, onEq, over, overlay, param, percentRank, pick, pipe, position, pow, prefixAllLeft, prefixAllRight, prefixOverlapLeft, prefixOverlapRight, Query, rank, regexExtract, regexLike, regexReplace, replace, reverse, right, rightJoin, round, rowNumber, rpad, shape, sort, sqrt, sub, substring, suffixAllLeft, suffixAllRight, sum, sumOver, t, table, take, takeWithin, timestampLiteral, toAst, toIR, toSql, toSqlResult, toUnixTime, trim, union, unionAll, unnest, upper, usingCols, values, when, windowFn, year } from "@teta/teta";
 ```
 
 ## 1) Query roots and composition
@@ -45,6 +45,19 @@ const q = pipe(
   map((u) => ({ id: u.id, name: upper(u.name) })),
   sort((u) => asc(u.name)),
   take(10)
+);
+```
+
+Use `takeWithin(...)` for the first N rows in each partition:
+
+```ts
+const firstEmployeePerRole = pipe(
+  employees,
+  takeWithin({
+    partitionBy: (employee) => employee.role,
+    orderBy: (employee) => asc(employee.join_date),
+    count: 1,
+  })
 );
 ```
 
@@ -202,6 +215,7 @@ const uniqueUsers = pipe(activeUsers, union(inactiveUsers));
 - `filter(predicate)`
 - `sort(selector)`
 - `take(count)`
+- `takeWithin({ partitionBy, orderBy, count })`
 - `join(rightOrBuilder, { type?, on, select?, lateral? })`
 - `innerJoin(...)`, `leftJoin(...)`, `rightJoin(...)`, `fullJoin(...)` as fixed-type wrappers
 - `innerJoinMap(...)`, `leftJoinMap(...)`, `rightJoinMap(...)`, `fullJoinMap(...)` as projection wrappers

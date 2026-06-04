@@ -718,6 +718,66 @@ const q = pipe(
 console.log(toSql(q, { dialect: "postgresql", format: "pretty" }));
 ```
 
+### Take rows within each partition
+
+When you want the first N rows inside each partition according to an ordering, you can compose the
+primitive helpers directly: add a row number with `extend(...)`, filter it, and then remove the helper
+column with `drop(...)`.
+
+```ts
+import { asc, drop, extend, filter, lte, over, pipe, rowNumber, table, t, toSql } from "@teta/teta";
+
+const employees = table("employees", {
+  id: t.int(),
+  name: t.string(),
+  role: t.string(),
+  join_date: t.date(),
+});
+
+const q = pipe(
+  employees,
+  extend("row_num", (employee) =>
+    over(rowNumber(), {
+      partitionBy: employee.role,
+      orderBy: asc(employee.join_date),
+    })
+  ),
+  filter((employee) => lte(employee.row_num, 1)),
+  drop("row_num")
+);
+
+console.log(toSql(q, { dialect: "postgresql", format: "pretty" }));
+```
+
+`takeWithin(...)` packages that `extend(...) -> filter(...) -> drop(...)` pattern into a reusable
+query step:
+
+```ts
+import { asc, pipe, table, t, takeWithin, toSql } from "@teta/teta";
+
+const q = pipe(
+  employees,
+  takeWithin({
+    partitionBy: (employee) => employee.role,
+    orderBy: (employee) => asc(employee.join_date),
+    count: 1,
+  })
+);
+
+console.log(toSql(q, { dialect: "postgresql", format: "pretty" }));
+```
+
+Generated SQL:
+
+```sql
+SELECT t_0.id, t_0.name, t_0.role, t_0.join_date
+FROM (
+SELECT employees_0.id, employees_0.name, employees_0.role, employees_0.join_date, row_number() OVER (PARTITION BY employees_0.role
+ORDER BY employees_0.join_date ASC) AS __teta_take_within_row_number
+FROM employees AS employees_0) AS t_0
+WHERE t_0.__teta_take_within_row_number <= 1
+```
+
 ### Custom SQL functions (UDF)
 
 ```ts
