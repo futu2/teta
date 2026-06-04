@@ -451,9 +451,7 @@ const compactUsers = pipe(
 
 const publicUsers = pipe(users, pick("id", "name"));
 
-const enrichedUsers = pipe(users, extend((user) => ({
-  name_upper: upper(user.name),
-})));
+const enrichedUsers = pipe(users, extend("name_upper", (user) => upper(user.name)));
 
 const internalUsers = pipe(users, drop("password_hash"));
 

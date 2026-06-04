@@ -145,12 +145,9 @@ const mappedSortedTakenSelectedUsers = pipe(users, map((user) => ({
     id: user.id,
     name: user.name,
 })), sort((user) => [desc(user.id)]), take(5));
-const extendedUsers = pipe(users, extend((user) => ({
-    name_upper: upper(user.name),
-})));
-const replacedExtendedUsers = pipe(users, extend((user) => ({
-    id: asString(user.id),
-})));
+const extendedUsers = pipe(users, extend("name_upper", (user) => upper(user.name)));
+const singleReplacedExtendedUsers = pipe(users, extend("id", (user) => add(user.id, 100)));
+const replacedExtendedUsers = pipe(users, extend("id", (user) => asString(user.id)));
 const pickedUsers = pipe(users, pick("id", "name"));
 const callbackFilteredUsers = pipe(users, filter((user) => eq(user.id, 1)));
 const filterEqCallbackNameUsers = pipe(users, filterEq((user) => user.name, "Ada"));
@@ -564,7 +561,9 @@ pipe(users, map((user) => ({
     missing: user.missing,
 })));
 // @ts-expect-error extend rejects unknown callback columns when applied to a typed query
-pipe(users, extend((user) => ({ broken: user.missing })));
+pipe(users, extend("broken", (user) => user.missing));
+// @ts-expect-error extend expects a single column name before the callback
+pipe(users, extend((user) => ({ broken: user.id })));
 pipe(orders, fold((order) => ({
     // @ts-expect-error callbacks reject unknown current-row columns in fold context
     total: sum(order.missing),

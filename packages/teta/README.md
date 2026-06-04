@@ -54,9 +54,7 @@ import { extend, filterEq, flow, lower, pick, take, whenStep } from "@teta/teta"
 
 const activePublicUsers = flow(
   filterEq((user) => user.active, true),
-  extend((user) => ({
-    normalized_email: lower(user.email),
-  })),
+  extend("normalized_email", (user) => lower(user.email)),
   pick("id", "normalized_email"),
   whenStep(includeLimit, take(50))
 );

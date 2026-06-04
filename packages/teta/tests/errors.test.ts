@@ -103,7 +103,7 @@ describe("error paths", () => {
         expectUserError(
             () => (extend as any)(users, (user: typeof users.columns) => ({ name: user.name })),
             "QUERY_HELPER_INVALID_ARGUMENTS",
-            "extend() expects extend(selector)"
+            "extend() expects extend(name, selector)"
         );
         expectUserError(
             () => (filter as any)(users, (user: typeof users.columns) => eq(user.id, 1)),
@@ -210,22 +210,27 @@ describe("error paths", () => {
             LEGACY_SELECTION_ARRAY_ERROR
         );
     });
-    test("rejects erased invalid extend callback returns with user errors", () => {
+    test("rejects erased invalid extend inputs with user errors", () => {
         const users = createUsersTable();
         expectUserError(
-            () => pipe(users, extend(() => undefined as never)),
-            "LEGACY_SELECTION_ARRAY",
-            LEGACY_SELECTION_ARRAY_ERROR
+            () => pipe(users, (extend as any)(undefined)),
+            "QUERY_HELPER_INVALID_ARGUMENTS",
+            "extend() expects extend(name, selector)"
         );
         expectUserError(
-            () => pipe(users, extend(() => new Date() as never)),
-            "LEGACY_SELECTION_ARRAY",
-            LEGACY_SELECTION_ARRAY_ERROR
+            () => pipe(users, extend("broken", undefined as never)),
+            "QUERY_HELPER_INVALID_SELECTOR",
+            "extend() expects a row callback"
         );
         expectUserError(
-            () => pipe(users, extend(() => ({} as never))),
-            "LEGACY_SELECTION_ARRAY",
-            LEGACY_SELECTION_ARRAY_ERROR
+            () => pipe(users, extend("broken", () => undefined as never)),
+            "INVALID_LITERAL_VALUE",
+            "Unsupported literal value: undefined"
+        );
+        expectUserError(
+            () => pipe(users, extend("broken", () => ({} as never))),
+            "INVALID_LITERAL_VALUE",
+            "Unsupported literal value: [object Object]"
         );
     });
     test("rejects non-canonical built-in dialect names", () => {

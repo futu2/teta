@@ -184,9 +184,9 @@ describe("callback column api", () => {
       active: user.active,
       normalized_name: coalesce(replace(user.name, " ", "_"), "unknown"),
     })));
-    const actual = pipe(users, extend((user) => ({
-      normalized_name: coalesce(replace(user.name, " ", "_"), "unknown"),
-    })));
+    const actual = pipe(users, extend("normalized_name", (user) =>
+      coalesce(replace(user.name, " ", "_"), "unknown")
+    ));
 
     expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
       toSql(expected, { dialect: "postgresql", format: "compact" })
@@ -202,9 +202,9 @@ describe("callback column api", () => {
       active: user.active,
       active_label: when(user.active, "active", true, "inactive"),
     })));
-    const actual = pipe(users, extend((user) => ({
-      active_label: when(user.active, "active", true, "inactive"),
-    })));
+    const actual = pipe(users, extend("active_label", (user) =>
+      when(user.active, "active", true, "inactive")
+    ));
 
     expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
       toSql(expected, { dialect: "postgresql", format: "compact" })
@@ -219,9 +219,24 @@ describe("callback column api", () => {
       age: user.age,
       active: user.active,
     })));
-    const actual = pipe(users, extend((user) => ({
-      name: coalesce(replace(user.name, " ", "_"), "unknown"),
+    const actual = pipe(users, extend("name", (user) =>
+      coalesce(replace(user.name, " ", "_"), "unknown")
+    ));
+
+    expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
+      toSql(expected, { dialect: "postgresql", format: "compact" })
+    );
+  });
+
+  test("supports extend with a single named column", () => {
+    const users = createUsersPipelineTable();
+    const expected = pipe(users, map((user) => ({
+      id: add(user.id, 100),
+      name: user.name,
+      age: user.age,
+      active: user.active,
     })));
+    const actual = pipe(users, extend("id", (user) => add(user.id, 100)));
 
     expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
       toSql(expected, { dialect: "postgresql", format: "compact" })
