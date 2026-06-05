@@ -15,6 +15,13 @@ const booleanLiteralExpr = lit(true);
 const nullLiteralExpr = lit(null);
 const dateLiteralExpr = lit({ kind: "date_literal", value: "2026-06-03" });
 const timestampLiteralExpr = lit({ kind: "timestamp_literal", value: "2026-06-03 12:00:00" });
+const stringParamExpr = param("some_string");
+const numberParamExpr = param(1);
+const bigintParamExpr = param(1n);
+const booleanParamExpr = param(true);
+const nullParamExpr = param(null);
+const dateParamExpr = param({ kind: "date_literal", value: "2026-06-03" });
+const timestampParamExpr = param({ kind: "timestamp_literal", value: "2026-06-03 12:00:00" });
 const orders = table("orders", {
     order_id: t.int(),
     user_id: t.int(),
@@ -361,6 +368,13 @@ type _BooleanLiteralExpr = Expect<Equal<ExprType<typeof booleanLiteralExpr>, Sql
 type _NullLiteralExpr = Expect<Equal<ExprType<typeof nullLiteralExpr>, null>>;
 type _DateLiteralExpr = Expect<Equal<ExprType<typeof dateLiteralExpr>, SqlDate>>;
 type _TimestampLiteralExpr = Expect<Equal<ExprType<typeof timestampLiteralExpr>, SqlTimestamp>>;
+type _StringParamExpr = Expect<Equal<ExprType<typeof stringParamExpr>, SqlString>>;
+type _NumberParamExpr = Expect<Equal<ExprType<typeof numberParamExpr>, SqlNumber>>;
+type _BigintParamExpr = Expect<Equal<ExprType<typeof bigintParamExpr>, SqlBigInt>>;
+type _BooleanParamExpr = Expect<Equal<ExprType<typeof booleanParamExpr>, SqlBoolean>>;
+type _NullParamExpr = Expect<Equal<ExprType<typeof nullParamExpr>, null>>;
+type _DateParamExpr = Expect<Equal<ExprType<typeof dateParamExpr>, SqlDate>>;
+type _TimestampParamExpr = Expect<Equal<ExprType<typeof timestampParamExpr>, SqlTimestamp>>;
 type _PickedUsersId = Expect<Equal<ExprType<typeof pickedUsers.columns.id>, SqlInt>>;
 type _PickedUsersName = Expect<Equal<ExprType<typeof pickedUsers.columns.name>, SqlString>>;
 type _InlineRowsId = Expect<Equal<ExprType<typeof inlineRows.columns.id>, SqlNumber>>;

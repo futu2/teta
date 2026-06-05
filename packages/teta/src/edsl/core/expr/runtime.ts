@@ -366,14 +366,26 @@ export function lit(value: Value): Expr<NormalizeExpressionLiteral<Value>> {
   return exprOf<NormalizeExpressionLiteral<Value>>({ kind: "literal", value });
 }
 
-export function param<T>(value: T, name: string | null = null): Expr<T> {
+export function param<T extends SqlNumber | SqlString | SqlBoolean | SqlDate | SqlTimestamp | SqlUuid>(
+  value: T,
+  name?: string | null
+): Expr<T>;
+export function param(value: string, name?: string | null): Expr<SqlString>;
+export function param(value: number, name?: string | null): Expr<SqlNumber>;
+export function param(value: bigint, name?: string | null): Expr<SqlBigInt>;
+export function param(value: boolean, name?: string | null): Expr<SqlBoolean>;
+export function param(value: null, name?: string | null): Expr<null>;
+export function param(value: DateLiteral, name?: string | null): Expr<SqlDate>;
+export function param(value: TimestampLiteral, name?: string | null): Expr<SqlTimestamp>;
+export function param<T>(value: T, name?: string | null): Expr<NormalizeExpressionLiteral<T>>;
+export function param<T>(value: T, name: string | null = null): Expr<NormalizeExpressionLiteral<T>> {
   if (value === undefined) {
     userError("INVALID_PARAM_VALUE", "Unsupported parameter value: undefined");
   }
   if (name !== null && !name.trim()) {
     userError("INVALID_PARAM_NAME", "param name cannot be empty");
   }
-  return exprOf<T>({ kind: "param", value, name });
+  return exprOf<NormalizeExpressionLiteral<T>>({ kind: "param", value, name });
 }
 
 export function array<T = unknown>(...values: ExprInput<T>[]): Expr<T[]> {
