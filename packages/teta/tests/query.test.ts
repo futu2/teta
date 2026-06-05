@@ -389,6 +389,10 @@ describe("toSql(query, options)", () => {
         const events = table("analytics.events", { id: t.int() });
         expect(toSql(events, { dialect: "postgresql", format: "compact" })).toBe(ANALYTICS_EVENTS_SELECT_POSTGRES_COMPACT);
     });
+    test("renders uppercase dotted string schema-qualified sources", () => {
+        const source = table("SCHEMANAME1.TABLENAME1", { id: t.int() });
+        expect(toSql(source, { dialect: "postgresql", format: "compact" })).toBe('SELECT "TABLENAME1_0".id FROM "SCHEMANAME1"."TABLENAME1" AS "TABLENAME1_0"');
+    });
     test("auto-quotes invalid source parts on postgresql", () => {
         const events = table({ schema: "analytics data", table: "events log", as: "events_alias" }, { id: t.int() });
         expect(toSql(events, { dialect: "postgresql", format: "compact" })).toBe(QUOTED_ANALYTICS_EVENTS_SELECT_POSTGRES_COMPACT);
