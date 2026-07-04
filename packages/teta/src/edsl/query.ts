@@ -28,7 +28,6 @@ export {
   unionAll,
 } from "./query/builder.ts";
 export type { Query, QueryExplainResult, QueryIR, QueryStageKind, QueryStep } from "./query/builder.ts";
-export { extend } from "./query/extend.ts";
 export { takeWithin, type TakeWithinSpec } from "./query/take_within.ts";
 export {
   filterEq,
@@ -38,7 +37,7 @@ export {
   filterLt,
   filterLte,
 } from "./helpers/filter_comparison.ts";
-export { drop, pick, rename } from "./helpers/projection.ts";
+export { drop, extend, pick, rename } from "./helpers/projection.ts";
 export { identityStep, unlessStep, whenStep } from "./query/steps.ts";
 export {
   dropOverlapLeft,
