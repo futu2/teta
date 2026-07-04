@@ -80,7 +80,7 @@ export function stageOutputNames(stage: Stage): readonly string[] {
   }
 }
 
-function projectionItemNames(items: ProjectionItem[]): string[] {
+function projectionItemNames(items: readonly ProjectionItem[]): string[] {
   return items.map((item) => {
     const name = projectionItemOutputName(item);
     if (!name) {

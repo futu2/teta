@@ -1,9 +1,13 @@
 {
   "name": "@teta/teta",
   "module": "./mod.ts",
-  "version": "0.4.20",
+  "version": "0.4.21",
   "exports": {
-    ".": "./mod.ts"
+    ".": "./mod.ts",
+    "./query": "./query.ts",
+    "./expr": "./expr.ts",
+    "./pipe": "./pipe.ts",
+    "./sql": "./sql.ts"
   },
   "types": "./mod.ts",
   "type": "module",

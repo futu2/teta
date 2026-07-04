@@ -91,7 +91,7 @@ export function optimizeLoopStage(
 }
 
 export function compactLoopStages(
-  stages: Stage[],
+  stages: readonly Stage[],
   inputNames: readonly string[]
 ): Stage[] {
   return mergeAdjacentLoopFilters(removeNoOpLoopMaps(stages, inputNames));
@@ -109,8 +109,8 @@ function validateLoopStage(stage: Stage, label: LoopPartLabel): void {
   }
 }
 
-function mergeAdjacentLoopFilters(stages: Stage[]): Stage[] {
-  if (stages.length < 2) return stages;
+function mergeAdjacentLoopFilters(stages: readonly Stage[]): Stage[] {
+  if (stages.length < 2) return [...stages];
   const merged: Stage[] = [];
   for (const stage of stages) {
     const previous = merged[merged.length - 1];
@@ -133,7 +133,7 @@ function mergeAdjacentLoopFilters(stages: Stage[]): Stage[] {
 }
 
 function pruneProjectionItems(
-  items: ProjectionItem[],
+  items: readonly ProjectionItem[],
   needed: ReadonlySet<string>
 ): ProjectionItem[] {
   const pruned = items.filter((item) => {
@@ -141,12 +141,12 @@ function pruneProjectionItems(
     if (!name) return true;
     return needed.has(name);
   });
-  if (pruned.length === 0 || pruned.length === items.length) return items;
+  if (pruned.length === 0 || pruned.length === items.length) return [...items];
   return pruned;
 }
 
 function removeNoOpLoopMaps(
-  stages: Stage[],
+  stages: readonly Stage[],
   initialInputNames: readonly string[]
 ): Stage[] {
   const compact: Stage[] = [];

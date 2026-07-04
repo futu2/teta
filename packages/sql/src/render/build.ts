@@ -30,7 +30,7 @@ export type BuildPipelineOptions = {
 
 export function buildPipelineAst(
   source: Source,
-  stages: Stage[],
+  stages: readonly Stage[],
   columnNames: readonly string[],
   sourceScopeId: ScopeId,
   options?: BuildPipelineOptions

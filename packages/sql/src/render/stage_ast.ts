@@ -134,7 +134,7 @@ export function buildTakeStageAst(
 }
 
 export function renderBoundProjectionItems(
-  items: ProjectionItem[],
+  items: readonly ProjectionItem[],
   bindings: ScopeBindings,
   dialect: QueryDialect
 ): SelectColumnAst[] {

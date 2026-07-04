@@ -52,6 +52,7 @@ import type {
   QueryState,
 } from "./state.ts";
 import { toQuerySpec } from "./state.ts";
+import { mergeNameSupply } from "./name_supply.ts";
 
 type JoinOnInput<
   TLeft extends Record<string, unknown>,
@@ -111,25 +112,6 @@ export function resolveFilterQuery<TColumns extends Record<string, unknown>>(
   query: QueryState<TColumns>,
   predicate: ExprNode<boolean | null>
 ): QueryDeriveInit<TColumns> {
-  const lastStage = query.stages[query.stages.length - 1];
-  if (lastStage?.kind === "filter") {
-    const merged: Stage = {
-      kind: "filter",
-      predicate: {
-        kind: "binary",
-        op: "AND",
-        left: lastStage.predicate,
-        right: predicate,
-      },
-      projectAll: lastStage.projectAll,
-    };
-    return {
-      stages: [...query.stages.slice(0, -1), merged],
-      columns: query.columns,
-      columnNames: query.columnNames,
-    };
-  }
-
   return appendPassthroughStage(query, {
     kind: "filter",
     predicate,
@@ -389,16 +371,6 @@ function appendPassthroughStage<TColumns extends Record<string, unknown>>(
     columns: query.columns,
     columnNames: query.columnNames,
   };
-}
-
-function mergeNameSupply(
-  left: QueryNameSupply,
-  right: QueryNameSupply
-): QueryNameSupply {
-  return Object.freeze({
-    scope: Math.max(left.scope, right.scope),
-    cte: Math.max(left.cte, right.cte),
-  });
 }
 
 function rewriteQuerySpecScope(

@@ -1,6 +1,7 @@
 # Teta Dev Guide
 
 This guide explains the internal structure of the EDSL and how data flows from an `Expr` or `Query` to final SQL.
+For the formal frontend type model, see `doc/TYPE_SYSTEM.md`.
 
 ## Mental model
 
@@ -136,6 +137,10 @@ That hidden state contains:
 - scope/name-supply metadata
 
 The important part is that query-building is **immutable**: each helper function returns a new `Query` with another stage appended or merged. `toIR(query)` lowers that frontend object into the backend `QueryIR` shape consumed by `@teta/sql`.
+
+Frontend normalization lives in `packages/teta/src/edsl/query/normalize.ts`.
+Builders should construct semantic stages; normalization handles meaning-
+preserving rewrites such as adjacent filter fusion.
 
 `QueryColumns` is constrained to SQL row values through `QueryValue`. Avoid widening it back to `unknown`; that weakens projection, join, and union checking.
 

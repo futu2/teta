@@ -16,24 +16,24 @@ export type QueryNameSupply = Readonly<{
 
 export type QueryState<TColumns extends Record<string, unknown>> = {
   source: Source;
-  stages: Stage[];
+  stages: readonly Stage[];
   columns: ColumnRefs<TColumns>;
   columnNames: readonly string[];
   sourceScopeId: ScopeId;
   scopeId: ScopeId;
-  withs: CteSpec[];
+  withs: readonly CteSpec[];
   columnIdentifiers: Readonly<Record<string, SqlIdentifier>>;
   nameSupply: QueryNameSupply;
 };
 
 export type QueryInit<TColumns extends Record<string, unknown>> = {
   source: Source;
-  stages: Stage[];
+  stages: readonly Stage[];
   columns: ColumnRefs<TColumns>;
   columnNames: readonly string[];
   sourceScopeId: ScopeId;
   scopeId: ScopeId;
-  withs?: CteSpec[];
+  withs?: readonly CteSpec[];
   columnIdentifiers?: Readonly<Record<string, SqlIdentifier>>;
   nameSupply?: QueryNameSupply;
 };
@@ -45,7 +45,7 @@ export type QueryDeriveInit<TColumns extends Record<string, unknown>> = Omit<
   source?: Source;
   sourceScopeId?: ScopeId;
   scopeId?: ScopeId;
-  withs?: CteSpec[];
+  withs?: readonly CteSpec[];
   columnIdentifiers?: Readonly<Record<string, SqlIdentifier>>;
   nameSupply?: QueryNameSupply;
 };

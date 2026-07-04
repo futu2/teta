@@ -25,6 +25,9 @@ npx jsr add @teta/sql
 ## Render Query IR
 
 `@teta/sql` renders backend IR. Any frontend can target the same IR contract.
+Query IR arrays such as `stages`, projection items, and CTE lists are treated as
+readonly inputs by the renderer; optimizer/build phases allocate fresh arrays
+when they need to rewrite a plan.
 
 ```ts
 import { irToSql, type QueryIRSqlTarget } from "@teta/sql";

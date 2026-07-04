@@ -26,11 +26,11 @@ export type SqlCompilable = QuerySqlTarget | ExprSqlTarget;
 
 export type QuerySqlTarget = {
   source: Source;
-  stages: Stage[];
+  stages: readonly Stage[];
   columnNames: readonly string[];
   sourceScopeId?: ScopeId;
   scopeId?: ScopeId;
-  withs?: CteSpec[];
+  withs?: readonly CteSpec[];
   columnIdentifiers?: Readonly<Record<string, SqlIdentifier>>;
 };
 

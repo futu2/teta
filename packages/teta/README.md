@@ -47,6 +47,16 @@ const activeUsers = pipe(
 console.log(toSql(activeUsers, { dialect: "postgresql", format: "pretty" }));
 ```
 
+The root entrypoint remains the easiest import path. For narrower module
+boundaries, the package also exposes subpath entrypoints:
+
+```ts
+import { table, t, filter } from "@teta/teta/query";
+import { eq } from "@teta/teta/expr";
+import { pipe } from "@teta/teta/pipe";
+import { toSql } from "@teta/teta/sql";
+```
+
 Reusable functional pipelines can be saved with `flow(...)`, and `extend(...)` keeps existing columns while adding computed ones:
 
 ```ts
@@ -61,6 +71,11 @@ const activePublicUsers = flow(
 ```
 
 Query values expose `columns` for typed expression reuse, but internal compiler details such as sources, stages, CTEs, and generated names are intentionally opaque. Use `toIR(query)` or `explain(query, ...)` when you need to inspect lowered query structure. Query steps are callable values with lightweight `kind` and `stepName` metadata for tooling/debugging.
+
+Query construction is immutable and normalization is handled as a pure compiler
+pass. Runtime deep-freezing is enabled by default outside
+`NODE_ENV=production`; set `TETA_FREEZE_QUERY_VALUES` or
+`TETA_FREEZE_EXPR_VALUES` to `1`/`0` to override that behavior explicitly.
 
 Row shapes are constrained to SQL value types, and table schemas must be non-empty objects built from `t.*` column helpers. Aggregate projections are checked separately from row projections. In `fold(...)`, use `group(...)` / `groupShape(...)` for grouping keys and aggregate helpers such as `count(...)`, `sum(...)`, or `arrayAgg(...)` for aggregate outputs.
 
@@ -184,3 +199,4 @@ More docs:
 - [Tutorial](https://github.com/futu2/teta/blob/master/doc/TUTORIAL.md)
 - [Cheatsheet](https://github.com/futu2/teta/blob/master/doc/cheatsheet.md)
 - [Type guide](https://github.com/futu2/teta/blob/master/doc/TYPES.md)
+- [Type system](https://github.com/futu2/teta/blob/master/doc/TYPE_SYSTEM.md)

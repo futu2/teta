@@ -17,7 +17,7 @@ export type QueryIRSqlTarget = QueryIR & {
   /** Physical identifiers for each output column. */
   columnIdentifiers: Readonly<Record<string, SqlIdentifier>>;
   /** Optional CTEs that must be rendered before the query body. */
-  withs?: CteSpec[];
+  withs?: readonly CteSpec[];
 };
 
 /** Standalone expression input accepted by `exprToSql(...)`. */

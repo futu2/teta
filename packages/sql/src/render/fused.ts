@@ -35,7 +35,9 @@ export function expandProjectedColumns(
   });
 }
 
-export function projectionItemsToScopeMap(items: ProjectionItem[]): Record<string, ExprNode<unknown>> {
+export function projectionItemsToScopeMap(
+  items: readonly ProjectionItem[]
+): Record<string, ExprNode<unknown>> {
   const mapping: Record<string, ExprNode<unknown>> = {};
   for (const item of items) {
     const name = projectionItemOutputName(item);

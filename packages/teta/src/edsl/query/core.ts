@@ -5,6 +5,8 @@ import type {
 import { resolveQueryInitDefaults } from "./state.ts";
 import type { ColumnRefs } from "../expr.ts";
 import type { QueryColumns } from "./types.ts";
+import { normalizeQueryState } from "./normalize.ts";
+import { resolveFreezeFlag } from "../runtime_config.ts";
 
 const QUERY_BRAND: unique symbol = Symbol("teta.query");
 const QUERY_STATE: unique symbol = Symbol("teta.query.state");
@@ -73,7 +75,7 @@ export function createQueryStep<
 export function createQuery<TColumns extends QueryColumns>(
   init: QueryInit<TColumns>
 ): Query<TColumns> {
-  return queryOf(resolveQueryInitDefaults(init));
+  return queryOf(normalizeQueryState(resolveQueryInitDefaults(init)));
 }
 
 export function getQueryState<TColumns extends QueryColumns>(
@@ -159,12 +161,6 @@ function freezeQueryStateValue<T>(value: T, seen = new WeakMap<object, unknown>(
 
 function freezeIfEnabled<T extends object>(value: T): T {
   return SHOULD_FREEZE_QUERY_VALUES ? Object.freeze(value) : value;
-}
-
-function resolveFreezeFlag(name: string): boolean {
-  const env = globalThis as { process?: { env?: Record<string, string | undefined> } };
-  const value = env.process?.env?.[name];
-  return value === undefined ? true : value !== "0" && value !== "false";
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

@@ -69,7 +69,7 @@ export type SourceRef =
 /** Query body used inside CTEs, joins, and unions. */
 export type QuerySpec = {
   source: Source;
-  stages: Stage[];
+  stages: readonly Stage[];
   columnNames: readonly string[];
   columnIdentifiers: Readonly<Record<string, SqlIdentifier>>;
   scopeId: ScopeId;
@@ -93,8 +93,8 @@ export type JoinSource =
 /** Projection stage that maps rows without aggregation. */
 export type MapStage = {
   kind: "map";
-  items: ProjectionItem[];
-  keys: string[];
+  items: readonly ProjectionItem[];
+  keys: readonly string[];
   groupBy: null;
   outputScopeId: ScopeId;
 };
@@ -102,9 +102,9 @@ export type MapStage = {
 /** Projection stage that may group and aggregate rows. */
 export type FoldStage = {
   kind: "fold";
-  items: ProjectionItem[];
-  keys: string[];
-  groupBy: ExprNode<any>[] | null;
+  items: readonly ProjectionItem[];
+  keys: readonly string[];
+  groupBy: readonly ExprNode<any>[] | null;
   outputScopeId: ScopeId;
 };
 
@@ -114,8 +114,8 @@ export type ProjectionStage = MapStage | FoldStage;
 /** Stage that adds an `ORDER BY` clause. */
 export type SortStage = {
   kind: "sort";
-  items: OrderItem[];
-  projectAll: ProjectionItem[];
+  items: readonly OrderItem[];
+  projectAll: readonly ProjectionItem[];
 };
 
 /** Stage that expands an array expression into rows. */
@@ -127,7 +127,7 @@ export type UnnestStage = {
   as: string | null;
   columnNames: readonly string[];
   columnIdentifiers: Readonly<Record<string, SqlIdentifier>>;
-  projectAll: ProjectionItem[];
+  projectAll: readonly ProjectionItem[];
   rightScopeId: ScopeId;
   outputScopeId: ScopeId;
 };
@@ -136,13 +136,13 @@ export type UnnestStage = {
 export type TakeStage = {
   kind: "take";
   count: number;
-  projectAll: ProjectionItem[];
+  projectAll: readonly ProjectionItem[];
 };
 
 /** One lowered query pipeline operation. */
 export type Stage =
   | ProjectionStage
-  | { kind: "filter"; predicate: ExprNode<boolean | null>; projectAll: ProjectionItem[] }
+  | { kind: "filter"; predicate: ExprNode<boolean | null>; projectAll: readonly ProjectionItem[] }
   | SortStage
   | TakeStage
   | UnnestStage
@@ -153,14 +153,14 @@ export type Stage =
       source: JoinSource;
       as: string | null;
       on: ExprNode<boolean | null>;
-      projectAll: ProjectionItem[];
+      projectAll: readonly ProjectionItem[];
       rightScopeId: ScopeId;
       outputScopeId: ScopeId;
     }
   | {
       kind: "union";
       op: "union" | "union all";
-      projectAll: ProjectionItem[];
+      projectAll: readonly ProjectionItem[];
       right: QuerySpec;
       outputScopeId: ScopeId;
     };
@@ -168,7 +168,7 @@ export type Stage =
 /** Root query IR before renderer-only output-column metadata is attached. */
 export type QueryIR = {
   source: Source;
-  stages: Stage[];
+  stages: readonly Stage[];
   scopeId: ScopeId;
 };
 

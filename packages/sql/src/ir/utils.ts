@@ -59,7 +59,7 @@ export function projectionItemOutputName(item: ProjectionItem): string | null {
 
 /** Build a projection output-name to identifier map. */
 export function projectionItemsToIdentifierMap(
-  items: ProjectionItem[]
+  items: readonly ProjectionItem[]
 ): Readonly<Record<string, SqlIdentifier>> {
   const mapping: Record<string, SqlIdentifier> = {};
   for (const item of items) {
@@ -129,7 +129,7 @@ function fromStringPath(input: string): Source {
 }
 
 /** Generate a stable table alias for a source at the current stage depth. */
-export function autoAlias(table: string | SqlIdentifier, stages: Stage[]): string {
+export function autoAlias(table: string | SqlIdentifier, stages: readonly Stage[]): string {
   const tableName = typeof table === "string" ? table : identifierName(table);
   const aliasBase = isInternalCteName(tableName)
     ? (internalCteLabel(tableName) ?? "cte")
@@ -189,7 +189,7 @@ export function assertLoopColumns(
 }
 
 /** Merge two CTE lists while rejecting duplicate names. */
-export function mergeWiths(left: CteSpec[], right: CteSpec[]): CteSpec[] {
+export function mergeWiths(left: readonly CteSpec[], right: readonly CteSpec[]): CteSpec[] {
   if (left.length === 0) return right.length ? [...right] : [];
   if (right.length === 0) return [...left];
   const seen = new Set<string>();

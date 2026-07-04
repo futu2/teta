@@ -38,7 +38,7 @@ export function tryBuildFusedSegmentAst(
   sourceScopeId: ScopeId,
   inputColumnNames: readonly string[],
   inputColumnIdentifiers: Readonly<Record<string, SqlIdentifier>>,
-  stages: Stage[],
+  stages: readonly Stage[],
   options: FusedBuildOptions
 ): CompiledSegment | null {
   const { ctes, ctePrefix, inheritedBindings, dialect } = options;

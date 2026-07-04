@@ -1,10 +1,6 @@
-import {
-  INTERNAL_CTE_PREFIX,
-  INTERNAL_SCOPE_PREFIX,
-  type ExprNode,
-  type InternalCteName,
-  type ScopeId,
-  type SqlIdentifier,
+import type {
+  ExprNode,
+  SqlIdentifier,
 } from "../core/types.ts";
 import {
   containsGroup,
@@ -15,8 +11,13 @@ import {
 import { userError } from "../errors.ts";
 import type { ProjectionShape, ProjectionValue } from "../expr.ts";
 import { LEGACY_SELECTION_ARRAY_ERROR } from "./projection_validation.ts";
-import type { QueryNameSupply, QueryState } from "./state.ts";
 import { normalizeIdentifier } from "./utils.ts";
+export {
+  allocateInternalCteName,
+  allocateScopeId,
+  initialScopeId,
+  reserveQueryScopes,
+} from "./name_supply.ts";
 
 type ResolvedProjection = {
   keys: string[];
@@ -26,44 +27,6 @@ type ResolvedProjection = {
 type ResolvedAggregateProjection = ResolvedProjection & {
   groupBy: ExprNode<any>[];
 };
-
-export function initialScopeId(): ScopeId {
-  return scopeIdFromIndex(0);
-}
-
-export function allocateScopeId(
-  state: Pick<QueryState<Record<string, unknown>>, "nameSupply">
-): { scopeId: ScopeId; nameSupply: QueryNameSupply } {
-  const scopeId = scopeIdFromIndex(state.nameSupply.scope);
-  return {
-    scopeId,
-    nameSupply: Object.freeze({
-      ...state.nameSupply,
-      scope: state.nameSupply.scope + 1,
-    }),
-  };
-}
-
-export function allocateInternalCteName(
-  state: Pick<QueryState<Record<string, unknown>>, "nameSupply">,
-  label: string
-): { name: InternalCteName; nameSupply: QueryNameSupply } {
-  const name = cteNameFromIndex(label, state.nameSupply.cte);
-  return {
-    name,
-    nameSupply: Object.freeze({
-      ...state.nameSupply,
-      cte: state.nameSupply.cte + 1,
-    }),
-  };
-}
-
-export function reserveQueryScopes(count: number): QueryNameSupply {
-  return Object.freeze({
-    scope: count,
-    cte: 0,
-  });
-}
 
 export function resolveProjection(selection: ProjectionShape): ResolvedProjection {
   const entries = projectionEntries(selection);
@@ -98,14 +61,6 @@ export function resolveFoldProjection(
     }),
     groupBy,
   };
-}
-
-function scopeIdFromIndex(index: number): ScopeId {
-  return `${INTERNAL_SCOPE_PREFIX}${index}` as ScopeId;
-}
-
-function cteNameFromIndex(label: string, index: number): InternalCteName {
-  return `${INTERNAL_CTE_PREFIX}${label}_${index}` as InternalCteName;
 }
 
 function resolveProjectionExpr(key: string, value: ProjectionValue): {

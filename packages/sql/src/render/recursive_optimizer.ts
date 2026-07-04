@@ -8,7 +8,7 @@ import {
 export type { LoopPartLabel } from "./recursive_optimizer_stage.ts";
 
 export function optimizeLoopStages(
-  stages: Stage[],
+  stages: readonly Stage[],
   columnNames: readonly string[],
   label: LoopPartLabel
 ): Stage[] {

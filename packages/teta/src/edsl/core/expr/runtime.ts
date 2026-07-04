@@ -26,6 +26,7 @@ import {
   unwrapGroupExpr,
 } from "./node/ops.ts";
 import { userError } from "../../errors.ts";
+import { resolveFreezeFlag } from "../../runtime_config.ts";
 
 type StringLiteralCompatible = string | SqlString | SqlDate | SqlTimestamp | SqlUuid;
 
@@ -227,12 +228,6 @@ function deepFreeze<T>(value: T, seen = new WeakSet<object>()): T {
 
 function freezeIfEnabled<T extends object>(value: T): T {
   return SHOULD_FREEZE_EXPR_VALUES ? Object.freeze(value) : value;
-}
-
-function resolveFreezeFlag(name: string): boolean {
-  const env = globalThis as { process?: { env?: Record<string, string | undefined> } };
-  const value = env.process?.env?.[name];
-  return value === undefined ? true : value !== "0" && value !== "false";
 }
 
 function isColumnNode(value: { kind?: unknown }): boolean {

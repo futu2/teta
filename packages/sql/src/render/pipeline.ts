@@ -14,7 +14,7 @@ export { buildRecursiveCte, createDeferredRecursiveCte } from "./recursive.ts";
 /** Options for lowering a query pipeline into a parser AST. */
 export type RenderPipelineOptions = {
   ctePrefix?: string;
-  baseCtes?: CteSpec[];
+  baseCtes?: readonly CteSpec[];
   scopeBindings?: ScopeBindings;
   dialect?: QueryDialect;
   renderStrategy?: SqlRenderStrategy;
@@ -24,7 +24,7 @@ export type RenderPipelineOptions = {
 /** Render a source and lowered stages into a `node-sql-parser` AST. */
 export function renderPipelineAst(
   source: Source,
-  stages: Stage[],
+  stages: readonly Stage[],
   columnNames: readonly string[],
   scopeId: ScopeId,
   options?: RenderPipelineOptions
