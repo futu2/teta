@@ -4,7 +4,6 @@ import type {
 } from "../core/types.ts";
 import type {
   SqlBoolean,
-  SqlInt,
 } from "../sql/types.ts";
 import { createColumnRefs, toExprNode } from "../expr.ts";
 import type {
@@ -41,7 +40,6 @@ import {
   resolveFoldQuery,
   resolveFilterQuery,
   resolveJoinQuery,
-  resolveUnnestQuery,
   resolveTakeQuery,
   resolveSortQuery,
   resolveMapQuery,
@@ -65,11 +63,6 @@ type PredicateInput<TColumns extends QueryColumns> =
 type SortInput<TColumns extends QueryColumns> =
   (cols: ColumnRefs<TColumns>) => OrderItem | OrderItem[];
 
-type UnnestSelectorInput<
-  TLeft extends QueryColumns,
-  TCollection extends readonly unknown[] | unknown[] | null,
-> = (cols: ColumnRefs<TLeft>) => Expr<TCollection>;
-
 type JoinOnInput<
   TLeft extends QueryColumns,
   TRight extends QueryColumns,
@@ -88,27 +81,6 @@ type JoinMergeInput<
 > =
   | JoinColumnMergerForType<TLeft, TRight, TType, TSelection>
   | TSelection;
-
-type CollectionItem<TCollection> =
-  NonNullable<TCollection> extends readonly (infer TItem)[] ? TItem
-  : NonNullable<TCollection> extends (infer TItem)[] ? TItem
-  : never;
-
-type MaybeOuter<TValue, TOuter extends boolean | undefined> =
-  TOuter extends true ? TValue | null
-  : TValue;
-
-type UnnestSelection<
-  TValueName extends string,
-  TOrdinalityName extends string | undefined = undefined,
-> = {
-  value: TValueName;
-  ordinality?: TOrdinalityName;
-};
-
-type UnnestOptions<TOuter extends boolean | undefined = undefined> = {
-  outer?: TOuter;
-};
 
 type JoinConfigWithoutSelect<
   TLeft extends QueryColumns,
@@ -133,17 +105,6 @@ type JoinConfigWithSelect<
     TSelection
   >;
 };
-
-type UnnestGeneratedColumns<
-  TItem,
-  TValueName extends string,
-  TOrdinalityName extends string | undefined,
-  TOuter extends boolean | undefined,
-> = {
-  [K in TValueName]: MaybeOuter<TItem, TOuter>;
-} & (TOrdinalityName extends string
-  ? { [K in TOrdinalityName]: MaybeOuter<SqlInt, TOuter> }
-  : {});
 
 export type JoinRightInput<
   TLeft extends QueryColumns,
@@ -270,36 +231,6 @@ function buildJoin<
       lateral,
       resolvedOptions.type ?? "inner",
       merge as JoinMergeInput<QueryColumns, QueryColumns, CanonicalJoinType<TType>, TSelection> | undefined
-    )
-  );
-}
-
-function buildUnnest<
-  TLeft extends QueryColumns,
-  TCollection extends readonly unknown[] | unknown[] | null,
-  TValueName extends string,
-  TOrdinalityName extends string | undefined = undefined,
-  TOuter extends boolean | undefined = undefined,
-  TGenerated extends QueryColumns = UnnestGeneratedColumns<
-    CollectionItem<TCollection>,
-    TValueName,
-    TOrdinalityName,
-    TOuter
-  >,
->(
-  left: Query<TLeft>,
-  selector: UnnestSelectorInput<TLeft, TCollection>,
-  selection: UnnestSelection<TValueName, TOrdinalityName>,
-  options: UnnestOptions<TOuter> = {}
-): Query<TLeft & TGenerated> {
-  const collection = selector(left.columns);
-  return deriveQuery(
-    left,
-    resolveUnnestQuery<TLeft, TGenerated>(
-      left,
-      collection,
-      selection,
-      options
     )
   );
 }
@@ -528,62 +459,6 @@ export function join<
 export function join(...args: unknown[]): unknown {
   const parsed = parseJoinInvocation(args);
   return buildJoinStep(parsed);
-}
-
-export function unnest<
-  TLeft extends QueryColumns,
-  TCollection extends readonly unknown[] | unknown[] | null,
-  TValueName extends string,
-  TOrdinalityName extends string | undefined = undefined,
-  TOuter extends boolean | undefined = undefined,
->(
-  selector: (cols: ColumnRefs<TLeft>) => Expr<TCollection>,
-  selection: UnnestSelection<TValueName, TOrdinalityName>,
-  options?: UnnestOptions<TOuter>
-): QueryStep<
-  TLeft,
-  TLeft & UnnestGeneratedColumns<
-    CollectionItem<TCollection>,
-    TValueName,
-    TOrdinalityName,
-    TOuter
-  >
->;
-
-export function unnest(...args: unknown[]): unknown {
-  assertCurriedInvocation("unnest", "unnest(selector, selection, options?)", args, 2, 3);
-  const [selector, selection, options] = args;
-  assertRowCallback("unnest", selector);
-  return (left: Query<QueryColumns>) =>
-    _unnest(
-      left,
-      selector as UnnestSelectorInput<QueryColumns, readonly unknown[] | unknown[] | null>,
-      selection as UnnestSelection<string, string | undefined>,
-      options as UnnestOptions<boolean | undefined> | undefined
-    );
-}
-
-function _unnest<
-  TLeft extends QueryColumns,
-  TCollection extends readonly unknown[] | unknown[] | null,
-  TValueName extends string,
-  TOrdinalityName extends string | undefined = undefined,
-  TOuter extends boolean | undefined = undefined,
->(
-  left: Query<TLeft>,
-  selector: UnnestSelectorInput<TLeft, TCollection>,
-  selection: UnnestSelection<TValueName, TOrdinalityName>,
-  options: UnnestOptions<TOuter> = {}
-): Query<
-  TLeft & UnnestGeneratedColumns<
-    CollectionItem<TCollection>,
-    TValueName,
-    TOrdinalityName,
-    TOuter
-  >
-> {
-  assertRowCallback("unnest", selector);
-  return buildUnnest(left, selector, selection, options);
 }
 
 function _join<

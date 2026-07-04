@@ -2,13 +2,13 @@ export {
   fold,
   filter,
   join,
-  unnest,
   take,
   sort,
   map,
   union,
   unionAll,
 } from "./query/builder.ts";
+export { unnest } from "./query/unnest.ts";
 export { isQuery } from "./query/value.ts";
 export { explain, toAst, toIR, toSql, toSqlResult } from "./query/render.ts";
 export type { QueryExplainResult, QueryIR } from "./query/render.ts";
