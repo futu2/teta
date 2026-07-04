@@ -14,10 +14,8 @@ import type {
   ProjectionResult,
   ProjectionShape,
 } from "../expr.ts";
-import { createDeferredRecursiveCte } from "../sql.ts";
-import { freshInternalCteName, freshScopeId } from "./planner.ts";
-import { toQuerySpec } from "./state.ts";
-import { assertLoopColumns, normalizeIdentifier, qualifyOuterColumns } from "./utils.ts";
+import { freshScopeId } from "./planner.ts";
+import { qualifyOuterColumns } from "./utils.ts";
 import type {
   CanonicalJoinType,
   JoinColumnMerger,
@@ -362,53 +360,6 @@ function buildUnion<TColumns extends QueryColumns>(
   return deriveQuery(left, resolveUnionQuery(left, right, kind));
 }
 
-function buildLoop<TColumns extends QueryColumns>(
-  base: Query<TColumns>,
-  step: (self: Query<TColumns>) => Query<TColumns>
-): Query<TColumns> {
-  const name = freshInternalCteName("loop");
-  const selfColumnNames = [...base.columnNames];
-  const loopSource = {
-    db: null,
-    table: normalizeIdentifier(name, "table"),
-    schema: null,
-    as: null,
-  };
-  const selfScopeId = freshScopeId();
-  const self = createQuery<TColumns>({
-    source: loopSource,
-    stages: [],
-    columns: createColumnRefs<TColumns>(selfScopeId, selfColumnNames),
-    columnNames: selfColumnNames,
-    sourceScopeId: selfScopeId,
-    scopeId: selfScopeId,
-    columnIdentifiers: base.columnIdentifiers,
-  });
-  const stepQuery = step(self);
-  assertLoopColumns(base.columnNames, stepQuery.columnNames);
-  if (base.withs.length || stepQuery.withs.length) {
-    userError("LOOP_NESTED_CTES", "loop does not allow nested CTEs in base or step queries");
-  }
-
-  const recursiveCte = createDeferredRecursiveCte(
-    name,
-    selfColumnNames,
-    toQuerySpec(base),
-    toQuerySpec(stepQuery)
-  );
-  const resultScopeId = freshScopeId();
-  return createQuery({
-    source: loopSource,
-    stages: [],
-    columns: createColumnRefs<TColumns>(resultScopeId, selfColumnNames),
-    columnNames: selfColumnNames,
-    sourceScopeId: resultScopeId,
-    scopeId: resultScopeId,
-    withs: [recursiveCte],
-    columnIdentifiers: base.columnIdentifiers,
-  });
-}
-
 export function map<TColumns extends QueryColumns, const Sel extends ProjectionShape>(
   selector: (cols: ColumnRefs<TColumns>) => Sel
 ): QueryStep<TColumns, ProjectionResult<Sel>>;
@@ -553,24 +504,6 @@ function _union<TColumns extends QueryColumns>(
   right: Query<TColumns>
 ): Query<TColumns> {
   return buildUnion(left, right, "union");
-}
-
-export function loop<TColumns extends QueryColumns>(
-  step: (self: Query<TColumns>) => Query<TColumns>
-): QueryStep<TColumns, TColumns>;
-
-export function loop(...args: unknown[]): unknown {
-  assertCurriedCallbackOperand("loop", "loop(step)", args);
-  const [step] = args;
-  return (base: Query<QueryColumns>) =>
-    _loop(base, step as (self: Query<QueryColumns>) => Query<QueryColumns>);
-}
-
-function _loop<TColumns extends QueryColumns>(
-  base: Query<TColumns>,
-  step: (self: Query<TColumns>) => Query<TColumns>
-): Query<TColumns> {
-  return buildLoop(base, step);
 }
 
 export function join<
