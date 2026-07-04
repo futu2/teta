@@ -63,4 +63,17 @@ describe("explain api", () => {
         expect(ir.withs).toEqual([]);
         expect(irToSql(ir, { dialect: "postgresql", format: "compact" })).toBe("SELECT users_0.\"user-id\" AS \"user-id\" FROM users AS users_0");
     });
+    test("toIR normalizes generated internal identifiers", () => {
+        const buildQuery = () => {
+            const employees = table("employees", {
+                id: t.int(),
+                manager_id: t.nullable(t.int()),
+            });
+            return pipe(pipe(employees, map((employee) => ({
+                id: employee.id,
+                manager_id: employee.manager_id,
+            }))), loop((self) => pipe(self, filter((row) => isNotNull(row.manager_id)))));
+        };
+        expect(toIR(buildQuery())).toEqual(toIR(buildQuery()));
+    });
 });
