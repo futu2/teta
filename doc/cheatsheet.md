@@ -2,6 +2,9 @@
 
 Quick reference for the public API exported from `@teta/teta`.
 
+For detailed signatures and return types, see the [API Reference](./API.md).
+For a guided walkthrough, see the [Tutorial](./TUTORIAL.md).
+
 Teta is function-first. Row-transforming query helpers are curried query steps used with `pipe(...)`.
 
 Queries are opaque runtime values. Use `query.columns` for reusable column expressions and `toIR(query)` / `explain(query, ...)` for inspection. Query steps are callable values with `kind: "query_step"` and `stepName` metadata, and `pipe(...)` / `flow(...)` preserve exact intermediate types for up to 12 steps.

@@ -196,7 +196,10 @@ const adultUsers = pipe(
 
 More docs:
 
-- [Tutorial](https://github.com/futu2/teta/blob/master/doc/TUTORIAL.md)
+- [Getting Started](https://github.com/futu2/teta/blob/master/doc/GETTING_STARTED.md) — first query in 5 minutes
+- [Tutorial](https://github.com/futu2/teta/blob/master/doc/TUTORIAL.md) — progressive examples with generated SQL
+- [Design Philosophy](https://github.com/futu2/teta/blob/master/doc/DESIGN.md) — why function-first, dialect-neutral, immutable
+- [API Reference](https://github.com/futu2/teta/blob/master/doc/API.md) — complete typed API with signatures
 - [Cheatsheet](https://github.com/futu2/teta/blob/master/doc/cheatsheet.md)
 - [Type guide](https://github.com/futu2/teta/blob/master/doc/TYPES.md)
 - [Type system](https://github.com/futu2/teta/blob/master/doc/TYPE_SYSTEM.md)

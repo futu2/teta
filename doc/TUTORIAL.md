@@ -2,6 +2,9 @@
 
 This guide shows EDSL snippets and the SQL they generate.
 
+If you're new to Teta, start with [Getting Started](./GETTING_STARTED.md).
+For an explanation of the design choices, see [Design Philosophy](./DESIGN.md).
+
 Note: `table(...)` requires a schema to avoid `SELECT *` and keep column names explicit.
 Generated SQL always uses auto-generated aliases (for example `users_0`, `orders_1`) and fully
 qualified column references.

@@ -4,6 +4,8 @@ This guide explains the main TypeScript types you will see while using Teta's ED
 
 If you are looking for compiler-internal IR types such as `ExprNode`, `Stage`, or `QuerySpec`, see `doc/DEV_GUIDE.md`.
 For a more formal statement of the EDSL type judgments and preservation rules, see `doc/TYPE_SYSTEM.md`.
+For the full API signatures, see `doc/API.md`.
+For the full API signatures, see `doc/API.md`.
 
 ## Quick mental model
 

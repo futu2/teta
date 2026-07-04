@@ -2,6 +2,7 @@
 
 This guide explains the internal structure of the EDSL and how data flows from an `Expr` or `Query` to final SQL.
 For the formal frontend type model, see `doc/TYPE_SYSTEM.md`.
+For a high-level overview of design choices, see `doc/DESIGN.md`.
 
 ## Mental model
 
