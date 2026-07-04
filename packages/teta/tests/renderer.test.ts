@@ -127,11 +127,34 @@ describe("SQL render options API", () => {
     });
   });
 
+  test("toSqlResult(expr, options) captures positional explicit params from array bindings", () => {
+    expect(toSqlResult(eq(param<number>("1"), param<number>("2")), {
+      dialect: "postgresql",
+      format: "compact",
+      parameterMode: "positional",
+      parameterPrefix: "$",
+      params: [1, 2],
+    })).toEqual({
+      sql: "$1 = $2",
+      params: [
+        { value: 1, index: 1, name: null },
+        { value: 2, index: 2, name: null },
+      ],
+    });
+  });
+
   test("toSqlResult(expr, options) rejects missing explicit param bindings", () => {
     expect(() => toSqlResult(eq(param<number>("left"), 1), {
       dialect: "postgresql",
       format: "compact",
       params: {},
+    })).toThrow("Missing parameter binding for left");
+  });
+
+  test("toSqlResult(expr, options) rejects unbound explicit params", () => {
+    expect(() => toSqlResult(eq(param<number>("left"), 1), {
+      dialect: "postgresql",
+      format: "compact",
     })).toThrow("Missing parameter binding for left");
   });
 

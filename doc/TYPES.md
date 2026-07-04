@@ -375,6 +375,19 @@ const rendered = toSqlResult(byId, {
 });
 ```
 
+Array bindings are available for positional placeholders. Numeric parameter names are 1-based indexes into the array:
+
+```ts
+const byPosition = pipe(users, filter((user) => eq(user.id, param<SqlInt>("1"))));
+
+const positional = toSqlResult(byPosition, {
+  dialect: "postgresql",
+  parameterMode: "positional",
+  parameterPrefix: "$",
+  params: [42],
+});
+```
+
 One useful detail: dialect is not part of `Query<TColumns>`. Teta keeps the query dialect-neutral, and you choose the target dialect later through `SqlOptions`.
 
 ## 8) Practical advice

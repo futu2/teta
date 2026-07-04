@@ -413,7 +413,11 @@ describe("callback column api", () => {
     }
 
     const valid = pipe(users, filterEq(() => param<string>("name"), "Ada"));
-    expect(toSql(valid, { dialect: "postgresql", format: "compact" })).toContain(":name = 'Ada'");
+    expect(toSql(valid, {
+      dialect: "postgresql",
+      format: "compact",
+      params: { name: "Ada" },
+    })).toContain(":name = 'Ada'");
   });
 
 });

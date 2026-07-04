@@ -73,6 +73,11 @@ type LeftJoinType = "left" | "LEFT";
 type RightJoinType = "right" | "RIGHT";
 type FullJoinType = "full" | "FULL";
 type JoinKind = "inner" | "left" | "right" | "full";
+type NormalizedJoinKind<TType extends JoinType> =
+  TType extends "LEFT" ? "left"
+  : TType extends "RIGHT" ? "right"
+    : TType extends "FULL" ? "full"
+      : "inner";
 
 export type CanonicalJoinType<TType extends JoinTypeInput | undefined> =
   TType extends LeftJoinType ? "left"
@@ -123,14 +128,20 @@ export type JoinColumnMergerForType<
 export function resolveJoinColumns<
   TLeft extends Record<string, unknown>,
   TRight extends Record<string, unknown>,
+  TType extends JoinType,
   TSelection extends JoinSelection,
 >(
   leftRefs: ColumnRefs<TLeft>,
   rightRefs: ColumnRefs<TRight>,
   leftNames: readonly string[],
   rightNames: readonly string[],
-  joinType: JoinType,
-  mergeColumns?: JoinColumnMerger<Record<string, unknown>, Record<string, unknown>, TSelection>
+  joinType: TType,
+  mergeColumns?: JoinColumnMergerForType<
+    TLeft,
+    TRight,
+    NormalizedJoinKind<TType>,
+    TSelection
+  >
 ): { mergedColumns: TSelection; nextNames: readonly string[] } {
   if (!mergeColumns) {
     const overlapping = getOverlappingColumnNames(leftNames, rightNames);
@@ -141,28 +152,50 @@ export function resolveJoinColumns<
       );
     }
   }
-  const mergeResolver =
-    (mergeColumns ?? defaultJoinColumnMerger) as JoinColumnMerger<
-      Record<string, unknown>,
-      Record<string, unknown>,
-      TSelection
-    >;
-  const mergeLeftColumns =
-    joinType === "RIGHT" || joinType === "FULL"
-      ? (leftRefs as unknown as ColumnRefs<NullableColumns<TLeft>>)
-      : leftRefs;
-  const mergeRightColumns =
-    joinType === "LEFT" || joinType === "FULL"
-      ? (rightRefs as unknown as ColumnRefs<NullableColumns<TRight>>)
-      : rightRefs;
+  type TKind = NormalizedJoinKind<TType>;
+  type TMergeLeft = JoinLeftColumnsForType<TLeft, TKind>;
+  type TMergeRight = JoinRightColumnsForType<TRight, TKind>;
+  const mergeResolver = (mergeColumns ?? defaultJoinColumnMerger) as JoinColumnMerger<
+    TMergeLeft,
+    TMergeRight,
+    TSelection
+  >;
   const mergedColumns = mergeResolver(
-    mergeLeftColumns as unknown as ColumnRefs<Record<string, unknown>>,
-    mergeRightColumns as unknown as ColumnRefs<Record<string, unknown>>
+    joinLeftRefs<TLeft, TType>(leftRefs, joinType),
+    joinRightRefs<TRight, TType>(rightRefs, joinType)
   );
   return {
     mergedColumns,
     nextNames: resolveMergedColumnNames(mergedColumns, leftNames, rightNames),
   };
+}
+
+function joinLeftRefs<
+  TLeft extends Record<string, unknown>,
+  TType extends JoinType,
+>(
+  leftRefs: ColumnRefs<TLeft>,
+  joinType: TType
+): ColumnRefs<JoinLeftColumnsForType<TLeft, NormalizedJoinKind<TType>>> {
+  return (
+    joinType === "RIGHT" || joinType === "FULL"
+      ? leftRefs
+      : leftRefs
+  ) as ColumnRefs<JoinLeftColumnsForType<TLeft, NormalizedJoinKind<TType>>>;
+}
+
+function joinRightRefs<
+  TRight extends Record<string, unknown>,
+  TType extends JoinType,
+>(
+  rightRefs: ColumnRefs<TRight>,
+  joinType: TType
+): ColumnRefs<JoinRightColumnsForType<TRight, NormalizedJoinKind<TType>>> {
+  return (
+    joinType === "LEFT" || joinType === "FULL"
+      ? rightRefs
+      : rightRefs
+  ) as ColumnRefs<JoinRightColumnsForType<TRight, NormalizedJoinKind<TType>>>;
 }
 
 function defaultJoinColumnMerger<

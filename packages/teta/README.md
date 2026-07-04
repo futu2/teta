@@ -133,6 +133,22 @@ const result = toSqlResult(byId, {
 });
 ```
 
+For positional driver placeholders, use numeric parameter names with array bindings:
+
+```ts
+const byPosition = pipe(
+  users,
+  filter((user) => eq(user.id, param<SqlInt>("1")))
+);
+
+const positional = toSqlResult(byPosition, {
+  dialect: "postgresql",
+  parameterMode: "positional",
+  parameterPrefix: "$",
+  params: [42],
+});
+```
+
 The callback form gives autocomplete and compile-time column checks while keeping query steps reusable:
 
 ```ts

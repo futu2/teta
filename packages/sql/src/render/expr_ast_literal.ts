@@ -110,7 +110,9 @@ function resolveParamBinding(
   renderContext: SqlRenderContext | null
 ): unknown {
   const bindings = renderContext?.paramBindings;
-  if (bindings === undefined) return undefined;
+  if (bindings === undefined) {
+    userError("INVALID_PARAM_VALUE", `Missing parameter binding for ${name}`);
+  }
 
   if (Array.isArray(bindings)) {
     const index = Number(name);

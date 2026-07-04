@@ -1,10 +1,8 @@
 import type { SqlFloat, SqlInt, SqlNumber } from "../../types.ts";
 import {
   aggregateExpr,
-  exprOfPhase,
   over,
   toExprNode,
-  withExprPhase,
   windowExpr,
   type ExprInput,
   type ExprInputValue,
@@ -13,6 +11,7 @@ import {
   type WindowBuilder,
   type WindowSpecInput,
 } from "../core.ts";
+import { exprOfPhase, withExprPhase } from "../../../core/expr/runtime.ts";
 
 type NullableSqlNumber = SqlNumber | null;
 

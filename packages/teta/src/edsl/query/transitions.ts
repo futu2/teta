@@ -1,6 +1,7 @@
 import type {
   ExprNode,
   JoinSource,
+  JoinType,
   JoinTypeInput,
   OrderItem,
   QuerySpec,
@@ -39,7 +40,8 @@ import {
 import { userError } from "../errors.ts";
 import {
   resolveJoinColumns,
-  type JoinColumnMerger,
+  type CanonicalJoinType,
+  type JoinColumnMergerForType,
   type JoinSelection,
   type JoinSelectionResult,
 } from "./join.ts";
@@ -57,8 +59,16 @@ type JoinOnInput<
 > = (left: ColumnRefs<TLeft>, right: ColumnRefs<TRight>) => Expr<SqlBoolean | null>;
 
 type JoinMergeInput<
+  TLeft extends Record<string, unknown>,
+  TRight extends Record<string, unknown>,
+  TType extends JoinTypeInput,
   TSelection extends JoinSelection,
-> = (left: ColumnRefs<any>, right: ColumnRefs<any>) => TSelection;
+> = JoinColumnMergerForType<
+  TLeft,
+  TRight,
+  CanonicalJoinType<TType>,
+  TSelection
+>;
 
 export function resolveMapQuery<
   TColumns extends Record<string, unknown>,
@@ -152,14 +162,15 @@ export function resolveTakeQuery<TColumns extends Record<string, unknown>>(
 export function resolveJoinQuery<
   TLeft extends Record<string, unknown>,
   TRight extends Record<string, unknown>,
+  TType extends JoinTypeInput,
   TSelection extends JoinSelection,
 >(
   leftQuery: QueryState<TLeft>,
   rightQuery: QueryState<TRight>,
   on: JoinOnInput<TLeft, TRight>,
   lateral: boolean,
-  joinType: JoinTypeInput,
-  mergeColumns?: JoinMergeInput<TSelection>
+  joinType: TType,
+  mergeColumns?: JoinMergeInput<TLeft, TRight, TType, TSelection>
 ): QueryDeriveInit<JoinSelectionResult<TSelection>> {
   const normalizedJoinType = normalizeJoinType(joinType);
   const alias = autoAlias(sourceAliasBase(rightQuery.source), leftQuery.stages);
@@ -170,7 +181,7 @@ export function resolveJoinQuery<
   const rightScopeId = allocatedRight.scopeId;
   const rightRefs = createColumnRefs<TRight>(rightScopeId, rightKeys);
   const predicate = toExprNode(on(leftQuery.columns, rightRefs));
-  const { mergedColumns, nextNames } = resolveJoinColumns(
+  const { mergedColumns, nextNames } = resolveJoinColumnsForType(
     leftQuery.columns,
     rightRefs,
     leftQuery.columnNames,
@@ -215,6 +226,59 @@ export function resolveJoinQuery<
     columnIdentifiers: projectionItemsToIdentifierMap(stage.projectAll),
     nameSupply: allocated.nameSupply,
   };
+}
+
+function resolveJoinColumnsForType<
+  TLeft extends Record<string, unknown>,
+  TRight extends Record<string, unknown>,
+  TType extends JoinTypeInput,
+  TSelection extends JoinSelection,
+>(
+  leftRefs: ColumnRefs<TLeft>,
+  rightRefs: ColumnRefs<TRight>,
+  leftNames: readonly string[],
+  rightNames: readonly string[],
+  joinType: JoinType,
+  mergeColumns?: JoinMergeInput<TLeft, TRight, TType, TSelection>
+): { mergedColumns: TSelection; nextNames: readonly string[] } {
+  switch (joinType) {
+    case "LEFT":
+      return resolveJoinColumns(
+        leftRefs,
+        rightRefs,
+        leftNames,
+        rightNames,
+        joinType,
+        mergeColumns as JoinColumnMergerForType<TLeft, TRight, "left", TSelection> | undefined
+      );
+    case "RIGHT":
+      return resolveJoinColumns(
+        leftRefs,
+        rightRefs,
+        leftNames,
+        rightNames,
+        joinType,
+        mergeColumns as JoinColumnMergerForType<TLeft, TRight, "right", TSelection> | undefined
+      );
+    case "FULL":
+      return resolveJoinColumns(
+        leftRefs,
+        rightRefs,
+        leftNames,
+        rightNames,
+        joinType,
+        mergeColumns as JoinColumnMergerForType<TLeft, TRight, "full", TSelection> | undefined
+      );
+    case "INNER":
+      return resolveJoinColumns(
+        leftRefs,
+        rightRefs,
+        leftNames,
+        rightNames,
+        joinType,
+        mergeColumns as JoinColumnMergerForType<TLeft, TRight, "inner", TSelection> | undefined
+      );
+  }
 }
 
 export function resolveUnnestQuery<
