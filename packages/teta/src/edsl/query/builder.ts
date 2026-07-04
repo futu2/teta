@@ -146,10 +146,6 @@ type UnnestOptions<TOuter extends boolean | undefined = undefined> = {
   outer?: TOuter;
 };
 
-type FixedJoinOptions = {
-  lateral?: boolean;
-};
-
 type JoinConfigWithoutSelect<
   TLeft extends QueryColumns,
   TRight extends QueryColumns,
@@ -199,6 +195,11 @@ export type QueryExplainResult<TColumns extends QueryColumns> = {
   parameterMode: SqlParameterMode;
   parameterPrefix: SqlParameterPrefix;
 };
+
+export type JoinRightInput<
+  TLeft extends QueryColumns,
+  TRight extends QueryColumns,
+> = Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>);
 
 /** Composable query builder value with typed columns and SQL rendering. */
 export type Query<TColumns extends QueryColumns> = Readonly<QueryState<TColumns> & {
@@ -645,170 +646,6 @@ export function join(...args: unknown[]): unknown {
   return buildJoinStep(parsed);
 }
 
-export function innerJoin<
-  TLeft extends QueryColumns,
-  TRight extends QueryColumns,
->(
-  right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
-  on: JoinOnNoMerge<TLeft, TRight>,
-  options?: FixedJoinOptions
-): QueryStep<TLeft, JoinColumnsForType<TLeft, TRight, "inner">>;
-
-export function innerJoin(...args: unknown[]): unknown {
-  return buildFixedJoinOverload(args, "inner");
-}
-
-export function innerJoinMap<
-  TLeft extends QueryColumns,
-  TRight extends QueryColumns,
-  const TSelection extends JoinSelection = JoinSelection,
->(
-  right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
-  on: JoinOnInput<TLeft, TRight>,
-  selector: JoinColumnMergerForType<TLeft, TRight, "inner", TSelection>
-): QueryStep<TLeft, JoinSelectionResult<TSelection>>;
-
-export function innerJoinMap(...args: unknown[]): unknown {
-  return buildFixedJoinMapOverload(args, "inner", "innerJoinMap");
-}
-
-export function innerJoinMerge<
-  TLeft extends QueryColumns,
-  TRight extends QueryColumns,
-  const TSelection extends JoinSelection = JoinSelection,
->(
-  right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
-  on: JoinOnInput<TLeft, TRight>,
-  merge: JoinColumnMergerForType<TLeft, TRight, "inner", TSelection>
-): QueryStep<TLeft, JoinSelectionResult<TSelection>>;
-
-export function innerJoinMerge(...args: unknown[]): unknown {
-  return buildFixedJoinMapOverload(args, "inner", "innerJoinMerge");
-}
-
-export function leftJoin<
-  TLeft extends QueryColumns,
-  TRight extends QueryColumns,
->(
-  right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
-  on: JoinOnNoMerge<TLeft, TRight>,
-  options?: FixedJoinOptions
-): QueryStep<TLeft, JoinColumnsForType<TLeft, TRight, "left">>;
-
-export function leftJoin(...args: unknown[]): unknown {
-  return buildFixedJoinOverload(args, "left");
-}
-
-export function leftJoinMap<
-  TLeft extends QueryColumns,
-  TRight extends QueryColumns,
-  const TSelection extends JoinSelection = JoinSelection,
->(
-  right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
-  on: JoinOnInput<TLeft, TRight>,
-  selector: JoinColumnMergerForType<TLeft, TRight, "left", TSelection>
-): QueryStep<TLeft, JoinSelectionResult<TSelection>>;
-
-export function leftJoinMap(...args: unknown[]): unknown {
-  return buildFixedJoinMapOverload(args, "left", "leftJoinMap");
-}
-
-export function leftJoinMerge<
-  TLeft extends QueryColumns,
-  TRight extends QueryColumns,
-  const TSelection extends JoinSelection = JoinSelection,
->(
-  right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
-  on: JoinOnInput<TLeft, TRight>,
-  merge: JoinColumnMergerForType<TLeft, TRight, "left", TSelection>
-): QueryStep<TLeft, JoinSelectionResult<TSelection>>;
-
-export function leftJoinMerge(...args: unknown[]): unknown {
-  return buildFixedJoinMapOverload(args, "left", "leftJoinMerge");
-}
-
-export function rightJoin<
-  TLeft extends QueryColumns,
-  TRight extends QueryColumns,
->(
-  right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
-  on: JoinOnNoMerge<TLeft, TRight>,
-  options?: FixedJoinOptions
-): QueryStep<TLeft, JoinColumnsForType<TLeft, TRight, "right">>;
-
-export function rightJoin(...args: unknown[]): unknown {
-  return buildFixedJoinOverload(args, "right");
-}
-
-export function rightJoinMap<
-  TLeft extends QueryColumns,
-  TRight extends QueryColumns,
-  const TSelection extends JoinSelection = JoinSelection,
->(
-  right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
-  on: JoinOnInput<TLeft, TRight>,
-  selector: JoinColumnMergerForType<TLeft, TRight, "right", TSelection>
-): QueryStep<TLeft, JoinSelectionResult<TSelection>>;
-
-export function rightJoinMap(...args: unknown[]): unknown {
-  return buildFixedJoinMapOverload(args, "right", "rightJoinMap");
-}
-
-export function rightJoinMerge<
-  TLeft extends QueryColumns,
-  TRight extends QueryColumns,
-  const TSelection extends JoinSelection = JoinSelection,
->(
-  right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
-  on: JoinOnInput<TLeft, TRight>,
-  merge: JoinColumnMergerForType<TLeft, TRight, "right", TSelection>
-): QueryStep<TLeft, JoinSelectionResult<TSelection>>;
-
-export function rightJoinMerge(...args: unknown[]): unknown {
-  return buildFixedJoinMapOverload(args, "right", "rightJoinMerge");
-}
-
-export function fullJoin<
-  TLeft extends QueryColumns,
-  TRight extends QueryColumns,
->(
-  right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
-  on: JoinOnNoMerge<TLeft, TRight>,
-  options?: FixedJoinOptions
-): QueryStep<TLeft, JoinColumnsForType<TLeft, TRight, "full">>;
-
-export function fullJoin(...args: unknown[]): unknown {
-  return buildFixedJoinOverload(args, "full");
-}
-
-export function fullJoinMap<
-  TLeft extends QueryColumns,
-  TRight extends QueryColumns,
-  const TSelection extends JoinSelection = JoinSelection,
->(
-  right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
-  on: JoinOnInput<TLeft, TRight>,
-  selector: JoinColumnMergerForType<TLeft, TRight, "full", TSelection>
-): QueryStep<TLeft, JoinSelectionResult<TSelection>>;
-
-export function fullJoinMap(...args: unknown[]): unknown {
-  return buildFixedJoinMapOverload(args, "full", "fullJoinMap");
-}
-
-export function fullJoinMerge<
-  TLeft extends QueryColumns,
-  TRight extends QueryColumns,
-  const TSelection extends JoinSelection = JoinSelection,
->(
-  right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
-  on: JoinOnInput<TLeft, TRight>,
-  merge: JoinColumnMergerForType<TLeft, TRight, "full", TSelection>
-): QueryStep<TLeft, JoinSelectionResult<TSelection>>;
-
-export function fullJoinMerge(...args: unknown[]): unknown {
-  return buildFixedJoinMapOverload(args, "full", "fullJoinMerge");
-}
-
 export function unnest<
   TLeft extends QueryColumns,
   TCollection extends readonly unknown[] | unknown[] | null,
@@ -1016,103 +853,9 @@ function assertJoinConfig(value: unknown): asserts value is {
   }
 }
 
-function buildFixedJoinOverload(
-  args: unknown[],
-  type: "inner" | "left" | "right" | "full"
-): unknown {
-  const helper = fixedJoinHelperName(type);
-  const parsed = parseFixedJoinInvocation(args, helper);
-  return join(
-    parsed.right as Query<QueryColumns> | ((outer: ColumnRefs<QueryColumns>) => Query<QueryColumns>),
-    {
-      ...(parsed.options as FixedJoinOptions | undefined),
-      type,
-      on: parsed.on as JoinOnNoMerge<QueryColumns, QueryColumns>,
-    }
-  );
-}
-
-function parseFixedJoinInvocation(
-  args: unknown[],
-  helper: string
-): ParsedCurriedJoinInvocation {
-  if (args.length !== 2 && args.length !== 3) {
-    userError("QUERY_HELPER_INVALID_ARGUMENTS", `${helper}() expects ${helper}(right, on, options?)`);
-  }
-  const [right, on, options] = args;
-  assertJoinRight(helper, right, `${helper}(right, on, options?)`);
-  assertRowCallback(helper, on);
-  assertFixedJoinOptions(helper, options);
-  return { right, on, merge: undefined, options };
-}
-
-function buildFixedJoinMapOverload(
-  args: unknown[],
-  type: "inner" | "left" | "right" | "full",
-  helper: string
-): unknown {
-  const parsed = parseFixedJoinMapInvocation(args, helper);
-  return join(
-    parsed.right as Query<QueryColumns> | ((outer: ColumnRefs<QueryColumns>) => Query<QueryColumns>),
-    {
-      type,
-      on: parsed.on as JoinOnInput<QueryColumns, QueryColumns>,
-      select: parsed.merge as JoinColumnMergerForType<QueryColumns, QueryColumns, typeof type, JoinSelection>,
-    }
-  );
-}
-
-function parseFixedJoinMapInvocation(
-  args: unknown[],
-  helper: string
-): ParsedCurriedJoinInvocation {
-  if (args.length !== 3) {
-    userError("QUERY_HELPER_INVALID_ARGUMENTS", `${helper}() expects ${helper}(right, on, selector)`);
-  }
-  const [right, on, merge] = args;
-  assertJoinRight(helper, right, `${helper}(right, on, selector)`);
-  assertRowCallback(helper, on);
-  assertRowCallback(helper, merge);
-  return { right, on, merge, options: undefined };
-}
-
 function assertJoinRight(helper: string, value: unknown, usage: string): void {
   if (!isQuery(value) && typeof value !== "function") {
     userError("QUERY_HELPER_INVALID_ARGUMENTS", `${helper}() expects ${usage}`);
-  }
-}
-
-function assertFixedJoinOptions(helper: string, value: unknown): void {
-  if (value === undefined) return;
-  if (
-    value === null
-    || typeof value !== "object"
-    || Array.isArray(value)
-    || isQuery(value)
-  ) {
-    userError("DEFERRED_INPUT_INVALID", `${helper}() options must be { lateral?: boolean }`);
-  }
-
-  const options = value as Record<string, unknown>;
-  const keys = Object.keys(options);
-  if (
-    keys.some((key) => key !== "lateral")
-    || ("lateral" in options && typeof options.lateral !== "boolean")
-  ) {
-    userError("DEFERRED_INPUT_INVALID", `${helper}() options must be { lateral?: boolean }`);
-  }
-}
-
-function fixedJoinHelperName(type: "inner" | "left" | "right" | "full"): string {
-  switch (type) {
-    case "inner":
-      return "innerJoin";
-    case "left":
-      return "leftJoin";
-    case "right":
-      return "rightJoin";
-    case "full":
-      return "fullJoin";
   }
 }
 

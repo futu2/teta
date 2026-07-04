@@ -2,20 +2,8 @@ export {
   explain,
   fold,
   filter,
-  fullJoin,
-  fullJoinMap,
-  fullJoinMerge,
   join,
-  innerJoin,
-  innerJoinMap,
-  innerJoinMerge,
-  leftJoin,
-  leftJoinMap,
-  leftJoinMerge,
   unnest,
-  rightJoin,
-  rightJoinMap,
-  rightJoinMerge,
   take,
   sort,
   map,
@@ -27,7 +15,21 @@ export {
   union,
   unionAll,
 } from "./query/builder.ts";
-export type { Query, QueryExplainResult, QueryIR, QueryStageKind, QueryStep } from "./query/builder.ts";
+export type { JoinRightInput, Query, QueryExplainResult, QueryIR, QueryStageKind, QueryStep } from "./query/builder.ts";
+export {
+  fullJoin,
+  fullJoinMap,
+  fullJoinMerge,
+  innerJoin,
+  innerJoinMap,
+  innerJoinMerge,
+  leftJoin,
+  leftJoinMap,
+  leftJoinMerge,
+  rightJoin,
+  rightJoinMap,
+  rightJoinMerge,
+} from "./helpers/join.ts";
 export { takeWithin, type TakeWithinSpec } from "./query/take_within.ts";
 export {
   filterEq,
