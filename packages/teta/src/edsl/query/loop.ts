@@ -1,8 +1,8 @@
 import { createColumnRefs } from "../expr.ts";
 import { userError } from "../errors.ts";
 import { createDeferredRecursiveCte } from "../sql.ts";
-import type { Query, QueryStep } from "./builder.ts";
-import { createQuery } from "./builder.ts";
+import type { Query, QueryStep } from "./core.ts";
+import { createQuery } from "./core.ts";
 import { freshInternalCteName, freshScopeId } from "./planner.ts";
 import { toQuerySpec } from "./state.ts";
 import { assertLoopColumns, normalizeIdentifier } from "./utils.ts";

@@ -20,7 +20,7 @@ import {
   resolveDialect,
 } from "../sql.ts";
 import type { QueryIRSqlTarget, SqlCompilable } from "../sql.ts";
-import type { Query, QueryStageKind } from "./builder.ts";
+import type { Query, QueryStageKind } from "./core.ts";
 import { isQuery } from "./value.ts";
 import { canonicalizeIR } from "./canonicalize.ts";
 

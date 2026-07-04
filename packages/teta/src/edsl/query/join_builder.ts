@@ -1,7 +1,7 @@
 import type { JoinTypeInput } from "../core/types.ts";
 import type { ColumnRefs, Exprs } from "../expr.ts";
 import { userError } from "../errors.ts";
-import type { Query, QueryStep } from "./builder.ts";
+import type { Query, QueryStep } from "./core.ts";
 import { deriveQuery } from "./derive.ts";
 import {
   assertQueryOrCallbackOperand,

@@ -1,7 +1,7 @@
 import type { ColumnRefs, Expr } from "../expr.ts";
 import { userError } from "../errors.ts";
 import type { SqlInt } from "../sql/types.ts";
-import type { Query, QueryStep } from "./builder.ts";
+import type { Query, QueryStep } from "./core.ts";
 import { deriveQuery } from "./derive.ts";
 import { assertRowCallback } from "./invocation.ts";
 import { resolveUnnestQuery } from "./mutations.ts";

@@ -1,4 +1,4 @@
-import type { Query, QueryStep } from "../query/builder.ts";
+import type { Query, QueryStep } from "../query/core.ts";
 import { filterResolved } from "../query/stage_builder.ts";
 import type { ExprNode } from "../core/types.ts";
 import type {

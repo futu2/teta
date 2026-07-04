@@ -3,7 +3,7 @@ import { lte, over, rowNumber } from "../expr.ts";
 import type { ColumnRefs, Expr, WindowSpecInput } from "../expr.ts";
 import { userError } from "../errors.ts";
 import type { SqlInt } from "../sql/types.ts";
-import type { QueryStep } from "./builder.ts";
+import type { QueryStep } from "./core.ts";
 import { filter } from "./stage_builder.ts";
 
 type QueryColumns = Record<string, any>;

@@ -3,7 +3,7 @@ import type {
   ProjectionResult,
   ProjectionShape,
 } from "../expr.ts";
-import type { Query, QueryStep } from "./builder.ts";
+import type { Query, QueryStep } from "./core.ts";
 import { deriveQuery } from "./derive.ts";
 import {
   assertCurriedInvocation,

@@ -1,6 +1,6 @@
 import type { SqlIdentifier } from "../core/types.ts";
 import { isExprNode } from "../expr.ts";
-import type { Query } from "./builder.ts";
+import type { Query } from "./core.ts";
 import type { QueryState } from "./state.ts";
 
 type QueryColumns = Record<string, any>;

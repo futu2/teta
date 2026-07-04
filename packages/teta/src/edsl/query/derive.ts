@@ -1,5 +1,5 @@
-import type { Query } from "./builder.ts";
-import { createQuery } from "./builder.ts";
+import type { Query } from "./core.ts";
+import { createQuery } from "./core.ts";
 import type { QueryDeriveInit } from "./state.ts";
 import { resolveDerivedQueryInit } from "./state.ts";
 

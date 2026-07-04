@@ -5,7 +5,7 @@ export { unnest } from "./query/unnest.ts";
 export { isQuery } from "./query/value.ts";
 export { explain, toAst, toIR, toSql, toSqlResult } from "./query/render.ts";
 export type { QueryExplainResult, QueryIR } from "./query/render.ts";
-export type { Query, QueryStageKind, QueryStep } from "./query/builder.ts";
+export type { Query, QueryStageKind, QueryStep } from "./query/core.ts";
 export type { JoinRightInput } from "./query/join_builder.ts";
 export {
   fullJoin,

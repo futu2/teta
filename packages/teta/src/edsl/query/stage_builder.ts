@@ -6,7 +6,7 @@ import type {
 } from "../expr.ts";
 import { userError } from "../errors.ts";
 import type { SqlBoolean } from "../sql/types.ts";
-import type { Query, QueryStep } from "./builder.ts";
+import type { Query, QueryStep } from "./core.ts";
 import { deriveQuery } from "./derive.ts";
 import {
   assertCurriedInvocation,

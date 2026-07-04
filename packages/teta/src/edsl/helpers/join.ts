@@ -1,7 +1,7 @@
 import { join } from "../query/join_builder.ts";
 import type {
   QueryStep,
-} from "../query/builder.ts";
+} from "../query/core.ts";
 import type { JoinRightInput } from "../query/join_builder.ts";
 import {
   assertQueryOrCallbackOperand,

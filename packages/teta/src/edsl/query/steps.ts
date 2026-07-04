@@ -1,4 +1,4 @@
-import type { QueryStep } from "./builder.ts";
+import type { QueryStep } from "./core.ts";
 
 type QueryColumns = Record<string, any>;
 

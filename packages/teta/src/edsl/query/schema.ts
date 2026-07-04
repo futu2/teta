@@ -21,8 +21,8 @@ import type {
   SqlTimestamp,
   SqlUuid,
 } from "../sql/types.ts";
-import type { Query } from "./builder.ts";
-import { createQuery } from "./builder.ts";
+import type { Query } from "./core.ts";
+import { createQuery } from "./core.ts";
 import { freshScopeId } from "./planner.ts";
 import { normalizeTableSource } from "./utils.ts";
 
