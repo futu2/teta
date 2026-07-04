@@ -6,10 +6,10 @@ export {
   take,
   sort,
   map,
-  isQuery,
   union,
   unionAll,
 } from "./query/builder.ts";
+export { isQuery } from "./query/value.ts";
 export { explain, toAst, toIR, toSql, toSqlResult } from "./query/render.ts";
 export type { QueryExplainResult, QueryIR } from "./query/render.ts";
 export type { JoinRightInput, Query, QueryStageKind, QueryStep } from "./query/builder.ts";

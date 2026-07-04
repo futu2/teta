@@ -15,7 +15,7 @@ import type {
   JoinSelection,
   JoinSelectionResult,
 } from "../query/join.ts";
-import { isQuery } from "../query/builder.ts";
+import { isQuery } from "../query/value.ts";
 import { userError } from "../errors.ts";
 
 type QueryColumns = Record<string, any>;
