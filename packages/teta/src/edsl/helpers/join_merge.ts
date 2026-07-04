@@ -1,5 +1,5 @@
 import { and, eq } from "../expr.ts";
-import type { ColumnRefs, Expr, Exprs } from "../expr.ts";
+import { isExpr, type ColumnRefs, type Expr, type Exprs } from "../expr.ts";
 import { userError } from "../errors.ts";
 import type { SqlBoolean } from "../types.ts";
 
@@ -116,10 +116,7 @@ export function usingCols(nameOrNames: string | readonly string[]) {
     let predicate: Expr<SqlBoolean | null> | undefined;
 
     for (const name of names) {
-      const next = eq(
-        left[name as keyof typeof left] as Expr<any>,
-        right[name as keyof typeof right] as Expr<any>
-      );
+      const next = eq(joinComparableColumn(left, name), joinComparableColumn(right, name));
       predicate = predicate ? and(predicate, next) : next;
     }
 
@@ -155,10 +152,7 @@ export function onEq<const TMapping extends Record<string, string>>(
     let predicate: Expr<SqlBoolean | null> | undefined;
 
     for (const [leftName, rightName] of Object.entries(mapping) as Array<[LeftKey, RightKey]>) {
-      const next = eq(
-        left[leftName as keyof typeof left] as Expr<any>,
-        right[rightName as unknown as keyof typeof right] as Expr<any>
-      );
+      const next = eq(joinComparableColumn(left, leftName), joinComparableColumn(right, rightName));
       predicate = predicate ? and(predicate, next) : next;
     }
 
@@ -199,10 +193,10 @@ export function prefixOverlapLeft<const TPrefix extends string>(prefix: TPrefix)
 
     for (const key of Object.keys(left)) {
       const outputKey = overlapping.has(key) ? `${prefix}${key}` : key;
-      assignJoinMergeColumn(merged, outputKey, left[key as keyof typeof left]);
+      assignJoinMergeColumn(merged, outputKey, joinColumn(left, key));
     }
     for (const key of Object.keys(right)) {
-      assignJoinMergeColumn(merged, key, right[key as keyof typeof right]);
+      assignJoinMergeColumn(merged, key, joinColumn(right, key));
     }
 
     return merged as JoinHelperSelection<
@@ -242,11 +236,11 @@ export function prefixOverlapRight<const TPrefix extends string>(prefix: TPrefix
     const merged: JoinSelection = {};
 
     for (const key of Object.keys(left)) {
-      assignJoinMergeColumn(merged, key, left[key as keyof typeof left]);
+      assignJoinMergeColumn(merged, key, joinColumn(left, key));
     }
     for (const key of Object.keys(right)) {
       const outputKey = overlapping.has(key) ? `${prefix}${key}` : key;
-      assignJoinMergeColumn(merged, outputKey, right[key as keyof typeof right]);
+      assignJoinMergeColumn(merged, outputKey, joinColumn(right, key));
     }
 
     return merged as JoinHelperSelection<
@@ -277,10 +271,10 @@ export function prefixAllLeft<const TPrefix extends string>(prefix: TPrefix) {
     const merged: JoinSelection = {};
 
     for (const key of Object.keys(left)) {
-      assignJoinMergeColumn(merged, `${prefix}${key}`, left[key as keyof typeof left]);
+      assignJoinMergeColumn(merged, `${prefix}${key}`, joinColumn(left, key));
     }
     for (const key of Object.keys(right)) {
-      assignJoinMergeColumn(merged, key, right[key as keyof typeof right]);
+      assignJoinMergeColumn(merged, key, joinColumn(right, key));
     }
 
     return merged as JoinHelperSelection<PrefixKeys<TLeft, TPrefix>, TRight>;
@@ -307,10 +301,10 @@ export function prefixAllRight<const TPrefix extends string>(prefix: TPrefix) {
     const merged: JoinSelection = {};
 
     for (const key of Object.keys(left)) {
-      assignJoinMergeColumn(merged, key, left[key as keyof typeof left]);
+      assignJoinMergeColumn(merged, key, joinColumn(left, key));
     }
     for (const key of Object.keys(right)) {
-      assignJoinMergeColumn(merged, `${prefix}${key}`, right[key as keyof typeof right]);
+      assignJoinMergeColumn(merged, `${prefix}${key}`, joinColumn(right, key));
     }
 
     return merged as JoinHelperSelection<TLeft, PrefixKeys<TRight, TPrefix>>;
@@ -337,10 +331,10 @@ export function suffixAllLeft<const TSuffix extends string>(suffix: TSuffix) {
     const merged: JoinSelection = {};
 
     for (const key of Object.keys(left)) {
-      assignJoinMergeColumn(merged, `${key}${suffix}`, left[key as keyof typeof left]);
+      assignJoinMergeColumn(merged, `${key}${suffix}`, joinColumn(left, key));
     }
     for (const key of Object.keys(right)) {
-      assignJoinMergeColumn(merged, key, right[key as keyof typeof right]);
+      assignJoinMergeColumn(merged, key, joinColumn(right, key));
     }
 
     return merged as JoinHelperSelection<SuffixKeys<TLeft, TSuffix>, TRight>;
@@ -367,10 +361,10 @@ export function suffixAllRight<const TSuffix extends string>(suffix: TSuffix) {
     const merged: JoinSelection = {};
 
     for (const key of Object.keys(left)) {
-      assignJoinMergeColumn(merged, key, left[key as keyof typeof left]);
+      assignJoinMergeColumn(merged, key, joinColumn(left, key));
     }
     for (const key of Object.keys(right)) {
-      assignJoinMergeColumn(merged, `${key}${suffix}`, right[key as keyof typeof right]);
+      assignJoinMergeColumn(merged, `${key}${suffix}`, joinColumn(right, key));
     }
 
     return merged as JoinHelperSelection<TLeft, SuffixKeys<TRight, TSuffix>>;
@@ -397,10 +391,10 @@ export function dropOverlapLeft() {
 
     for (const key of Object.keys(left)) {
       if (overlapping.has(key)) continue;
-      assignJoinMergeColumn(merged, key, left[key as keyof typeof left]);
+      assignJoinMergeColumn(merged, key, joinColumn(left, key));
     }
     for (const key of Object.keys(right)) {
-      assignJoinMergeColumn(merged, key, right[key as keyof typeof right]);
+      assignJoinMergeColumn(merged, key, joinColumn(right, key));
     }
 
     return merged as JoinHelperSelection<DropOverlapLeftKeys<TLeft, TRight>, TRight>;
@@ -426,11 +420,11 @@ export function dropOverlapRight() {
     const merged: JoinSelection = {};
 
     for (const key of Object.keys(left)) {
-      assignJoinMergeColumn(merged, key, left[key as keyof typeof left]);
+      assignJoinMergeColumn(merged, key, joinColumn(left, key));
     }
     for (const key of Object.keys(right)) {
       if (overlapping.has(key)) continue;
-      assignJoinMergeColumn(merged, key, right[key as keyof typeof right]);
+      assignJoinMergeColumn(merged, key, joinColumn(right, key));
     }
 
     return merged as JoinHelperSelection<TLeft, DropOverlapRightKeys<TLeft, TRight>>;
@@ -455,4 +449,25 @@ function assignJoinMergeColumn(
     userError("JOIN_MERGE_CONFLICT", `join merge helper still overlaps after renaming: ${key}`);
   }
   target[key] = value;
+}
+
+function joinColumn<TColumns extends Record<string, any>>(
+  columns: ColumnRefs<TColumns>,
+  key: string
+): Expr<TColumns[keyof TColumns]> {
+  const value = Reflect.get(columns, key);
+  if (!isExpr(value)) {
+    userError(
+      "JOIN_MERGE_UNKNOWN_COLUMN",
+      `Unknown join column '${key}'. Available columns: ${Object.keys(columns).join(", ")}`
+    );
+  }
+  return value as Expr<TColumns[keyof TColumns]>;
+}
+
+function joinComparableColumn<TColumns extends Record<string, any>>(
+  columns: ColumnRefs<TColumns>,
+  key: string
+): Expr<any> {
+  return joinColumn(columns, key) as Expr<any>;
 }

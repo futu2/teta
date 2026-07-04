@@ -70,6 +70,12 @@ export function takeWithin<TColumns extends QueryColumns>(
       lte(numberedColumns[TAKE_WITHIN_ROW_NUMBER], spec.count)
     );
 
-    return dropInternal(limited, [TAKE_WITHIN_ROW_NUMBER] as const) as unknown as Query<TColumns>;
+    return dropTakeWithinRowNumber(limited);
   });
+}
+
+function dropTakeWithinRowNumber<TColumns extends QueryColumns>(
+  query: Query<InternalExtendedColumns<TColumns, typeof TAKE_WITHIN_ROW_NUMBER, SqlInt>>
+): Query<TColumns> {
+  return dropInternal(query, [TAKE_WITHIN_ROW_NUMBER] as const) as unknown as Query<TColumns>;
 }

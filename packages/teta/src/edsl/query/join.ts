@@ -135,7 +135,7 @@ export function resolveJoinColumns<
   rightRefs: ColumnRefs<TRight>,
   leftNames: readonly string[],
   rightNames: readonly string[],
-  joinType: TType,
+  _joinType: TType,
   mergeColumns?: JoinColumnMergerForType<
     TLeft,
     TRight,
@@ -161,8 +161,8 @@ export function resolveJoinColumns<
     TSelection
   >;
   const mergedColumns = mergeResolver(
-    joinLeftRefs<TLeft, TType>(leftRefs, joinType),
-    joinRightRefs<TRight, TType>(rightRefs, joinType)
+    joinLeftRefs<TLeft, TKind>(leftRefs),
+    joinRightRefs<TRight, TKind>(rightRefs)
   );
   return {
     mergedColumns,
@@ -172,30 +172,20 @@ export function resolveJoinColumns<
 
 function joinLeftRefs<
   TLeft extends Record<string, unknown>,
-  TType extends JoinType,
+  TKind extends JoinKind,
 >(
-  leftRefs: ColumnRefs<TLeft>,
-  joinType: TType
-): ColumnRefs<JoinLeftColumnsForType<TLeft, NormalizedJoinKind<TType>>> {
-  return (
-    joinType === "RIGHT" || joinType === "FULL"
-      ? leftRefs
-      : leftRefs
-  ) as ColumnRefs<JoinLeftColumnsForType<TLeft, NormalizedJoinKind<TType>>>;
+  leftRefs: ColumnRefs<TLeft>
+): ColumnRefs<JoinLeftColumnsForType<TLeft, TKind>> {
+  return leftRefs as ColumnRefs<JoinLeftColumnsForType<TLeft, TKind>>;
 }
 
 function joinRightRefs<
   TRight extends Record<string, unknown>,
-  TType extends JoinType,
+  TKind extends JoinKind,
 >(
-  rightRefs: ColumnRefs<TRight>,
-  joinType: TType
-): ColumnRefs<JoinRightColumnsForType<TRight, NormalizedJoinKind<TType>>> {
-  return (
-    joinType === "LEFT" || joinType === "FULL"
-      ? rightRefs
-      : rightRefs
-  ) as ColumnRefs<JoinRightColumnsForType<TRight, NormalizedJoinKind<TType>>>;
+  rightRefs: ColumnRefs<TRight>
+): ColumnRefs<JoinRightColumnsForType<TRight, TKind>> {
+  return rightRefs as ColumnRefs<JoinRightColumnsForType<TRight, TKind>>;
 }
 
 function defaultJoinColumnMerger<
