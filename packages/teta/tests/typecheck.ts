@@ -1,6 +1,6 @@
 import type { Column, Expr, SqlBigInt, SqlBoolean, SqlBytes, SqlDate, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlNumber, SqlString, SqlTimestamp, SqlUuid, } from "../mod.ts";
 import * as publicApi from "../mod.ts";
-import { between, filter, filterEq, filterNe, filterGt, filterGte, filterLt, filterLte, fullJoin, fullJoinMerge, identityStep, innerJoin, innerJoinMap, innerJoinMerge, isDistinctFrom, isNotIn, leftJoin, leftJoinMap, leftJoinMerge, rightJoin, rightJoinMerge, take, takeWithin, sort, param, lit, map, rename, pipe, flow, table, t, fold, asc, desc, eq, gt, upper, add, mul, coalesce, count, group, loop, sum, and, or, isNotNull, sub, when, mapShape, groupShape, lt, unnest, unionAll, union, unlessStep, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, asBigInt, asBoolean, asBytes, asDate, asDecimal, asFloat, asInt, asJson, asString, asTimestamp, asUuid, pick, drop, extend, whenStep } from "../mod.ts";
+import { between, filter, filterEq, filterNe, filterGt, filterGte, filterLt, filterLte, fullJoin, fullJoinMerge, identityStep, innerJoin, innerJoinMap, innerJoinMerge, isDistinctFrom, isNotIn, join, leftJoin, leftJoinMap, leftJoinMerge, rightJoin, rightJoinMerge, take, takeWithin, sort, param, lit, map, rename, pipe, flow, table, t, fold, asc, desc, eq, gt, upper, add, mul, coalesce, count, group, loop, sum, and, or, isNotNull, sub, when, mapShape, groupShape, lt, unnest, unionAll, union, unlessStep, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, asBigInt, asBoolean, asBytes, asDate, asDecimal, asFloat, asInt, asJson, asString, asTimestamp, asUuid, pick, drop, extend, whenStep } from "../mod.ts";
 type Equal<A, B> = ((<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false);
 type Expect<T extends true> = T;
 type ExprType<TExpr> = TExpr extends Expr<infer TValue> ? TValue : TExpr extends Column<infer TValue, string> ? TValue : never;
@@ -66,6 +66,13 @@ const fullJoined = pipe(users, fullJoin(
 const leftViaJoin = pipe(users, leftJoin(
     orders,
     (user, order) => eq(user.id, order.user_id)
+));
+const leftViaPrimitiveJoin = pipe(users, join(
+    orders,
+    {
+        type: "left",
+        on: (user, order) => eq(user.id, order.user_id),
+    }
 ));
 const renamedJoin = pipe(users, innerJoinMap(
     orders,
@@ -325,6 +332,7 @@ type _OuterExplodedTag = Expect<Equal<ExprType<typeof outerExplodedSessions.colu
 type _RightJoinId = Expect<Equal<ExprType<typeof rightJoined.columns.id>, SqlInt | null>>;
 type _FullJoinTotal = Expect<Equal<ExprType<typeof fullJoined.columns.total>, SqlFloat | null>>;
 type _LeftViaJoinTotal = Expect<Equal<ExprType<typeof leftViaJoin.columns.total>, SqlFloat | null>>;
+type _LeftViaPrimitiveJoinTotal = Expect<Equal<ExprType<typeof leftViaPrimitiveJoin.columns.total>, SqlFloat | null>>;
 type _ProjectedUsersId = Expect<Equal<ExprType<typeof projectedUsers.columns.id>, SqlInt>>;
 type _ProjectedUsersName = Expect<Equal<ExprType<typeof projectedUsers.columns.name>, SqlString>>;
 type _MappedSelectedUsersKeys = Expect<Equal<keyof typeof mappedSelectedUsers.columns, "id" | "name">>;
@@ -472,6 +480,7 @@ void directKeyMappedUsage;
 void droppedUsersUsage;
 void manualOmittedAggregate;
 void leftViaJoinSelected;
+void leftViaPrimitiveJoin;
 void overlapPrefixedLeft;
 void overlapPrefixedRight;
 void allPrefixedLeft;
@@ -548,6 +557,25 @@ pipe(users, fullJoin(
     profileRows,
     // @ts-expect-error fullJoin without merge must reject overlapping output names
     (user, profile) => eq(user.id, profile.id)
+));
+pipe(users, join(
+    orders,
+    {
+        // @ts-expect-error frontend join type options are lowercase only
+        type: "LEFT",
+        on: (user, order) => eq(user.id, order.user_id),
+    }
+));
+pipe(sessions, unnest(
+    (session) => session.tags,
+    // @ts-expect-error unnest selection.value must be a string
+    { value: 1 }
+));
+pipe(sessions, unnest(
+    (session) => session.tags,
+    { value: "tag" },
+    // @ts-expect-error unnest options.outer must be boolean
+    { outer: "yes" }
 ));
 pipe(users, leftJoin(
     profileRows,

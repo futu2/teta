@@ -2,7 +2,6 @@ import type {
   ExprNode,
   JoinSource,
   JoinType,
-  JoinTypeInput,
   OrderItem,
   QuerySpec,
   ScopeId,
@@ -42,6 +41,7 @@ import {
   resolveJoinColumns,
   type CanonicalJoinType,
   type JoinColumnMergerForType,
+  type JoinKind,
   type JoinSelection,
   type JoinSelectionResult,
 } from "./join.ts";
@@ -61,7 +61,7 @@ type JoinOnInput<
 type JoinMergeInput<
   TLeft extends Record<string, unknown>,
   TRight extends Record<string, unknown>,
-  TType extends JoinTypeInput,
+  TType extends JoinKind,
   TSelection extends JoinSelection,
 > = JoinColumnMergerForType<
   TLeft,
@@ -162,7 +162,7 @@ export function resolveTakeQuery<TColumns extends Record<string, unknown>>(
 export function resolveJoinQuery<
   TLeft extends Record<string, unknown>,
   TRight extends Record<string, unknown>,
-  TType extends JoinTypeInput,
+  TType extends JoinKind,
   TSelection extends JoinSelection,
 >(
   leftQuery: QueryState<TLeft>,
@@ -231,7 +231,7 @@ export function resolveJoinQuery<
 function resolveJoinColumnsForType<
   TLeft extends Record<string, unknown>,
   TRight extends Record<string, unknown>,
-  TType extends JoinTypeInput,
+  TType extends JoinKind,
   TSelection extends JoinSelection,
 >(
   leftRefs: ColumnRefs<TLeft>,

@@ -1,4 +1,3 @@
-import type { JoinTypeInput } from "../core/types.ts";
 import type { ColumnRefs, Exprs } from "../expr.ts";
 import { userError } from "../errors.ts";
 import { createQueryStep, getQueryState, type Query, type QueryStep } from "./core.ts";
@@ -9,6 +8,7 @@ import {
 } from "./invocation.ts";
 import type {
   CanonicalJoinType,
+  JoinKind,
   JoinColumnMergerForType,
   JoinColumnsForType,
   JoinOn,
@@ -37,7 +37,7 @@ type JoinMergeInput<
 type JoinConfigWithoutSelect<
   TLeft extends QueryColumns,
   TRight extends QueryColumns,
-  TType extends JoinTypeInput | undefined,
+  TType extends JoinKind | undefined,
 > = JoinOptions<TType> & {
   on: JoinOnNoMerge<TLeft, TRight>;
   select?: undefined;
@@ -46,7 +46,7 @@ type JoinConfigWithoutSelect<
 type JoinConfigWithSelect<
   TLeft extends QueryColumns,
   TRight extends QueryColumns,
-  TType extends JoinTypeInput | undefined,
+  TType extends JoinKind | undefined,
   TSelection extends JoinSelection,
 > = JoinOptions<TType> & {
   on: JoinOnInput<TLeft, TRight>;
@@ -66,7 +66,7 @@ export type JoinRightInput<
 function buildJoin<
   TLeft extends QueryColumns,
   TRight extends QueryColumns,
-  TType extends JoinTypeInput | undefined = undefined,
+  TType extends JoinKind | undefined = undefined,
   TSelection extends JoinSelection = Exprs<JoinColumnsForType<
     TLeft,
     TRight,
@@ -104,7 +104,7 @@ function buildJoin<
 export function join<
   TLeft extends QueryColumns,
   TRight extends QueryColumns,
-  TType extends JoinTypeInput | undefined = undefined,
+  TType extends JoinKind | undefined = undefined,
 >(
   right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
   config: JoinConfigWithoutSelect<TLeft, TRight, TType>
@@ -113,7 +113,7 @@ export function join<
 export function join<
   TLeft extends QueryColumns,
   TRight extends QueryColumns,
-  TType extends JoinTypeInput | undefined = undefined,
+  TType extends JoinKind | undefined = undefined,
   const TSelection extends JoinSelection = JoinSelection,
 >(
   right: Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>),
@@ -128,7 +128,7 @@ export function join(...args: unknown[]): unknown {
 function _join<
   TLeft extends QueryColumns,
   TRight extends QueryColumns,
-  TType extends JoinTypeInput | undefined = undefined,
+  TType extends JoinKind | undefined = undefined,
   TSelection extends JoinSelection = Exprs<JoinColumnsForType<
     TLeft,
     TRight,
@@ -166,7 +166,7 @@ function buildJoinStep(parsed: ParsedJoinInvocation): QueryStep<QueryColumns, Qu
       parsed.right as Query<QueryColumns> | ((outer: ColumnRefs<QueryColumns>) => Query<QueryColumns>),
       parsed.on as JoinOnInput<QueryColumns, QueryColumns>,
       parsed.merge as JoinMergeInput<QueryColumns, QueryColumns, "inner" | "left" | "right" | "full", JoinSelection> | undefined,
-      parsed.options as JoinOptions<JoinTypeInput | undefined> | undefined
+      parsed.options as JoinOptions<JoinKind | undefined> | undefined
     ));
 }
 
@@ -192,7 +192,7 @@ function parseJoinInvocation(args: unknown[]): ParsedJoinInvocation {
 }
 
 function assertJoinConfig(value: unknown): asserts value is {
-  type?: JoinTypeInput;
+  type?: JoinKind;
   on: (...args: any[]) => unknown;
   select?: (...args: any[]) => unknown;
   lateral?: boolean;
@@ -226,13 +226,9 @@ function assertJoinConfig(value: unknown): asserts value is {
   }
 }
 
-function isJoinTypeInputValue(value: unknown): value is JoinTypeInput {
+function isJoinTypeInputValue(value: unknown): value is JoinKind {
   return value === "inner"
     || value === "left"
     || value === "right"
-    || value === "full"
-    || value === "INNER"
-    || value === "LEFT"
-    || value === "RIGHT"
-    || value === "FULL";
+    || value === "full";
 }

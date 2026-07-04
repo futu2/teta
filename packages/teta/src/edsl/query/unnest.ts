@@ -6,6 +6,7 @@ import { deriveQuery } from "./derive.ts";
 import { assertRowCallback } from "./invocation.ts";
 import { resolveUnnestQuery } from "./transitions.ts";
 import type { QueryColumns } from "./types.ts";
+import { isPlainObject } from "./value.ts";
 
 type UnnestSelectorInput<
   TLeft extends QueryColumns,
@@ -95,6 +96,8 @@ function buildUnnest<
   options: UnnestOptions<TOuter> = {}
 ): Query<TLeft & TGenerated> {
   assertRowCallback("unnest", selector);
+  assertUnnestSelection(selection);
+  assertUnnestOptions(options);
   const collection = selector(left.columns);
   assertExprResult("unnest", collection);
   return deriveQuery(
@@ -116,10 +119,60 @@ function assertUnnestInvocation(args: unknown[]): void {
     );
   }
   assertRowCallback("unnest", args[0]);
+  assertUnnestSelection(args[1]);
+  if (args.length === 3) assertUnnestOptions(args[2]);
 }
 
 function assertExprResult(helper: string, value: unknown): asserts value is Expr<unknown> {
   if (!isExpr(value)) {
     userError("DEFERRED_INPUT_INVALID", `${helper}() callback must return an expression`);
+  }
+}
+
+function assertUnnestSelection(
+  value: unknown
+): asserts value is UnnestSelection<string, string | undefined> {
+  if (!isPlainObject(value)) {
+    userError(
+      "DEFERRED_INPUT_INVALID",
+      "unnest() selection must be { value: string, ordinality?: string }"
+    );
+  }
+
+  const keys = Object.keys(value);
+  if (keys.some((key) => key !== "value" && key !== "ordinality")) {
+    userError(
+      "DEFERRED_INPUT_INVALID",
+      "unnest() selection must be { value: string, ordinality?: string }"
+    );
+  }
+  if (typeof value.value !== "string" || value.value.length === 0) {
+    userError("DEFERRED_INPUT_INVALID", "unnest() selection.value must be a non-empty string");
+  }
+  if (
+    value.ordinality !== undefined
+    && (typeof value.ordinality !== "string" || value.ordinality.length === 0)
+  ) {
+    userError("DEFERRED_INPUT_INVALID", "unnest() selection.ordinality must be a non-empty string");
+  }
+  if (value.ordinality === value.value) {
+    userError("DEFERRED_INPUT_INVALID", "unnest() selection column names must be distinct");
+  }
+}
+
+function assertUnnestOptions(
+  value: unknown
+): asserts value is UnnestOptions<boolean | undefined> {
+  if (value === undefined) return;
+  if (!isPlainObject(value)) {
+    userError("DEFERRED_INPUT_INVALID", "unnest() options must be { outer?: boolean }");
+  }
+
+  const keys = Object.keys(value);
+  if (
+    keys.some((key) => key !== "outer")
+    || (value.outer !== undefined && typeof value.outer !== "boolean")
+  ) {
+    userError("DEFERRED_INPUT_INVALID", "unnest() options must be { outer?: boolean }");
   }
 }

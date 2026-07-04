@@ -207,14 +207,28 @@ function booleanChain(
 
   let current = toExprNode(values[0] as BooleanInput);
   for (const value of values.slice(1)) {
-    current = {
-      kind: "binary",
-      op,
-      left: current,
-      right: toExprNode(value as BooleanInput),
-    };
+    current = booleanBinaryNode(op, current, toExprNode(value as BooleanInput));
   }
-  return exprOf<SqlBoolean | null>(current as unknown as ExprNode<SqlBoolean | null>);
+  return exprOf<SqlBoolean | null>(booleanChainNode(current));
+}
+
+function booleanChainNode(
+  node: ExprNode<boolean | SqlBoolean | null>
+): ExprNode<SqlBoolean | null> {
+  return node as ExprNode<SqlBoolean | null>;
+}
+
+function booleanBinaryNode(
+  op: "AND" | "OR",
+  left: ExprNode<boolean | SqlBoolean | null>,
+  right: ExprNode<boolean | SqlBoolean | null>
+): ExprNode<SqlBoolean | null> {
+  return {
+    kind: "binary",
+    op,
+    left,
+    right,
+  } as ExprNode<SqlBoolean | null>;
 }
 
 export function not<TValue extends ExprInput<boolean | SqlBoolean | null>>(

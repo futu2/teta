@@ -1,4 +1,4 @@
-import type { JoinType, JoinTypeInput } from "../core/types.ts";
+import type { JoinType } from "../core/types.ts";
 import { mergeColumnNames } from "../expr.ts";
 import type { ColumnRefs, Expr, ExprPhase, Exprs } from "../expr.ts";
 import { userError } from "../errors.ts";
@@ -68,21 +68,17 @@ type FullJoinColumns<
   TRight extends Record<string, unknown>
 > = NullableColumns<TLeft> & NullableColumns<TRight>;
 
-type InnerJoinType = "inner" | "INNER";
-type LeftJoinType = "left" | "LEFT";
-type RightJoinType = "right" | "RIGHT";
-type FullJoinType = "full" | "FULL";
-type JoinKind = "inner" | "left" | "right" | "full";
+export type JoinKind = "inner" | "left" | "right" | "full";
 type NormalizedJoinKind<TType extends JoinType> =
   TType extends "LEFT" ? "left"
   : TType extends "RIGHT" ? "right"
     : TType extends "FULL" ? "full"
       : "inner";
 
-export type CanonicalJoinType<TType extends JoinTypeInput | undefined> =
-  TType extends LeftJoinType ? "left"
-  : TType extends RightJoinType ? "right"
-    : TType extends FullJoinType ? "full"
+export type CanonicalJoinType<TType extends JoinKind | undefined> =
+  TType extends "left" ? "left"
+  : TType extends "right" ? "right"
+    : TType extends "full" ? "full"
       : "inner";
 
 export type JoinColumnsForType<
@@ -108,7 +104,7 @@ type JoinRightColumnsForType<
 > = TType extends "left" | "full" ? NullableColumns<TRight> : TRight;
 
 export type JoinOptions<
-  TType extends JoinTypeInput | undefined = undefined,
+  TType extends JoinKind | undefined = undefined,
 > = {
   type?: TType;
   lateral?: boolean;

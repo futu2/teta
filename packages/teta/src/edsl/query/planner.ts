@@ -100,10 +100,6 @@ export function resolveFoldProjection(
   };
 }
 
-export function legacySelectionArrayError(): string {
-  return LEGACY_SELECTION_ARRAY_ERROR;
-}
-
 function scopeIdFromIndex(index: number): ScopeId {
   return `${INTERNAL_SCOPE_PREFIX}${index}` as ScopeId;
 }

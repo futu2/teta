@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { TetaUserError, count, eq, extend, filter, fold, fullJoin, group, innerJoin, innerJoinMerge, leftJoin, loop, map, prefixOverlapLeft, rightJoin, sort, t, table, take, toSql, unnest, values, pipe } from "../mod.ts";
+import { TetaUserError, count, eq, extend, filter, fold, fullJoin, group, innerJoin, innerJoinMerge, join, leftJoin, loop, map, onEq, prefixOverlapLeft, rightJoin, sort, t, table, take, toSql, unnest, usingCols, values, pipe } from "../mod.ts";
 import { GROUP_INSIDE_AGGREGATE_FUNCTION_ERROR, GROUP_OUTSIDE_AGGREGATE_ERROR, JOIN_MERGE_CONFLICT_ERROR, JOIN_OVERLAPPING_COLUMNS_ERROR, LEGACY_SELECTION_ARRAY_ERROR, LOOP_COLUMN_MISMATCH_ERROR, NON_CANONICAL_POSTGRES_DIALECT_ERROR, VALUES_COLUMN_MISMATCH_ERROR, VALUES_EMPTY_ERROR } from "./helpers/expected-errors.ts";
 import { createOrdersTable, createUsersTable } from "./helpers/fixtures.ts";
 describe("error paths", () => {
@@ -61,6 +61,19 @@ describe("error paths", () => {
         );
         expect(() => (innerJoinMerge as any)("not a query", on, selector)).toThrow(
             "innerJoinMerge() expects innerJoinMerge(right, on, selector)"
+        );
+    });
+    test("join rejects uppercase type options at the EDSL boundary", () => {
+        const orders = createOrdersTable();
+        expectUserError(
+            () => join(orders, {
+                type: "LEFT" as never,
+                on: () => {
+                    throw new Error("callback should not be executed during argument validation");
+                },
+            }),
+            "DEFERRED_INPUT_INVALID",
+            "join() options.type must be inner, left, right, or full"
         );
     });
     test("rejects default joins with overlapping output columns", () => {
@@ -160,6 +173,54 @@ describe("error paths", () => {
             () => pipe(sessions, unnest(() => ["not", "expr"] as any, { value: "tag" })),
             "DEFERRED_INPUT_INVALID",
             "unnest() callback must return an expression"
+        );
+    });
+    test("unnest validates selection and options before deriving queries", () => {
+        const sessions = table("sessions", {
+            id: t.int(),
+            tags: t.array(t.string()),
+        });
+
+        expectUserError(
+            () => unnest((session: typeof sessions.columns) => session.tags, undefined as never),
+            "DEFERRED_INPUT_INVALID",
+            "unnest() selection must be { value: string, ordinality?: string }"
+        );
+        expectUserError(
+            () => unnest((session: typeof sessions.columns) => session.tags, { value: "" }),
+            "DEFERRED_INPUT_INVALID",
+            "unnest() selection.value must be a non-empty string"
+        );
+        expectUserError(
+            () => unnest((session: typeof sessions.columns) => session.tags, { value: "tag", ordinality: "tag" }),
+            "DEFERRED_INPUT_INVALID",
+            "unnest() selection column names must be distinct"
+        );
+        expectUserError(
+            () => unnest((session: typeof sessions.columns) => session.tags, { value: "tag" }, { outer: "yes" } as never),
+            "DEFERRED_INPUT_INVALID",
+            "unnest() options must be { outer?: boolean }"
+        );
+    });
+    test("join column helpers report dynamic unknown columns", () => {
+        const users = createUsersTable();
+        const orders = createOrdersTable();
+
+        expectUserError(
+            () => pipe(users, innerJoinMerge(orders, usingCols("missing" as never), (user, order) => ({
+                id: user.id,
+                order_id: order.order_id,
+            }))),
+            "JOIN_MERGE_UNKNOWN_COLUMN",
+            "Unknown join column 'missing'. Available columns: id, name"
+        );
+        expectUserError(
+            () => pipe(users, innerJoinMerge(orders, onEq({ id: "missing" } as never), (user, order) => ({
+                id: user.id,
+                order_id: order.order_id,
+            }))),
+            "JOIN_MERGE_UNKNOWN_COLUMN",
+            "Unknown join column 'missing'. Available columns: order_id, user_id, total"
         );
     });
     test("rejects loop steps with mismatched column names", () => {
