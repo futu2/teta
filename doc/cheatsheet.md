@@ -4,6 +4,8 @@ Quick reference for the public API exported from `@teta/teta`.
 
 Teta is function-first. Row-transforming query helpers are curried query steps used with `pipe(...)`.
 
+Queries are opaque runtime values. Use `query.columns` for reusable column expressions and `toIR(query)` / `explain(query, ...)` for inspection. Query steps are callable values with `kind: "query_step"` and `stepName` metadata, and `pipe(...)` / `flow(...)` preserve exact intermediate types for up to 12 steps.
+
 ```ts
 import { add, and, arrayAppend, arrayContains, arrayJoin, arrayLength, arrayPosition, arraySlice, asBigInt, asBoolean, asBytes, asDate, asDecimal, asFloat, asInt, asJson, asString, asTimestamp, asUuid, asc, avg, bitLength, cast, charLength, characterLength, coalesce, concat, count, currentDate, currentTimestamp, dateAdd, dateDiff, dateFormat, dateLiteral, dateParse, dateTrunc, day, desc, drop, dropOverlapLeft, dropOverlapRight, eq, explain, Expr, extend, f, filter, filterEq, flow, fn, fold, fromUnixTime, fullJoin, group, gt, gte, hour, innerJoin, isIn, isNotNull, isNull, join, lag, lead, left, leftJoin, like, loop, lower, lt, lte, map, rename, max, min, minute, mod, month, mul, ne, not, ntile, nullIf, octetLength, onEq, over, overlay, param, percentRank, pick, pipe, position, pow, prefixAllLeft, prefixAllRight, prefixOverlapLeft, prefixOverlapRight, Query, rank, regexExtract, regexLike, regexReplace, replace, reverse, right, rightJoin, round, rowNumber, rpad, shape, sort, sqrt, sub, substring, suffixAllLeft, suffixAllRight, sum, sumOver, t, table, take, takeWithin, timestampLiteral, toAst, toIR, toSql, toSqlResult, toUnixTime, trim, union, unionAll, unnest, upper, usingCols, values, when, windowFn, year } from "@teta/teta";
 ```
@@ -489,6 +491,7 @@ See [the dev package README](../packages/dev/README.md) for setup and usage.
 For a guided explanation of how these fit together in the EDSL, see [TYPES.md](./TYPES.md).
 
 - `Query`
+- `QueryColumns`
 - `QueryIR`
 - `QueryExplainResult`
 - `QueryStep`
@@ -503,6 +506,7 @@ For a guided explanation of how these fit together in the EDSL, see [TYPES.md](.
 - `SqlFormat`
 - `SqlRenderStrategy`
 - `SqlOptions`
+- `SqlRenderable`
 - `SqlInt`
 - `SqlFloat`
 - `SqlBigInt`

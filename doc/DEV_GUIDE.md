@@ -109,15 +109,35 @@ It includes nodes like:
 
 ### `Query`
 
-A `Query<TColumns>` in `packages/teta/src/edsl/query.ts` stores:
+A public `Query<TColumns>` in `packages/teta/src/edsl/query.ts` is intentionally opaque. User code sees:
+
+- `kind`
+- `columns`
+
+The full frontend compiler state is stored on a non-enumerable internal symbol and is accessed inside the package through `getQueryState(query)`.
+
+That hidden state contains:
 
 - `source`
 - `stages`
 - `columns`
 - `columnNames`
 - `withs`
+- `columnIdentifiers`
+- scope/name-supply metadata
 
 The important part is that query-building is **immutable**: each helper function returns a new `Query` with another stage appended or merged. `toIR(query)` lowers that frontend object into the backend `QueryIR` shape consumed by `@teta/sql`.
+
+Do not add new public query fields casually. Prefer adding internal state to `QueryState`, lowering it through `toIR(...)` or `explain(...)` when users need to inspect it.
+
+### `QueryStep`
+
+`QueryStep<TIn, TOut>` is a callable function value with metadata:
+
+- `kind: "query_step"`
+- `stepName`
+
+Build new query steps with `createQueryStep(stepName, apply)` so the runtime shape stays consistent. A step should remain pure: it receives a `Query<TIn>` and returns a new `Query<TOut>`.
 
 ### `Stage`
 
@@ -257,6 +277,8 @@ const result = toSql(q, { dialect: "postgresql", format: "pretty" })
 
 Each query helper returns a new `Query` (or a `QueryStep` in data-last form).
 
+Curried/data-last helpers should return `createQueryStep(...)`. The step body reads public callback columns through `query.columns` and reads compiler state through `getQueryState(query)` when it needs sources, stages, names, or CTE metadata.
+
 Examples:
 
 - `map(...)`
@@ -291,6 +313,8 @@ Useful checkpoints:
 - `explain(query, ...)` bundles IR, AST, SQL, params, stage metadata, and CTE metadata in one snapshot
 
 In practice, `explain(query, ...)` is usually the fastest debugging entrypoint, with `toIR(query)` and `toAst(query)` as lower-level follow-ups.
+
+Because `Query` is opaque, tests and tooling should inspect lowered output through `toIR(...)` or `explain(...)` rather than reaching for query object internals.
 
 ### 4) `toSql(query, options)` and `toSqlResult(query, options)`
 

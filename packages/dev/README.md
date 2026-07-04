@@ -29,6 +29,8 @@ console.log(sql);
 
 `renderSqlFromSource(...)` looks for an export named `query` by default. Pass a custom `exportName` if your source module uses a different name.
 
+The export may be a SQL string, an opaque Teta `Query`, or a function returning either one. Query detection uses the public `isQuery(...)` brand rather than structural fields.
+
 ## Watch and copy SQL
 
 ```ts

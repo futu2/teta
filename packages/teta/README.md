@@ -60,6 +60,8 @@ const activePublicUsers = flow(
 );
 ```
 
+Query values expose `columns` for typed expression reuse, but internal compiler details such as sources, stages, CTEs, and generated names are intentionally opaque. Use `toIR(query)` or `explain(query, ...)` when you need to inspect lowered query structure. Query steps are callable values with lightweight `kind` and `stepName` metadata for tooling/debugging.
+
 Comparison filter helpers require at least one row callback; direct values are allowed only as the other operand.
 `whenStep(...)` and `unlessStep(...)` use host-language booleans to include or skip schema-preserving steps while building a query; use `filter(...)` and predicate expressions for conditions evaluated by SQL.
 

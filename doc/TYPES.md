@@ -11,7 +11,7 @@ Teta's type story is easiest to understand in four layers:
 1. `t.*` declares column types for a schema.
 2. `table(...)` and `values(...)` produce `Query<TColumns>`.
 3. query callbacks receive typed expression values and return new query shapes.
-4. render helpers use SQL-focused types such as `SqlOptions` and `SqlResult`.
+4. render helpers use SQL-focused types such as `SqlOptions`, `SqlResult`, and `SqlRenderable`.
 
 In practice, you usually let TypeScript infer everything and only annotate types at API boundaries or when extracting reusable helpers.
 
@@ -70,6 +70,14 @@ Common schema helpers:
 `Query<TColumns>` means: "a query that currently exposes one row shaped like `TColumns`".
 
 The key rule is that each query helper either preserves that shape or replaces it.
+
+At runtime, a query is intentionally opaque. Public code should use:
+
+- `query.kind` to identify the value as a query-like EDSL value
+- `query.columns` when reusing column expressions outside a callback
+- `toIR(query)` or `explain(query, ...)` when inspecting lowered sources, stages, CTEs, and output columns
+
+Do not depend on internal fields such as `source`, `stages`, `columnNames`, `withs`, or name-supply counters being present on the query object. Those are internal compiler state and may change without affecting the public row type.
 
 ### Shape-preserving helpers
 
@@ -268,16 +276,29 @@ const top10ActiveUsers = pipe(
 );
 ```
 
-Inside that pipeline, `filter((user) => eq(user.active, true))` and `take(10)` are `QueryStep<TIn, TOut>` functions.
+Inside that pipeline, `filter((user) => eq(user.active, true))` and `take(10)` are callable `QueryStep<TIn, TOut>` values.
 
 - `filter(...)` returns `QueryStep<T, T>`
 - `map(...)` returns `QueryStep<TIn, TOut>` with a new output shape
 - `take(...)` returns `QueryStep<T, T>`
-- `flow(...)` composes query steps and preserves each intermediate type.
+- `flow(...)` composes query steps and preserves each intermediate type for ordinary pipeline lengths.
 - `extend(name, selector)` keeps existing columns and adds or replaces one named column.
 - `filterEq(...)` and related helpers return `QueryStep<T, T>` and use row callbacks when operands come from query columns.
 
+At runtime, query steps are still functions, but they also expose lightweight metadata:
+
+```ts
+const activeStep = filterEq((user) => user.active, true);
+
+activeStep.kind;     // "query_step"
+activeStep.stepName; // "filterEq"
+```
+
+This metadata is useful for debugging, logging, and tooling. It is not needed for normal query composition.
+
 You usually do not need to write `QueryStep<...>` explicitly, but it is the right type when building higher-level query utilities.
+
+`pipe(...)` and `flow(...)` keep exact intermediate types through 12 steps. Longer pipelines still run normally, but TypeScript falls back to a less precise result type after that point. Split very long pipelines with `flow(...)` if you need precise types across every step.
 
 ## 6) `values(...)` infers row types from data
 
@@ -306,10 +327,11 @@ These types matter once you leave the query-building layer:
 
 - `SqlOptions` configures dialect, format, render strategy, and parameter mode
 - `SqlResult` is the structured `{ sql, params }` return type from `toSqlResult(...)`
+- `SqlRenderable` is the frontend union accepted by `toSql(...)`: an opaque Teta `Query` or a backend SQL expression/query target
 - `QueryIR<TColumns>` is the lowered logical query representation returned by `toIR(...)`
 - `QueryExplainResult<TColumns>` is the structured debug output returned by `explain(...)`
 
-`SqlOptions`, `SqlResult`, `ExprNode`, `Stage`, and the raw backend `QueryIR` contract are owned by `@teta/sql`. `@teta/teta` re-exports the common SQL types and adds the typed frontend `QueryIR<TColumns>` returned by `toIR(...)`.
+`SqlOptions`, `SqlResult`, `ExprNode`, `Stage`, and the raw backend `QueryIR` contract are owned by `@teta/sql`. `@teta/teta` re-exports the common SQL types and adds frontend types such as `SqlRenderable` and the typed `QueryIR<TColumns>` returned by `toIR(...)`.
 
 ```ts
 import { explain, toSqlResult } from "@teta/teta";
@@ -333,6 +355,7 @@ One useful detail: dialect is not part of `Query<TColumns>`. Teta keeps the quer
 - Prefer inference first. Teta is designed so schemas and callbacks usually provide all the types you need.
 - Reach for `Expr<T>` when writing reusable expression helpers.
 - Reach for `Query<TColumns>` or `QueryStep<TIn, TOut>` when writing reusable query utilities.
+- Reach for `QueryColumns` when you need a generic constraint for "any object-shaped query row".
 - Use `null`, not `undefined`, for nullable SQL values.
 - Remember that `t.json<T>()` affects TypeScript types only; it does not validate JSON at runtime.
 - Remember that `SqlDate` and `SqlTimestamp` are string-based SQL types, not JavaScript `Date` objects.
@@ -342,11 +365,12 @@ One useful detail: dialect is not part of `Query<TColumns>`. Teta keeps the quer
 The most important public types for EDSL users are:
 
 - `Query`
+- `QueryColumns`
 - `QueryStep`
 - `Expr`
 - `SqlInt`, `SqlFloat`, `SqlBigInt`, `SqlDecimal`, `SqlNumber`
 - `SqlDate`, `SqlTimestamp`, `SqlUuid`, `SqlBytes`, `SqlJson`
-- `SqlOptions`, `SqlResult`
+- `SqlOptions`, `SqlResult`, `SqlRenderable`
 - `QueryIR`, `QueryExplainResult`
 - `BuiltinDialect`, `Dialect`, `DialectSpec`, `QueryDialect`
 
