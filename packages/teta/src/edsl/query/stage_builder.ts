@@ -7,15 +7,13 @@ import type {
 import { userError } from "../errors.ts";
 import type { SqlBoolean } from "../sql/types.ts";
 import type { Query, QueryStep } from "./builder.ts";
-import { createQuery } from "./builder.ts";
+import { deriveQuery } from "./derive.ts";
 import {
   resolveFilterQuery,
   resolveSortQuery,
   resolveTakeQuery,
   resolveUnionQuery,
 } from "./mutations.ts";
-import type { QueryDeriveInit } from "./state.ts";
-import { resolveDerivedQueryInit } from "./state.ts";
 import { isQuery } from "./value.ts";
 
 type QueryColumns = Record<string, any>;
@@ -25,16 +23,6 @@ type PredicateInput<TColumns extends QueryColumns> =
 
 type SortInput<TColumns extends QueryColumns> =
   (cols: ColumnRefs<TColumns>) => OrderItem | OrderItem[];
-
-function deriveQuery<
-  TCurrentColumns extends QueryColumns,
-  TNextColumns extends QueryColumns,
->(
-  query: Query<TCurrentColumns>,
-  init: QueryDeriveInit<TNextColumns>
-): Query<TNextColumns> {
-  return createQuery(resolveDerivedQueryInit(query, init));
-}
 
 function buildFilter<TColumns extends QueryColumns>(
   query: Query<TColumns>,

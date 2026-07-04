@@ -2,7 +2,7 @@ import type { JoinTypeInput } from "../core/types.ts";
 import type { ColumnRefs, Exprs } from "../expr.ts";
 import { userError } from "../errors.ts";
 import type { Query, QueryStep } from "./builder.ts";
-import { createQuery } from "./builder.ts";
+import { deriveQuery } from "./derive.ts";
 import type {
   CanonicalJoinType,
   JoinColumnMergerForType,
@@ -14,8 +14,6 @@ import type {
   JoinSelectionResult,
 } from "./join.ts";
 import { resolveJoinQuery } from "./mutations.ts";
-import type { QueryDeriveInit } from "./state.ts";
-import { resolveDerivedQueryInit } from "./state.ts";
 import { qualifyOuterColumns } from "./utils.ts";
 import { isPlainObject, isQuery } from "./value.ts";
 
@@ -63,16 +61,6 @@ export type JoinRightInput<
   TLeft extends QueryColumns,
   TRight extends QueryColumns,
 > = Query<TRight> | ((outer: ColumnRefs<TLeft>) => Query<TRight>);
-
-function deriveQuery<
-  TCurrentColumns extends QueryColumns,
-  TNextColumns extends QueryColumns,
->(
-  query: Query<TCurrentColumns>,
-  init: QueryDeriveInit<TNextColumns>
-): Query<TNextColumns> {
-  return createQuery(resolveDerivedQueryInit(query, init));
-}
 
 function buildJoin<
   TLeft extends QueryColumns,

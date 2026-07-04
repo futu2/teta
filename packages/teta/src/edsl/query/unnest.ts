@@ -2,8 +2,7 @@ import type { ColumnRefs, Expr } from "../expr.ts";
 import { userError } from "../errors.ts";
 import type { SqlInt } from "../sql/types.ts";
 import type { Query, QueryStep } from "./builder.ts";
-import { createQuery } from "./builder.ts";
-import { resolveDerivedQueryInit } from "./state.ts";
+import { deriveQuery } from "./derive.ts";
 import { resolveUnnestQuery } from "./mutations.ts";
 
 type QueryColumns = Record<string, any>;
@@ -97,7 +96,7 @@ function buildUnnest<
 ): Query<TLeft & TGenerated> {
   assertRowCallback("unnest", selector);
   const collection = selector(left.columns);
-  return createQuery(resolveDerivedQueryInit(
+  return deriveQuery(
     left,
     resolveUnnestQuery<TLeft, TGenerated>(
       left,
@@ -105,7 +104,7 @@ function buildUnnest<
       selection,
       options
     )
-  ));
+  );
 }
 
 function assertUnnestInvocation(args: unknown[]): void {

@@ -5,25 +5,13 @@ import type {
 } from "../expr.ts";
 import { userError } from "../errors.ts";
 import type { Query, QueryStep } from "./builder.ts";
-import { createQuery } from "./builder.ts";
+import { deriveQuery } from "./derive.ts";
 import {
   resolveFoldQuery,
   resolveMapQuery,
 } from "./mutations.ts";
-import type { QueryDeriveInit } from "./state.ts";
-import { resolveDerivedQueryInit } from "./state.ts";
 
 type QueryColumns = Record<string, any>;
-
-function deriveQuery<
-  TCurrentColumns extends QueryColumns,
-  TNextColumns extends QueryColumns,
->(
-  query: Query<TCurrentColumns>,
-  init: QueryDeriveInit<TNextColumns>
-): Query<TNextColumns> {
-  return createQuery(resolveDerivedQueryInit(query, init));
-}
 
 function buildMap<
   TColumns extends QueryColumns,
