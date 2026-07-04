@@ -1,7 +1,7 @@
 import type { JoinTypeInput } from "../core/types.ts";
 import type { ColumnRefs, Exprs } from "../expr.ts";
 import { userError } from "../errors.ts";
-import type { Query, QueryStep } from "./core.ts";
+import { createQueryStep, getQueryState, type Query, type QueryStep } from "./core.ts";
 import { deriveQuery } from "./derive.ts";
 import {
   assertQueryOrCallbackOperand,
@@ -93,8 +93,8 @@ function buildJoin<
   return deriveQuery(
     left,
     resolveJoinQuery(
-      left,
-      rightQuery,
+      getQueryState(left),
+      getQueryState(rightQuery),
       on,
       lateral,
       resolvedOptions.type ?? "inner",
@@ -162,14 +162,14 @@ type ParsedCurriedJoinInvocation = {
 type ParsedJoinInvocation = ParsedCurriedJoinInvocation;
 
 function buildJoinStep(parsed: ParsedJoinInvocation): QueryStep<QueryColumns, QueryColumns> {
-  return (left: Query<QueryColumns>) =>
+  return createQueryStep("join", (left: Query<QueryColumns>) =>
     _join(
       left,
       parsed.right as Query<QueryColumns> | ((outer: ColumnRefs<QueryColumns>) => Query<QueryColumns>),
       parsed.on as JoinOnInput<QueryColumns, QueryColumns>,
       parsed.merge as JoinMergeInput<QueryColumns, QueryColumns, "inner" | "left" | "right" | "full", JoinSelection> | undefined,
       parsed.options as JoinOptions<JoinTypeInput | undefined> | undefined
-    );
+    ));
 }
 
 function parseJoinInvocation(args: unknown[]): ParsedJoinInvocation {

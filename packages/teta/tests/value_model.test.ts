@@ -8,6 +8,7 @@ import {
   param,
   table,
   t,
+  toIR,
   toSql,
   filter,
   pipe,
@@ -51,16 +52,17 @@ describe("tagged EDSL value model", () => {
     expect(users.kind).toBe("query");
     expect(isQuery(users)).toBe(true);
     expect(Object.isFrozen(users)).toBe(true);
-    expect(Object.isFrozen(users.state)).toBe(true);
-    expect(Object.isFrozen(users.source)).toBe(true);
     expect(Object.isFrozen(users.columns)).toBe(true);
-    expect(Object.isFrozen(users.columnNames)).toBe(true);
-    expect(Object.isFrozen(users.nameSupply)).toBe(true);
-    expect(users.columnNames).toEqual(["id"]);
+    expect("state" in users).toBe(false);
+    expect("source" in users).toBe(false);
+    expect("stages" in users).toBe(false);
+    expect("columnNames" in users).toBe(false);
+    expect(toIR(users).columnNames).toEqual(["id"]);
 
     const filtered = pipe(users, filter((user) => eq(user.id, lit(1))));
-    expect(Object.isFrozen(filtered.stages)).toBe(true);
-    expect(Object.isFrozen(filtered.stages[0])).toBe(true);
+    const filteredIr = toIR(filtered);
+    expect(filteredIr.stages).toHaveLength(1);
+    expect(filteredIr.stages[0]?.kind).toBe("filter");
   });
 
   test("rejects malformed expression-like values", () => {
@@ -91,7 +93,7 @@ describe("tagged EDSL value model", () => {
     const forged = {
       ...users,
       state: {
-        ...users.state,
+        ...toIR(users),
         stages: malformedStages,
       },
       stages: malformedStages,
@@ -110,7 +112,7 @@ describe("tagged EDSL value model", () => {
     const forgedWithMalformedPredicate = {
       ...users,
       state: {
-        ...users.state,
+        ...toIR(users),
         stages: malformedPredicateStages,
       },
       stages: malformedPredicateStages,
@@ -125,7 +127,7 @@ describe("tagged EDSL value model", () => {
     });
     const forged = {
       ...users,
-      state: users.state,
+      state: toIR(users),
     };
 
     expect(isQuery(forged)).toBe(false);

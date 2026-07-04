@@ -1,6 +1,6 @@
 import type { SqlIdentifier } from "../core/types.ts";
 import { isExprNode } from "../expr.ts";
-import { hasQueryBrand } from "./core.ts";
+import { getQueryState, hasQueryBrand } from "./core.ts";
 import type { Query } from "./core.ts";
 import type { QueryState } from "./state.ts";
 import type { QueryColumns } from "./types.ts";
@@ -9,32 +9,15 @@ export function isQuery(value: unknown): value is Query<QueryColumns> {
   if (!value || typeof value !== "object") return false;
   const candidate = value as {
     kind?: unknown;
-    state?: unknown;
-    source?: unknown;
-    stages?: unknown;
     columns?: unknown;
-    columnNames?: unknown;
-    sourceScopeId?: unknown;
-    scopeId?: unknown;
-    withs?: unknown;
-    columnIdentifiers?: unknown;
-    nameSupply?: unknown;
   };
 
-  if (!hasQueryBrand(value) || candidate.kind !== "query" || !isQueryState(candidate.state)) {
+  if (!hasQueryBrand(value) || candidate.kind !== "query") {
     return false;
   }
 
-  const state = candidate.state;
-  return candidate.source === state.source
-    && candidate.stages === state.stages
-    && candidate.columns === state.columns
-    && candidate.columnNames === state.columnNames
-    && candidate.sourceScopeId === state.sourceScopeId
-    && candidate.scopeId === state.scopeId
-    && candidate.withs === state.withs
-    && candidate.columnIdentifiers === state.columnIdentifiers
-    && candidate.nameSupply === state.nameSupply;
+  const state = getQueryState(value as Query<QueryColumns>);
+  return isQueryState(state) && candidate.columns === state.columns;
 }
 
 export function isPlainObject(value: unknown): value is Record<string, unknown> {

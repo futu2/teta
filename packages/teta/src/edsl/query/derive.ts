@@ -1,4 +1,4 @@
-import type { Query } from "./core.ts";
+import { getQueryState, type Query } from "./core.ts";
 import { createQuery } from "./core.ts";
 import type { QueryDeriveInit } from "./state.ts";
 import { resolveDerivedQueryInit } from "./state.ts";
@@ -11,5 +11,5 @@ export function deriveQuery<
   query: Query<TCurrentColumns>,
   init: QueryDeriveInit<TNextColumns>
 ): Query<TNextColumns> {
-  return createQuery(resolveDerivedQueryInit(query, init));
+  return createQuery(resolveDerivedQueryInit(getQueryState(query), init));
 }

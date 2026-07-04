@@ -3,7 +3,7 @@ import { lte, over, rowNumber } from "../expr.ts";
 import type { ColumnRefs, Expr, WindowSpecInput } from "../expr.ts";
 import { userError } from "../errors.ts";
 import type { SqlInt } from "../sql/types.ts";
-import type { QueryStep } from "./core.ts";
+import { createQueryStep, getQueryState, type QueryStep } from "./core.ts";
 import { filter } from "./stage_builder.ts";
 import type { QueryColumns } from "./types.ts";
 
@@ -34,8 +34,8 @@ export function takeWithin<TColumns extends QueryColumns>(
     );
   }
 
-  return (query) => {
-    if (query.columnNames.includes(TAKE_WITHIN_ROW_NUMBER)) {
+  return createQueryStep("takeWithin", (query) => {
+    if (getQueryState(query).columnNames.includes(TAKE_WITHIN_ROW_NUMBER)) {
       userError(
         "QUERY_HELPER_INVALID_ARGUMENTS",
         `takeWithin() cannot use reserved helper column '${TAKE_WITHIN_ROW_NUMBER}'`
@@ -57,5 +57,5 @@ export function takeWithin<TColumns extends QueryColumns>(
     })(numbered as any) as any;
 
     return (drop(TAKE_WITHIN_ROW_NUMBER) as QueryStep<QueryColumns, QueryColumns>)(limited) as any;
-  };
+  });
 }

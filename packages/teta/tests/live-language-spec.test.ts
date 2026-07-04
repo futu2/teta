@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
-import { toSql, type SqlCompilable } from "../mod.ts";
+import { toSql, type SqlRenderable } from "../mod.ts";
 import { createDuckDbAdapter, createPostgresqlAdapter, createSqliteAdapter, normalizeLiveRows, type LiveDialect, type LiveDialectAdapter } from "./helpers/live-db.ts";
 import { LIVE_LANGUAGE_SPEC_CASES, type LiveOutcome } from "./helpers/live-language-spec.ts";
 
@@ -29,7 +29,7 @@ async function runCase(
   adapterFactory: () => Promise<LiveDialectAdapter>,
   dialect: LiveDialect,
   outcome: LiveOutcome,
-  build: () => SqlCompilable
+  build: () => SqlRenderable
 ): Promise<void> {
   const adapter = await adapterFactory();
   try {
@@ -43,7 +43,7 @@ async function runCaseWithAdapter(
   adapter: LiveDialectAdapter,
   dialect: LiveDialect,
   outcome: LiveOutcome,
-  build: () => SqlCompilable
+  build: () => SqlRenderable
 ): Promise<void> {
   const sql = toSql(build(), { dialect, format: "compact" });
   if (isErrorOutcome(outcome)) {

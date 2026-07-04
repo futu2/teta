@@ -33,6 +33,36 @@ describe("function-first query api", () => {
 
         expect(flow(addOne, toLabel)(41)).toBe("n=42");
     });
+    test("query steps are callable values with stable metadata", () => {
+        const step = filterEq((user: ReturnType<typeof createUsersPipelineTable>["columns"]) => user.active, true);
+
+        expect(step.kind).toBe("query_step");
+        expect(step.stepName).toBe("filterEq");
+        expect(Object.isFrozen(step)).toBe(true);
+    });
+    test("pipe preserves types past eight steps", () => {
+        const users = createUsersPipelineTable();
+        const query = pipe(
+            users,
+            filter((user: typeof users.columns) => eq(user.active, true)),
+            filter((user) => gte(user.age, 18)),
+            filter((user) => isDistinctFrom(user.name, "anonymous")),
+            map((user) => ({
+                id: user.id,
+                name: user.name,
+                age: user.age,
+                active: user.active,
+            })),
+            sort((user) => asc(user.id)),
+            take(100),
+            filter((user) => gte(user.age, 18)),
+            sort((user) => desc(user.name)),
+            take(50)
+        );
+
+        const typedName = query.columns.name;
+        expect(typedName.name).toBe("name");
+    });
     test("uses simple boolean query-step combinators", () => {
         const users = createUsersPipelineTable();
         const query = pipe(

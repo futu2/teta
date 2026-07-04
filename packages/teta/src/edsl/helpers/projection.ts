@@ -1,5 +1,5 @@
 import { userError } from "../errors.ts";
-import type { Query } from "../query/core.ts";
+import { createQueryStep, getQueryState, type Query } from "../query/core.ts";
 import { map } from "../query/projection_builder.ts";
 import { assertProjectionShape } from "../query/projection_validation.ts";
 import type {
@@ -53,7 +53,7 @@ export function pick<const TNames extends readonly [string, ...string[]]>(
 ): <TColumns extends Record<TNames[number], any>>(
   query: Query<TColumns>
 ) => Query<PickResult<TColumns, TNames>> {
-  return ((query: Query<QueryColumns>) => map((input: ColumnRefs<QueryColumns>) => {
+  return createQueryStep("pick", (query: Query<QueryColumns>) => map((input: ColumnRefs<QueryColumns>) => {
     assertKnownColumns(input, names);
     return selectColumnsByName(input, names);
   })(query)) as unknown as <TColumns extends Record<TNames[number], any>>(
@@ -66,10 +66,11 @@ export function drop<const TNames extends readonly [string, ...string[]]>(
 ): <TColumns extends Record<TNames[number], any>>(
   query: Query<TColumns>
 ) => Query<DropResult<TColumns, TNames>> {
-  return ((query: Query<QueryColumns>) => {
+  return createQueryStep("drop", (query: Query<QueryColumns>) => {
+    const state = getQueryState(query);
     assertKnownColumns(query.columns as ColumnRefs<QueryColumns>, names);
     const dropped = new Set<string>(names);
-    const kept = query.columnNames.filter((name: string) => !dropped.has(name));
+    const kept = state.columnNames.filter((name: string) => !dropped.has(name));
 
     return map((input: ColumnRefs<QueryColumns>) => {
       return selectColumnsByName(input, kept);
@@ -84,8 +85,8 @@ export function rename<const TPattern extends string>(
 ): <TColumns extends QueryColumns>(
   query: Query<TColumns>
 ) => Query<RenameResult<TColumns, TPattern>> {
-  return ((query: Query<QueryColumns>) => map((input: ColumnRefs<QueryColumns>) => {
-    return mapColumnNames(input, query.columnNames, renameKey);
+  return createQueryStep("rename", (query: Query<QueryColumns>) => map((input: ColumnRefs<QueryColumns>) => {
+    return mapColumnNames(input, getQueryState(query).columnNames, renameKey);
   })(query)) as unknown as <TColumns extends QueryColumns>(
     query: Query<TColumns>
   ) => Query<RenameResult<TColumns, TPattern>>;
@@ -115,12 +116,13 @@ export function extend(...args: unknown[]): unknown {
     args[0],
     args[1] as (cols: ColumnRefs<QueryColumns>) => ProjectionValue
   );
-  return (query: Query<QueryColumns>) => {
+  return createQueryStep("extend", (query: Query<QueryColumns>) => {
+    const state = getQueryState(query);
     return map((cols: ColumnRefs<QueryColumns>) => ({
-      ...selectColumnsByName(cols, query.columnNames),
+      ...selectColumnsByName(cols, state.columnNames),
       ...resolveExtensionShape(selector(cols)),
     }))(query);
-  };
+  });
 }
 
 function resolveExtendSelector(

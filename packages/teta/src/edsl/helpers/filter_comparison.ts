@@ -1,4 +1,4 @@
-import type { Query, QueryStep } from "../query/core.ts";
+import { createQueryStep, type Query, type QueryStep } from "../query/core.ts";
 import { filterResolved } from "../query/stage_builder.ts";
 import type { ExprNode } from "../core/types.ts";
 import type {
@@ -272,11 +272,11 @@ function comparisonFilter<TColumns extends QueryColumns, T>(
       `${helper}() expects at least one row callback operand`
     );
   }
-  return (query: Query<TColumns>) => {
+  return createQueryStep(helper, (query: Query<TColumns>) => {
     const resolvedLeft = resolveOperand(query, left);
     const resolvedRight = resolveOperand(query, right);
     return filterResolved<TColumns>(op(resolvedLeft, resolvedRight))(query);
-  };
+  });
 }
 
 function resolveOperand<TColumns extends QueryColumns, T>(

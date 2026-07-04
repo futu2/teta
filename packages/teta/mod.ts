@@ -12,6 +12,9 @@ import * as sql from "@teta/sql";
 /** Query builder value returned by query roots and stage helpers. */
 export type Query<TColumns extends Record<string, any>> = import("./src/edsl/query.ts").Query<TColumns>;
 
+/** Object-shaped row type carried by a query. */
+export type QueryColumns = import("./src/edsl/query.ts").QueryColumns;
+
 /** Explains a query's lowered stages, CTEs, and rendered SQL. */
 export const explain: typeof import("./src/edsl/query.ts").explain = query.explain;
 
@@ -176,6 +179,9 @@ export type QueryExplainResult<TColumns extends Record<string, any>> = import(".
 
 /** Intermediate representation produced during query lowering. */
 export type QueryIR<TColumns extends Record<string, any>> = import("./src/edsl/query.ts").QueryIR<TColumns>;
+
+/** Frontend query or backend SQL expression/target accepted by SQL render helpers. */
+export type SqlRenderable = import("./src/edsl/query.ts").SqlRenderable;
 
 /** Kind discriminator for an individual lowered query stage. */
 export type QueryStageKind = import("./src/edsl/query.ts").QueryStageKind;

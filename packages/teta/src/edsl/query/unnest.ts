@@ -1,7 +1,7 @@
 import type { ColumnRefs, Expr } from "../expr.ts";
 import { userError } from "../errors.ts";
 import type { SqlInt } from "../sql/types.ts";
-import type { Query, QueryStep } from "./core.ts";
+import { createQueryStep, getQueryState, type Query, type QueryStep } from "./core.ts";
 import { deriveQuery } from "./derive.ts";
 import { assertRowCallback } from "./invocation.ts";
 import { resolveUnnestQuery } from "./transitions.ts";
@@ -67,13 +67,13 @@ export function unnest<
 export function unnest(...args: unknown[]): unknown {
   assertUnnestInvocation(args);
   const [selector, selection, options] = args;
-  return (left: Query<QueryColumns>) =>
+  return createQueryStep("unnest", (left: Query<QueryColumns>) =>
     buildUnnest(
       left,
       selector as UnnestSelectorInput<QueryColumns, readonly unknown[] | unknown[] | null>,
       selection as UnnestSelection<string, string | undefined>,
       options as UnnestOptions<boolean | undefined> | undefined
-    );
+    ));
 }
 
 function buildUnnest<
@@ -99,7 +99,7 @@ function buildUnnest<
   return deriveQuery(
     left,
     resolveUnnestQuery<TLeft, TGenerated>(
-      left,
+      getQueryState(left),
       collection,
       selection,
       options

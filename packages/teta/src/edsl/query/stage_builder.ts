@@ -6,7 +6,7 @@ import type {
 } from "../expr.ts";
 import { userError } from "../errors.ts";
 import type { SqlBoolean } from "../sql/types.ts";
-import type { Query, QueryStep } from "./core.ts";
+import { createQueryStep, getQueryState, type Query, type QueryStep } from "./core.ts";
 import { deriveQuery } from "./derive.ts";
 import {
   assertCurriedInvocation,
@@ -32,7 +32,7 @@ function buildFilter<TColumns extends QueryColumns>(
   predicate: PredicateInput<TColumns>
 ): Query<TColumns> {
   const resolved = predicate(query.columns);
-  return deriveQuery(query, resolveFilterQuery(query, resolved.node));
+  return deriveQuery(query, resolveFilterQuery(getQueryState(query), resolved.node));
 }
 
 function buildSort<TColumns extends QueryColumns>(
@@ -41,14 +41,14 @@ function buildSort<TColumns extends QueryColumns>(
 ): Query<TColumns> {
   const next = selector(query.columns);
   const items = Array.isArray(next) ? next : [next];
-  return deriveQuery(query, resolveSortQuery(query, items));
+  return deriveQuery(query, resolveSortQuery(getQueryState(query), items));
 }
 
 function buildTake<TColumns extends QueryColumns>(
   query: Query<TColumns>,
   count: number
 ): Query<TColumns> {
-  return deriveQuery(query, resolveTakeQuery(query, count));
+  return deriveQuery(query, resolveTakeQuery(getQueryState(query), count));
 }
 
 function buildUnion<TColumns extends QueryColumns>(
@@ -56,7 +56,7 @@ function buildUnion<TColumns extends QueryColumns>(
   right: Query<TColumns>,
   kind: "union" | "union all"
 ): Query<TColumns> {
-  return deriveQuery(left, resolveUnionQuery(left, right, kind));
+  return deriveQuery(left, resolveUnionQuery(getQueryState(left), getQueryState(right), kind));
 }
 
 export function filter<TColumns extends QueryColumns>(
@@ -67,8 +67,8 @@ export function filter(...args: unknown[]): unknown {
   assertCurriedInvocation("filter", "filter(predicate)", args);
   const [predicate] = args;
   assertRowCallback("filter", predicate);
-  return (query: Query<QueryColumns>) =>
-    _filter(query, predicate as PredicateInput<QueryColumns>);
+  return createQueryStep("filter", (query: Query<QueryColumns>) =>
+    _filter(query, predicate as PredicateInput<QueryColumns>));
 }
 
 function _filter<TColumns extends QueryColumns>(
@@ -82,7 +82,8 @@ function _filter<TColumns extends QueryColumns>(
 export function filterResolved<TColumns extends QueryColumns>(
   predicate: Expr<SqlBoolean | null>
 ): QueryStep<TColumns, TColumns> {
-  return (query) => deriveQuery(query, resolveFilterQuery(query, toExprNode(predicate)));
+  return createQueryStep("filterResolved", (query) =>
+    deriveQuery(query, resolveFilterQuery(getQueryState(query), toExprNode(predicate))));
 }
 
 export function sort<TColumns extends QueryColumns>(
@@ -93,8 +94,8 @@ export function sort(...args: unknown[]): unknown {
   assertCurriedInvocation("sort", "sort(selector)", args);
   const [selector] = args;
   assertRowCallback("sort", selector);
-  return (query: Query<QueryColumns>) =>
-    _sort(query, selector as SortInput<QueryColumns>);
+  return createQueryStep("sort", (query: Query<QueryColumns>) =>
+    _sort(query, selector as SortInput<QueryColumns>));
 }
 
 function _sort<TColumns extends QueryColumns>(
@@ -119,7 +120,7 @@ export function take(...args: unknown[]): unknown {
       "take() expects a finite non-negative integer count"
     );
   }
-  return (query: Query<QueryColumns>) => _take(query, count as number);
+  return createQueryStep("take", (query: Query<QueryColumns>) => _take(query, count as number));
 }
 
 function _take<TColumns extends QueryColumns>(
@@ -134,7 +135,8 @@ export function unionAll<TColumns extends QueryColumns>(right: Query<TColumns>):
 export function unionAll(...args: unknown[]): unknown {
   assertCurriedQueryOperand("unionAll", "unionAll(right)", args);
   const [right] = args;
-  return (left: Query<QueryColumns>) => _unionAll(left, right as Query<QueryColumns>);
+  return createQueryStep("unionAll", (left: Query<QueryColumns>) =>
+    _unionAll(left, right as Query<QueryColumns>));
 }
 
 function _unionAll<TColumns extends QueryColumns>(
@@ -149,7 +151,8 @@ export function union<TColumns extends QueryColumns>(right: Query<TColumns>): Qu
 export function union(...args: unknown[]): unknown {
   assertCurriedQueryOperand("union", "union(right)", args);
   const [right] = args;
-  return (left: Query<QueryColumns>) => _union(left, right as Query<QueryColumns>);
+  return createQueryStep("union", (left: Query<QueryColumns>) =>
+    _union(left, right as Query<QueryColumns>));
 }
 
 function _union<TColumns extends QueryColumns>(

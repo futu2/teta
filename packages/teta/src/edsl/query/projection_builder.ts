@@ -3,7 +3,7 @@ import type {
   ProjectionResult,
   ProjectionShape,
 } from "../expr.ts";
-import type { Query, QueryStep } from "./core.ts";
+import { createQueryStep, getQueryState, type Query, type QueryStep } from "./core.ts";
 import { deriveQuery } from "./derive.ts";
 import {
   assertCurriedInvocation,
@@ -25,7 +25,7 @@ function buildMap<
 ): Query<ProjectionResult<TSelection>> {
   const selection = selector(query.columns);
   assertProjectionShape(selection);
-  return deriveQuery(query, resolveMapQuery(query, selection));
+  return deriveQuery(query, resolveMapQuery(getQueryState(query), selection));
 }
 
 function buildFold<
@@ -37,7 +37,7 @@ function buildFold<
 ): Query<ProjectionResult<TSelection>> {
   const selection = selector(query.columns);
   assertProjectionShape(selection);
-  return deriveQuery(query, resolveFoldQuery(query, selection));
+  return deriveQuery(query, resolveFoldQuery(getQueryState(query), selection));
 }
 
 export function map<TColumns extends QueryColumns, const Sel extends ProjectionShape>(
@@ -48,11 +48,11 @@ export function map(...args: unknown[]): unknown {
   assertCurriedInvocation("map", "map(selector)", args);
   const [selector] = args;
   assertRowCallback("map", selector);
-  return (query: Query<QueryColumns>) =>
+  return createQueryStep("map", (query: Query<QueryColumns>) =>
     _map(
       query,
       selector as (cols: ColumnRefs<QueryColumns>) => ProjectionShape
-    );
+    ));
 }
 
 function _map<TColumns extends QueryColumns, const Sel extends ProjectionShape>(
@@ -71,11 +71,11 @@ export function fold(...args: unknown[]): unknown {
   assertCurriedInvocation("fold", "fold(selector)", args);
   const [selector] = args;
   assertRowCallback("fold", selector);
-  return (query: Query<QueryColumns>) =>
+  return createQueryStep("fold", (query: Query<QueryColumns>) =>
     _fold(
       query,
       selector as (cols: ColumnRefs<QueryColumns>) => ProjectionShape
-    );
+    ));
 }
 
 function _fold<TColumns extends QueryColumns, const Sel extends ProjectionShape>(

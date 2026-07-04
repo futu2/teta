@@ -1,8 +1,8 @@
-import type { QueryStep } from "./core.ts";
+import { createQueryStep, type QueryStep } from "./core.ts";
 import type { QueryColumns } from "./types.ts";
 
 export function identityStep<TColumns extends QueryColumns>(): QueryStep<TColumns, TColumns> {
-  return (query) => query;
+  return createQueryStep("identityStep", (query) => query);
 }
 
 export function whenStep<TColumns extends QueryColumns>(

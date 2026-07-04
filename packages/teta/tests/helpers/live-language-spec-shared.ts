@@ -5,7 +5,7 @@ import {
   t,
 } from "../../mod.ts";
 
-import type { SqlCompilable } from "../../mod.ts";
+import type { SqlRenderable } from "../../mod.ts";
 import type { LiveDialect, LiveRow } from "./live-db.ts";
 
 export { currentDate, currentTimestamp };
@@ -16,7 +16,7 @@ export type LiveOutcome =
 
 export type LiveSpecCase = {
   name: string;
-  build: () => SqlCompilable;
+  build: () => SqlRenderable;
   outcomes: Record<LiveDialect, LiveOutcome>;
 };
 

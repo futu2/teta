@@ -1,13 +1,8 @@
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { TetaUserError, toSql, type QuerySqlTarget, type SqlOptions } from "@teta/teta";
+import { isQuery, TetaUserError, toSql, type Query, type QueryColumns, type SqlOptions } from "@teta/teta";
 
-export type QueryLike = {
-  source: unknown;
-  stages: unknown[];
-  columnNames: readonly string[];
-  sourceScopeId: string;
-};
+export type QueryLike = Query<QueryColumns>;
 
 export function normalizeRenderSourcePath(source: string): string {
   const sourcePath = source.toString().trim();
@@ -55,15 +50,9 @@ export async function resolveRenderedSqlFromModule(
       `Export '${exportName}' must be a SQL string, Query-like object, or a function returning one`
     );
   }
-  return toSql(target as QuerySqlTarget, rendererOptions);
+  return toSql(target, rendererOptions);
 }
 
 export function isQueryLike(value: unknown): value is QueryLike {
-  if (typeof value !== "object" || value === null) return false;
-  return (
-    "source" in value
-    && "stages" in value
-    && "columnNames" in value
-    && "sourceScopeId" in value
-  );
+  return isQuery(value);
 }

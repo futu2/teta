@@ -20,7 +20,7 @@ import {
   resolveDialect,
 } from "../sql.ts";
 import type { QueryIRSqlTarget, SqlCompilable } from "../sql.ts";
-import type { Query, QueryStageKind } from "./core.ts";
+import { getQueryState, type Query, type QueryStageKind } from "./core.ts";
 import { isQuery } from "./value.ts";
 import { canonicalizeIR } from "./canonicalize.ts";
 import type { QueryColumns } from "./types.ts";
@@ -28,6 +28,8 @@ import type { QueryColumns } from "./types.ts";
 export type QueryIR<TColumns extends QueryColumns> = QueryIRSqlTarget & {
   columnNames: readonly (keyof TColumns & string)[];
 };
+
+export type SqlRenderable = Query<QueryColumns> | SqlCompilable;
 
 export type QueryExplainStage = {
   index: number;
@@ -55,13 +57,14 @@ export type QueryExplainResult<TColumns extends QueryColumns> = {
 };
 
 export function toIR<TColumns extends QueryColumns>(query: Query<TColumns>): QueryIR<TColumns> {
+  const state = getQueryState(query);
   return canonicalizeIR({
-    source: query.source,
-    stages: query.stages,
-    scopeId: query.sourceScopeId,
-    columnNames: query.columnNames,
-    columnIdentifiers: query.columnIdentifiers,
-    withs: query.withs,
+    source: state.source,
+    stages: state.stages,
+    scopeId: state.sourceScopeId,
+    columnNames: state.columnNames,
+    columnIdentifiers: state.columnIdentifiers,
+    withs: state.withs,
   }) as QueryIR<TColumns>;
 }
 
@@ -75,18 +78,18 @@ export function toAst<TColumns extends QueryColumns>(
   });
 }
 
-export function toSql<TTarget extends SqlCompilable>(
+export function toSql<TTarget extends SqlRenderable>(
   query: TTarget,
   options: SqlOptions = {}
 ): string {
-  return isQuery(query) ? irToSql(toIR(query), options) : renderSql(query, options);
+  return isQuery(query) ? irToSql(toIR(query), options ?? {}) : renderSql(query, options ?? {});
 }
 
-export function toSqlResult<TTarget extends SqlCompilable>(
+export function toSqlResult<TTarget extends SqlRenderable>(
   query: TTarget,
   options: SqlOptions = {}
 ): SqlResult {
-  return isQuery(query) ? irToSqlResult(toIR(query), options) : renderSqlResult(query, options);
+  return isQuery(query) ? irToSqlResult(toIR(query), options ?? {}) : renderSqlResult(query, options ?? {});
 }
 
 export function explain<TColumns extends QueryColumns>(

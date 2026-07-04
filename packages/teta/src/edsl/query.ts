@@ -4,8 +4,9 @@ export { filter, sort, take, union, unionAll } from "./query/stage_builder.ts";
 export { unnest } from "./query/unnest.ts";
 export { isQuery } from "./query/value.ts";
 export { explain, toAst, toIR, toSql, toSqlResult } from "./query/render.ts";
-export type { QueryExplainResult, QueryIR } from "./query/render.ts";
+export type { QueryExplainResult, QueryIR, SqlRenderable } from "./query/render.ts";
 export type { Query, QueryStageKind, QueryStep } from "./query/core.ts";
+export type { QueryColumns } from "./query/types.ts";
 export type { JoinRightInput } from "./query/join_builder.ts";
 export {
   fullJoin,
