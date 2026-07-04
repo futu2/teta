@@ -3,6 +3,10 @@ import type { ColumnRefs, Exprs } from "../expr.ts";
 import { userError } from "../errors.ts";
 import type { Query, QueryStep } from "./builder.ts";
 import { deriveQuery } from "./derive.ts";
+import {
+  assertQueryOrCallbackOperand,
+  assertRowCallback,
+} from "./invocation.ts";
 import type {
   CanonicalJoinType,
   JoinColumnMergerForType,
@@ -176,7 +180,7 @@ function parseJoinInvocation(args: unknown[]): ParsedJoinInvocation {
   }
 
   const [right, config] = args;
-  assertJoinRight("join", right, usage);
+  assertQueryOrCallbackOperand("join", right, usage);
   assertJoinConfig(config);
 
   return {
@@ -222,18 +226,6 @@ function assertJoinConfig(value: unknown): asserts value is {
   }
   if (value.lateral !== undefined && typeof value.lateral !== "boolean") {
     userError("DEFERRED_INPUT_INVALID", "join() options.lateral must be boolean");
-  }
-}
-
-function assertJoinRight(helper: string, value: unknown, usage: string): void {
-  if (!isQuery(value) && typeof value !== "function") {
-    userError("QUERY_HELPER_INVALID_ARGUMENTS", `${helper}() expects ${usage}`);
-  }
-}
-
-function assertRowCallback(helper: string, value: unknown): asserts value is (...args: any[]) => unknown {
-  if (typeof value !== "function") {
-    userError("DEFERRED_INPUT_INVALID", `${helper}() expects a row callback`);
   }
 }
 

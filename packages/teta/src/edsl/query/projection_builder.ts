@@ -7,6 +7,10 @@ import { userError } from "../errors.ts";
 import type { Query, QueryStep } from "./builder.ts";
 import { deriveQuery } from "./derive.ts";
 import {
+  assertCurriedInvocation,
+  assertRowCallback,
+} from "./invocation.ts";
+import {
   resolveFoldQuery,
   resolveMapQuery,
 } from "./mutations.ts";
@@ -81,24 +85,6 @@ function _fold<TColumns extends QueryColumns, const Sel extends ProjectionShape>
 ): Query<ProjectionResult<Sel>> {
   assertRowCallback("fold", selector);
   return buildFold(query, selector);
-}
-
-function assertCurriedInvocation(
-  helper: string,
-  usage: string,
-  args: unknown[],
-  minArgs = 1,
-  maxArgs = 1
-): void {
-  if (args.length < minArgs || args.length > maxArgs) {
-    userError("QUERY_HELPER_INVALID_ARGUMENTS", `${helper}() expects ${usage}`);
-  }
-}
-
-function assertRowCallback(helper: string, value: unknown): asserts value is (...args: any[]) => unknown {
-  if (typeof value !== "function") {
-    userError("DEFERRED_INPUT_INVALID", `${helper}() expects a row callback`);
-  }
 }
 
 export function assertProjectionShape(value: unknown): asserts value is ProjectionShape {

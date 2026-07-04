@@ -3,6 +3,7 @@ import { userError } from "../errors.ts";
 import type { SqlInt } from "../sql/types.ts";
 import type { Query, QueryStep } from "./builder.ts";
 import { deriveQuery } from "./derive.ts";
+import { assertRowCallback } from "./invocation.ts";
 import { resolveUnnestQuery } from "./mutations.ts";
 
 type QueryColumns = Record<string, any>;
@@ -115,10 +116,4 @@ function assertUnnestInvocation(args: unknown[]): void {
     );
   }
   assertRowCallback("unnest", args[0]);
-}
-
-function assertRowCallback(helper: string, value: unknown): asserts value is (...args: any[]) => unknown {
-  if (typeof value !== "function") {
-    userError("DEFERRED_INPUT_INVALID", `${helper}() expects a row callback`);
-  }
 }

@@ -3,6 +3,10 @@ import type {
   QueryStep,
 } from "../query/builder.ts";
 import type { JoinRightInput } from "../query/join_builder.ts";
+import {
+  assertQueryOrCallbackOperand,
+  assertRowCallback,
+} from "../query/invocation.ts";
 import type {
   ColumnRefs,
   Exprs,
@@ -238,7 +242,7 @@ function parseFixedJoinInvocation(
     userError("QUERY_HELPER_INVALID_ARGUMENTS", `${helper}() expects ${helper}(right, on, options?)`);
   }
   const [right, on, options] = args;
-  assertJoinRight(helper, right, `${helper}(right, on, options?)`);
+  assertQueryOrCallbackOperand(helper, right, `${helper}(right, on, options?)`);
   assertRowCallback(helper, on);
   assertFixedJoinOptions(helper, options);
   return { right, on, select: undefined, options };
@@ -252,22 +256,10 @@ function parseFixedJoinSelectInvocation(
     userError("QUERY_HELPER_INVALID_ARGUMENTS", `${helper}() expects ${helper}(right, on, selector)`);
   }
   const [right, on, select] = args;
-  assertJoinRight(helper, right, `${helper}(right, on, selector)`);
+  assertQueryOrCallbackOperand(helper, right, `${helper}(right, on, selector)`);
   assertRowCallback(helper, on);
   assertRowCallback(helper, select);
   return { right, on, select, options: undefined };
-}
-
-function assertJoinRight(helper: string, value: unknown, usage: string): void {
-  if (!isQuery(value) && typeof value !== "function") {
-    userError("QUERY_HELPER_INVALID_ARGUMENTS", `${helper}() expects ${usage}`);
-  }
-}
-
-function assertRowCallback(helper: string, value: unknown): asserts value is (...args: any[]) => unknown {
-  if (typeof value !== "function") {
-    userError("DEFERRED_INPUT_INVALID", `${helper}() expects a row callback`);
-  }
 }
 
 function assertFixedJoinOptions(helper: string, value: unknown): void {
