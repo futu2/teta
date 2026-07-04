@@ -8,61 +8,22 @@ import {
   type ColumnRefs,
   type Exprs,
 } from "./core.ts";
-import { internalError, userError } from "../../errors.ts";
-
-function assertKnownColumn(name: string, columns: readonly string[]): void {
-  if (columns.includes(name)) return;
-  userError(
-    "UNKNOWN_COLUMN_REF",
-    `Unknown column '${name}'. Available columns: ${columns.join(", ")}.`
-  );
-}
-
-function isReflectiveName(name: string): boolean {
-  return name === "then" || name === "toJSON" || name === "inspect";
-}
+import { internalError } from "../../errors.ts";
 
 export function createColumnRefs<TColumns extends Record<string, unknown>>(
   tableName: ScopeId | null,
   columnNames: readonly string[]
 ): ColumnRefs<TColumns> {
-  const cache = new Map<string, Column<unknown, string>>();
-  const columns = [...columnNames];
-  const getColumn = (name: string) => {
-    const existing = cache.get(name);
-    if (existing) return existing;
-    const next = columnOf<unknown, string>(tableName, name);
-    cache.set(name, next);
-    return next;
-  };
-
-  return new Proxy(
-    {},
-    {
-      get(_target, prop) {
-        if (typeof prop !== "string") return undefined;
-        if (!columns.includes(prop) && isReflectiveName(prop)) return undefined;
-        assertKnownColumn(prop, columns);
-        return getColumn(prop);
-      },
-      ownKeys() {
-        return columns;
-      },
-      has(_target, prop) {
-        return typeof prop === "string" && columns.includes(prop);
-      },
-      getOwnPropertyDescriptor(_target, prop) {
-        if (typeof prop !== "string") return undefined;
-        if (!columns.includes(prop)) return undefined;
-        return {
-          enumerable: true,
-          configurable: true,
-          writable: false,
-          value: getColumn(prop),
-        };
-      },
-    }
-  ) as ColumnRefs<TColumns>;
+  const refs: Record<string, Column<unknown, string>> = {};
+  for (const name of columnNames) {
+    Object.defineProperty(refs, name, {
+      enumerable: true,
+      configurable: false,
+      writable: false,
+      value: columnOf<unknown, string>(tableName, name),
+    });
+  }
+  return Object.freeze(refs) as ColumnRefs<TColumns>;
 }
 
 export function mergeColumnRefs<
@@ -75,44 +36,26 @@ export function mergeColumnRefs<
   rightKeys: readonly string[]
 ): ColumnRefs<TLeft & TRight> {
   const mergedKeys = mergeColumnNames(leftKeys, rightKeys);
-  const getColumn = (prop: string) => {
+  const refs: Record<string, Column<unknown, string>> = {};
+  for (const prop of mergedKeys) {
     const leftHas = leftKeys.includes(prop);
     const rightHas = rightKeys.includes(prop);
     const leftValue = leftHas ? Reflect.get(left, prop) : undefined;
     const rightValue = rightHas ? Reflect.get(right, prop) : undefined;
     const leftRef = isExpr(leftValue) ? leftValue : undefined;
     const rightRef = isExpr(rightValue) ? rightValue : undefined;
-    if (rightHas && !leftHas) return rightRef;
-    return leftRef ?? rightRef;
-  };
-
-  return new Proxy(
-    {},
-    {
-      get(_target, prop) {
-        if (typeof prop !== "string") return undefined;
-        if (!mergedKeys.includes(prop) && isReflectiveName(prop)) return undefined;
-        assertKnownColumn(prop, mergedKeys);
-        return getColumn(prop);
-      },
-      ownKeys() {
-        return mergedKeys;
-      },
-      has(_target, prop) {
-        return typeof prop === "string" && mergedKeys.includes(prop);
-      },
-      getOwnPropertyDescriptor(_target, prop) {
-        if (typeof prop !== "string") return undefined;
-        if (!mergedKeys.includes(prop)) return undefined;
-        return {
-          enumerable: true,
-          configurable: true,
-          writable: false,
-          value: getColumn(prop),
-        };
-      },
+    const ref = rightHas && !leftHas ? rightRef : leftRef ?? rightRef;
+    if (!ref) {
+      internalError("INTERNAL_UNKNOWN_COLUMN_REF", `Unknown column ref: ${prop}`);
     }
-  ) as ColumnRefs<TLeft & TRight>;
+    Object.defineProperty(refs, prop, {
+      enumerable: true,
+      configurable: false,
+      writable: false,
+      value: ref,
+    });
+  }
+  return Object.freeze(refs) as ColumnRefs<TLeft & TRight>;
 }
 
 export function mergeColumnNames(

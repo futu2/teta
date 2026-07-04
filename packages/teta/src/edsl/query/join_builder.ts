@@ -17,7 +17,7 @@ import type {
   JoinSelection,
   JoinSelectionResult,
 } from "./join.ts";
-import { resolveJoinQuery } from "./mutations.ts";
+import { resolveJoinQuery } from "./transitions.ts";
 import type { QueryColumns } from "./types.ts";
 import { qualifyOuterColumns } from "./utils.ts";
 import { isPlainObject, isQuery } from "./value.ts";

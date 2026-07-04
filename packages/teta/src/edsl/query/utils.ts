@@ -18,7 +18,7 @@ export {
   sourceAliasBase,
 } from "@teta/sql";
 
-export function qualifyOuterColumns<TColumns extends Record<string, any>>(
+export function qualifyOuterColumns<TColumns extends Record<string, unknown>>(
   columns: ColumnRefs<TColumns>
 ): ColumnRefs<TColumns> {
   const result: Record<string, Column<any, string>> = {};

@@ -1,5 +1,6 @@
 import type { SqlIdentifier } from "../core/types.ts";
 import { isExprNode } from "../expr.ts";
+import { hasQueryBrand } from "./core.ts";
 import type { Query } from "./core.ts";
 import type { QueryState } from "./state.ts";
 import type { QueryColumns } from "./types.ts";
@@ -17,9 +18,10 @@ export function isQuery(value: unknown): value is Query<QueryColumns> {
     scopeId?: unknown;
     withs?: unknown;
     columnIdentifiers?: unknown;
+    nameSupply?: unknown;
   };
 
-  if (candidate.kind !== "query" || !isQueryState(candidate.state)) {
+  if (!hasQueryBrand(value) || candidate.kind !== "query" || !isQueryState(candidate.state)) {
     return false;
   }
 
@@ -31,7 +33,8 @@ export function isQuery(value: unknown): value is Query<QueryColumns> {
     && candidate.sourceScopeId === state.sourceScopeId
     && candidate.scopeId === state.scopeId
     && candidate.withs === state.withs
-    && candidate.columnIdentifiers === state.columnIdentifiers;
+    && candidate.columnIdentifiers === state.columnIdentifiers
+    && candidate.nameSupply === state.nameSupply;
 }
 
 export function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -53,7 +56,8 @@ function isQueryState(value: unknown): value is Readonly<QueryState<QueryColumns
     && typeof state.scopeId === "string"
     && Array.isArray(state.withs)
     && state.withs.every(isCteSpec)
-    && isColumnIdentifiers(state.columnIdentifiers);
+    && isColumnIdentifiers(state.columnIdentifiers)
+    && isNameSupply(state.nameSupply);
 }
 
 function isSource(value: unknown): boolean {
@@ -249,4 +253,13 @@ function isSqlIdentifier(value: unknown): value is SqlIdentifier {
 
 function isStringArray(value: unknown): value is readonly string[] {
   return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+function isNameSupply(value: unknown): boolean {
+  if (!isPlainObject(value)) return false;
+  const supply = value as { scope?: unknown; cte?: unknown };
+  return Number.isInteger(supply.scope)
+    && Number.isInteger(supply.cte)
+    && (supply.scope as number) >= 0
+    && (supply.cte as number) >= 0;
 }

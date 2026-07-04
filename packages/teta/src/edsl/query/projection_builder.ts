@@ -12,7 +12,7 @@ import {
 import {
   resolveFoldQuery,
   resolveMapQuery,
-} from "./mutations.ts";
+} from "./transitions.ts";
 import { assertProjectionShape } from "./projection_validation.ts";
 import type { QueryColumns } from "./types.ts";
 

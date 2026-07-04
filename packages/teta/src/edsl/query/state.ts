@@ -9,7 +9,12 @@ import type {
 import type { ColumnRefs } from "../expr.ts";
 import { columnNamesToIdentifierMap } from "./utils.ts";
 
-export type QueryState<TColumns extends Record<string, any>> = {
+export type QueryNameSupply = Readonly<{
+  scope: number;
+  cte: number;
+}>;
+
+export type QueryState<TColumns extends Record<string, unknown>> = {
   source: Source;
   stages: Stage[];
   columns: ColumnRefs<TColumns>;
@@ -18,9 +23,10 @@ export type QueryState<TColumns extends Record<string, any>> = {
   scopeId: ScopeId;
   withs: CteSpec[];
   columnIdentifiers: Readonly<Record<string, SqlIdentifier>>;
+  nameSupply: QueryNameSupply;
 };
 
-export type QueryInit<TColumns extends Record<string, any>> = {
+export type QueryInit<TColumns extends Record<string, unknown>> = {
   source: Source;
   stages: Stage[];
   columns: ColumnRefs<TColumns>;
@@ -29,9 +35,10 @@ export type QueryInit<TColumns extends Record<string, any>> = {
   scopeId: ScopeId;
   withs?: CteSpec[];
   columnIdentifiers?: Readonly<Record<string, SqlIdentifier>>;
+  nameSupply?: QueryNameSupply;
 };
 
-export type QueryDeriveInit<TColumns extends Record<string, any>> = Omit<
+export type QueryDeriveInit<TColumns extends Record<string, unknown>> = Omit<
   QueryInit<TColumns>,
   "source" | "sourceScopeId" | "scopeId" | "withs" | "columnIdentifiers"
 > & {
@@ -40,9 +47,15 @@ export type QueryDeriveInit<TColumns extends Record<string, any>> = Omit<
   scopeId?: ScopeId;
   withs?: CteSpec[];
   columnIdentifiers?: Readonly<Record<string, SqlIdentifier>>;
+  nameSupply?: QueryNameSupply;
 };
 
-export function resolveQueryInitDefaults<TColumns extends Record<string, any>>(
+export const INITIAL_QUERY_NAME_SUPPLY: QueryNameSupply = Object.freeze({
+  scope: 0,
+  cte: 0,
+});
+
+export function resolveQueryInitDefaults<TColumns extends Record<string, unknown>>(
   init: QueryInit<TColumns>
 ): QueryState<TColumns> {
   return {
@@ -54,12 +67,13 @@ export function resolveQueryInitDefaults<TColumns extends Record<string, any>>(
     scopeId: init.scopeId,
     withs: init.withs ?? [],
     columnIdentifiers: init.columnIdentifiers ?? columnNamesToIdentifierMap(init.columnNames),
+    nameSupply: init.nameSupply ?? INITIAL_QUERY_NAME_SUPPLY,
   };
 }
 
 export function resolveDerivedQueryInit<
-  TCurrentColumns extends Record<string, any>,
-  TNextColumns extends Record<string, any>,
+  TCurrentColumns extends Record<string, unknown>,
+  TNextColumns extends Record<string, unknown>,
 >(
   current: QueryState<TCurrentColumns>,
   init: QueryDeriveInit<TNextColumns>
@@ -73,10 +87,11 @@ export function resolveDerivedQueryInit<
     scopeId: init.scopeId ?? current.scopeId,
     withs: init.withs ?? current.withs,
     columnIdentifiers: init.columnIdentifiers ?? current.columnIdentifiers,
+    nameSupply: init.nameSupply ?? current.nameSupply,
   };
 }
 
-export function toQuerySpec<TColumns extends Record<string, any>>(
+export function toQuerySpec<TColumns extends Record<string, unknown>>(
   query: Pick<
     QueryState<TColumns>,
     "source" | "stages" | "columnNames" | "columnIdentifiers" | "sourceScopeId"

@@ -23,7 +23,7 @@ import type {
 } from "../sql/types.ts";
 import type { Query } from "./core.ts";
 import { createQuery } from "./core.ts";
-import { freshScopeId } from "./planner.ts";
+import { initialScopeId, reserveQueryScopes } from "./planner.ts";
 import { normalizeTableSource } from "./utils.ts";
 
 type ValuesRow = Readonly<Record<string, Value>>;
@@ -89,7 +89,7 @@ export function table<S extends Record<string, ColumnType<any>>>(
 ): Query<InferSchema<S>> {
   const columnNames = Object.keys(schema);
   const source = normalizeTableSource(name);
-  const scopeId = freshScopeId();
+  const scopeId = initialScopeId();
   return createQuery({
     source,
     stages: [],
@@ -97,6 +97,7 @@ export function table<S extends Record<string, ColumnType<any>>>(
     columnNames,
     sourceScopeId: scopeId,
     scopeId,
+    nameSupply: reserveQueryScopes(1),
   });
 }
 
@@ -106,7 +107,7 @@ export function values<const TRows extends readonly [ValuesRow, ...ValuesRow[]]>
 ): Query<ValuesColumns<TRows>> {
   const normalizedRows = normalizeValuesRows(rows);
   const columnNames = Object.keys(normalizedRows[0]!);
-  const scopeId = freshScopeId();
+  const scopeId = initialScopeId();
   return createQuery({
     source: {
       kind: "values",
@@ -117,6 +118,7 @@ export function values<const TRows extends readonly [ValuesRow, ...ValuesRow[]]>
     columnNames,
     sourceScopeId: scopeId,
     scopeId,
+    nameSupply: reserveQueryScopes(1),
   });
 }
 

@@ -7,13 +7,13 @@ import type { SqlBoolean } from "../types.ts";
 export type JoinSelection = Record<string, Expr<unknown>>;
 
 export type JoinOverlappingColumnNames<
-  TLeft extends Record<string, any>,
-  TRight extends Record<string, any>,
+  TLeft extends Record<string, unknown>,
+  TRight extends Record<string, unknown>,
 > = Extract<keyof TLeft, keyof TRight> & string;
 
 export type JoinNoMergeGuard<
-  TLeft extends Record<string, any>,
-  TRight extends Record<string, any>,
+  TLeft extends Record<string, unknown>,
+  TRight extends Record<string, unknown>,
 > = string extends keyof TLeft ? unknown
   : string extends keyof TRight ? unknown
     : [JoinOverlappingColumnNames<TLeft, TRight>] extends [never] ? unknown
@@ -22,13 +22,13 @@ export type JoinNoMergeGuard<
         };
 
 export type JoinOn<
-  TLeft extends Record<string, any>,
-  TRight extends Record<string, any>,
+  TLeft extends Record<string, unknown>,
+  TRight extends Record<string, unknown>,
 > = (left: ColumnRefs<TLeft>, right: ColumnRefs<TRight>) => Expr<SqlBoolean | null>;
 
 export type JoinOnNoMerge<
-  TLeft extends Record<string, any>,
-  TRight extends Record<string, any>,
+  TLeft extends Record<string, unknown>,
+  TRight extends Record<string, unknown>,
 > = JoinOn<TLeft, TRight> & JoinNoMergeGuard<TLeft, TRight>;
 
 export type JoinSelectionResult<TSelection extends JoinSelection> = {
@@ -36,31 +36,31 @@ export type JoinSelectionResult<TSelection extends JoinSelection> = {
 };
 
 export type JoinColumnMerger<
-  TLeft extends Record<string, any>,
-  TRight extends Record<string, any>,
+  TLeft extends Record<string, unknown>,
+  TRight extends Record<string, unknown>,
   TSelection extends JoinSelection = Exprs<TLeft & TRight>
 > = (
   left: ColumnRefs<TLeft>,
   right: ColumnRefs<TRight>
 ) => TSelection;
 
-type NullableColumns<TColumns extends Record<string, any>> = {
+type NullableColumns<TColumns extends Record<string, unknown>> = {
   [K in keyof TColumns]: TColumns[K] | null;
 };
 
 type LeftJoinColumns<
-  TLeft extends Record<string, any>,
-  TRight extends Record<string, any>
+  TLeft extends Record<string, unknown>,
+  TRight extends Record<string, unknown>
 > = TLeft & NullableColumns<TRight>;
 
 type RightJoinColumns<
-  TLeft extends Record<string, any>,
-  TRight extends Record<string, any>
+  TLeft extends Record<string, unknown>,
+  TRight extends Record<string, unknown>
 > = NullableColumns<TLeft> & TRight;
 
 type FullJoinColumns<
-  TLeft extends Record<string, any>,
-  TRight extends Record<string, any>
+  TLeft extends Record<string, unknown>,
+  TRight extends Record<string, unknown>
 > = NullableColumns<TLeft> & NullableColumns<TRight>;
 
 type InnerJoinType = "inner" | "INNER";
@@ -76,8 +76,8 @@ export type CanonicalJoinType<TType extends JoinTypeInput | undefined> =
       : "inner";
 
 export type JoinColumnsForType<
-  TLeft extends Record<string, any>,
-  TRight extends Record<string, any>,
+  TLeft extends Record<string, unknown>,
+  TRight extends Record<string, unknown>,
   TType extends JoinKind,
 > = TType extends "left"
   ? LeftJoinColumns<TLeft, TRight>
@@ -88,12 +88,12 @@ export type JoinColumnsForType<
       : TLeft & TRight;
 
 type JoinLeftColumnsForType<
-  TLeft extends Record<string, any>,
+  TLeft extends Record<string, unknown>,
   TType extends JoinKind,
 > = TType extends "right" | "full" ? NullableColumns<TLeft> : TLeft;
 
 type JoinRightColumnsForType<
-  TRight extends Record<string, any>,
+  TRight extends Record<string, unknown>,
   TType extends JoinKind,
 > = TType extends "left" | "full" ? NullableColumns<TRight> : TRight;
 
@@ -105,8 +105,8 @@ export type JoinOptions<
 };
 
 export type JoinColumnMergerForType<
-  TLeft extends Record<string, any>,
-  TRight extends Record<string, any>,
+  TLeft extends Record<string, unknown>,
+  TRight extends Record<string, unknown>,
   TType extends JoinKind,
   TSelection extends JoinSelection,
 > = JoinColumnMerger<
@@ -116,8 +116,8 @@ export type JoinColumnMergerForType<
 >;
 
 export function resolveJoinColumns<
-  TLeft extends Record<string, any>,
-  TRight extends Record<string, any>,
+  TLeft extends Record<string, unknown>,
+  TRight extends Record<string, unknown>,
   TSelection extends JoinSelection,
 >(
   leftRefs: ColumnRefs<TLeft>,
@@ -125,7 +125,7 @@ export function resolveJoinColumns<
   leftNames: readonly string[],
   rightNames: readonly string[],
   joinType: JoinType,
-  mergeColumns?: JoinColumnMerger<Record<string, any>, Record<string, any>, TSelection>
+  mergeColumns?: JoinColumnMerger<Record<string, unknown>, Record<string, unknown>, TSelection>
 ): { mergedColumns: TSelection; nextNames: readonly string[] } {
   if (!mergeColumns) {
     const overlapping = getOverlappingColumnNames(leftNames, rightNames);
@@ -138,8 +138,8 @@ export function resolveJoinColumns<
   }
   const mergeResolver =
     (mergeColumns ?? defaultJoinColumnMerger) as JoinColumnMerger<
-      Record<string, any>,
-      Record<string, any>,
+      Record<string, unknown>,
+      Record<string, unknown>,
       TSelection
     >;
   const mergeLeftColumns =
@@ -151,8 +151,8 @@ export function resolveJoinColumns<
       ? (rightRefs as unknown as ColumnRefs<NullableColumns<TRight>>)
       : rightRefs;
   const mergedColumns = mergeResolver(
-    mergeLeftColumns as unknown as ColumnRefs<Record<string, any>>,
-    mergeRightColumns as unknown as ColumnRefs<Record<string, any>>
+    mergeLeftColumns as unknown as ColumnRefs<Record<string, unknown>>,
+    mergeRightColumns as unknown as ColumnRefs<Record<string, unknown>>
   );
   return {
     mergedColumns,
@@ -161,8 +161,8 @@ export function resolveJoinColumns<
 }
 
 function defaultJoinColumnMerger<
-  TLeft extends Record<string, any>,
-  TRight extends Record<string, any>
+  TLeft extends Record<string, unknown>,
+  TRight extends Record<string, unknown>
 >(left: ColumnRefs<TLeft>, right: ColumnRefs<TRight>): Exprs<TLeft & TRight> {
   return { ...left, ...right } as unknown as Exprs<TLeft & TRight>;
 }

@@ -15,6 +15,7 @@ import {
 import { userError } from "../errors.ts";
 import type { ProjectionShape, ProjectionValue } from "../expr.ts";
 import { LEGACY_SELECTION_ARRAY_ERROR } from "./projection_validation.ts";
+import type { QueryNameSupply, QueryState } from "./state.ts";
 import { normalizeIdentifier } from "./utils.ts";
 
 type ResolvedProjection = {
@@ -26,12 +27,42 @@ type ResolvedAggregateProjection = ResolvedProjection & {
   groupBy: ExprNode<any>[];
 };
 
-export function freshScopeId(): ScopeId {
-  return `${INTERNAL_SCOPE_PREFIX}${freshInternalToken()}` as ScopeId;
+export function initialScopeId(): ScopeId {
+  return scopeIdFromIndex(0);
 }
 
-export function freshInternalCteName(label: string): InternalCteName {
-  return `${INTERNAL_CTE_PREFIX}${label}_${freshInternalToken()}` as InternalCteName;
+export function allocateScopeId(
+  state: Pick<QueryState<Record<string, unknown>>, "nameSupply">
+): { scopeId: ScopeId; nameSupply: QueryNameSupply } {
+  const scopeId = scopeIdFromIndex(state.nameSupply.scope);
+  return {
+    scopeId,
+    nameSupply: Object.freeze({
+      ...state.nameSupply,
+      scope: state.nameSupply.scope + 1,
+    }),
+  };
+}
+
+export function allocateInternalCteName(
+  state: Pick<QueryState<Record<string, unknown>>, "nameSupply">,
+  label: string
+): { name: InternalCteName; nameSupply: QueryNameSupply } {
+  const name = cteNameFromIndex(label, state.nameSupply.cte);
+  return {
+    name,
+    nameSupply: Object.freeze({
+      ...state.nameSupply,
+      cte: state.nameSupply.cte + 1,
+    }),
+  };
+}
+
+export function reserveQueryScopes(count: number): QueryNameSupply {
+  return Object.freeze({
+    scope: count,
+    cte: 0,
+  });
 }
 
 export function resolveProjection(selection: ProjectionShape): ResolvedProjection {
@@ -73,11 +104,12 @@ export function legacySelectionArrayError(): string {
   return LEGACY_SELECTION_ARRAY_ERROR;
 }
 
-function freshInternalToken(): string {
-  if (typeof globalThis.crypto?.randomUUID === "function") {
-    return globalThis.crypto.randomUUID().replace(/-/g, "");
-  }
-  return `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
+function scopeIdFromIndex(index: number): ScopeId {
+  return `${INTERNAL_SCOPE_PREFIX}${index}` as ScopeId;
+}
+
+function cteNameFromIndex(label: string, index: number): InternalCteName {
+  return `${INTERNAL_CTE_PREFIX}${label}_${index}` as InternalCteName;
 }
 
 function resolveProjectionExpr(key: string, value: ProjectionValue): {

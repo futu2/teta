@@ -3,7 +3,7 @@ import { userError } from "../errors.ts";
 import { createDeferredRecursiveCte } from "../sql.ts";
 import type { Query, QueryStep } from "./core.ts";
 import { createQuery } from "./core.ts";
-import { freshInternalCteName, freshScopeId } from "./planner.ts";
+import { allocateInternalCteName, allocateScopeId } from "./planner.ts";
 import { toQuerySpec } from "./state.ts";
 import type { QueryColumns } from "./types.ts";
 import { assertLoopColumns, normalizeIdentifier } from "./utils.ts";
@@ -23,7 +23,9 @@ function buildLoop<TColumns extends QueryColumns>(
   base: Query<TColumns>,
   step: (self: Query<TColumns>) => Query<TColumns>
 ): Query<TColumns> {
-  const name = freshInternalCteName("loop");
+  const allocatedName = allocateInternalCteName(base, "loop");
+  const allocatedSelf = allocateScopeId({ nameSupply: allocatedName.nameSupply });
+  const name = allocatedName.name;
   const selfColumnNames = [...base.columnNames];
   const loopSource = {
     db: null,
@@ -31,7 +33,7 @@ function buildLoop<TColumns extends QueryColumns>(
     schema: null,
     as: null,
   };
-  const selfScopeId = freshScopeId();
+  const selfScopeId = allocatedSelf.scopeId;
   const self = createQuery<TColumns>({
     source: loopSource,
     stages: [],
@@ -40,6 +42,7 @@ function buildLoop<TColumns extends QueryColumns>(
     sourceScopeId: selfScopeId,
     scopeId: selfScopeId,
     columnIdentifiers: base.columnIdentifiers,
+    nameSupply: allocatedSelf.nameSupply,
   });
   const stepQuery = step(self);
   assertLoopColumns(base.columnNames, stepQuery.columnNames);
@@ -53,7 +56,13 @@ function buildLoop<TColumns extends QueryColumns>(
     toQuerySpec(base),
     toQuerySpec(stepQuery)
   );
-  const resultScopeId = freshScopeId();
+  const allocatedResult = allocateScopeId({
+    nameSupply: {
+      scope: Math.max(allocatedSelf.nameSupply.scope, stepQuery.nameSupply.scope),
+      cte: Math.max(allocatedSelf.nameSupply.cte, stepQuery.nameSupply.cte),
+    },
+  });
+  const resultScopeId = allocatedResult.scopeId;
   return createQuery({
     source: loopSource,
     stages: [],
@@ -63,6 +72,7 @@ function buildLoop<TColumns extends QueryColumns>(
     scopeId: resultScopeId,
     withs: [recursiveCte],
     columnIdentifiers: base.columnIdentifiers,
+    nameSupply: allocatedResult.nameSupply,
   });
 }
 

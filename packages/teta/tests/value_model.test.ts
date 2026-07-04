@@ -53,7 +53,9 @@ describe("tagged EDSL value model", () => {
     expect(Object.isFrozen(users)).toBe(true);
     expect(Object.isFrozen(users.state)).toBe(true);
     expect(Object.isFrozen(users.source)).toBe(true);
+    expect(Object.isFrozen(users.columns)).toBe(true);
     expect(Object.isFrozen(users.columnNames)).toBe(true);
+    expect(Object.isFrozen(users.nameSupply)).toBe(true);
     expect(users.columnNames).toEqual(["id"]);
 
     const filtered = pipe(users, filter((user) => eq(user.id, lit(1))));
@@ -117,6 +119,18 @@ describe("tagged EDSL value model", () => {
     expect(isQuery(forgedWithMalformedPredicate)).toBe(false);
   });
 
+  test("rejects structurally forged query values without the internal brand", () => {
+    const users = table("users", {
+      id: t.int(),
+    });
+    const forged = {
+      ...users,
+      state: users.state,
+    };
+
+    expect(isQuery(forged)).toBe(false);
+  });
+
   test("freezes nested expression arrays", () => {
     const window = windowFn("ROW_NUMBER", lit(1));
 
@@ -137,7 +151,7 @@ describe("tagged EDSL value model", () => {
     );
   });
 
-  test("throws when untyped code accesses an unknown callback column", () => {
+  test("throws when untyped code uses an unknown callback column", () => {
     const users = table("users", {
       id: t.int(),
       name: t.string(),
@@ -148,7 +162,7 @@ describe("tagged EDSL value model", () => {
         users,
         filter((row) => eq((row as any).missing, 1))
       );
-    }).toThrow("Unknown column 'missing'. Available columns: id, name.");
+    }).toThrow("Unsupported literal value: undefined");
   });
 
   test("allows reflective names when they are callback columns", () => {

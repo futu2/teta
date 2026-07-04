@@ -1,1 +1,1 @@
-export type QueryColumns = Record<string, any>;
+export type QueryColumns = Record<string, unknown>;

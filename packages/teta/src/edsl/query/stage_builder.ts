@@ -18,7 +18,7 @@ import {
   resolveSortQuery,
   resolveTakeQuery,
   resolveUnionQuery,
-} from "./mutations.ts";
+} from "./transitions.ts";
 import type { QueryColumns } from "./types.ts";
 
 type PredicateInput<TColumns extends QueryColumns> =

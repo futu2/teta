@@ -4,7 +4,7 @@ import type { SqlInt } from "../sql/types.ts";
 import type { Query, QueryStep } from "./core.ts";
 import { deriveQuery } from "./derive.ts";
 import { assertRowCallback } from "./invocation.ts";
-import { resolveUnnestQuery } from "./mutations.ts";
+import { resolveUnnestQuery } from "./transitions.ts";
 import type { QueryColumns } from "./types.ts";
 
 type UnnestSelectorInput<

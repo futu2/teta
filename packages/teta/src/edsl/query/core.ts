@@ -4,7 +4,8 @@ import type {
 } from "./state.ts";
 import { resolveQueryInitDefaults } from "./state.ts";
 import type { QueryColumns } from "./types.ts";
-import { isPlainObject } from "./value.ts";
+
+const QUERY_BRAND: unique symbol = Symbol("teta.query");
 
 export type QueryStep<
   TInputColumns extends QueryColumns,
@@ -17,7 +18,12 @@ export type QueryStageKind = "map" | "fold" | "filter" | "sort" | "take" | "join
 export type Query<TColumns extends QueryColumns> = Readonly<QueryState<TColumns> & {
   kind: "query";
   state: Readonly<QueryState<TColumns>>;
+  [QUERY_BRAND]: true;
 }>;
+
+export function hasQueryBrand(value: unknown): boolean {
+  return Boolean(value && typeof value === "object" && (value as { [QUERY_BRAND]?: unknown })[QUERY_BRAND] === true);
+}
 
 export function createQuery<TColumns extends QueryColumns>(
   init: QueryInit<TColumns>
@@ -33,18 +39,19 @@ function queryOf<TColumns extends QueryColumns>(
   const columnNames = freezeQueryStateValue(state.columnNames);
   const withs = freezeQueryStateValue(state.withs) as QueryState<TColumns>["withs"];
   const columnIdentifiers = freezeQueryStateValue(state.columnIdentifiers);
+  const nameSupply = freezeQueryStateValue(state.nameSupply);
   const frozenState = Object.freeze({
     ...state,
     source,
     stages,
-    // Column refs are currently Proxy-backed; Task 3 will tighten their invariants.
     columns: state.columns,
     columnNames,
     withs,
     columnIdentifiers,
+    nameSupply,
   }) as Readonly<QueryState<TColumns>>;
 
-  return Object.freeze({
+  const query = {
     kind: "query" as const,
     state: frozenState,
     source: frozenState.source,
@@ -55,7 +62,15 @@ function queryOf<TColumns extends QueryColumns>(
     scopeId: frozenState.scopeId,
     withs: frozenState.withs,
     columnIdentifiers: frozenState.columnIdentifiers,
+    nameSupply: frozenState.nameSupply,
+  } as Omit<Query<TColumns>, typeof QUERY_BRAND> & { [QUERY_BRAND]?: true };
+  Object.defineProperty(query, QUERY_BRAND, {
+    enumerable: false,
+    configurable: false,
+    writable: false,
+    value: true,
   });
+  return Object.freeze(query) as Query<TColumns>;
 }
 
 function freezeQueryStateValue<T>(value: T, seen = new WeakMap<object, unknown>()): T {
@@ -87,4 +102,10 @@ function freezeQueryStateValue<T>(value: T, seen = new WeakMap<object, unknown>(
     );
   }
   return Object.freeze(copy) as T;
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
 }
