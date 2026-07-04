@@ -1,10 +1,19 @@
 export function resolveFreezeFlag(name: string): boolean {
+  const explicit = readEnv(name);
+  if (explicit !== undefined) return explicit !== "0" && explicit !== "false";
+
+  const nodeEnv = readEnv("NODE_ENV");
+  return nodeEnv !== "production";
+}
+
+function readEnv(name: string): string | undefined {
   const env = globalThis as {
     process?: { env?: Record<string, string | undefined> };
   };
-  const explicit = env.process?.env?.[name];
-  if (explicit !== undefined) return explicit !== "0" && explicit !== "false";
 
-  const nodeEnv = env.process?.env?.NODE_ENV;
-  return nodeEnv !== "production";
+  try {
+    return env.process?.env?.[name];
+  } catch {
+    return undefined;
+  }
 }
