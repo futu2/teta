@@ -1,10 +1,14 @@
-import { drop, extendInternal } from "../helpers/projection.ts";
+import {
+  dropInternal,
+  extendInternal,
+  filterInternal,
+  type InternalExtendedColumns,
+} from "../helpers/projection.ts";
 import { lte, over, rowNumber } from "../expr.ts";
 import type { ColumnRefs, Expr, WindowSpecInput } from "../expr.ts";
 import { userError } from "../errors.ts";
 import type { SqlInt } from "../sql/types.ts";
-import { createQueryStep, getQueryState, type QueryStep } from "./core.ts";
-import { filter } from "./stage_builder.ts";
+import { createQueryStep, getQueryState, type Query, type QueryStep } from "./core.ts";
 import type { QueryColumns } from "./types.ts";
 
 export type TakeWithinSpec<TColumns extends QueryColumns> = {
@@ -42,6 +46,12 @@ export function takeWithin<TColumns extends QueryColumns>(
       );
     }
 
+    type NumberedColumns = InternalExtendedColumns<
+      TColumns,
+      typeof TAKE_WITHIN_ROW_NUMBER,
+      SqlInt
+    >;
+
     const numbered = extendInternal<TColumns, typeof TAKE_WITHIN_ROW_NUMBER, Expr<SqlInt>>(
       TAKE_WITHIN_ROW_NUMBER,
       (cols: ColumnRefs<TColumns>) =>
@@ -51,11 +61,15 @@ export function takeWithin<TColumns extends QueryColumns>(
         })
     )(query);
 
-    const limited = filter((cols: ColumnRefs<QueryColumns>) => {
-      const numberedCols = cols as Record<typeof TAKE_WITHIN_ROW_NUMBER, Expr<SqlInt>>;
-      return lte(numberedCols[TAKE_WITHIN_ROW_NUMBER], spec.count);
-    })(numbered as any) as any;
+    const numberedColumns = numbered.columns as ColumnRefs<Record<
+      typeof TAKE_WITHIN_ROW_NUMBER,
+      SqlInt
+    >>;
+    const limited = filterInternal<NumberedColumns>(
+      numbered,
+      lte(numberedColumns[TAKE_WITHIN_ROW_NUMBER], spec.count)
+    );
 
-    return (drop(TAKE_WITHIN_ROW_NUMBER) as QueryStep<QueryColumns, QueryColumns>)(limited) as any;
+    return dropInternal(limited, [TAKE_WITHIN_ROW_NUMBER] as const) as unknown as Query<TColumns>;
   });
 }

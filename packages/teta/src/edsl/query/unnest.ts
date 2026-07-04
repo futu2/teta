@@ -1,4 +1,4 @@
-import type { ColumnRefs, Expr } from "../expr.ts";
+import { isExpr, type ColumnRefs, type Expr } from "../expr.ts";
 import { userError } from "../errors.ts";
 import type { SqlInt } from "../sql/types.ts";
 import { createQueryStep, getQueryState, type Query, type QueryStep } from "./core.ts";
@@ -96,6 +96,7 @@ function buildUnnest<
 ): Query<TLeft & TGenerated> {
   assertRowCallback("unnest", selector);
   const collection = selector(left.columns);
+  assertExprResult("unnest", collection);
   return deriveQuery(
     left,
     resolveUnnestQuery<TLeft, TGenerated>(
@@ -115,4 +116,10 @@ function assertUnnestInvocation(args: unknown[]): void {
     );
   }
   assertRowCallback("unnest", args[0]);
+}
+
+function assertExprResult(helper: string, value: unknown): asserts value is Expr<unknown> {
+  if (!isExpr(value)) {
+    userError("DEFERRED_INPUT_INVALID", `${helper}() callback must return an expression`);
+  }
 }

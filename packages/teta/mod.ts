@@ -560,7 +560,7 @@ export const f: typeof import("./src/edsl/expr.ts").f = expr.f;
 /** Wraps a literal value as an expression. */
 export const lit: typeof import("./src/edsl/expr.ts").lit = expr.lit;
 
-/** Wraps a runtime parameter value for bound SQL rendering. */
+/** Creates a named parameter placeholder; pass runtime values with render options. */
 export const param: typeof import("./src/edsl/expr.ts").param = expr.param;
 
 /** Builds a `CURRENT_DATE` expression. */

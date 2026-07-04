@@ -19,6 +19,8 @@ export {
   toExprNodeList,
   toOrderItems,
   exprOf,
+  exprOfPhase,
+  withExprPhase,
   columnOf,
   windowBuilderOf,
   isExpr,

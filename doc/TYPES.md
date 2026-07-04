@@ -360,6 +360,21 @@ const info = explain(publicUsers, {
 });
 ```
 
+Explicit parameter placeholders are value-free in the query expression. Bind their runtime values through `SqlOptions.params`:
+
+```ts
+import { eq, filter, param, pipe, table, t, toSqlResult } from "@teta/teta";
+import type { SqlInt } from "@teta/teta";
+
+const users = table("users", { id: t.int() });
+const byId = pipe(users, filter((user) => eq(user.id, param<SqlInt>("id"))));
+
+const rendered = toSqlResult(byId, {
+  dialect: "postgresql",
+  params: { id: 42 },
+});
+```
+
 One useful detail: dialect is not part of `Query<TColumns>`. Teta keeps the query dialect-neutral, and you choose the target dialect later through `SqlOptions`.
 
 ## 8) Practical advice

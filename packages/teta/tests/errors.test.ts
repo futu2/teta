@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { TetaUserError, count, eq, extend, filter, fold, fullJoin, group, innerJoin, innerJoinMerge, leftJoin, loop, map, prefixOverlapLeft, rightJoin, sort, t, table, take, toSql, values, pipe } from "../mod.ts";
+import { TetaUserError, count, eq, extend, filter, fold, fullJoin, group, innerJoin, innerJoinMerge, leftJoin, loop, map, prefixOverlapLeft, rightJoin, sort, t, table, take, toSql, unnest, values, pipe } from "../mod.ts";
 import { GROUP_INSIDE_AGGREGATE_FUNCTION_ERROR, GROUP_OUTSIDE_AGGREGATE_ERROR, JOIN_MERGE_CONFLICT_ERROR, JOIN_OVERLAPPING_COLUMNS_ERROR, LEGACY_SELECTION_ARRAY_ERROR, LOOP_COLUMN_MISMATCH_ERROR, NON_CANONICAL_POSTGRES_DIALECT_ERROR, VALUES_COLUMN_MISMATCH_ERROR, VALUES_EMPTY_ERROR } from "./helpers/expected-errors.ts";
 import { createOrdersTable, createUsersTable } from "./helpers/fixtures.ts";
 describe("error paths", () => {
@@ -147,6 +147,19 @@ describe("error paths", () => {
             () => (fullJoin as any)(users, orders, (user: typeof users.columns, order: typeof orders.columns) => eq(user.id, order.user_id)),
             "DEFERRED_INPUT_INVALID",
             "fullJoin() expects a row callback"
+        );
+    });
+
+    test("unnest rejects non-expression selector results", () => {
+        const sessions = table("sessions", {
+            id: t.int(),
+            tags: t.array(t.string()),
+        });
+
+        expectUserError(
+            () => pipe(sessions, unnest(() => ["not", "expr"] as any, { value: "tag" })),
+            "DEFERRED_INPUT_INVALID",
+            "unnest() callback must return an expression"
         );
     });
     test("rejects loop steps with mismatched column names", () => {

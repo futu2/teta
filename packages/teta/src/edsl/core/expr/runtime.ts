@@ -111,6 +111,20 @@ export function exprOf<T>(node: ExprNode<T>): Expr<T> {
   return freezeIfEnabled({ kind: "expr" as const, node: freezeExprNode(node) });
 }
 
+export function exprOfPhase<T, TPhase extends ExprPhase>(
+  node: ExprNode<T>,
+  _phase: TPhase
+): Expr<T, TPhase> {
+  return exprOf(node) as Expr<T, TPhase>;
+}
+
+export function withExprPhase<T, TPhase extends ExprPhase>(
+  expr: Expr<T, ExprPhase>,
+  _phase: TPhase
+): Expr<T, TPhase> {
+  return expr as Expr<T, TPhase>;
+}
+
 export function columnOf<T, Name extends string>(
   table: ColumnTableRef,
   name: Name

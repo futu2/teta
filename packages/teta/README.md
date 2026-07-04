@@ -117,6 +117,22 @@ const direct = toSql(activeUsers, { dialect: "postgresql" });
 const explicit = irToSql(toIR(activeUsers), { dialect: "postgresql" });
 ```
 
+Use `param<T>(name)` for reusable placeholders and pass runtime values when rendering:
+
+```ts
+import { eq, filter, param, pipe, toSqlResult, type SqlInt } from "@teta/teta";
+
+const byId = pipe(
+  users,
+  filter((user) => eq(user.id, param<SqlInt>("id")))
+);
+
+const result = toSqlResult(byId, {
+  dialect: "postgresql",
+  params: { id: 42 },
+});
+```
+
 The callback form gives autocomplete and compile-time column checks while keeping query steps reusable:
 
 ```ts

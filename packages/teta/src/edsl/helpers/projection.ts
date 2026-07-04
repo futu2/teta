@@ -3,9 +3,10 @@ import { createQueryStep, getQueryState, type Query } from "../query/core.ts";
 import { deriveQuery } from "../query/derive.ts";
 import { map } from "../query/projection_builder.ts";
 import { assertProjectionShape } from "../query/projection_validation.ts";
-import { resolveMapQuery } from "../query/transitions.ts";
+import { resolveFilterQuery, resolveMapQuery } from "../query/transitions.ts";
 import type {
   ColumnRefs,
+  Expr,
   ProjectionShape,
   ProjectionValue,
   ProjectionValueResult,
@@ -49,6 +50,11 @@ type RenameResult<TColumns extends QueryColumns, TPattern extends string> = {
 
 type ExtendResult<TColumns extends QueryColumns, TExtension extends QueryColumns> =
   Omit<TColumns, StringKeyOf<TExtension>> & TExtension;
+
+export type DropResultInternal<
+  TColumns extends QueryColumns,
+  TNames extends readonly string[],
+> = DropResult<TColumns, TNames>;
 
 export function pick<const TNames extends readonly [string, ...string[]]>(
   ...names: TNames
@@ -148,6 +154,37 @@ export function extendInternal<
     };
     return deriveQuery(query, resolveMapQuery(state, selection));
   }) as unknown as (query: Query<TColumns>) => Query<ExtendResult<TColumns, { [K in TName]: ProjectionValueResult<TValue> }>>;
+}
+
+export function dropInternal<
+  TColumns extends QueryColumns,
+  const TNames extends readonly string[],
+>(
+  query: Query<TColumns>,
+  names: TNames
+): Query<DropResult<TColumns, TNames>> {
+  const state = getQueryState(query);
+  assertKnownColumns(query.columns as ColumnRefs<QueryColumns>, names);
+  const dropped = new Set<string>(names);
+  const kept = state.columnNames.filter((name: string) => !dropped.has(name));
+  const selection = selectColumnsByName(
+    query.columns as ColumnRefs<QueryColumns>,
+    kept
+  );
+  return deriveQuery(query, resolveMapQuery(state, selection)) as Query<DropResult<TColumns, TNames>>;
+}
+
+export type InternalExtendedColumns<
+  TColumns extends QueryColumns,
+  TName extends string,
+  TValue extends ProjectionValue,
+> = ExtendResult<TColumns, { [K in TName]: ProjectionValueResult<TValue> }>;
+
+export function filterInternal<TColumns extends QueryColumns>(
+  query: Query<TColumns>,
+  predicate: Expr<boolean | null>
+): Query<TColumns> {
+  return deriveQuery(query, resolveFilterQuery(getQueryState(query), predicate.node));
 }
 
 function resolveExtendSelector(
