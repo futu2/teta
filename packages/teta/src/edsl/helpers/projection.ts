@@ -1,6 +1,7 @@
 import { userError } from "../errors.ts";
 import type { Query } from "../query/builder.ts";
-import { assertProjectionShape, map } from "../query/projection_builder.ts";
+import { map } from "../query/projection_builder.ts";
+import { assertProjectionShape } from "../query/projection_validation.ts";
 import type {
   ColumnRefs,
   ProjectionShape,

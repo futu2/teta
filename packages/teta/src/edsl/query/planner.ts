@@ -14,6 +14,7 @@ import {
 } from "../expr.ts";
 import { userError } from "../errors.ts";
 import type { ProjectionShape, ProjectionValue } from "../expr.ts";
+import { LEGACY_SELECTION_ARRAY_ERROR } from "./projection_validation.ts";
 import { normalizeIdentifier } from "./utils.ts";
 
 type ResolvedProjection = {
@@ -24,8 +25,6 @@ type ResolvedProjection = {
 type ResolvedAggregateProjection = ResolvedProjection & {
   groupBy: ExprNode<any>[];
 };
-
-const LEGACY_SELECTION_ARRAY_ERROR = "map() and fold() now expect an object shape";
 
 export function freshScopeId(): ScopeId {
   return `${INTERNAL_SCOPE_PREFIX}${freshInternalToken()}` as ScopeId;

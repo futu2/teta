@@ -3,7 +3,6 @@ import type {
   ProjectionResult,
   ProjectionShape,
 } from "../expr.ts";
-import { userError } from "../errors.ts";
 import type { Query, QueryStep } from "./builder.ts";
 import { deriveQuery } from "./derive.ts";
 import {
@@ -14,6 +13,7 @@ import {
   resolveFoldQuery,
   resolveMapQuery,
 } from "./mutations.ts";
+import { assertProjectionShape } from "./projection_validation.ts";
 
 type QueryColumns = Record<string, any>;
 
@@ -85,16 +85,4 @@ function _fold<TColumns extends QueryColumns, const Sel extends ProjectionShape>
 ): Query<ProjectionResult<Sel>> {
   assertRowCallback("fold", selector);
   return buildFold(query, selector);
-}
-
-export function assertProjectionShape(value: unknown): asserts value is ProjectionShape {
-  if (
-    value === null
-    || typeof value !== "object"
-    || Array.isArray(value)
-    || Object.getPrototypeOf(value) !== Object.prototype
-    || Object.keys(value).length === 0
-  ) {
-    userError("LEGACY_SELECTION_ARRAY", "map() and fold() now expect an object shape");
-  }
 }
