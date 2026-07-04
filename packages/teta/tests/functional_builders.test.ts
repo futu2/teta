@@ -49,4 +49,14 @@ describe("functional expression builders", () => {
     expect(sql).toContain("GROUP BY orders_0.user_id");
     expect(sql).toContain("SUM(orders_0.total) AS total_spend");
   });
+
+  test("rejects reserved projection keys", () => {
+    const users = table("users", {
+      id: t.int(),
+    });
+
+    expect(() => pipe(users, map((user) => ({
+      __teta_internal: user.id,
+    })))).toThrow("Projection key is reserved for Teta internals");
+  });
 });

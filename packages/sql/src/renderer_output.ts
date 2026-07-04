@@ -8,12 +8,13 @@ import type { SqlRenderContext } from "./render/types.ts";
 import type { RendererState } from "./renderer_types.ts";
 
 export function createRenderContext(
-  state: Pick<RendererState, "parameterMode" | "parameterPrefix">
+  state: Pick<RendererState, "parameterMode" | "parameterPrefix" | "paramBindings">
 ): SqlRenderContext {
   return {
     mode: "sql",
     parameterMode: state.parameterMode,
     parameterPrefix: state.parameterPrefix,
+    paramBindings: state.paramBindings,
     params: [],
     quotedIdentifiers: [],
     identifierBindings: {},

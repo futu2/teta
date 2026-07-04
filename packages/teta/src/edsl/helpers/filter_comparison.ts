@@ -446,11 +446,8 @@ function validateLiteralNode(node: ExprNode<unknown>): void {
 }
 
 function validateParamNode(node: ExprNode<unknown>): void {
-  const paramNode = node as { value?: unknown; name?: unknown };
-  if (!Object.hasOwn(paramNode, "value") || paramNode.value === undefined) {
-    invalidExpressionOperand();
-  }
-  if (paramNode.name !== null && typeof paramNode.name !== "string") {
+  const paramNode = node as { name?: unknown };
+  if (typeof paramNode.name !== "string" || paramNode.name.trim().length === 0) {
     invalidExpressionOperand();
   }
 }

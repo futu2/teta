@@ -9,6 +9,7 @@ import type { QueryColumns } from "./types.ts";
 const QUERY_BRAND: unique symbol = Symbol("teta.query");
 const QUERY_STATE: unique symbol = Symbol("teta.query.state");
 const QUERY_STEP_BRAND: unique symbol = Symbol("teta.query_step");
+const SHOULD_FREEZE_QUERY_VALUES = resolveFreezeFlag("TETA_FREEZE_QUERY_VALUES");
 
 export type QueryStep<
   TInputColumns extends QueryColumns,
@@ -90,7 +91,7 @@ function queryOf<TColumns extends QueryColumns>(
   const withs = freezeQueryStateValue(state.withs) as QueryState<TColumns>["withs"];
   const columnIdentifiers = freezeQueryStateValue(state.columnIdentifiers);
   const nameSupply = freezeQueryStateValue(state.nameSupply);
-  const frozenState = Object.freeze({
+  const resolvedState = {
     ...state,
     source,
     stages,
@@ -99,7 +100,8 @@ function queryOf<TColumns extends QueryColumns>(
     withs,
     columnIdentifiers,
     nameSupply,
-  }) as Readonly<QueryState<TColumns>>;
+  };
+  const frozenState = freezeIfEnabled(resolvedState) as Readonly<QueryState<TColumns>>;
 
   const query = {
     kind: "query" as const,
@@ -120,10 +122,11 @@ function queryOf<TColumns extends QueryColumns>(
     writable: false,
     value: frozenState,
   });
-  return Object.freeze(query) as QueryValue<TColumns>;
+  return freezeIfEnabled(query) as QueryValue<TColumns>;
 }
 
 function freezeQueryStateValue<T>(value: T, seen = new WeakMap<object, unknown>()): T {
+  if (!SHOULD_FREEZE_QUERY_VALUES) return value;
   if (!value || typeof value !== "object") return value;
 
   const object = value as object;
@@ -152,6 +155,16 @@ function freezeQueryStateValue<T>(value: T, seen = new WeakMap<object, unknown>(
     );
   }
   return Object.freeze(copy) as T;
+}
+
+function freezeIfEnabled<T extends object>(value: T): T {
+  return SHOULD_FREEZE_QUERY_VALUES ? Object.freeze(value) : value;
+}
+
+function resolveFreezeFlag(name: string): boolean {
+  const env = globalThis as { process?: { env?: Record<string, string | undefined> } };
+  const value = env.process?.env?.[name];
+  return value === undefined ? true : value !== "0" && value !== "false";
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

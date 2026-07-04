@@ -4,6 +4,7 @@ import type {
   QueryDialect,
   SqlFormat,
   SqlOptions,
+  SqlParamBindings,
   SqlParameterMode,
   SqlParameterPrefix,
   SqlRenderStrategy,
@@ -33,4 +34,5 @@ export type RendererState = {
   renderStrategy: SqlRenderStrategy;
   parameterMode: SqlParameterMode;
   parameterPrefix: SqlParameterPrefix;
+  paramBindings: SqlParamBindings | undefined;
 };

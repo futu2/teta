@@ -1,6 +1,6 @@
 import type { Select, SortDirection, ValueExpr } from "node-sql-parser";
 import type { InternalCteName, ScopeId } from "../ir/types.ts";
-import type { SqlParam, SqlParameterMode, SqlParameterPrefix } from "../types.ts";
+import type { SqlParam, SqlParamBindings, SqlParameterMode, SqlParameterPrefix } from "../types.ts";
 
 export type AstValueExpr<T = string | number | boolean> = ValueExpr<T>;
 
@@ -229,6 +229,7 @@ export type SqlRenderContext = {
   mode: "sql" | "ast";
   parameterMode: SqlParameterMode;
   parameterPrefix: SqlParameterPrefix;
+  paramBindings: SqlParamBindings | undefined;
   params: SqlParam[];
   quotedIdentifiers: Array<{ token: string; sql: string }>;
   identifierBindings: Record<string, AstIdentifierExpr>;

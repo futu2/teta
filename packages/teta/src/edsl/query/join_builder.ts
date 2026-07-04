@@ -32,9 +32,7 @@ type JoinMergeInput<
   TRight extends QueryColumns,
   TType extends "inner" | "left" | "right" | "full",
   TSelection extends JoinSelection,
-> =
-  | JoinColumnMergerForType<TLeft, TRight, TType, TSelection>
-  | TSelection;
+> = JoinColumnMergerForType<TLeft, TRight, TType, TSelection>;
 
 type JoinConfigWithoutSelect<
   TLeft extends QueryColumns,
@@ -98,7 +96,7 @@ function buildJoin<
       on,
       lateral,
       resolvedOptions.type ?? "inner",
-      merge as any
+      merge
     )
   );
 }

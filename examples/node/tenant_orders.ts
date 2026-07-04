@@ -19,8 +19,8 @@ export function buildTenantOrdersQuery(tenantId: string, email: string) {
   const result = toSqlResult(
     pipe(
       orders,
-      filter((order) => eq(order.tenant_id, param(tenantId))),
-      filter((order) => eq(order.customer_email, param(email))),
+      filter((order) => eq(order.tenant_id, param<string>("tenant_id"))),
+      filter((order) => eq(order.customer_email, param<string>("email"))),
       filter((order) => eq(order.status, "paid")),
       map((order) => ({
         id: order.id,
@@ -30,7 +30,7 @@ export function buildTenantOrdersQuery(tenantId: string, email: string) {
       sort((order) => desc(order.id)),
       take(50)
     ),
-    sqlOptions
+    { ...sqlOptions, params: { tenant_id: tenantId, email } }
   );
 
   return {

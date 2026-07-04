@@ -15,13 +15,13 @@ const booleanLiteralExpr = lit(true);
 const nullLiteralExpr = lit(null);
 const dateLiteralExpr = lit({ kind: "date_literal", value: "2026-06-03" });
 const timestampLiteralExpr = lit({ kind: "timestamp_literal", value: "2026-06-03 12:00:00" });
-const stringParamExpr = param("some_string");
-const numberParamExpr = param(1);
-const bigintParamExpr = param(1n);
-const booleanParamExpr = param(true);
-const nullParamExpr = param(null);
-const dateParamExpr = param({ kind: "date_literal", value: "2026-06-03" });
-const timestampParamExpr = param({ kind: "timestamp_literal", value: "2026-06-03 12:00:00" });
+const stringParamExpr = param<SqlString>("some_string");
+const numberParamExpr = param<SqlNumber>("some_number");
+const bigintParamExpr = param<SqlBigInt>("some_bigint");
+const booleanParamExpr = param<SqlBoolean>("some_boolean");
+const nullParamExpr = param<null>("some_null");
+const dateParamExpr = param<SqlDate>("some_date");
+const timestampParamExpr = param<SqlTimestamp>("some_timestamp");
 const orders = table("orders", {
     order_id: t.int(),
     user_id: t.int(),
@@ -289,7 +289,7 @@ const projectedProfiles = pipe(profiles, map((profile) => ({
     avatar: profile.avatar,
     nickname: coalesce(profile.nickname, "anonymous"),
 })));
-const uuidFilteredProfiles = pipe(profiles, filter((profile) => eq(profile.id, param("00000000-0000-0000-0000-000000000000"))));
+const uuidFilteredProfiles = pipe(profiles, filter((profile) => eq(profile.id, param<SqlUuid>("profile_id"))));
 const bigintFilteredProfiles = pipe(profiles, filter((profile) => and(gt(profile.external_id, 0), eq(profile.external_id, 42n))));
 const nullableFilterGtCallbackUsers = pipe(profiles, filterGt((profile) => profile.credit_limit, 0));
 const nullableFilterGtRightCallbackUsers = pipe(profiles, filterGt(0, (profile) => profile.credit_limit));

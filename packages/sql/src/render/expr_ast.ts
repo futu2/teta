@@ -46,7 +46,7 @@ export function exprNodeToAst(
     case "literal":
       return literalToAst(expr.value, renderContext);
     case "param":
-      return paramToAst(expr.value, expr.name, renderContext);
+      return paramToAst(expr.name, renderContext);
     case "binary": {
       const binaryExpr: BinaryExprAst = {
         type: "binary_expr",

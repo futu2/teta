@@ -58,9 +58,7 @@ type JoinOnInput<
 
 type JoinMergeInput<
   TSelection extends JoinSelection,
-> =
-  | JoinColumnMerger<Record<string, unknown>, Record<string, unknown>, TSelection>
-  | TSelection;
+> = (left: ColumnRefs<any>, right: ColumnRefs<any>) => TSelection;
 
 export function resolveMapQuery<
   TColumns extends Record<string, unknown>,
@@ -172,17 +170,13 @@ export function resolveJoinQuery<
   const rightScopeId = allocatedRight.scopeId;
   const rightRefs = createColumnRefs<TRight>(rightScopeId, rightKeys);
   const predicate = toExprNode(on(leftQuery.columns, rightRefs));
-  const resolvedMergeColumns =
-    typeof mergeColumns === "function" || mergeColumns === undefined
-      ? mergeColumns
-      : undefined;
   const { mergedColumns, nextNames } = resolveJoinColumns(
     leftQuery.columns,
     rightRefs,
     leftQuery.columnNames,
     rightKeys,
     normalizedJoinType,
-    resolvedMergeColumns
+    mergeColumns
   );
   const allocated = allocateScopeId({ nameSupply: allocatedRight.nameSupply });
   const outputScopeId = allocated.scopeId;

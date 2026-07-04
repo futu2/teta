@@ -11,6 +11,7 @@ export function createAstRenderContext(): SqlRenderContext {
     mode: "ast",
     parameterMode: "inline",
     parameterPrefix: ":",
+    paramBindings: undefined,
     params: [],
     quotedIdentifiers: [],
     identifierBindings: {},

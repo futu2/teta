@@ -1,4 +1,4 @@
-import { drop, extend } from "../helpers/projection.ts";
+import { drop, extendInternal } from "../helpers/projection.ts";
 import { lte, over, rowNumber } from "../expr.ts";
 import type { ColumnRefs, Expr, WindowSpecInput } from "../expr.ts";
 import { userError } from "../errors.ts";
@@ -42,7 +42,7 @@ export function takeWithin<TColumns extends QueryColumns>(
       );
     }
 
-    const numbered = extend<TColumns, typeof TAKE_WITHIN_ROW_NUMBER, Expr<SqlInt>>(
+    const numbered = extendInternal<TColumns, typeof TAKE_WITHIN_ROW_NUMBER, Expr<SqlInt>>(
       TAKE_WITHIN_ROW_NUMBER,
       (cols: ColumnRefs<TColumns>) =>
         over(rowNumber(), {

@@ -179,6 +179,8 @@ export type SqlRenderStrategy = "optimized" | "readable";
 export type SqlParameterMode = "inline" | "named" | "positional";
 /** Placeholder prefix for named or positional parameters. */
 export type SqlParameterPrefix = ":" | "$" | "@";
+/** Runtime values bound to explicit parameter placeholders. */
+export type SqlParamBindings = Readonly<Record<string, unknown>> | readonly unknown[];
 
 /** Rendering options accepted by query and expression SQL helpers. */
 export type SqlOptions = Option & {
@@ -187,6 +189,7 @@ export type SqlOptions = Option & {
   dialect?: Dialect;
   parameterMode?: SqlParameterMode;
   parameterPrefix?: SqlParameterPrefix;
+  params?: SqlParamBindings;
 };
 
 /** One bound parameter produced by parameterized rendering. */

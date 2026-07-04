@@ -1,6 +1,6 @@
 import type { Value } from "../ir/types.ts";
 import type { LiteralAst, ParamAst, SqlRenderContext } from "./types.ts";
-import { internalError } from "../errors.ts";
+import { internalError, userError } from "../errors.ts";
 
 export function literalToAst(
   value: Value,
@@ -43,12 +43,11 @@ export function literalToAst(
 }
 
 export function paramToAst(
-  value: unknown,
-  name: string | null,
+  name: string,
   renderContext: SqlRenderContext | null
 ): ParamAst {
   const resolved = resolveExplicitParameterRender(name, renderContext);
-  return parameterizeValue(value, renderContext, resolved);
+  return parameterizeValue(resolveParamBinding(name, renderContext), renderContext, resolved);
 }
 
 type ActiveParameterMode = Exclude<SqlRenderContext["parameterMode"], "inline">;
@@ -88,7 +87,7 @@ function parameterValue(value: Exclude<Value, null>): unknown {
 }
 
 function resolveExplicitParameterRender(
-  name: string | null,
+  name: string,
   renderContext: SqlRenderContext | null
 ): ParameterRender {
   if (renderContext && renderContext.parameterMode !== "inline") {
@@ -99,19 +98,32 @@ function resolveExplicitParameterRender(
     };
   }
 
-  if (name !== null) {
-    return {
-      mode: "named",
-      prefix: ":",
-      name,
-    };
+  return {
+    mode: "named",
+    prefix: ":",
+    name,
+  };
+}
+
+function resolveParamBinding(
+  name: string,
+  renderContext: SqlRenderContext | null
+): unknown {
+  const bindings = renderContext?.paramBindings;
+  if (bindings === undefined) return undefined;
+
+  if (Array.isArray(bindings)) {
+    const index = Number(name);
+    if (!Number.isInteger(index) || index < 1 || index > bindings.length) {
+      userError("INVALID_PARAM_VALUE", `Missing parameter binding for ${name}`);
+    }
+    return bindings[index - 1];
   }
 
-  return {
-    mode: "positional",
-    prefix: "$",
-    name: null,
-  };
+  if (!Object.prototype.hasOwnProperty.call(bindings, name)) {
+    userError("INVALID_PARAM_VALUE", `Missing parameter binding for ${name}`);
+  }
+  return (bindings as Readonly<Record<string, unknown>>)[name];
 }
 
 function assertNever(value: never): never {

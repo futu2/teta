@@ -163,5 +163,6 @@ function createRendererState(options: Parameters<typeof buildSqlOptions>[0]): Re
     renderStrategy: resolved.renderStrategy,
     parameterMode: resolved.parameterMode,
     parameterPrefix: resolved.parameterPrefix,
+    paramBindings: resolved.params,
   };
 }

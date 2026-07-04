@@ -3,6 +3,7 @@ import type {
   Dialect,
   SqlFormat,
   SqlOptions,
+  SqlParamBindings,
   SqlParameterMode,
   SqlParameterPrefix,
   SqlRenderStrategy,
@@ -19,6 +20,7 @@ export type ResolvedSqlOptions = {
   renderStrategy: SqlRenderStrategy;
   parameterMode: SqlParameterMode;
   parameterPrefix: SqlParameterPrefix;
+  params: SqlParamBindings | undefined;
 };
 
 /** Normalize overloaded renderer options into a single resolved options object. */
@@ -33,6 +35,7 @@ export function buildSqlOptions(
   let renderStrategy: SqlRenderStrategy = "optimized";
   let parameterMode: SqlParameterMode = "inline";
   let parameterPrefix: SqlParameterPrefix = ":";
+  let params: SqlParamBindings | undefined;
 
   if (typeof dialectOrOpt === "string") {
     dialect = resolveDialect(dialectOrOpt);
@@ -44,6 +47,7 @@ export function buildSqlOptions(
         renderStrategy,
         parameterMode,
         parameterPrefix,
+        params,
       } = applySqlOptions(optOrFormat, {
         dialect,
         options,
@@ -51,6 +55,7 @@ export function buildSqlOptions(
         renderStrategy,
         parameterMode,
         parameterPrefix,
+        params,
       }));
     }
   } else if (dialectOrOpt && typeof dialectOrOpt === "object") {
@@ -64,6 +69,7 @@ export function buildSqlOptions(
         renderStrategy,
         parameterMode,
         parameterPrefix,
+        params,
       } = applySqlOptions(dialectOrOpt, {
         dialect,
         options,
@@ -71,6 +77,7 @@ export function buildSqlOptions(
         renderStrategy,
         parameterMode,
         parameterPrefix,
+        params,
       }));
     }
   }
@@ -83,6 +90,7 @@ export function buildSqlOptions(
       renderStrategy,
       parameterMode,
       parameterPrefix,
+      params,
     } = applySqlOptions(optOrFormat, {
       dialect,
       options,
@@ -90,6 +98,7 @@ export function buildSqlOptions(
       renderStrategy,
       parameterMode,
       parameterPrefix,
+      params,
       mergeOptions: true,
     }));
   }
@@ -108,6 +117,7 @@ export function buildSqlOptions(
     renderStrategy,
     parameterMode,
     parameterPrefix,
+    params,
   };
 }
 
@@ -118,6 +128,7 @@ type SqlOptionState = {
   renderStrategy: SqlRenderStrategy;
   parameterMode: SqlParameterMode;
   parameterPrefix: SqlParameterPrefix;
+  params: SqlParamBindings | undefined;
   mergeOptions?: boolean;
 };
 
@@ -129,6 +140,7 @@ function applySqlOptions(input: SqlOptions, state: SqlOptionState): SqlOptionSta
     database: explicitDatabase,
     parameterMode: inlineParameterMode,
     parameterPrefix: inlineParameterPrefix,
+    params: inlineParams,
     ...rest
   } = input;
 
@@ -144,5 +156,6 @@ function applySqlOptions(input: SqlOptions, state: SqlOptionState): SqlOptionSta
     renderStrategy: renderStrategy ?? state.renderStrategy,
     parameterMode: inlineParameterMode ?? state.parameterMode,
     parameterPrefix: inlineParameterPrefix ?? state.parameterPrefix,
+    params: inlineParams ?? state.params,
   };
 }

@@ -76,8 +76,7 @@ export type LiteralNode = {
 /** Parameter expression node. */
 export type ParamNode = {
   kind: "param";
-  value: unknown;
-  name: string | null;
+  name: string;
 };
 
 /** Binary expression node. */

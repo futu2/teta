@@ -3,7 +3,10 @@ import { userError } from "../errors.ts";
 
 export const LEGACY_SELECTION_ARRAY_ERROR = "map() and fold() now expect an object shape";
 
-export function assertProjectionShape(value: unknown): asserts value is ProjectionShape {
+export function assertProjectionShape(
+  value: unknown,
+  options: { allowReservedKeys?: boolean } = {}
+): asserts value is ProjectionShape {
   if (
     value === null
     || typeof value !== "object"
@@ -12,5 +15,15 @@ export function assertProjectionShape(value: unknown): asserts value is Projecti
     || Object.keys(value).length === 0
   ) {
     userError("LEGACY_SELECTION_ARRAY", LEGACY_SELECTION_ARRAY_ERROR);
+  }
+
+  const reservedKey = options.allowReservedKeys
+    ? undefined
+    : Object.keys(value).find((key) => key.startsWith("__teta_"));
+  if (reservedKey) {
+    userError(
+      "DEFERRED_INPUT_INVALID",
+      `Projection key is reserved for Teta internals: ${reservedKey}`
+    );
   }
 }

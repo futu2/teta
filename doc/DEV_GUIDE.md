@@ -251,7 +251,7 @@ The final return value is:
 }
 ```
 
-Built-in renderers populate `params` when the query contains `param(...)` placeholders.
+Built-in renderers populate `params` when the query contains `param<T>(name)` placeholders and render options provide matching `params`.
 
 Rule of thumb:
 

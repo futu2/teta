@@ -11,13 +11,9 @@ import {
 } from "../types.ts";
 import type {
   NormalizeExpressionLiteral,
-  NormalizeNumericLiteral,
-  NormalizeNumericLiteralTuple,
   SqlBigInt,
   SqlBoolean,
   SqlDate,
-  SqlFloat,
-  SqlInt,
   SqlNumber,
   SqlString,
   SqlTimestamp,
@@ -85,6 +81,7 @@ const BINARY_OPS = new Set<string>([
 ]);
 
 const AGG_FUNCS = new Set<string>(["COUNT", "SUM", "AVG", "MIN", "MAX", "ARRAY_AGG"]);
+const SHOULD_FREEZE_EXPR_VALUES = resolveFreezeFlag("TETA_FREEZE_EXPR_VALUES");
 
 export type ExprPhase = "row" | "group" | "aggregate";
 
@@ -111,7 +108,7 @@ export type WindowExpr<T> = Readonly<{
 export type WindowBuilder<T> = WindowExpr<T>;
 
 export function exprOf<T>(node: ExprNode<T>): Expr<T> {
-  return Object.freeze({ kind: "expr" as const, node: freezeExprNode(node) });
+  return freezeIfEnabled({ kind: "expr" as const, node: freezeExprNode(node) });
 }
 
 export function columnOf<T, Name extends string>(
@@ -119,7 +116,7 @@ export function columnOf<T, Name extends string>(
   name: Name
 ): Column<T, Name> {
   const node = freezeExprNode({ kind: "column", table, name } as ExprNode<T>);
-  return Object.freeze({
+  return freezeIfEnabled({
     kind: "expr" as const,
     node,
     table,
@@ -131,10 +128,10 @@ export function windowBuilderOf<T>(
   name: string,
   args: readonly ExprNode<unknown>[]
 ): WindowBuilder<T> {
-  return Object.freeze({
+  return freezeIfEnabled({
     kind: "window_builder" as const,
     name,
-    args: Object.freeze(args.map((arg) => freezeExprNode(arg))),
+    args: freezeIfEnabled(args.map((arg) => freezeExprNode(arg))),
   });
 }
 
@@ -199,6 +196,7 @@ function freezeExprNode<T>(node: ExprNode<T>): ExprNode<T> {
   if (!isExprNode(node)) {
     userError("INVALID_LITERAL_VALUE", `Unsupported literal value: ${String(node)}`);
   }
+  if (!SHOULD_FREEZE_EXPR_VALUES) return node;
   return deepFreeze(node);
 }
 
@@ -211,6 +209,16 @@ function deepFreeze<T>(value: T, seen = new WeakSet<object>()): T {
     deepFreeze((value as Record<PropertyKey, unknown>)[key], seen);
   }
   return Object.freeze(value);
+}
+
+function freezeIfEnabled<T extends object>(value: T): T {
+  return SHOULD_FREEZE_EXPR_VALUES ? Object.freeze(value) : value;
+}
+
+function resolveFreezeFlag(name: string): boolean {
+  const env = globalThis as { process?: { env?: Record<string, string | undefined> } };
+  const value = env.process?.env?.[name];
+  return value === undefined ? true : value !== "0" && value !== "false";
 }
 
 function isColumnNode(value: { kind?: unknown }): boolean {
@@ -236,12 +244,8 @@ function isLiteralValue(value: unknown): value is Value {
 }
 
 function isParamNode(value: { kind?: unknown }): boolean {
-  const candidate = value as { name?: unknown; value?: unknown };
-  return (
-    Object.prototype.hasOwnProperty.call(candidate, "value") &&
-    candidate.value !== undefined &&
-    (typeof candidate.name === "string" || candidate.name === null)
-  );
+  const candidate = value as { name?: unknown };
+  return typeof candidate.name === "string" && candidate.name.trim().length > 0;
 }
 
 function isBinaryNode(value: { kind?: unknown }): boolean {
@@ -369,26 +373,12 @@ export function lit(value: Value): Expr<NormalizeExpressionLiteral<Value>> {
   return exprOf<NormalizeExpressionLiteral<Value>>({ kind: "literal", value });
 }
 
-export function param<T extends SqlNumber | SqlString | SqlBoolean | SqlDate | SqlTimestamp | SqlUuid>(
-  value: T,
-  name?: string | null
-): Expr<T>;
-export function param(value: string, name?: string | null): Expr<SqlString>;
-export function param(value: number, name?: string | null): Expr<SqlNumber>;
-export function param(value: bigint, name?: string | null): Expr<SqlBigInt>;
-export function param(value: boolean, name?: string | null): Expr<SqlBoolean>;
-export function param(value: null, name?: string | null): Expr<null>;
-export function param(value: DateLiteral, name?: string | null): Expr<SqlDate>;
-export function param(value: TimestampLiteral, name?: string | null): Expr<SqlTimestamp>;
-export function param<T>(value: T, name?: string | null): Expr<NormalizeExpressionLiteral<T>>;
-export function param<T>(value: T, name: string | null = null): Expr<NormalizeExpressionLiteral<T>> {
-  if (value === undefined) {
-    userError("INVALID_PARAM_VALUE", "Unsupported parameter value: undefined");
-  }
-  if (name !== null && !name.trim()) {
+export function param<T = unknown>(name: string): Expr<T>;
+export function param(name: string): Expr<unknown> {
+  if (!name.trim()) {
     userError("INVALID_PARAM_NAME", "param name cannot be empty");
   }
-  return exprOf<NormalizeExpressionLiteral<T>>({ kind: "param", value, name });
+  return exprOf<unknown>({ kind: "param", name });
 }
 
 export function array<T = unknown>(...values: ExprInput<T>[]): Expr<T[]> {

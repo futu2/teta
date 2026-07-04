@@ -1,7 +1,9 @@
 import { userError } from "../errors.ts";
 import { createQueryStep, getQueryState, type Query } from "../query/core.ts";
+import { deriveQuery } from "../query/derive.ts";
 import { map } from "../query/projection_builder.ts";
 import { assertProjectionShape } from "../query/projection_validation.ts";
+import { resolveMapQuery } from "../query/transitions.ts";
 import type {
   ColumnRefs,
   ProjectionShape,
@@ -125,6 +127,29 @@ export function extend(...args: unknown[]): unknown {
   });
 }
 
+export function extendInternal<
+  TColumns extends QueryColumns,
+  const TName extends string,
+  TValue extends ProjectionValue,
+>(
+  name: TName,
+  selector: (cols: ColumnRefs<TColumns>) => TValue
+): (query: Query<TColumns>) => Query<ExtendResult<TColumns, { [K in TName]: ProjectionValueResult<TValue> }>> {
+  const resolvedSelector = resolveExtendSelector(
+    name,
+    selector as unknown as (cols: ColumnRefs<QueryColumns>) => ProjectionValue
+  );
+  return createQueryStep("extendInternal", (query: Query<QueryColumns>) => {
+    const state = getQueryState(query);
+    const cols = query.columns as ColumnRefs<QueryColumns>;
+    const selection = {
+      ...selectColumnsByName(cols, state.columnNames),
+      ...resolveExtensionShape(resolvedSelector(cols), { allowReservedKeys: true }),
+    };
+    return deriveQuery(query, resolveMapQuery(state, selection));
+  }) as unknown as (query: Query<TColumns>) => Query<ExtendResult<TColumns, { [K in TName]: ProjectionValueResult<TValue> }>>;
+}
+
 function resolveExtendSelector(
   name: string,
   selector: (cols: ColumnRefs<QueryColumns>) => ProjectionValue
@@ -132,7 +157,10 @@ function resolveExtendSelector(
   return (cols) => ({ [name]: selector(cols) });
 }
 
-function resolveExtensionShape(value: unknown): ProjectionShape {
-  assertProjectionShape(value);
+function resolveExtensionShape(
+  value: unknown,
+  options: { allowReservedKeys?: boolean } = {}
+): ProjectionShape {
+  assertProjectionShape(value, options);
   return value;
 }

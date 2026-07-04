@@ -6,7 +6,7 @@ const users = table("users", {
 });
 const result = toSqlResult(pipe(
     users,
-    filter((user) => and(eq(user.id, param(42)), eq(user.active, true))),
+    filter((user) => and(eq(user.id, param<number>("id")), eq(user.active, true))),
     map((user) => ({
         id: user.id,
         normalized_name: lower(trim(user.name)),
@@ -15,6 +15,7 @@ const result = toSqlResult(pipe(
 ), {
     dialect: "postgresql",
     format: "compact",
+    params: { id: 42 },
 });
 if (!result.sql.startsWith("SELECT ")) {
     throw new Error(`Expected SQL to start with SELECT, received: ${result.sql}`);

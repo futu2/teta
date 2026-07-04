@@ -76,14 +76,14 @@ export function fold(...args: unknown[]): unknown {
   return createQueryStep("fold", (query: Query<QueryColumns>) =>
     _fold(
       query,
-      selector as (cols: ColumnRefs<QueryColumns>) => ProjectionShape
+      selector as (cols: ColumnRefs<QueryColumns>) => AggregateProjectionShape
     ));
 }
 
-function _fold<TColumns extends QueryColumns, const Sel extends ProjectionShape>(
+function _fold<TColumns extends QueryColumns, const Sel extends AggregateProjectionShape>(
   query: Query<TColumns>,
   selector: (cols: ColumnRefs<TColumns>) => Sel
-): Query<ProjectionResult<Sel>> {
+): Query<AggregateProjectionResult<Sel>> {
   assertRowCallback("fold", selector);
-  return buildFold(query, selector as unknown as (cols: ColumnRefs<TColumns>) => AggregateProjectionShape) as unknown as Query<ProjectionResult<Sel>>;
+  return buildFold(query, selector);
 }

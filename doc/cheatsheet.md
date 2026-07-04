@@ -439,7 +439,7 @@ const explicitSql = irToSql(ir, { dialect: "postgresql" });
 ### Core expression builders
 
 - `lit(value)`
-- `param(value, name?)`
+- `param<T>(name)` with render-time `params`
 - `fn(name, ...args)`
 - `windowFn(name, ...args)`
 - `over(window, spec)`

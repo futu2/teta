@@ -30,12 +30,12 @@ export function handleListPaidOrders(request: RequestLike, session: Session) {
 
   const baseQuery = pipe(
     orders,
-    filter((order) => eq(order.tenant_id, param(session.tenantId))),
+    filter((order) => eq(order.tenant_id, param<string>("tenant_id"))),
     filter((order) => eq(order.status, "paid"))
   );
 
   const filteredQuery = email
-    ? pipe(baseQuery, filter((order) => eq(order.customer_email, param(email))))
+    ? pipe(baseQuery, filter((order) => eq(order.customer_email, param<string>("email"))))
     : baseQuery;
 
   const result = toSqlResult(
@@ -50,7 +50,7 @@ export function handleListPaidOrders(request: RequestLike, session: Session) {
       sort((order) => desc(order.created_at)),
       take(25)
     ),
-    sqlOptions
+    { ...sqlOptions, params: { tenant_id: session.tenantId, email } }
   );
 
   return {

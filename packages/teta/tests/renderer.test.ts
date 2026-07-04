@@ -63,20 +63,20 @@ describe("SQL render options API", () => {
       id: t.int(),
       name: t.string(),
     });
-    const name = "SQL injection string ;)";
     const query = pipe(
       users,
-      filter((user) => eq(user.name, param(name))),
+      filter((user) => eq(user.name, param<string>("name"))),
       map((user) => ({ id: user.id }))
     );
 
     expect(toSqlResult(query, {
       dialect: "postgresql",
       format: "compact",
+      params: { name: "SQL injection string ;)" },
     })).toEqual({
       sql: EXPLICIT_PARAM_USERS_FILTER_POSTGRES_COMPACT,
       params: [
-        { value: name, index: 1, name: null },
+        { value: "SQL injection string ;)", index: 1, name: "name" },
       ],
     });
   });
@@ -114,16 +114,25 @@ describe("SQL render options API", () => {
   });
 
   test("toSqlResult(expr, options) captures explicit params by default", () => {
-    expect(toSqlResult(eq(param(1), param(2)), {
+    expect(toSqlResult(eq(param<number>("left"), param<number>("right")), {
       dialect: "postgresql",
       format: "compact",
+      params: { left: 1, right: 2 },
     })).toEqual({
       sql: EXPLICIT_PARAM_EXPR_POSTGRES_COMPACT,
       params: [
-        { value: 1, index: 1, name: null },
-        { value: 2, index: 2, name: null },
+        { value: 1, index: 1, name: "left" },
+        { value: 2, index: 2, name: "right" },
       ],
     });
+  });
+
+  test("toSqlResult(expr, options) rejects missing explicit param bindings", () => {
+    expect(() => toSqlResult(eq(param<number>("left"), 1), {
+      dialect: "postgresql",
+      format: "compact",
+      params: {},
+    })).toThrow("Missing parameter binding for left");
   });
 
   test("toSql(query, options) supports bigint literals on bigint columns", () => {

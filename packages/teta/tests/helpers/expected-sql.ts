@@ -34,9 +34,9 @@ export const PARAMETERIZED_USERS_FILTER_POSTGRES_COMPACT =
 export const PARAMETERIZED_EXPR_POSTGRES_COMPACT = ":p1 + :p2";
 
 export const EXPLICIT_PARAM_USERS_FILTER_POSTGRES_COMPACT =
-  "SELECT users_0.id FROM users AS users_0 WHERE users_0.name = $1";
+  "SELECT users_0.id FROM users AS users_0 WHERE users_0.name = :name";
 
-export const EXPLICIT_PARAM_EXPR_POSTGRES_COMPACT = "$1 = $2";
+export const EXPLICIT_PARAM_EXPR_POSTGRES_COMPACT = ":left = :right";
 
 export const EMPLOYEES_SELF_JOIN_POSTGRES_COMPACT =
   "SELECT employees_0.id AS employee_id, employees_0.name AS employee_name, employees_1.name AS manager_name FROM employees AS employees_0 INNER JOIN employees AS employees_1 ON employees_0.manager_id = employees_1.id";
