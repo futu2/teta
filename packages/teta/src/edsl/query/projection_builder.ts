@@ -1,4 +1,6 @@
 import type {
+  AggregateProjectionResult,
+  AggregateProjectionShape,
   ColumnRefs,
   ProjectionResult,
   ProjectionShape,
@@ -30,11 +32,11 @@ function buildMap<
 
 function buildFold<
   TColumns extends QueryColumns,
-  TSelection extends ProjectionShape,
+  TSelection extends AggregateProjectionShape,
 >(
   query: Query<TColumns>,
   selector: (cols: ColumnRefs<TColumns>) => TSelection
-): Query<ProjectionResult<TSelection>> {
+): Query<AggregateProjectionResult<TSelection>> {
   const selection = selector(query.columns);
   assertProjectionShape(selection);
   return deriveQuery(query, resolveFoldQuery(getQueryState(query), selection));
@@ -63,9 +65,9 @@ function _map<TColumns extends QueryColumns, const Sel extends ProjectionShape>(
   return buildMap(query, selector);
 }
 
-export function fold<TColumns extends QueryColumns, const Sel extends ProjectionShape>(
+export function fold<TColumns extends QueryColumns, const Sel extends AggregateProjectionShape>(
   selector: (cols: ColumnRefs<TColumns>) => Sel
-): QueryStep<TColumns, ProjectionResult<Sel>>;
+): QueryStep<TColumns, AggregateProjectionResult<Sel>>;
 
 export function fold(...args: unknown[]): unknown {
   assertCurriedInvocation("fold", "fold(selector)", args);
@@ -83,5 +85,5 @@ function _fold<TColumns extends QueryColumns, const Sel extends ProjectionShape>
   selector: (cols: ColumnRefs<TColumns>) => Sel
 ): Query<ProjectionResult<Sel>> {
   assertRowCallback("fold", selector);
-  return buildFold(query, selector);
+  return buildFold(query, selector as unknown as (cols: ColumnRefs<TColumns>) => AggregateProjectionShape) as unknown as Query<ProjectionResult<Sel>>;
 }

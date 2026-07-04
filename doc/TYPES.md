@@ -17,7 +17,7 @@ In practice, you usually let TypeScript infer everything and only annotate types
 
 ## 1) Schema types with `t`
 
-Use `t.*` helpers only when declaring schemas.
+Use `t.*` helpers only when declaring schemas. Table schemas are restricted to SQL row values: SQL primitives, nullable SQL primitives, SQL JSON/bytes values, and SQL arrays. Arbitrary host objects should be encoded with `t.json<T>()` rather than used as plain column values.
 
 ```ts
 import { table, t } from "@teta/teta";
@@ -114,7 +114,7 @@ const publicUsers = pipe(
 // Query<{ id: SqlInt; email: SqlString }>
 ```
 
-With `fold(...)`, the returned object also becomes the new row shape, but it is meant for grouped or aggregated output.
+With `fold(...)`, the returned object also becomes the new row shape, but it must be grouped or aggregated output. Plain row expressions such as `user.id` are rejected in `fold(...)`; wrap grouping keys with `group(...)` or `groupShape(...)`, and use aggregate helpers for measures.
 
 ```ts
 import { count, fold, group, pipe } from "@teta/teta";
@@ -127,6 +127,8 @@ const userCounts = pipe(
   }))
 );
 ```
+
+`fold(...)` uses a phantom expression phase internally. `group(...)` marks an expression as a grouping key and aggregate helpers mark expressions as aggregate outputs. This is type-only metadata and does not change the runtime expression object or generated SQL.
 
 ### Shape-merging helpers
 
@@ -200,7 +202,7 @@ const usersByTag = pipe(users, unnest((user) => user.tags, {
 
 ### Set operations
 
-`union(...)` and `unionAll(...)` require both sides to have the same row shape and return that same shape.
+`union(...)` and `unionAll(...)` require both sides to have the same row shape and compatible SQL value types, then return that same shape.
 
 ## 3) `Expr<T>` is the expression type
 
@@ -231,6 +233,16 @@ const adults = pipe(users, filter((user) => isAdult(user.age)));
 ```
 
 The important idea is that Teta tracks the SQL value type carried by an expression, and TypeScript keeps that information all the way through your query pipeline.
+
+Expression types also carry an optional phantom phase parameter used by aggregate projections:
+
+```ts
+// Most user code only needs Expr<T>.
+type RowExpr = Expr<SqlInt>;
+
+// Advanced helpers may mention the phase explicitly.
+type GroupedExpr = Expr<SqlInt, "group">;
+```
 
 ## 4) Branded SQL primitives
 
@@ -355,7 +367,7 @@ One useful detail: dialect is not part of `Query<TColumns>`. Teta keeps the quer
 - Prefer inference first. Teta is designed so schemas and callbacks usually provide all the types you need.
 - Reach for `Expr<T>` when writing reusable expression helpers.
 - Reach for `Query<TColumns>` or `QueryStep<TIn, TOut>` when writing reusable query utilities.
-- Reach for `QueryColumns` when you need a generic constraint for "any object-shaped query row".
+- Reach for `QueryColumns` when you need a generic constraint for "any object-shaped SQL query row". Its values are constrained to SQL value types rather than arbitrary `unknown`.
 - Use `null`, not `undefined`, for nullable SQL values.
 - Remember that `t.json<T>()` affects TypeScript types only; it does not validate JSON at runtime.
 - Remember that `SqlDate` and `SqlTimestamp` are string-based SQL types, not JavaScript `Date` objects.

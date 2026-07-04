@@ -72,7 +72,7 @@ export function mapShape<
 }
 
 export type GroupShapeResult<T extends Record<string, Expr<unknown>>> = {
-  [K in keyof T]: T[K] extends Expr<infer TValue> ? Expr<TValue> : never;
+  [K in keyof T]: T[K] extends Expr<infer TValue> ? Expr<TValue, "group"> : never;
 };
 
 export function groupShape<T extends Record<string, Expr<unknown>>>(

@@ -1,4 +1,12 @@
-import type { SqlBoolean, SqlDate, SqlNumber, SqlTimestamp } from "../../types.ts";
+import type {
+  NormalizeExpressionLiteral,
+  SqlBoolean,
+  SqlDate,
+  SqlNumber,
+  SqlString,
+  SqlTimestamp,
+  SqlUuid,
+} from "../../types.ts";
 import type { ExprNode, OrderItem } from "../../../core/types.ts";
 import {
   binaryExpr,
@@ -12,6 +20,15 @@ import {
 import { userError } from "../../../errors.ts";
 
 type ComparableInput = SqlNumber | number | bigint | SqlDate | SqlTimestamp | null;
+type StringComparable = SqlString | SqlDate | SqlTimestamp | SqlUuid;
+type ComparableValue<T> = NormalizeExpressionLiteral<Exclude<ExprInputValue<T>, null>>;
+type ComparableDomain<T> = T extends StringComparable ? string : T;
+type CompatibleExprInput<TLeft, TRight> =
+  [ComparableDomain<ComparableValue<TLeft>>] extends [ComparableDomain<ComparableValue<TRight>>]
+    ? unknown
+    : [ComparableDomain<ComparableValue<TRight>>] extends [ComparableDomain<ComparableValue<TLeft>>]
+      ? unknown
+      : never;
 type PredicateResult<TValue> = null extends TValue ? SqlBoolean | null : SqlBoolean;
 type BinaryPredicateResult<TLeft, TRight> = PredicateResult<
   ExprInputValue<TLeft> | ExprInputValue<TRight>
@@ -19,7 +36,7 @@ type BinaryPredicateResult<TLeft, TRight> = PredicateResult<
 
 export function eq<T, TLeft extends ExprInput<T>, TRight extends ExprInput<T>>(
   left: TLeft,
-  right: TRight
+  right: TRight & CompatibleExprInput<TLeft, TRight>
 ): Expr<BinaryPredicateResult<TLeft, TRight>> {
   return binaryExpr(
     "=",
@@ -30,7 +47,7 @@ export function eq<T, TLeft extends ExprInput<T>, TRight extends ExprInput<T>>(
 
 export function ne<T, TLeft extends ExprInput<T>, TRight extends ExprInput<T>>(
   left: TLeft,
-  right: TRight
+  right: TRight & CompatibleExprInput<TLeft, TRight>
 ): Expr<BinaryPredicateResult<TLeft, TRight>> {
   return binaryExpr(
     "!=",

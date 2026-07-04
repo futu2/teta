@@ -26,6 +26,9 @@ export type Query<TColumns extends QueryColumns> = Readonly<{
   kind: "query";
   columns: ColumnRefs<TColumns>;
   [QUERY_BRAND]: true;
+}>;
+
+type QueryValue<TColumns extends QueryColumns> = Query<TColumns> & Readonly<{
   [QUERY_STATE]: Readonly<QueryState<TColumns>>;
 }>;
 
@@ -75,7 +78,7 @@ export function createQuery<TColumns extends QueryColumns>(
 export function getQueryState<TColumns extends QueryColumns>(
   query: Query<TColumns>
 ): Readonly<QueryState<TColumns>> {
-  return query[QUERY_STATE];
+  return (query as QueryValue<TColumns>)[QUERY_STATE];
 }
 
 function queryOf<TColumns extends QueryColumns>(
@@ -101,7 +104,7 @@ function queryOf<TColumns extends QueryColumns>(
   const query = {
     kind: "query" as const,
     columns: frozenState.columns,
-  } as Omit<Query<TColumns>, typeof QUERY_BRAND | typeof QUERY_STATE> & {
+  } as Omit<QueryValue<TColumns>, typeof QUERY_BRAND | typeof QUERY_STATE> & {
     [QUERY_BRAND]?: true;
     [QUERY_STATE]?: Readonly<QueryState<TColumns>>;
   };
@@ -117,7 +120,7 @@ function queryOf<TColumns extends QueryColumns>(
     writable: false,
     value: frozenState,
   });
-  return Object.freeze(query) as Query<TColumns>;
+  return Object.freeze(query) as QueryValue<TColumns>;
 }
 
 function freezeQueryStateValue<T>(value: T, seen = new WeakMap<object, unknown>()): T {

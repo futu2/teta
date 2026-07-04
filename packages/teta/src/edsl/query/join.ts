@@ -1,10 +1,11 @@
 import type { JoinType, JoinTypeInput } from "../core/types.ts";
 import { mergeColumnNames } from "../expr.ts";
-import type { ColumnRefs, Expr, Exprs } from "../expr.ts";
+import type { ColumnRefs, Expr, ExprPhase, Exprs } from "../expr.ts";
 import { userError } from "../errors.ts";
 import type { SqlBoolean } from "../types.ts";
+import type { QueryValue } from "./types.ts";
 
-export type JoinSelection = Record<string, Expr<unknown>>;
+export type JoinSelection = Record<string, Expr<any, ExprPhase>>;
 
 export type JoinOverlappingColumnNames<
   TLeft extends Record<string, unknown>,
@@ -32,7 +33,11 @@ export type JoinOnNoMerge<
 > = JoinOn<TLeft, TRight> & JoinNoMergeGuard<TLeft, TRight>;
 
 export type JoinSelectionResult<TSelection extends JoinSelection> = {
-  [K in keyof TSelection]: TSelection[K] extends Expr<infer TValue> ? TValue : never;
+  [K in keyof TSelection]: TSelection[K] extends Expr<infer TValue, ExprPhase>
+    ? TValue extends QueryValue
+      ? TValue
+      : never
+    : never;
 };
 
 export type JoinColumnMerger<

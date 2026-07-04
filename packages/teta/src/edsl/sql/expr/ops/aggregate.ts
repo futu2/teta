@@ -17,47 +17,47 @@ type NullableSqlNumber = SqlNumber | null;
 
 export function group<TInput extends ExprInput<unknown>>(
   value: TInput
-): Expr<ExprInputValue<TInput>> {
+): Expr<ExprInputValue<TInput>, "group"> {
   return exprOf<ExprInputValue<TInput>>({
     kind: "group",
     expr: toExprNode(value as ExprInput<unknown>) as any,
-  });
+  }) as Expr<ExprInputValue<TInput>, "group">;
 }
 
 export function count<TInput extends ExprInput<unknown>>(
   value: TInput
-): Expr<SqlInt> {
-  return aggregateExpr<SqlInt, TInput>("COUNT", value);
+): Expr<SqlInt, "aggregate"> {
+  return aggregateExpr<SqlInt, TInput>("COUNT", value) as Expr<SqlInt, "aggregate">;
 }
 
 export function sum<TInput extends ExprInput<NullableSqlNumber>>(
   value: TInput
-): Expr<ExprInputValue<TInput>> {
-  return aggregateExpr<ExprInputValue<TInput>, TInput>("SUM", value);
+): Expr<ExprInputValue<TInput>, "aggregate"> {
+  return aggregateExpr<ExprInputValue<TInput>, TInput>("SUM", value) as Expr<ExprInputValue<TInput>, "aggregate">;
 }
 
 export function avg<TInput extends ExprInput<NullableSqlNumber>>(
   value: TInput
-): Expr<PropagateNull<ExprInputValue<TInput>, SqlFloat>> {
-  return aggregateExpr<PropagateNull<ExprInputValue<TInput>, SqlFloat>, TInput>("AVG", value);
+): Expr<PropagateNull<ExprInputValue<TInput>, SqlFloat>, "aggregate"> {
+  return aggregateExpr<PropagateNull<ExprInputValue<TInput>, SqlFloat>, TInput>("AVG", value) as Expr<PropagateNull<ExprInputValue<TInput>, SqlFloat>, "aggregate">;
 }
 
 export function min<TInput extends ExprInput<unknown>>(
   value: TInput
-): Expr<ExprInputValue<TInput>> {
-  return aggregateExpr<ExprInputValue<TInput>, TInput>("MIN", value);
+): Expr<ExprInputValue<TInput>, "aggregate"> {
+  return aggregateExpr<ExprInputValue<TInput>, TInput>("MIN", value) as Expr<ExprInputValue<TInput>, "aggregate">;
 }
 
 export function max<TInput extends ExprInput<unknown>>(
   value: TInput
-): Expr<ExprInputValue<TInput>> {
-  return aggregateExpr<ExprInputValue<TInput>, TInput>("MAX", value);
+): Expr<ExprInputValue<TInput>, "aggregate"> {
+  return aggregateExpr<ExprInputValue<TInput>, TInput>("MAX", value) as Expr<ExprInputValue<TInput>, "aggregate">;
 }
 
 export function arrayAgg<TInput extends ExprInput<unknown>>(
   value: TInput
-): Expr<ExprInputValue<TInput>[]> {
-  return aggregateExpr<ExprInputValue<TInput>[], TInput>("ARRAY_AGG", value);
+): Expr<ExprInputValue<TInput>[], "aggregate"> {
+  return aggregateExpr<ExprInputValue<TInput>[], TInput>("ARRAY_AGG", value) as Expr<ExprInputValue<TInput>[], "aggregate">;
 }
 
 export function rank(_value?: ExprInput<unknown>): WindowBuilder<SqlInt> {
@@ -114,6 +114,6 @@ export function ntile(
 export function sumOver<TValue extends NullableSqlNumber>(
   value: ExprInput<TValue>,
   spec: WindowSpecInput = {}
-): Expr<TValue> {
-  return over(windowExpr<TValue>("SUM", value), spec);
+): Expr<TValue, "aggregate"> {
+  return over(windowExpr<TValue>("SUM", value), spec) as Expr<TValue, "aggregate">;
 }

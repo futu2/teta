@@ -98,7 +98,7 @@ function buildJoin<
       on,
       lateral,
       resolvedOptions.type ?? "inner",
-      merge as JoinMergeInput<QueryColumns, QueryColumns, CanonicalJoinType<TType>, TSelection> | undefined
+      merge as any
     )
   );
 }

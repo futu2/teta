@@ -42,9 +42,9 @@ type LiteralInput<T> = T extends number
   : T extends SqlBoolean
     ? boolean
   : T;
-export type ExprInput<T> = Expr<T> | LiteralInput<T>;
+export type ExprInput<T> = Expr<T, ExprPhase> | LiteralInput<T>;
 export type ExprInputValue<TInput> =
-  TInput extends Expr<infer TValue> ? TValue
+  TInput extends Expr<infer TValue, ExprPhase> ? TValue
   : TInput;
 export type ExprInputTuple<T extends readonly unknown[]> = {
   [K in keyof T]: ExprInput<T[K]>;
@@ -86,14 +86,17 @@ const BINARY_OPS = new Set<string>([
 
 const AGG_FUNCS = new Set<string>(["COUNT", "SUM", "AVG", "MIN", "MAX", "ARRAY_AGG"]);
 
-export type Expr<T> = Readonly<{
+export type ExprPhase = "row" | "group" | "aggregate";
+
+export type Expr<T, TPhase extends ExprPhase = "row"> = Readonly<{
   kind: "expr";
   node: ExprNode<T>;
+  readonly __phase?: TPhase;
 }>;
 
 export type ColumnTableRef = ScopeId | typeof OUTER_TABLE_ALIAS | null;
 
-export type Column<T, Name extends string> = Expr<T> & Readonly<{
+export type Column<T, Name extends string> = Expr<T, "row"> & Readonly<{
   table: ColumnTableRef;
   name: Name;
 }>;

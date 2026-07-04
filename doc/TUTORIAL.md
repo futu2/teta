@@ -236,6 +236,8 @@ const usersWithProfiles = pipe(
 );
 ```
 
+`fold(...)` is intentionally stricter than `map(...)`: every selected expression must be a grouped key or an aggregate result. Use `group(row.id)` or `groupShape({ id: row.id })` for dimensions, and helpers like `count(...)`, `sum(...)`, and `arrayAgg(...)` for aggregate outputs.
+
 If both sides expose the same output column name, Teta now requires an explicit merge helper such as `dropOverlapLeft()` or `prefixOverlapLeft("left_")`.
 Use `join(right, { type, on, select })` with a merge helper such as `dropOverlapLeft()`. Fixed helpers such as `leftJoinMerge(right, on, dropOverlapLeft())` remain wrappers around `join(...)`.
 

@@ -50,9 +50,12 @@ In short:
 
 ### User-facing EDSL
 
+- `packages/teta/src/edsl/query/algebra.ts`
+  - Re-exports the immutable query-building algebra: roots, query steps, joins, projection helpers, recursive loops, and query type aliases.
+- `packages/teta/src/edsl/query/rendering.ts`
+  - Re-exports query rendering and inspection helpers: `toIR(...)`, `toAst(...)`, `toSql(...)`, `toSqlResult(...)`, and `explain(...)`.
 - `packages/teta/src/edsl/query.ts`
-  - Defines `Query` and the immutable query-building API.
-   - Also defines `table(...)`, `loop(...)`, and `toIR()`, `toAst()`, `toSql(...)`.
+  - Compatibility barrel that re-exports both algebra and rendering.
 - `packages/teta/src/edsl/expr.ts`
   - Loads expression methods and re-exports the public expression API.
 - `packages/teta/src/edsl/sql/expr/*`
@@ -105,7 +108,13 @@ It includes nodes like:
 - `array`
 - `list`
 
-`Expr<T>` is just a typed wrapper around an `ExprNode<T>`.
+`Expr<T>` is a typed wrapper around an `ExprNode<T>`. It also has an optional phantom phase type used by aggregate projection typing:
+
+- `"row"` for ordinary row expressions
+- `"group"` for expressions returned by `group(...)` / `groupShape(...)`
+- `"aggregate"` for aggregate outputs such as `count(...)`, `sum(...)`, and `arrayAgg(...)`
+
+The phase is compile-time-only metadata; it is not added to runtime expression values.
 
 ### `Query`
 
@@ -127,6 +136,8 @@ That hidden state contains:
 - scope/name-supply metadata
 
 The important part is that query-building is **immutable**: each helper function returns a new `Query` with another stage appended or merged. `toIR(query)` lowers that frontend object into the backend `QueryIR` shape consumed by `@teta/sql`.
+
+`QueryColumns` is constrained to SQL row values through `QueryValue`. Avoid widening it back to `unknown`; that weakens projection, join, and union checking.
 
 Do not add new public query fields casually. Prefer adding internal state to `QueryState`, lowering it through `toIR(...)` or `explain(...)` when users need to inspect it.
 
@@ -264,7 +275,7 @@ const result = toSql(q, { dialect: "postgresql", format: "pretty" })
 
 ### 1) `table(...)` creates the base query
 
-`table(...)` in `packages/teta/src/edsl/query.ts`:
+`table(...)` in `packages/teta/src/edsl/query/schema.ts`:
 
 - parses the table name
 - creates column proxies with `createColumnRefs(...)`
@@ -288,6 +299,7 @@ Examples:
 - `fold(...)`
   - unwraps `group(...)` markers
   - builds a `fold` stage + `groupBy`
+  - is typed to accept only grouped or aggregate projection expressions
 - `filter(...)`
   - stores a predicate expression
   - merges adjacent filters with `AND`
@@ -417,7 +429,7 @@ This is the key bridge between neutral expression IR and query-local SQL names.
 
 #### Recursive CTEs
 
-`loop(...)` in `packages/teta/src/edsl/query.ts` does not emit SQL directly.
+`loop(...)` in `packages/teta/src/edsl/query/loop.ts` does not emit SQL directly.
 It creates a deferred recursive `CteSpec`.
 
 Later, `materializeCte(...)` and `buildRecursiveCte(...)` in `packages/sql/src/render/recursive_cte.ts` turn that into a recursive `WITH` entry.
@@ -503,7 +515,7 @@ Usually touch:
 Usually touch:
 
 - `packages/sql/src/ir/types_query.ts` to add a new `Stage`
-- `packages/teta/src/edsl/query.ts` to build that stage
+- `packages/teta/src/edsl/query/algebra.ts` and the relevant `packages/teta/src/edsl/query/*` builder to expose and build that stage
 - `packages/sql/src/render/stage.ts` and/or `packages/sql/src/render/build.ts` to lower it
 
 ### Add dialect behavior

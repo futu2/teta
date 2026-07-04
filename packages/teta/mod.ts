@@ -3,11 +3,10 @@
  *
  * Import query builders, expression helpers, and SQL rendering types from this module.
  */
-import * as query from "./src/edsl/query.ts";
+import * as query from "./src/edsl/query/algebra.ts";
+import * as queryRender from "./src/edsl/query/rendering.ts";
 import * as expr from "./src/edsl/expr.ts";
 import * as pipeModule from "./src/edsl/pipe.ts";
-import * as language from "./src/edsl/sql/language.ts";
-import * as sql from "@teta/sql";
 
 /** Query builder value returned by query roots and stage helpers. */
 export type Query<TColumns extends Record<string, any>> = import("./src/edsl/query.ts").Query<TColumns>;
@@ -16,7 +15,7 @@ export type Query<TColumns extends Record<string, any>> = import("./src/edsl/que
 export type QueryColumns = import("./src/edsl/query.ts").QueryColumns;
 
 /** Explains a query's lowered stages, CTEs, and rendered SQL. */
-export const explain: typeof import("./src/edsl/query.ts").explain = query.explain;
+export const explain: typeof import("./src/edsl/query.ts").explain = queryRender.explain;
 
 /** Applies unary steps to a value from left to right. */
 export const pipe: typeof import("./src/edsl/pipe.ts").pipe = pipeModule.pipe;
@@ -157,16 +156,16 @@ export const table: typeof import("./src/edsl/query.ts").table = query.table;
 export const values: typeof import("./src/edsl/query.ts").values = query.values;
 
 /** Lowers a query into the SQL AST used by the renderer. */
-export const toAst: typeof import("./src/edsl/query.ts").toAst = query.toAst;
+export const toAst: typeof import("./src/edsl/query.ts").toAst = queryRender.toAst;
 
 /** Lowers a query into Teta's intermediate representation. */
-export const toIR: typeof import("./src/edsl/query.ts").toIR = query.toIR;
+export const toIR: typeof import("./src/edsl/query.ts").toIR = queryRender.toIR;
 
 /** Renders a query to a SQL string. */
-export const toSql: typeof import("./src/edsl/query.ts").toSql = query.toSql;
+export const toSql: typeof import("./src/edsl/query.ts").toSql = queryRender.toSql;
 
 /** Renders a query to SQL plus bound parameter metadata. */
-export const toSqlResult: typeof import("./src/edsl/query.ts").toSqlResult = query.toSqlResult;
+export const toSqlResult: typeof import("./src/edsl/query.ts").toSqlResult = queryRender.toSqlResult;
 
 /** Combines compatible queries with `UNION`. */
 export const union: typeof import("./src/edsl/query.ts").union = query.union;
@@ -577,124 +576,49 @@ export const dateLiteral: typeof import("./src/edsl/expr.ts").dateLiteral = expr
 export const timestampLiteral: typeof import("./src/edsl/expr.ts").timestampLiteral = expr.timestampLiteral;
 
 /** Canonical catalog of SQL operations and dialect support metadata. */
-export const LANGUAGE_SPEC: typeof import("./src/edsl/sql/language.ts").LANGUAGE_SPEC = language.LANGUAGE_SPEC;
+export { LANGUAGE_SPEC, getLanguageSpec } from "./src/edsl/sql/language.ts";
 
-/** Looks up language-spec metadata for a named SQL operation. */
-export const getLanguageSpec: typeof import("./src/edsl/sql/language.ts").getLanguageSpec = language.getLanguageSpec;
+export type { LanguageCategory } from "./src/edsl/sql/language.ts";
+export type { ExprSqlTarget, QuerySqlTarget, SqlCompilable } from "./src/edsl/sql.ts";
+export type {
+  BuiltinDialect,
+  Dialect,
+  DialectFeatures,
+  DialectLanguageConfig,
+  DialectLanguageFallback,
+  DialectSpec,
+  IdentifierInput,
+  QueryDialect,
+  SqlBigInt,
+  SqlBoolean,
+  SqlBytes,
+  SqlDate,
+  SqlDecimal,
+  SqlFloat,
+  SqlFormat,
+  SqlIdentifier,
+  SqlInt,
+  SqlJson,
+  SqlNumber,
+  SqlOptions,
+  SqlParam,
+  SqlParameterMode,
+  SqlParameterPrefix,
+  SqlRenderStrategy,
+  SqlResult,
+  SqlString,
+  SqlTimestamp,
+  SqlUuid,
+} from "./src/edsl/types.ts";
 
-/** Top-level category name used in the language specification. */
-export type LanguageCategory = import("./src/edsl/sql/language.ts").LanguageCategory;
-
-/** Expression-like input accepted by SQL rendering helpers. */
-export type ExprSqlTarget = import("./src/edsl/sql.ts").ExprSqlTarget;
-
-/** Query-like input accepted by SQL rendering helpers. */
-export type QuerySqlTarget = import("./src/edsl/sql.ts").QuerySqlTarget;
-
-/** Union of public values that can be compiled to SQL. */
-export type SqlCompilable = import("./src/edsl/sql.ts").SqlCompilable;
-
-/** Names of the built-in SQL dialects supported by Teta. */
-export type BuiltinDialect = import("./src/edsl/types.ts").BuiltinDialect;
-
-/** Dialect-specific language overrides and fallbacks. */
-export type DialectLanguageConfig = import("./src/edsl/types.ts").DialectLanguageConfig;
-
-/** Fallback rewrite applied when a dialect lacks a direct operation. */
-export type DialectLanguageFallback = import("./src/edsl/types.ts").DialectLanguageFallback;
-
-/** Feature flags that describe renderer behavior for a dialect. */
-export type DialectFeatures = import("./src/edsl/types.ts").DialectFeatures;
-
-/** Full dialect specification used by the SQL renderer. */
-export type DialectSpec = import("./src/edsl/types.ts").DialectSpec;
-
-/** Resolved dialect configuration used while rendering a query. */
-export type QueryDialect = import("./src/edsl/types.ts").QueryDialect;
-
-/** Type marker for SQL integer expressions and columns. */
-export type SqlInt = import("./src/edsl/types.ts").SqlInt;
-
-/** Type marker for SQL floating-point expressions and columns. */
-export type SqlFloat = import("./src/edsl/types.ts").SqlFloat;
-
-/** Type marker for SQL bigint expressions and columns. */
-export type SqlBigInt = import("./src/edsl/types.ts").SqlBigInt;
-
-/** Type marker for SQL decimal expressions and columns. */
-export type SqlDecimal = import("./src/edsl/types.ts").SqlDecimal;
-
-/** Union of numeric SQL type markers. */
-export type SqlNumber = import("./src/edsl/types.ts").SqlNumber;
-
-/** Type marker for SQL text expressions and columns. */
-export type SqlString = import("./src/edsl/types.ts").SqlString;
-
-/** Type marker for SQL boolean expressions and columns. */
-export type SqlBoolean = import("./src/edsl/types.ts").SqlBoolean;
-
-/** Type marker for SQL date expressions and columns. */
-export type SqlDate = import("./src/edsl/types.ts").SqlDate;
-
-/** Type marker for SQL timestamp expressions and columns. */
-export type SqlTimestamp = import("./src/edsl/types.ts").SqlTimestamp;
-
-/** Type marker for SQL UUID expressions and columns. */
-export type SqlUuid = import("./src/edsl/types.ts").SqlUuid;
-
-/** Type marker for SQL binary or blob expressions and columns. */
-export type SqlBytes = import("./src/edsl/types.ts").SqlBytes;
-
-/** Type marker for SQL JSON expressions and columns. */
-export type SqlJson<T = unknown> = import("./src/edsl/types.ts").SqlJson<T>;
-
-/** Dialect input accepted by the render APIs. */
-export type Dialect = import("./src/edsl/types.ts").Dialect;
-
-/** Formatting mode for generated SQL strings. */
-export type SqlFormat = import("./src/edsl/types.ts").SqlFormat;
-
-/** Strategy controlling how aggressively query stages are fused. */
-export type SqlRenderStrategy = import("./src/edsl/types.ts").SqlRenderStrategy;
-
-/** Options for rendering queries or expressions to SQL. */
-export type SqlOptions = import("./src/edsl/types.ts").SqlOptions;
-
-/** Metadata describing one bound SQL parameter. */
-export type SqlParam = import("./src/edsl/types.ts").SqlParam;
-
-/** Parameter binding style used in rendered SQL. */
-export type SqlParameterMode = import("./src/edsl/types.ts").SqlParameterMode;
-
-/** Prefix style used for named SQL parameters. */
-export type SqlParameterPrefix = import("./src/edsl/types.ts").SqlParameterPrefix;
-
-/** Rendered SQL plus its collected parameter metadata. */
-export type SqlResult = import("./src/edsl/types.ts").SqlResult;
-
-/** Input type accepted by identifier-quoting helpers. */
-export type IdentifierInput = import("./src/edsl/types.ts").IdentifierInput;
-
-/** Branded type representing a SQL identifier fragment. */
-export type SqlIdentifier = import("./src/edsl/types.ts").SqlIdentifier;
-
-/** Base class for public Teta errors. */
-export const TetaError: typeof import("@teta/sql").TetaError = sql.TetaError;
-export type TetaError = import("@teta/sql").TetaError;
-
-/** Error raised when Teta detects an internal compiler failure. */
-export const TetaInternalError: typeof import("@teta/sql").TetaInternalError = sql.TetaInternalError;
-export type TetaInternalError = import("@teta/sql").TetaInternalError;
-
-/** Error raised for invalid user input or unsupported queries. */
-export const TetaUserError: typeof import("@teta/sql").TetaUserError = sql.TetaUserError;
-export type TetaUserError = import("@teta/sql").TetaUserError;
-
-/** Checks whether a value is one of Teta's public error types. */
-export const isTetaError: typeof import("@teta/sql").isTetaError = sql.isTetaError;
-
-/** String code identifying a specific Teta error condition. */
-export type TetaErrorCode = import("@teta/sql").TetaErrorCode;
-
-/** High-level category assigned to a Teta error. */
-export type TetaErrorKind = import("@teta/sql").TetaErrorKind;
+/** Public Teta error classes and guards. */
+export {
+  TetaError,
+  TetaInternalError,
+  TetaUserError,
+  isTetaError,
+} from "@teta/sql";
+export type {
+  TetaErrorCode,
+  TetaErrorKind,
+} from "@teta/sql";

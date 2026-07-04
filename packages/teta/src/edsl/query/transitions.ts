@@ -17,6 +17,8 @@ import {
 import type {
   ColumnRefs,
   Expr,
+  AggregateProjectionResult,
+  AggregateProjectionShape,
   ProjectionResult,
   ProjectionShape,
 } from "../expr.ts";
@@ -80,15 +82,15 @@ export function resolveMapQuery<
 
 export function resolveFoldQuery<
   TColumns extends Record<string, unknown>,
-  TSelection extends ProjectionShape,
+  TSelection extends AggregateProjectionShape,
 >(
   query: QueryState<TColumns>,
   selection: TSelection
-): QueryDeriveInit<ProjectionResult<TSelection>> {
+): QueryDeriveInit<AggregateProjectionResult<TSelection>> {
   const resolved = resolveFoldProjection(selection);
   const finalGroupBy = dedupeExprs(resolved.groupBy);
   const allocated = allocateScopeId(query);
-  return resolveProjectedQuery<ProjectionResult<TSelection>>(query, {
+  return resolveProjectedQuery<AggregateProjectionResult<TSelection>>(query, {
     kind: "fold",
     items: resolved.items,
     keys: resolved.keys,

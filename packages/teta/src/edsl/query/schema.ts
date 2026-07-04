@@ -1,7 +1,6 @@
 import type {
   ColumnType,
   ColumnTypeName,
-  InferSchema,
   TableSourceInput,
   Value,
 } from "../core/types.ts";
@@ -24,6 +23,7 @@ import type {
 import type { Query } from "./core.ts";
 import { createQuery } from "./core.ts";
 import { initialScopeId, reserveQueryScopes } from "./planner.ts";
+import type { QueryValue } from "./types.ts";
 import { normalizeTableSource } from "./utils.ts";
 
 type ValuesRow = Readonly<Record<string, Value>>;
@@ -83,17 +83,22 @@ function columnType<T>(
 }
 
 /** Define a table with a schema and return a typed query builder. */
-export function table<S extends Record<string, ColumnType<any>>>(
+type TableSchema = Record<string, ColumnType<QueryValue>>;
+type InferQuerySchema<S extends TableSchema> = {
+  [K in keyof S]: S[K] extends ColumnType<infer T extends QueryValue> ? T : never;
+};
+
+export function table<S extends TableSchema>(
   name: TableSourceInput,
   schema: S
-): Query<InferSchema<S>> {
+): Query<InferQuerySchema<S>> {
   const columnNames = Object.keys(schema);
   const source = normalizeTableSource(name);
   const scopeId = initialScopeId();
   return createQuery({
     source,
     stages: [],
-    columns: createColumnRefs<InferSchema<S>>(scopeId, columnNames),
+    columns: createColumnRefs<InferQuerySchema<S>>(scopeId, columnNames),
     columnNames,
     sourceScopeId: scopeId,
     scopeId,

@@ -431,6 +431,8 @@ type _ProjectedProfileAvatar = Expect<Equal<ExprType<typeof projectedProfiles.co
 type _ProjectedProfileNickname = Expect<Equal<ExprType<typeof projectedProfiles.columns.nickname>, SqlString>>;
 type _NullableFilterGtCallbackUsersCreditLimit = Expect<Equal<ExprType<typeof nullableFilterGtCallbackUsers.columns.credit_limit>, SqlDecimal | null>>;
 type _NullableFilterGtRightCallbackUsersCreditLimit = Expect<Equal<ExprType<typeof nullableFilterGtRightCallbackUsers.columns.credit_limit>, SqlDecimal | null>>;
+const nullableEqPredicate = eq(profiles.columns.credit_limit, null);
+type _NullableEqPredicate = Expect<Equal<ExprType<typeof nullableEqPredicate>, SqlBoolean | null>>;
 type _FlowNumberToString = Expect<Equal<ReturnType<typeof flowNumberToString>, string>>;
 type _FlowPipelineKeys = Expect<Equal<keyof typeof flowPipelineResult.columns, "id">>;
 type _FlowPipelineId = Expect<Equal<ExprType<typeof flowPipelineResult.columns.id>, SqlInt>>;
@@ -667,6 +669,18 @@ pipe(users, map((user) => [user.id]));
 pipe(orders, fold((order) => [group(order.user_id)]));
 // @ts-expect-error map projections must reject undefined values
 pipe(users, map({ id: undefined }));
+// @ts-expect-error query internals are opaque on the public Query type
+users[Symbol("teta.query.state")];
+// @ts-expect-error table schemas reject arbitrary non-SQL row values
+table("bad_rows", { payload: {} });
+// @ts-expect-error map projections reject arbitrary objects
+pipe(users, map(() => ({ payload: {} })));
+// @ts-expect-error fold requires grouped or aggregate expressions
+pipe(orders, fold((order) => ({ user_id: order.user_id, total_spend: sum(order.total) })));
+// @ts-expect-error comparisons reject incompatible SQL domains
+pipe(users, filter((user) => eq(user.id, user.name)));
+// @ts-expect-error union rejects same column names with incompatible SQL value types
+pipe(users, union(table("users_v2", { id: t.string(), name: t.string() })));
 // @ts-expect-error unnest selectors must reject undefined
 pipe(sessions, unnest(undefined, { value: "tag" }));
 // @ts-expect-error rename should reject unknown direct renamed fields
