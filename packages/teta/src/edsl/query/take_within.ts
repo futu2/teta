@@ -4,7 +4,7 @@ import type { ColumnRefs, Expr, WindowSpecInput } from "../expr.ts";
 import { userError } from "../errors.ts";
 import type { SqlInt } from "../sql/types.ts";
 import type { QueryStep } from "./builder.ts";
-import { filter } from "./builder.ts";
+import { filter } from "./stage_builder.ts";
 
 type QueryColumns = Record<string, any>;
 

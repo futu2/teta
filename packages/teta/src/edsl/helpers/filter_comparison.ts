@@ -1,5 +1,5 @@
-import { filterResolved } from "../query/builder.ts";
 import type { Query, QueryStep } from "../query/builder.ts";
+import { filterResolved } from "../query/stage_builder.ts";
 import type { ExprNode } from "../core/types.ts";
 import type {
   ColumnRefs,
