@@ -62,7 +62,7 @@ const activePublicUsers = flow(
 
 Query values expose `columns` for typed expression reuse, but internal compiler details such as sources, stages, CTEs, and generated names are intentionally opaque. Use `toIR(query)` or `explain(query, ...)` when you need to inspect lowered query structure. Query steps are callable values with lightweight `kind` and `stepName` metadata for tooling/debugging.
 
-Row shapes are constrained to SQL value types, and aggregate projections are checked separately from row projections. In `fold(...)`, use `group(...)` / `groupShape(...)` for grouping keys and aggregate helpers such as `count(...)`, `sum(...)`, or `arrayAgg(...)` for aggregate outputs.
+Row shapes are constrained to SQL value types, and table schemas must be non-empty objects built from `t.*` column helpers. Aggregate projections are checked separately from row projections. In `fold(...)`, use `group(...)` / `groupShape(...)` for grouping keys and aggregate helpers such as `count(...)`, `sum(...)`, or `arrayAgg(...)` for aggregate outputs.
 
 Comparison filter helpers require at least one row callback; direct values are allowed only as the other operand.
 `whenStep(...)` and `unlessStep(...)` use host-language booleans to include or skip schema-preserving steps while building a query; use `filter(...)` and predicate expressions for conditions evaluated by SQL.
@@ -104,6 +104,8 @@ const usersWithOrders = pipe(
   })
 );
 ```
+
+`join(...)` accepts lowercase join types only (`"inner"`, `"left"`, `"right"`, `"full"`). The `JoinKind` and `JoinOptions` types are exported for reusable helper wrappers.
 
 Predicates involving nullable expressions are typed as `Expr<SqlBoolean | null>` and are accepted by `filter(...)`, matching SQL's three-valued boolean behavior.
 

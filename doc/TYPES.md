@@ -17,7 +17,7 @@ In practice, you usually let TypeScript infer everything and only annotate types
 
 ## 1) Schema types with `t`
 
-Use `t.*` helpers only when declaring schemas. Table schemas are restricted to SQL row values: SQL primitives, nullable SQL primitives, SQL JSON/bytes values, and SQL arrays. Arbitrary host objects should be encoded with `t.json<T>()` rather than used as plain column values.
+Use `t.*` helpers only when declaring schemas. Table schemas must be non-empty objects and are restricted to SQL row values: SQL primitives, nullable SQL primitives, SQL JSON/bytes values, and SQL arrays. Arbitrary host objects should be encoded with `t.json<T>()` rather than used as plain column values.
 
 ```ts
 import { table, t } from "@teta/teta";
@@ -138,6 +138,8 @@ const userCounts = pipe(
 - `left` join makes right-side columns nullable
 - `right` join makes left-side columns nullable
 - `full` join makes both sides nullable
+
+The frontend join type is exported as `JoinKind` and is intentionally lowercase-only. `JoinOptions<T>` is available when typing reusable join helper wrappers.
 
 ```ts
 import {

@@ -139,7 +139,7 @@ export function extendInternal<
 ): (query: Query<TColumns>) => Query<ExtendResult<TColumns, { [K in TName]: ProjectionValueResult<TValue> }>> {
   const resolvedSelector = resolveExtendSelector(
     name,
-    selector as unknown as (cols: ColumnRefs<QueryColumns>) => ProjectionValue
+    eraseProjectionSelector(selector)
   );
   return typedProjectionStep("extendInternal", (query: Query<QueryColumns>) => {
     const state = getQueryState(query);
@@ -198,9 +198,21 @@ function resolveExtensionShape(
   return value;
 }
 
+function eraseProjectionSelector<TColumns extends QueryColumns>(
+  selector: (cols: ColumnRefs<TColumns>) => ProjectionValue
+): (cols: ColumnRefs<QueryColumns>) => ProjectionValue {
+  return selector as unknown as (cols: ColumnRefs<QueryColumns>) => ProjectionValue;
+}
+
 function typedProjectionStep<TInput extends QueryColumns, TOutput extends QueryColumns>(
   name: string,
   apply: (query: Query<QueryColumns>) => Query<QueryColumns>
 ): GenericQueryStep<TInput, TOutput> {
-  return createQueryStep(name, apply) as unknown as GenericQueryStep<TInput, TOutput>;
+  return eraseProjectionStep(createQueryStep(name, apply));
+}
+
+function eraseProjectionStep<TInput extends QueryColumns, TOutput extends QueryColumns>(
+  step: GenericQueryStep<QueryColumns, QueryColumns>
+): GenericQueryStep<TInput, TOutput> {
+  return step as unknown as GenericQueryStep<TInput, TOutput>;
 }

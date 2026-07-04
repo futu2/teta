@@ -21,6 +21,18 @@ export const VALUES_EMPTY_ERROR =
 export const VALUES_COLUMN_MISMATCH_ERROR =
   "values() row 2 must have exactly the same columns as row 1";
 
+export const VALUES_NO_COLUMNS_ERROR =
+  "values() rows must define at least one column";
+
+export const VALUES_UNDEFINED_ERROR =
+  "values() row 1 column 'id' cannot be undefined";
+
+export const TABLE_SCHEMA_EMPTY_ERROR =
+  "table() schema must define at least one column";
+
+export const TABLE_SCHEMA_INVALID_ERROR =
+  "table() schema column 'payload' must be a column type";
+
 export const JOIN_OVERLAPPING_COLUMNS_ERROR =
   "Join helpers require an explicit merge strategy for overlapping columns: id";
 

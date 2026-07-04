@@ -25,6 +25,7 @@ import { createQuery } from "./core.ts";
 import { initialScopeId, reserveQueryScopes } from "./planner.ts";
 import type { QueryValue } from "./types.ts";
 import { normalizeTableSource } from "./utils.ts";
+import { isPlainObject } from "./value.ts";
 
 type ValuesRow = Readonly<Record<string, Value>>;
 type ValuesColumns<TRows extends readonly ValuesRow[]> = {
@@ -60,9 +61,11 @@ export const t: TableColumnHelpers = {
   json: <T = unknown>() => columnType<SqlJson<T>>("json"),
   bytes: () => columnType<SqlBytes>("bytes"),
   array: <T>(column: ColumnType<T>): ColumnType<T[]> => {
+    assertColumnType("t.array", column);
     return columnType<T[]>("array", { arrayOf: column as ColumnType<unknown> });
   },
   nullable: <T>(column: ColumnType<T>): ColumnType<T | null> => {
+    assertColumnType("t.nullable", column);
     return {
       ...column,
       nullable: true,
@@ -84,14 +87,19 @@ function columnType<T>(
 
 /** Define a table with a schema and return a typed query builder. */
 type TableSchema = Record<string, ColumnType<QueryValue>>;
+type RequireNonEmptySchema<S extends TableSchema> =
+  keyof S extends never
+    ? { __teta_table_schema_requires_columns__: never }
+    : unknown;
 type InferQuerySchema<S extends TableSchema> = {
   [K in keyof S]: S[K] extends ColumnType<infer T extends QueryValue> ? T : never;
 };
 
 export function table<S extends TableSchema>(
   name: TableSourceInput,
-  schema: S
+  schema: S & RequireNonEmptySchema<S>
 ): Query<InferQuerySchema<S>> {
+  assertTableSchema(schema);
   const columnNames = Object.keys(schema);
   const source = normalizeTableSource(name);
   const scopeId = initialScopeId();
@@ -139,6 +147,53 @@ function normalizeValuesRows(rows: readonly ValuesRow[]): readonly ValuesRow[] {
   }
 
   return rows.map((row, rowIndex) => normalizeValuesRow(row, rowIndex, columnNames));
+}
+
+function assertTableSchema(value: unknown): asserts value is TableSchema {
+  if (!isPlainObject(value)) {
+    userError("TABLE_SCHEMA_INVALID", "table() schema must be a non-empty object of column types");
+  }
+
+  const entries = Object.entries(value);
+  if (entries.length === 0) {
+    userError("TABLE_SCHEMA_EMPTY", "table() schema must define at least one column");
+  }
+
+  for (const [name, column] of entries) {
+    if (!isColumnType(column)) {
+      userError("TABLE_SCHEMA_INVALID", `table() schema column '${name}' must be a column type`);
+    }
+  }
+}
+
+function assertColumnType(helper: string, value: unknown): asserts value is ColumnType<QueryValue> {
+  if (!isColumnType(value)) {
+    userError("TABLE_SCHEMA_INVALID", `${helper}() expects a column type`);
+  }
+}
+
+function isColumnType(value: unknown): value is ColumnType<QueryValue> {
+  if (!isPlainObject(value)) return false;
+  if (value.kind !== "column_type") return false;
+  if (!isColumnTypeName(value.type)) return false;
+  if (typeof value.nullable !== "boolean") return false;
+  if (value.arrayOf !== undefined && !isColumnType(value.arrayOf)) return false;
+  return true;
+}
+
+function isColumnTypeName(value: unknown): value is ColumnTypeName {
+  return value === "string"
+    || value === "int"
+    || value === "float"
+    || value === "bigint"
+    || value === "decimal"
+    || value === "boolean"
+    || value === "date"
+    || value === "timestamp"
+    || value === "uuid"
+    || value === "json"
+    || value === "bytes"
+    || value === "array";
 }
 
 function normalizeValuesRow(

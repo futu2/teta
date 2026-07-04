@@ -6,6 +6,7 @@ export { isQuery } from "./value.ts";
 export type { Query, QueryStageKind, QueryStep } from "./core.ts";
 export type { QueryColumns } from "./types.ts";
 export type { JoinRightInput } from "./join_builder.ts";
+export type { JoinKind, JoinOptions } from "./join.ts";
 export {
   fullJoin,
   fullJoinMap,

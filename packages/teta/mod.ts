@@ -188,6 +188,12 @@ export type QueryStageKind = import("./src/edsl/query.ts").QueryStageKind;
 /** Single step in the lowered query plan. */
 export type QueryStep<TInputColumns extends Record<string, any>, TOutputColumns extends Record<string, any>> = import("./src/edsl/query.ts").QueryStep<TInputColumns, TOutputColumns>;
 
+/** Lowercase join type accepted by the frontend query EDSL. */
+export type JoinKind = import("./src/edsl/query.ts").JoinKind;
+
+/** Options accepted by the primitive `join(...)` helper. */
+export type JoinOptions<TType extends import("./src/edsl/query.ts").JoinKind | undefined = undefined> = import("./src/edsl/query.ts").JoinOptions<TType>;
+
 /** Options accepted by `takeWithin(...)`. */
 export type TakeWithinSpec<TColumns extends Record<string, any>> = import("./src/edsl/query.ts").TakeWithinSpec<TColumns>;
 

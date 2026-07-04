@@ -4,8 +4,9 @@ import {
   filterInternal,
   type InternalExtendedColumns,
 } from "../helpers/projection.ts";
-import { lte, over, rowNumber } from "../expr.ts";
-import type { ColumnRefs, Expr, WindowSpecInput } from "../expr.ts";
+import { isExpr, lte, over, rowNumber } from "../expr.ts";
+import type { OrderItem } from "../core/types.ts";
+import type { ColumnRefs, Expr } from "../expr.ts";
 import { userError } from "../errors.ts";
 import type { SqlInt } from "../sql/types.ts";
 import { createQueryStep, getQueryState, type Query, type QueryStep } from "./core.ts";
@@ -13,7 +14,7 @@ import type { QueryColumns } from "./types.ts";
 
 export type TakeWithinSpec<TColumns extends QueryColumns> = {
   partitionBy: (cols: ColumnRefs<TColumns>) => Expr<unknown> | Expr<unknown>[];
-  orderBy: (cols: ColumnRefs<TColumns>) => NonNullable<WindowSpecInput["orderBy"]>;
+  orderBy: (cols: ColumnRefs<TColumns>) => OrderItem | OrderItem[];
   count: number;
 };
 
@@ -54,11 +55,11 @@ export function takeWithin<TColumns extends QueryColumns>(
 
     const numbered = extendInternal<TColumns, typeof TAKE_WITHIN_ROW_NUMBER, Expr<SqlInt>>(
       TAKE_WITHIN_ROW_NUMBER,
-      (cols: ColumnRefs<TColumns>) =>
-        over(rowNumber(), {
-          partitionBy: spec.partitionBy(cols),
-          orderBy: spec.orderBy(cols),
-        })
+      (cols: ColumnRefs<TColumns>) => {
+        const partitionBy = resolvePartitionBy(cols, spec.partitionBy);
+        const orderBy = resolveOrderBy(cols, spec.orderBy);
+        return over(rowNumber(), { partitionBy, orderBy });
+      }
     )(query);
 
     const numberedColumns = numbered.columns as ColumnRefs<Record<
@@ -78,4 +79,49 @@ function dropTakeWithinRowNumber<TColumns extends QueryColumns>(
   query: Query<InternalExtendedColumns<TColumns, typeof TAKE_WITHIN_ROW_NUMBER, SqlInt>>
 ): Query<TColumns> {
   return dropInternal(query, [TAKE_WITHIN_ROW_NUMBER] as const) as unknown as Query<TColumns>;
+}
+
+function resolvePartitionBy<TColumns extends QueryColumns>(
+  cols: ColumnRefs<TColumns>,
+  selector: TakeWithinSpec<TColumns>["partitionBy"]
+): Expr<unknown> | Expr<unknown>[] {
+  const value = selector(cols);
+  const items = Array.isArray(value) ? value : [value];
+  for (const item of items) {
+    assertExprResult("takeWithin.partitionBy", item);
+  }
+  return value;
+}
+
+function resolveOrderBy<TColumns extends QueryColumns>(
+  cols: ColumnRefs<TColumns>,
+  selector: TakeWithinSpec<TColumns>["orderBy"]
+): OrderItem | OrderItem[] {
+  const value = selector(cols);
+  const items = Array.isArray(value) ? value : [value];
+  for (const item of items) {
+    assertOrderItemResult("takeWithin.orderBy", item);
+  }
+  return value;
+}
+
+function assertExprResult(helper: string, value: unknown): asserts value is Expr<unknown> {
+  if (!isExpr(value)) {
+    userError("DEFERRED_INPUT_INVALID", `${helper}() callback must return expression(s)`);
+  }
+}
+
+function assertOrderItemResult(helper: string, value: unknown): asserts value is OrderItem {
+  if (
+    value === null
+    || typeof value !== "object"
+    || Array.isArray(value)
+    || !isExpr({ kind: "expr", node: (value as { expr?: unknown }).expr })
+  ) {
+    userError("DEFERRED_INPUT_INVALID", `${helper}() callback must return order item(s)`);
+  }
+  const direction = (value as { direction?: unknown }).direction;
+  if (direction !== "ASC" && direction !== "DESC") {
+    userError("DEFERRED_INPUT_INVALID", `${helper}() callback must return order item(s)`);
+  }
 }

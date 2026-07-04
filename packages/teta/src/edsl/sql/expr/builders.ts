@@ -82,9 +82,17 @@ export function groupShape<T extends Record<string, Expr<unknown>>>(
   for (const key of Object.keys(value) as Array<keyof T>) {
     const item = value[key];
     if (!item) continue;
-    result[key] = group(item) as unknown as GroupShapeResult<T>[typeof key];
+    assignGroupedShapeValue(result, key, item);
   }
   return result as GroupShapeResult<T>;
+}
+
+function assignGroupedShapeValue<T extends Record<string, Expr<unknown>>, K extends keyof T>(
+  target: Partial<GroupShapeResult<T>>,
+  key: K,
+  value: T[K]
+): void {
+  target[key] = group(value) as GroupShapeResult<T>[K];
 }
 
 export function f<const TExprs extends readonly ExprInput<unknown>[]>(

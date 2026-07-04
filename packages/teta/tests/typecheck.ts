@@ -1,4 +1,4 @@
-import type { Column, Expr, SqlBigInt, SqlBoolean, SqlBytes, SqlDate, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlNumber, SqlString, SqlTimestamp, SqlUuid, } from "../mod.ts";
+import type { Column, Expr, JoinKind, JoinOptions, SqlBigInt, SqlBoolean, SqlBytes, SqlDate, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlNumber, SqlString, SqlTimestamp, SqlUuid, } from "../mod.ts";
 import * as publicApi from "../mod.ts";
 import { between, filter, filterEq, filterNe, filterGt, filterGte, filterLt, filterLte, fullJoin, fullJoinMerge, identityStep, innerJoin, innerJoinMap, innerJoinMerge, isDistinctFrom, isNotIn, join, leftJoin, leftJoinMap, leftJoinMerge, rightJoin, rightJoinMerge, take, takeWithin, sort, param, lit, map, rename, pipe, flow, table, t, fold, asc, desc, eq, gt, upper, add, mul, coalesce, count, group, loop, sum, and, or, isNotNull, sub, when, mapShape, groupShape, lt, unnest, unionAll, union, unlessStep, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, asBigInt, asBoolean, asBytes, asDate, asDecimal, asFloat, asInt, asJson, asString, asTimestamp, asUuid, pick, drop, extend, whenStep } from "../mod.ts";
 type Equal<A, B> = ((<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false);
@@ -8,6 +8,8 @@ const users = table("users", {
     id: t.int(),
     name: t.string(),
 });
+const joinKind: JoinKind = "left";
+const joinOptions: JoinOptions<typeof joinKind> = { type: joinKind, lateral: true };
 const stringLiteralExpr = lit("some_string");
 const numberLiteralExpr = lit(1);
 const bigintLiteralExpr = lit(1n);
@@ -162,6 +164,18 @@ const mappedSortedTakenSelectedUsers = pipe(users, map((user) => ({
 const takenWithinUsers = pipe(users, takeWithin({
     partitionBy: (user) => user.name,
     orderBy: (user) => asc(user.id),
+    count: 1,
+}));
+pipe(users, takeWithin({
+    // @ts-expect-error takeWithin partitionBy must return expression(s)
+    partitionBy: () => "name",
+    orderBy: (user) => asc(user.id),
+    count: 1,
+}));
+pipe(users, takeWithin({
+    partitionBy: (user) => user.name,
+    // @ts-expect-error takeWithin orderBy must return order item(s)
+    orderBy: (user) => user.id,
     count: 1,
 }));
 const extendedUsers = pipe(users, extend("name_upper", (user) => upper(user.name)));
@@ -481,6 +495,7 @@ void droppedUsersUsage;
 void manualOmittedAggregate;
 void leftViaJoinSelected;
 void leftViaPrimitiveJoin;
+void joinOptions;
 void overlapPrefixedLeft;
 void overlapPrefixedRight;
 void allPrefixedLeft;
@@ -699,8 +714,12 @@ pipe(orders, fold((order) => [group(order.user_id)]));
 pipe(users, map({ id: undefined }));
 // @ts-expect-error query internals are opaque on the public Query type
 users[Symbol("teta.query.state")];
+// @ts-expect-error table schemas must define at least one column
+table("empty_rows", {});
 // @ts-expect-error table schemas reject arbitrary non-SQL row values
 table("bad_rows", { payload: {} });
+// @ts-expect-error t.array expects a column type
+t.array({});
 // @ts-expect-error map projections reject arbitrary objects
 pipe(users, map(() => ({ payload: {} })));
 // @ts-expect-error fold requires grouped or aggregate expressions

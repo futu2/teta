@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { TetaUserError, count, eq, extend, filter, fold, fullJoin, group, innerJoin, innerJoinMerge, join, leftJoin, loop, map, onEq, prefixOverlapLeft, rightJoin, sort, t, table, take, toSql, unnest, usingCols, values, pipe } from "../mod.ts";
-import { GROUP_INSIDE_AGGREGATE_FUNCTION_ERROR, GROUP_OUTSIDE_AGGREGATE_ERROR, JOIN_MERGE_CONFLICT_ERROR, JOIN_OVERLAPPING_COLUMNS_ERROR, LEGACY_SELECTION_ARRAY_ERROR, LOOP_COLUMN_MISMATCH_ERROR, NON_CANONICAL_POSTGRES_DIALECT_ERROR, VALUES_COLUMN_MISMATCH_ERROR, VALUES_EMPTY_ERROR } from "./helpers/expected-errors.ts";
+import { TetaUserError, asc, count, eq, extend, filter, fold, fullJoin, group, innerJoin, innerJoinMerge, join, leftJoin, loop, map, onEq, prefixOverlapLeft, rightJoin, sort, t, table, take, takeWithin, toSql, unnest, usingCols, values, pipe } from "../mod.ts";
+import { GROUP_INSIDE_AGGREGATE_FUNCTION_ERROR, GROUP_OUTSIDE_AGGREGATE_ERROR, JOIN_MERGE_CONFLICT_ERROR, JOIN_OVERLAPPING_COLUMNS_ERROR, LEGACY_SELECTION_ARRAY_ERROR, LOOP_COLUMN_MISMATCH_ERROR, NON_CANONICAL_POSTGRES_DIALECT_ERROR, TABLE_SCHEMA_EMPTY_ERROR, TABLE_SCHEMA_INVALID_ERROR, VALUES_COLUMN_MISMATCH_ERROR, VALUES_EMPTY_ERROR, VALUES_NO_COLUMNS_ERROR, VALUES_UNDEFINED_ERROR } from "./helpers/expected-errors.ts";
 import { createOrdersTable, createUsersTable } from "./helpers/fixtures.ts";
 describe("error paths", () => {
     function expectUserError(fn: () => unknown, code: string, message: string): void {
@@ -40,6 +40,28 @@ describe("error paths", () => {
                 "take() expects a finite non-negative integer count"
             );
         }
+    });
+    test("takeWithin validates erased callback outputs", () => {
+        const users = createUsersTable();
+
+        expectUserError(
+            () => pipe(users, takeWithin({
+                partitionBy: () => "name" as never,
+                orderBy: (user) => asc(user.id),
+                count: 1,
+            })),
+            "DEFERRED_INPUT_INVALID",
+            "takeWithin.partitionBy() callback must return expression(s)"
+        );
+        expectUserError(
+            () => pipe(users, takeWithin({
+                partitionBy: (user) => user.name,
+                orderBy: () => "name" as never,
+                count: 1,
+            })),
+            "DEFERRED_INPUT_INVALID",
+            "takeWithin.orderBy() callback must return order item(s)"
+        );
     });
     test("fixed join helpers reject invalid options without probing callbacks", () => {
         const users = table("users", { id: t.int() });
@@ -314,11 +336,21 @@ describe("error paths", () => {
     test("rejects empty values() inputs", () => {
         expect(() => values([] as unknown as [{ id: number }])).toThrow(VALUES_EMPTY_ERROR);
     });
+    test("rejects values() rows without columns", () => {
+        expect(() => values([{}] as unknown as [{ id: number }])).toThrow(VALUES_NO_COLUMNS_ERROR);
+    });
+    test("rejects values() undefined cells", () => {
+        expect(() => values([{ id: undefined }] as unknown as [{ id: number }])).toThrow(VALUES_UNDEFINED_ERROR);
+    });
     test("rejects values() rows with mismatched columns", () => {
         expect(() => values([
             { id: 1, name: "Ada" },
             { id: 2, email: "grace@example.com" } as unknown as { id: number; name: string },
         ])).toThrow(VALUES_COLUMN_MISMATCH_ERROR);
+    });
+    test("rejects erased invalid table schemas", () => {
+        expect(() => table("empty", {} as never)).toThrow(TABLE_SCHEMA_EMPTY_ERROR);
+        expect(() => table("bad_rows", { payload: {} } as never)).toThrow(TABLE_SCHEMA_INVALID_ERROR);
     });
     test("user-facing errors expose stable error codes", () => {
         const users = createUsersTable();
