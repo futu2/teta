@@ -8,7 +8,7 @@ import type {
   Source,
   Stage,
 } from "../core/types.ts";
-import type { QueryIR } from "./builder.ts";
+import type { QueryIR } from "./render.ts";
 
 type QueryColumns = Record<string, any>;
 type ScopeRewriteMap = Map<string, ScopeId>;

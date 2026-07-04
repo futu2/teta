@@ -1,21 +1,11 @@
-import type { AST } from "node-sql-parser";
 import type {
-  CteSpec,
   JoinTypeInput,
   OrderItem,
   SqlIdentifier,
 } from "../core/types.ts";
 import type {
-  Dialect,
-  QueryDialect,
   SqlBoolean,
-  SqlFormat,
   SqlInt,
-  SqlOptions,
-  SqlParameterMode,
-  SqlParameterPrefix,
-  SqlRenderStrategy,
-  SqlResult,
 } from "../sql/types.ts";
 import { createColumnRefs, isExprNode, toExprNode } from "../expr.ts";
 import type {
@@ -25,17 +15,7 @@ import type {
   ProjectionResult,
   ProjectionShape,
 } from "../expr.ts";
-import {
-  createDeferredRecursiveCte,
-  explainIR,
-  irToAst,
-  irToSql,
-  irToSqlResult,
-  renderSql,
-  renderSqlResult,
-  resolveDialect,
-} from "../sql.ts";
-import type { QueryIRSqlTarget, SqlCompilable } from "../sql.ts";
+import { createDeferredRecursiveCte } from "../sql.ts";
 import { freshInternalCteName, freshScopeId } from "./planner.ts";
 import { toQuerySpec } from "./state.ts";
 import { assertLoopColumns, normalizeIdentifier, qualifyOuterColumns } from "./utils.ts";
@@ -71,7 +51,6 @@ import {
   resolveUnionQuery,
 } from "./mutations.ts";
 import { userError } from "../errors.ts";
-import { canonicalizeIR } from "./canonicalize.ts";
 
 type QueryColumns = Record<string, any>;
 
@@ -79,20 +58,6 @@ export type QueryStep<
   TInputColumns extends QueryColumns,
   TOutputColumns extends QueryColumns,
 > = (query: Query<TInputColumns>) => Query<TOutputColumns>;
-
-export type QueryIR<TColumns extends QueryColumns> = QueryIRSqlTarget & {
-  columnNames: readonly (keyof TColumns & string)[];
-};
-
-export type QueryExplainStage = {
-  index: number;
-  kind: QueryStageKind;
-};
-
-export type QueryExplainCte = {
-  name: string;
-  kind: CteSpec["kind"];
-};
 
 export type QueryStageKind = "map" | "fold" | "filter" | "sort" | "take" | "join" | "unnest" | "union";
 
@@ -181,21 +146,6 @@ type UnnestGeneratedColumns<
 } & (TOrdinalityName extends string
   ? { [K in TOrdinalityName]: MaybeOuter<SqlInt, TOuter> }
   : {});
-
-export type QueryExplainResult<TColumns extends QueryColumns> = {
-  ir: QueryIR<TColumns>;
-  ast: AST;
-  sql: string;
-  params: SqlResult["params"];
-  columnNames: readonly string[];
-  stages: QueryExplainStage[];
-  ctes: QueryExplainCte[];
-  dialect: QueryDialect;
-  format: SqlFormat;
-  renderStrategy: SqlRenderStrategy;
-  parameterMode: SqlParameterMode;
-  parameterPrefix: SqlParameterPrefix;
-};
 
 export type JoinRightInput<
   TLeft extends QueryColumns,
@@ -869,63 +819,6 @@ function isJoinTypeInputValue(value: unknown): value is JoinTypeInput {
     || value === "LEFT"
     || value === "RIGHT"
     || value === "FULL";
-}
-
-export function toIR<TColumns extends QueryColumns>(query: Query<TColumns>): QueryIR<TColumns> {
-  return canonicalizeIR({
-    source: query.source,
-    stages: query.stages,
-    scopeId: query.sourceScopeId,
-    columnNames: query.columnNames,
-    columnIdentifiers: query.columnIdentifiers,
-    withs: query.withs,
-  }) as QueryIR<TColumns>;
-}
-
-export function toAst<TColumns extends QueryColumns>(
-  query: Query<TColumns>,
-  options?: { dialect?: Dialect; renderStrategy?: SqlRenderStrategy }
-): AST {
-  return irToAst(toIR(query), {
-    dialect: options?.dialect ? resolveDialect(options.dialect) : undefined,
-    renderStrategy: options?.renderStrategy,
-  });
-}
-
-export function toSql<TTarget extends SqlCompilable>(
-  query: TTarget,
-  options: SqlOptions = {}
-): string {
-  return isQuery(query) ? irToSql(toIR(query), options) : renderSql(query, options);
-}
-
-export function toSqlResult<TTarget extends SqlCompilable>(
-  query: TTarget,
-  options: SqlOptions = {}
-): SqlResult {
-  return isQuery(query) ? irToSqlResult(toIR(query), options) : renderSqlResult(query, options);
-}
-
-export function explain<TColumns extends QueryColumns>(
-  query: Query<TColumns>,
-  options: SqlOptions = {}
-): QueryExplainResult<TColumns> {
-  const result = explainIR(toIR(query), options);
-
-  return {
-    ir: result.ir,
-    ast: result.ast,
-    sql: result.sql,
-    params: result.params,
-    columnNames: result.columnNames,
-    stages: result.stages,
-    ctes: result.ctes,
-    dialect: result.dialect,
-    format: result.format,
-    renderStrategy: result.renderStrategy,
-    parameterMode: result.parameterMode,
-    parameterPrefix: result.parameterPrefix,
-  };
 }
 
 export function isQuery(value: unknown): value is Query<QueryColumns> {
