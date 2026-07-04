@@ -1,8 +1,8 @@
-import { join } from "../query/builder.ts";
+import { join } from "../query/join_builder.ts";
 import type {
-  JoinRightInput,
   QueryStep,
 } from "../query/builder.ts";
+import type { JoinRightInput } from "../query/join_builder.ts";
 import type {
   ColumnRefs,
   Exprs,
