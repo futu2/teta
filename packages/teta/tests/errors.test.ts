@@ -27,6 +27,22 @@ describe("error paths", () => {
             bad: count(group(user.id)),
         })))).toThrow(GROUP_INSIDE_AGGREGATE_FUNCTION_ERROR);
     });
+    test("renderSql rejects query targets without a scope id with a user error", () => {
+        expectUserError(
+            () => toSql({
+                source: {
+                    db: null,
+                    schema: null,
+                    table: { name: "users", quoted: false },
+                    as: null,
+                },
+                stages: [],
+                columnNames: ["id"],
+            } as never),
+            "QUERY_SQL_TARGET_MISSING_SCOPE",
+            "Query SQL target is missing scopeId"
+        );
+    });
     test("query helpers validate only current curried shapes", () => {
         expect(() => (map as any)()).toThrow("map() expects map(selector)");
         expect(() => (filter as any)("not a callback")).toThrow("filter() expects a row callback");

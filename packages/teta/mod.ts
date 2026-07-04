@@ -197,6 +197,15 @@ export type JoinOptions<TType extends import("./src/edsl/query.ts").JoinKind | u
 /** Options accepted by `takeWithin(...)`. */
 export type TakeWithinSpec<TColumns extends Record<string, any>> = import("./src/edsl/query.ts").TakeWithinSpec<TColumns>;
 
+/** Generated column names accepted by `unnest(...)`. */
+export type UnnestSelection<
+  TValueName extends string,
+  TOrdinalityName extends string | undefined = undefined,
+> = import("./src/edsl/query.ts").UnnestSelection<TValueName, TOrdinalityName>;
+
+/** Options accepted by `unnest(...)`. */
+export type UnnestOptions<TOuter extends boolean | undefined = undefined> = import("./src/edsl/query.ts").UnnestOptions<TOuter>;
+
 /** Typed SQL expression value used throughout the query DSL. */
 export type Expr<T> = import("./src/edsl/expr.ts").Expr<T>;
 

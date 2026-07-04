@@ -1,4 +1,4 @@
-import { isExpr, type ColumnRefs, type Expr } from "../expr.ts";
+import type { ColumnRefs, Expr } from "../expr.ts";
 import { userError } from "../errors.ts";
 import type { SqlInt } from "../sql/types.ts";
 import { createQueryStep, getQueryState, type Query, type QueryStep } from "./core.ts";
@@ -7,6 +7,7 @@ import { assertRowCallback } from "./invocation.ts";
 import { resolveUnnestQuery } from "./transitions.ts";
 import type { QueryColumns } from "./types.ts";
 import { isPlainObject } from "./value.ts";
+import { assertExprCallbackResult } from "./callback_validation.ts";
 
 type UnnestSelectorInput<
   TLeft extends QueryColumns,
@@ -22,7 +23,7 @@ type MaybeOuter<TValue, TOuter extends boolean | undefined> =
   TOuter extends true ? TValue | null
   : TValue;
 
-type UnnestSelection<
+export type UnnestSelection<
   TValueName extends string,
   TOrdinalityName extends string | undefined = undefined,
 > = {
@@ -30,7 +31,7 @@ type UnnestSelection<
   ordinality?: TOrdinalityName;
 };
 
-type UnnestOptions<TOuter extends boolean | undefined = undefined> = {
+export type UnnestOptions<TOuter extends boolean | undefined = undefined> = {
   outer?: TOuter;
 };
 
@@ -99,7 +100,7 @@ function buildUnnest<
   assertUnnestSelection(selection);
   assertUnnestOptions(options);
   const collection = selector(left.columns);
-  assertExprResult("unnest", collection);
+  assertExprCallbackResult("unnest", collection);
   return deriveQuery(
     left,
     resolveUnnestQuery<TLeft, TGenerated>(
@@ -121,12 +122,6 @@ function assertUnnestInvocation(args: unknown[]): void {
   assertRowCallback("unnest", args[0]);
   assertUnnestSelection(args[1]);
   if (args.length === 3) assertUnnestOptions(args[2]);
-}
-
-function assertExprResult(helper: string, value: unknown): asserts value is Expr<unknown> {
-  if (!isExpr(value)) {
-    userError("DEFERRED_INPUT_INVALID", `${helper}() callback must return an expression`);
-  }
 }
 
 function assertUnnestSelection(

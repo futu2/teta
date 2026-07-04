@@ -14,6 +14,7 @@ import {
   type SqlResult,
   type Stage,
 } from "@teta/sql";
+import { userError } from "@teta/sql";
 
 export * from "@teta/sql";
 export {
@@ -64,7 +65,7 @@ function isQuerySqlTarget(value: SqlCompilable): value is QuerySqlTarget {
 function toBackendTarget(target: QuerySqlTarget): QueryIRSqlTarget {
   const scopeId = target.sourceScopeId ?? target.scopeId;
   if (!scopeId) {
-    throw new Error("Query SQL target is missing scopeId");
+    userError("QUERY_SQL_TARGET_MISSING_SCOPE", "Query SQL target is missing scopeId");
   }
   return {
     ...target,

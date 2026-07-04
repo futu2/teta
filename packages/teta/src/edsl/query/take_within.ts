@@ -4,13 +4,17 @@ import {
   filterInternal,
   type InternalExtendedColumns,
 } from "../helpers/projection.ts";
-import { isExpr, lte, over, rowNumber } from "../expr.ts";
+import { lte, over, rowNumber } from "../expr.ts";
 import type { OrderItem } from "../core/types.ts";
 import type { ColumnRefs, Expr } from "../expr.ts";
 import { userError } from "../errors.ts";
 import type { SqlInt } from "../sql/types.ts";
 import { createQueryStep, getQueryState, type Query, type QueryStep } from "./core.ts";
 import type { QueryColumns } from "./types.ts";
+import {
+  assertExprCallbackResult,
+  assertOrderItemCallbackResult,
+} from "./callback_validation.ts";
 
 export type TakeWithinSpec<TColumns extends QueryColumns> = {
   partitionBy: (cols: ColumnRefs<TColumns>) => Expr<unknown> | Expr<unknown>[];
@@ -88,7 +92,7 @@ function resolvePartitionBy<TColumns extends QueryColumns>(
   const value = selector(cols);
   const items = Array.isArray(value) ? value : [value];
   for (const item of items) {
-    assertExprResult("takeWithin.partitionBy", item);
+    assertExprCallbackResult("takeWithin.partitionBy", item, "expression(s)");
   }
   return value;
 }
@@ -100,28 +104,7 @@ function resolveOrderBy<TColumns extends QueryColumns>(
   const value = selector(cols);
   const items = Array.isArray(value) ? value : [value];
   for (const item of items) {
-    assertOrderItemResult("takeWithin.orderBy", item);
+    assertOrderItemCallbackResult("takeWithin.orderBy", item);
   }
   return value;
-}
-
-function assertExprResult(helper: string, value: unknown): asserts value is Expr<unknown> {
-  if (!isExpr(value)) {
-    userError("DEFERRED_INPUT_INVALID", `${helper}() callback must return expression(s)`);
-  }
-}
-
-function assertOrderItemResult(helper: string, value: unknown): asserts value is OrderItem {
-  if (
-    value === null
-    || typeof value !== "object"
-    || Array.isArray(value)
-    || !isExpr({ kind: "expr", node: (value as { expr?: unknown }).expr })
-  ) {
-    userError("DEFERRED_INPUT_INVALID", `${helper}() callback must return order item(s)`);
-  }
-  const direction = (value as { direction?: unknown }).direction;
-  if (direction !== "ASC" && direction !== "DESC") {
-    userError("DEFERRED_INPUT_INVALID", `${helper}() callback must return order item(s)`);
-  }
 }

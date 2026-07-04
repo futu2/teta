@@ -1,5 +1,5 @@
 import type { OrderItem } from "../core/types.ts";
-import { isExpr, toExprNode } from "../expr.ts";
+import { toExprNode } from "../expr.ts";
 import type {
   ColumnRefs,
   Expr,
@@ -20,6 +20,10 @@ import {
   resolveUnionQuery,
 } from "./transitions.ts";
 import type { QueryColumns } from "./types.ts";
+import {
+  assertExprCallbackResult,
+  assertOrderItemCallbackResult,
+} from "./callback_validation.ts";
 
 type PredicateInput<TColumns extends QueryColumns> =
   (cols: ColumnRefs<TColumns>) => Expr<SqlBoolean | null>;
@@ -32,7 +36,7 @@ function buildFilter<TColumns extends QueryColumns>(
   predicate: PredicateInput<TColumns>
 ): Query<TColumns> {
   const resolved = predicate(query.columns);
-  assertExprResult("filter", resolved);
+  assertExprCallbackResult("filter", resolved);
   return deriveQuery(query, resolveFilterQuery(getQueryState(query), resolved.node));
 }
 
@@ -43,7 +47,7 @@ function buildSort<TColumns extends QueryColumns>(
   const next = selector(query.columns);
   const items = Array.isArray(next) ? next : [next];
   for (const item of items) {
-    assertOrderItemResult("sort", item);
+    assertOrderItemCallbackResult("sort", item);
   }
   return deriveQuery(query, resolveSortQuery(getQueryState(query), items));
 }
@@ -86,7 +90,7 @@ function _filter<TColumns extends QueryColumns>(
 export function filterResolved<TColumns extends QueryColumns>(
   predicate: Expr<SqlBoolean | null>
 ): QueryStep<TColumns, TColumns> {
-  assertExprResult("filterResolved", predicate);
+  assertExprCallbackResult("filterResolved", predicate);
   return createQueryStep("filterResolved", (query) =>
     deriveQuery(query, resolveFilterQuery(getQueryState(query), toExprNode(predicate))));
 }
@@ -165,25 +169,4 @@ function _union<TColumns extends QueryColumns>(
   right: Query<TColumns>
 ): Query<TColumns> {
   return buildUnion(left, right, "union");
-}
-
-function assertExprResult(helper: string, value: unknown): asserts value is Expr<unknown> {
-  if (!isExpr(value)) {
-    userError("DEFERRED_INPUT_INVALID", `${helper}() callback must return an expression`);
-  }
-}
-
-function assertOrderItemResult(helper: string, value: unknown): asserts value is OrderItem {
-  if (
-    value === null
-    || typeof value !== "object"
-    || Array.isArray(value)
-    || !isExpr({ kind: "expr", node: (value as { expr?: unknown }).expr })
-  ) {
-    userError("DEFERRED_INPUT_INVALID", `${helper}() callback must return order item(s)`);
-  }
-  const direction = (value as { direction?: unknown }).direction;
-  if (direction !== "ASC" && direction !== "DESC") {
-    userError("DEFERRED_INPUT_INVALID", `${helper}() callback must return order item(s)`);
-  }
 }

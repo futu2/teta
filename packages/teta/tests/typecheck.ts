@@ -1,4 +1,4 @@
-import type { Column, Expr, JoinKind, JoinOptions, SqlBigInt, SqlBoolean, SqlBytes, SqlDate, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlNumber, SqlString, SqlTimestamp, SqlUuid, } from "../mod.ts";
+import type { Column, Expr, JoinKind, JoinOptions, SqlBigInt, SqlBoolean, SqlBytes, SqlDate, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlNumber, SqlString, SqlTimestamp, SqlUuid, UnnestOptions, UnnestSelection, } from "../mod.ts";
 import * as publicApi from "../mod.ts";
 import { between, filter, filterEq, filterNe, filterGt, filterGte, filterLt, filterLte, fullJoin, fullJoinMerge, identityStep, innerJoin, innerJoinMap, innerJoinMerge, isDistinctFrom, isNotIn, join, leftJoin, leftJoinMap, leftJoinMerge, rightJoin, rightJoinMerge, take, takeWithin, sort, param, lit, map, rename, pipe, flow, table, t, fold, asc, desc, eq, gt, upper, add, mul, coalesce, count, group, loop, sum, and, or, isNotNull, sub, when, mapShape, groupShape, lt, unnest, unionAll, union, unlessStep, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, asBigInt, asBoolean, asBytes, asDate, asDecimal, asFloat, asInt, asJson, asString, asTimestamp, asUuid, pick, drop, extend, whenStep } from "../mod.ts";
 type Equal<A, B> = ((<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false);
@@ -10,6 +10,8 @@ const users = table("users", {
 });
 const joinKind: JoinKind = "left";
 const joinOptions: JoinOptions<typeof joinKind> = { type: joinKind, lateral: true };
+const unnestSelection: UnnestSelection<"tag", "tag_index"> = { value: "tag", ordinality: "tag_index" };
+const unnestOptions: UnnestOptions<true> = { outer: true };
 const stringLiteralExpr = lit("some_string");
 const numberLiteralExpr = lit(1);
 const bigintLiteralExpr = lit(1n);

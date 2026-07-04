@@ -1,7 +1,7 @@
 export { join } from "./join_builder.ts";
 export { fold, map } from "./projection_builder.ts";
 export { filter, sort, take, union, unionAll } from "./stage_builder.ts";
-export { unnest } from "./unnest.ts";
+export { unnest, type UnnestOptions, type UnnestSelection } from "./unnest.ts";
 export { isQuery } from "./value.ts";
 export type { Query, QueryStageKind, QueryStep } from "./core.ts";
 export type { QueryColumns } from "./types.ts";
