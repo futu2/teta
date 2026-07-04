@@ -8,7 +8,11 @@ import type {
   ProjectionValue,
   ProjectionValueResult,
 } from "../expr.ts";
-import { mapColumnNames, selectColumnsByName } from "../query/projection_utils.ts";
+import {
+  assertKnownColumns,
+  mapColumnNames,
+  selectColumnsByName,
+} from "../query/projection_utils.ts";
 
 type QueryColumns = Record<string, any>;
 type StringKeyOf<T> = Extract<keyof T, string>;
@@ -44,20 +48,6 @@ type RenameResult<TColumns extends QueryColumns, TPattern extends string> = {
 
 type ExtendResult<TColumns extends QueryColumns, TExtension extends QueryColumns> =
   Omit<TColumns, StringKeyOf<TExtension>> & TExtension;
-
-function assertKnownColumns(
-  cols: ColumnRefs<QueryColumns>,
-  names: readonly string[]
-): void {
-  for (const name of names) {
-    if (!(name in cols)) {
-      userError(
-        "DEFERRED_COLUMN_UNKNOWN",
-        `Unknown current row column '${name}'. Available columns: ${Object.keys(cols).join(", ")}`
-      );
-    }
-  }
-}
 
 export function pick<const TNames extends readonly [string, ...string[]]>(
   ...names: TNames

@@ -1,6 +1,21 @@
 import type { Column, ColumnRefs } from "../expr.ts";
+import { userError } from "../errors.ts";
 
 type QueryColumns = Record<string, any>;
+
+export function assertKnownColumns(
+  cols: ColumnRefs<QueryColumns>,
+  names: readonly string[]
+): void {
+  for (const name of names) {
+    if (!(name in cols)) {
+      userError(
+        "DEFERRED_COLUMN_UNKNOWN",
+        `Unknown current row column '${name}'. Available columns: ${Object.keys(cols).join(", ")}`
+      );
+    }
+  }
+}
 
 export function selectColumnsByName(
   cols: ColumnRefs<QueryColumns>,
