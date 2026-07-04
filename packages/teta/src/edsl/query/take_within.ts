@@ -5,8 +5,7 @@ import { userError } from "../errors.ts";
 import type { SqlInt } from "../sql/types.ts";
 import type { QueryStep } from "./core.ts";
 import { filter } from "./stage_builder.ts";
-
-type QueryColumns = Record<string, any>;
+import type { QueryColumns } from "./types.ts";
 
 export type TakeWithinSpec<TColumns extends QueryColumns> = {
   partitionBy: (cols: ColumnRefs<TColumns>) => Expr<unknown> | Expr<unknown>[];

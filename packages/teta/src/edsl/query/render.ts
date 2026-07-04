@@ -23,8 +23,7 @@ import type { QueryIRSqlTarget, SqlCompilable } from "../sql.ts";
 import type { Query, QueryStageKind } from "./core.ts";
 import { isQuery } from "./value.ts";
 import { canonicalizeIR } from "./canonicalize.ts";
-
-type QueryColumns = Record<string, any>;
+import type { QueryColumns } from "./types.ts";
 
 export type QueryIR<TColumns extends QueryColumns> = QueryIRSqlTarget & {
   columnNames: readonly (keyof TColumns & string)[];

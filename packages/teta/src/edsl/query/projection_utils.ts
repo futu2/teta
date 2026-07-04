@@ -1,7 +1,6 @@
 import type { Column, ColumnRefs } from "../expr.ts";
 import { userError } from "../errors.ts";
-
-type QueryColumns = Record<string, any>;
+import type { QueryColumns } from "./types.ts";
 
 export function assertKnownColumns(
   cols: ColumnRefs<QueryColumns>,

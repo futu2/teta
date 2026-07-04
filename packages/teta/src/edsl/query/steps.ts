@@ -1,6 +1,5 @@
 import type { QueryStep } from "./core.ts";
-
-type QueryColumns = Record<string, any>;
+import type { QueryColumns } from "./types.ts";
 
 export function identityStep<TColumns extends QueryColumns>(): QueryStep<TColumns, TColumns> {
   return (query) => query;

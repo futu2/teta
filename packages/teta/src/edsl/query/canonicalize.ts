@@ -9,8 +9,7 @@ import type {
   Stage,
 } from "../core/types.ts";
 import type { QueryIR } from "./render.ts";
-
-type QueryColumns = Record<string, any>;
+import type { QueryColumns } from "./types.ts";
 type ScopeRewriteMap = Map<string, ScopeId>;
 type CteRewriteMap = Map<string, InternalCteName>;
 

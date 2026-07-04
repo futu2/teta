@@ -5,9 +5,8 @@ import type { Query, QueryStep } from "./core.ts";
 import { createQuery } from "./core.ts";
 import { freshInternalCteName, freshScopeId } from "./planner.ts";
 import { toQuerySpec } from "./state.ts";
+import type { QueryColumns } from "./types.ts";
 import { assertLoopColumns, normalizeIdentifier } from "./utils.ts";
-
-type QueryColumns = Record<string, any>;
 
 export function loop<TColumns extends QueryColumns>(
   step: (self: Query<TColumns>) => Query<TColumns>

@@ -18,10 +18,9 @@ import type {
   JoinSelectionResult,
 } from "./join.ts";
 import { resolveJoinQuery } from "./mutations.ts";
+import type { QueryColumns } from "./types.ts";
 import { qualifyOuterColumns } from "./utils.ts";
 import { isPlainObject, isQuery } from "./value.ts";
-
-type QueryColumns = Record<string, any>;
 
 type JoinOnInput<
   TLeft extends QueryColumns,

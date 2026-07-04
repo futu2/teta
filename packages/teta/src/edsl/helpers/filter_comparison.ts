@@ -7,7 +7,7 @@ import type {
 } from "../expr.ts";
 import { eq, gt, gte, isExpr, lt, lte, ne, type Expr } from "../expr.ts";
 import type { NormalizeNumericLiteral, SqlBoolean, SqlDate, SqlNumber, SqlTimestamp } from "../sql/types.ts";
-type QueryColumns = Record<string, any>;
+import type { QueryColumns } from "../query/types.ts";
 import { userError } from "../errors.ts";
 
 type ComparableInput = SqlNumber | number | bigint | SqlDate | SqlTimestamp | null;

@@ -13,8 +13,7 @@ import {
   mapColumnNames,
   selectColumnsByName,
 } from "../query/projection_utils.ts";
-
-type QueryColumns = Record<string, any>;
+import type { QueryColumns } from "../query/types.ts";
 type StringKeyOf<T> = Extract<keyof T, string>;
 
 type PickResult<

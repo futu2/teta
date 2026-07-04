@@ -21,8 +21,7 @@ import type {
 } from "../query/join.ts";
 import { isQuery } from "../query/value.ts";
 import { userError } from "../errors.ts";
-
-type QueryColumns = Record<string, any>;
+import type { QueryColumns } from "../query/types.ts";
 type FixedJoinType = "inner" | "left" | "right" | "full";
 
 type FixedJoinOptions = {

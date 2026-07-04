@@ -14,8 +14,7 @@ import {
   resolveMapQuery,
 } from "./mutations.ts";
 import { assertProjectionShape } from "./projection_validation.ts";
-
-type QueryColumns = Record<string, any>;
+import type { QueryColumns } from "./types.ts";
 
 function buildMap<
   TColumns extends QueryColumns,

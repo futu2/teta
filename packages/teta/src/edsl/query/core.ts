@@ -3,9 +3,8 @@ import type {
   QueryState,
 } from "./state.ts";
 import { resolveQueryInitDefaults } from "./state.ts";
+import type { QueryColumns } from "./types.ts";
 import { isPlainObject } from "./value.ts";
-
-type QueryColumns = Record<string, any>;
 
 export type QueryStep<
   TInputColumns extends QueryColumns,

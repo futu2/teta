@@ -19,8 +19,7 @@ import {
   resolveTakeQuery,
   resolveUnionQuery,
 } from "./mutations.ts";
-
-type QueryColumns = Record<string, any>;
+import type { QueryColumns } from "./types.ts";
 
 type PredicateInput<TColumns extends QueryColumns> =
   (cols: ColumnRefs<TColumns>) => Expr<SqlBoolean | null>;

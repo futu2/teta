@@ -2,8 +2,7 @@ import type { SqlIdentifier } from "../core/types.ts";
 import { isExprNode } from "../expr.ts";
 import type { Query } from "./core.ts";
 import type { QueryState } from "./state.ts";
-
-type QueryColumns = Record<string, any>;
+import type { QueryColumns } from "./types.ts";
 
 export function isQuery(value: unknown): value is Query<QueryColumns> {
   if (!value || typeof value !== "object") return false;
