@@ -116,3 +116,9 @@ test("publish workflow detects and publishes the sql package before teta", () =>
   expect(publish).toContain("Publish @teta/sql");
   expect(publish).toContain("needs.publish-sql.result == 'success' || needs.publish-sql.result == 'skipped'");
 });
+
+test("publish workflow grants OIDC tokens for JSR provenance", () => {
+  const publish = readFileSync(new URL("../.github/workflows/publish.yaml", import.meta.url), "utf8");
+
+  expect(publish).toContain("id-token: write");
+});

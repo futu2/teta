@@ -2,6 +2,8 @@
  * Public API for `@teta/teta`.
  *
  * Import query builders, expression helpers, and SQL rendering types from this module.
+ *
+ * @module
  */
 import * as query from "./src/edsl/query/algebra.ts";
 import * as queryRender from "./src/edsl/query/rendering.ts";
@@ -218,11 +220,134 @@ export type WhenArgs<TArgs extends readonly unknown[]> = import("./src/edsl/expr
 /** Result value type inferred from alternating `when(...)` pairs. */
 export type WhenResult<TArgs extends readonly unknown[]> = import("./src/edsl/expr.ts").WhenResult<TArgs>;
 
+/** Column-reference object passed to row callbacks. */
+export type ColumnRefs<T extends Record<string, unknown>> = import("./src/edsl/expr.ts").ColumnRefs<T>;
+
+/** Expression-only object shape passed to aggregate and projection helpers. */
+export type Exprs<T extends Record<string, unknown>> = import("./src/edsl/expr.ts").Exprs<T>;
+
+/** Value accepted anywhere a SQL expression is expected. */
+export type ExprInput<T> = import("./src/edsl/expr.ts").ExprInput<T>;
+
+/** Runtime value type extracted from an expression input. */
+export type ExprInputValue<TInput> = import("./src/edsl/expr.ts").ExprInputValue<TInput>;
+
+/** Tuple of expression inputs matching a tuple of value types. */
+export type ExprInputTuple<T extends readonly unknown[]> = import("./src/edsl/expr.ts").ExprInputTuple<T>;
+
+/** Expression phase marker used to distinguish row, group, and aggregate expressions. */
+export type ExprPhase = import("./src/edsl/expr.ts").ExprPhase;
+
+/** Non-nullable version of a SQL value type. */
+export type NonNull<T> = import("./src/edsl/expr.ts").NonNull<T>;
+
+/** Adds `null` to a result type when the input can be null. */
+export type PropagateNull<TInput, TResult> = import("./src/edsl/expr.ts").PropagateNull<TInput, TResult>;
+
+/** Window specification accepted by `over(...)`. */
+export type WindowSpecInput = import("./src/edsl/expr.ts").WindowSpecInput;
+
+/** Window function expression before a window specification is applied. */
+export type WindowExpr<T> = import("./src/edsl/expr.ts").WindowExpr<T>;
+
+/** Builder returned by window function helpers before calling `over(...)`. */
+export type WindowBuilder<T> = import("./src/edsl/expr.ts").WindowBuilder<T>;
+
+/** Value accepted in a row projection shape. */
+export type ProjectionValue = import("./src/edsl/expr.ts").ProjectionValue;
+
+/** Value accepted in an aggregate projection shape. */
+export type AggregateProjectionValue = import("./src/edsl/expr.ts").AggregateProjectionValue;
+
+/** Result type inferred for a single projection value. */
+export type ProjectionValueResult<V> = import("./src/edsl/expr.ts").ProjectionValueResult<V>;
+
+/** Object shape accepted by `map(...)`. */
+export type ProjectionShape = import("./src/edsl/expr.ts").ProjectionShape;
+
+/** Object shape accepted by `fold(...)`. */
+export type AggregateProjectionShape = import("./src/edsl/expr.ts").AggregateProjectionShape;
+
+/** Result row type inferred from a projection shape. */
+export type ProjectionResult<S extends import("./src/edsl/expr.ts").ProjectionShape> = import("./src/edsl/expr.ts").ProjectionResult<S>;
+
+/** Result row type inferred from an aggregate projection shape. */
+export type AggregateProjectionResult<S extends import("./src/edsl/expr.ts").AggregateProjectionShape> = import("./src/edsl/expr.ts").AggregateProjectionResult<S>;
+
+/** Alias for a projection object accepted by query projection helpers. */
+export type ProjectionSelection = import("./src/edsl/expr.ts").ProjectionSelection;
+
+/** Right-hand query input accepted by join helpers. */
+export type JoinRightInput<
+  TLeftColumns extends Record<string, any>,
+  TRightColumns extends Record<string, any>,
+> = import("./src/edsl/query.ts").JoinRightInput<TLeftColumns, TRightColumns>;
+
 /** Returns true when a value is a Teta expression. */
 export const isExpr: typeof import("./src/edsl/expr.ts").isExpr = expr.isExpr;
 
 /** Returns true when a value is a Teta column expression. */
 export const isColumn: typeof import("./src/edsl/expr.ts").isColumn = expr.isColumn;
+
+/** Returns true when a value is a low-level expression node. */
+export const isExprNode: typeof import("./src/edsl/expr.ts").isExprNode = expr.isExprNode;
+
+/** Creates a typed expression value from a low-level expression node. */
+export const exprOf: typeof import("./src/edsl/expr.ts").exprOf = expr.exprOf;
+
+/** Creates a typed column expression from a table reference and column name. */
+export const columnOf: typeof import("./src/edsl/expr.ts").columnOf = expr.columnOf;
+
+/** Creates a low-level window builder from a SQL function name and argument nodes. */
+export const windowBuilderOf: typeof import("./src/edsl/expr.ts").windowBuilderOf = expr.windowBuilderOf;
+
+/** Wraps an expression input as a typed expression value. */
+export const wrapExpr: typeof import("./src/edsl/expr.ts").wrapExpr = expr.wrapExpr;
+
+/** Creates an aggregate expression from an aggregate function name and argument. */
+export const aggregateExpr: typeof import("./src/edsl/expr.ts").aggregateExpr = expr.aggregateExpr;
+
+/** Creates a raw window function expression builder. */
+export const windowExpr: typeof import("./src/edsl/expr.ts").windowExpr = expr.windowExpr;
+
+/** Converts an expression input to the low-level expression node model. */
+export const toExprNode: typeof import("./src/edsl/expr.ts").toExprNode = expr.toExprNode;
+
+/** Converts one or more expressions to low-level expression nodes. */
+export const toExprNodeList: typeof import("./src/edsl/expr.ts").toExprNodeList = expr.toExprNodeList;
+
+/** Normalizes one or more sort items to an array of order items. */
+export const toOrderItems: typeof import("./src/edsl/expr.ts").toOrderItems = expr.toOrderItems;
+
+/** Creates a binary expression from an operator and two expression nodes. */
+export const binaryExpr: typeof import("./src/edsl/expr.ts").binaryExpr = expr.binaryExpr;
+
+/** Creates a function-call expression from a SQL function name and expression nodes. */
+export const funcExpr: typeof import("./src/edsl/expr.ts").funcExpr = expr.funcExpr;
+
+/** Returns true when an expression tree contains a grouped expression. */
+export const containsGroup: typeof import("./src/edsl/expr.ts").containsGroup = expr.containsGroup;
+
+/** Removes a grouping wrapper from an expression node when one is present. */
+export const unwrapGroupExpr: typeof import("./src/edsl/expr.ts").unwrapGroupExpr = expr.unwrapGroupExpr;
+
+/** Removes duplicate expression nodes while preserving expression order. */
+export const dedupeExprs: typeof import("./src/edsl/expr.ts").dedupeExprs = expr.dedupeExprs;
+
+/** Returns true when a projected expression should be assigned an SQL alias. */
+export const shouldAlias: typeof import("./src/edsl/expr.ts").shouldAlias = expr.shouldAlias;
+
+/** Creates column references for an object-shaped query schema. */
+export const createColumnRefs: typeof import("./src/edsl/expr.ts").createColumnRefs = expr.createColumnRefs;
+
+/** Merges two column-reference objects. */
+export const mergeColumnRefs: typeof import("./src/edsl/expr.ts").mergeColumnRefs = expr.mergeColumnRefs;
+
+/** Merges column name arrays while preserving order and removing duplicates. */
+export const mergeColumnNames: typeof import("./src/edsl/expr.ts").mergeColumnNames = expr.mergeColumnNames;
+
+/** Builds projection items for every column in a query schema. */
+export const projectAllItems: typeof import("./src/edsl/expr.ts").projectAllItems = expr.projectAllItems;
 
 /** Returns true when a value is a Teta query. */
 export const isQuery: typeof import("./src/edsl/query.ts").isQuery = query.isQuery;
@@ -594,7 +719,16 @@ export const timestampLiteral: typeof import("./src/edsl/expr.ts").timestampLite
 export { LANGUAGE_SPEC, getLanguageSpec } from "./src/edsl/sql/language.ts";
 
 export type { LanguageCategory } from "./src/edsl/sql/language.ts";
-export type { ExprSqlTarget, QuerySqlTarget, SqlCompilable } from "./src/edsl/sql.ts";
+
+/** Backend SQL expression target accepted by SQL rendering helpers. */
+export type ExprSqlTarget = import("./src/edsl/sql.ts").ExprSqlTarget;
+
+/** Backend SQL query target accepted by SQL rendering helpers. */
+export type QuerySqlTarget = import("./src/edsl/sql.ts").QuerySqlTarget;
+
+/** SQL render target accepted by low-level SQL rendering helpers. */
+export type SqlCompilable = import("./src/edsl/sql.ts").SqlCompilable;
+
 export type {
   BuiltinDialect,
   Dialect,

@@ -1,5 +1,6 @@
 type UnaryStep<TInput, TOutput> = (input: TInput) => TOutput;
 
+/** Applies unary steps to a value from left to right. */
 export function pipe<TValue>(value: TValue): TValue;
 export function pipe<TValue, T1>(
   value: TValue,
@@ -139,6 +140,7 @@ export function pipe(value: unknown, ...steps: UnaryStep<unknown, unknown>[]): u
   return current;
 }
 
+/** Composes unary steps from left to right into a reusable function. */
 export function flow<TValue>(): UnaryStep<TValue, TValue>;
 export function flow<TValue, T1>(
   step1: UnaryStep<TValue, T1>
