@@ -97,7 +97,7 @@ function queryOf<TColumns extends QueryColumns>(
     ...state,
     source,
     stages,
-    columns: state.columns,
+    columns: freezeQueryStateValue(state.columns),
     columnNames,
     withs,
     columnIdentifiers,

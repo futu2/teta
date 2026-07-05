@@ -83,6 +83,9 @@ const BINARY_OPS = new Set<string>([
 
 const AGG_FUNCS = new Set<string>(["COUNT", "SUM", "AVG", "MIN", "MAX", "ARRAY_AGG"]);
 const SHOULD_FREEZE_EXPR_VALUES = resolveFreezeFlag("TETA_FREEZE_EXPR_VALUES");
+const EXPR_BRAND: unique symbol = Symbol("teta.expr");
+const COLUMN_BRAND: unique symbol = Symbol("teta.column");
+const WINDOW_BUILDER_BRAND: unique symbol = Symbol("teta.window_builder");
 
 export type ExprPhase = "row" | "group" | "aggregate";
 
@@ -90,6 +93,7 @@ export type Expr<T, TPhase extends ExprPhase = "row"> = Readonly<{
   kind: "expr";
   node: ExprNode<T>;
   readonly __phase?: TPhase;
+  readonly [EXPR_BRAND]: true;
 }>;
 
 export type ColumnTableRef = ScopeId | typeof OUTER_TABLE_ALIAS | null;
@@ -97,6 +101,7 @@ export type ColumnTableRef = ScopeId | typeof OUTER_TABLE_ALIAS | null;
 export type Column<T, Name extends string> = Expr<T, "row"> & Readonly<{
   table: ColumnTableRef;
   name: Name;
+  readonly [COLUMN_BRAND]: true;
 }>;
 
 export type WindowExpr<T> = Readonly<{
@@ -104,12 +109,16 @@ export type WindowExpr<T> = Readonly<{
   name: string;
   args: readonly ExprNode<unknown>[];
   readonly __valueType?: T;
+  readonly [WINDOW_BUILDER_BRAND]: true;
 }>;
 
 export type WindowBuilder<T> = WindowExpr<T>;
 
 export function exprOf<T>(node: ExprNode<T>): Expr<T> {
-  return freezeIfEnabled({ kind: "expr" as const, node: freezeExprNode(node) });
+  return defineHiddenBrand(
+    { kind: "expr" as const, node: freezeExprNode(node) },
+    EXPR_BRAND
+  ) as Expr<T>;
 }
 
 export function exprOfPhase<T, TPhase extends ExprPhase>(
@@ -131,29 +140,32 @@ export function columnOf<T, Name extends string>(
   name: Name
 ): Column<T, Name> {
   const node = freezeExprNode({ kind: "column", table, name } as ExprNode<T>);
-  return freezeIfEnabled({
+  const expr = {
     kind: "expr" as const,
     node,
     table,
     name,
-  });
+  };
+  defineHiddenBrandProperty(expr, EXPR_BRAND);
+  defineHiddenBrandProperty(expr, COLUMN_BRAND);
+  return freezeIfEnabled(expr) as Column<T, Name>;
 }
 
 export function windowBuilderOf<T>(
   name: string,
   args: readonly ExprNode<unknown>[]
 ): WindowBuilder<T> {
-  return freezeIfEnabled({
+  return defineHiddenBrand({
     kind: "window_builder" as const,
     name,
     args: freezeIfEnabled(args.map((arg) => freezeExprNode(arg))),
-  });
+  }, WINDOW_BUILDER_BRAND) as WindowBuilder<T>;
 }
 
 export function isExpr(value: unknown): value is Expr<unknown> {
   if (!value || typeof value !== "object") return false;
-  const candidate = value as { kind?: unknown; node?: unknown };
-  return candidate.kind === "expr" && isExprNode(candidate.node);
+  const candidate = value as { kind?: unknown; node?: unknown; [EXPR_BRAND]?: unknown };
+  return candidate.kind === "expr" && candidate[EXPR_BRAND] === true && isExprNode(candidate.node);
 }
 
 export function isColumn(value: unknown): value is Column<unknown, string> {
@@ -163,8 +175,13 @@ export function isColumn(value: unknown): value is Column<unknown, string> {
     node?: unknown;
     table?: unknown;
     name?: unknown;
+    [COLUMN_BRAND]?: unknown;
   };
-  if (candidate.kind !== "expr" || !isColumnNode(candidate.node as { kind?: unknown })) {
+  if (
+    candidate.kind !== "expr" ||
+    candidate[COLUMN_BRAND] !== true ||
+    !isColumnNode(candidate.node as { kind?: unknown })
+  ) {
     return false;
   }
   const node = candidate.node as { table: unknown; name: unknown };
@@ -228,6 +245,26 @@ function deepFreeze<T>(value: T, seen = new WeakSet<object>()): T {
 
 function freezeIfEnabled<T extends object>(value: T): T {
   return SHOULD_FREEZE_EXPR_VALUES ? Object.freeze(value) : value;
+}
+
+function defineHiddenBrand<T extends object, TBrand extends symbol>(
+  value: T,
+  brand: TBrand
+): T & { readonly [K in TBrand]: true } {
+  defineHiddenBrandProperty(value, brand);
+  return freezeIfEnabled(value) as T & { readonly [K in TBrand]: true };
+}
+
+function defineHiddenBrandProperty<TBrand extends symbol>(
+  value: object,
+  brand: TBrand
+): void {
+  Object.defineProperty(value, brand, {
+    enumerable: false,
+    configurable: false,
+    writable: false,
+    value: true,
+  });
 }
 
 function isColumnNode(value: { kind?: unknown }): boolean {

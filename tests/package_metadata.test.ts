@@ -71,6 +71,18 @@ test("teta jsr manifest maps workspace dependencies to jsr packages", () => {
   expect(tetaJsr.imports?.["@teta/sql"]).toEqual("jsr:@teta/sql@^0.1.6");
 });
 
+test("teta package does not re-export the sql backend subpath", () => {
+  const tetaPackage = readJson<{
+    exports: Record<string, string>;
+  }>("packages/teta/package.json");
+  const tetaJsr = readJson<{
+    exports: Record<string, string>;
+  }>("packages/teta/jsr.json");
+
+  expect(tetaPackage.exports["./sql"]).toBeUndefined();
+  expect(tetaJsr.exports["./sql"]).toBeUndefined();
+});
+
 test("ci workflow checks and validates the sql package", () => {
   const ci = readFileSync(new URL("../.github/workflows/ci.yaml", import.meta.url), "utf8");
 

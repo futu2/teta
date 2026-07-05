@@ -1,9 +1,7 @@
 export function resolveFreezeFlag(name: string): boolean {
   const explicit = readEnv(name);
   if (explicit !== undefined) return explicit !== "0" && explicit !== "false";
-
-  const nodeEnv = readEnv("NODE_ENV");
-  return nodeEnv !== "production";
+  return true;
 }
 
 function readEnv(name: string): string | undefined {

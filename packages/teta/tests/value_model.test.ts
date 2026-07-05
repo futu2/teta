@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   eq,
+  asc,
   isColumn,
   isExpr,
   isQuery,
@@ -11,6 +12,7 @@ import {
   toIR,
   toSql,
   filter,
+  sort,
   pipe,
   windowFn,
 } from "../mod.ts";
@@ -66,6 +68,7 @@ describe("tagged EDSL value model", () => {
   });
 
   test("rejects malformed expression-like values", () => {
+    expect(isExpr({ kind: "expr", node: { kind: "literal", value: 1 } })).toBe(false);
     expect(isExpr({ kind: "expr", node: null })).toBe(false);
     expect(isExpr({ kind: "expr", node: { kind: "bogus" } })).toBe(false);
     expect(isColumn({
@@ -150,6 +153,18 @@ describe("tagged EDSL value model", () => {
 
     expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe(
       "SELECT users_0.id AS id FROM users AS users_0 WHERE users_0.id = 1"
+    );
+  });
+
+  test("order item callbacks validate branded expression nodes", () => {
+    const users = table("users", {
+      id: t.int(),
+    });
+
+    const query = pipe(users, sort((user) => asc(user.id)));
+
+    expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe(
+      "SELECT users_0.id AS id FROM users AS users_0 ORDER BY users_0.id ASC"
     );
   });
 

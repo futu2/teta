@@ -6,8 +6,7 @@
     ".": "./mod.ts",
     "./query": "./query.ts",
     "./expr": "./expr.ts",
-    "./pipe": "./pipe.ts",
-    "./sql": "./sql.ts"
+    "./pipe": "./pipe.ts"
   },
   "types": "./mod.ts",
   "type": "module",

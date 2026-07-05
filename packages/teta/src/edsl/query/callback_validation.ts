@@ -1,5 +1,5 @@
 import type { OrderItem } from "../core/types.ts";
-import { isExpr, type Expr } from "../expr.ts";
+import { isExpr, isExprNode, type Expr } from "../expr.ts";
 import { userError } from "../errors.ts";
 
 export function assertExprCallbackResult(
@@ -26,7 +26,7 @@ function isOrderItem(value: unknown): value is OrderItem {
     value === null
     || typeof value !== "object"
     || Array.isArray(value)
-    || !isExpr({ kind: "expr", node: (value as { expr?: unknown }).expr })
+    || !isExprNode((value as { expr?: unknown }).expr)
   ) {
     return false;
   }
