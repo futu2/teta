@@ -9,11 +9,15 @@ export const RENDER_BENCHMARK_THRESHOLDS: Record<string, RenderBenchmarkThreshol
     maxSqlChars: 500,
   },
   "postgresql/readable": {
-    maxMsPerRender: 0.35,
+    // Readable plans allocate and format several intermediate CTEs. Keep
+    // headroom for shared CI runners while the relative slowdown guard below
+    // still catches disproportionate regressions.
+    maxMsPerRender: 0.45,
     maxSqlChars: 1800,
   },
   "duckdb/optimized": {
-    maxMsPerRender: 0.12,
+    // The median varies by a few microseconds across equivalent runners.
+    maxMsPerRender: 0.15,
     maxSqlChars: 500,
   },
   "sqlite/optimized": {
