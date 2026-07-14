@@ -29,9 +29,25 @@ export function getDialectCapability(
   dialectInput: Dialect | QueryDialect | undefined,
   operation: LanguageOperation
 ): DialectCapability {
-  const dialect = isResolvedDialect(dialectInput)
-    ? dialectInput
-    : resolveDialect(dialectInput);
+  return getResolvedDialectCapability(resolveCapabilityDialect(dialectInput), operation);
+}
+
+/** Return the complete capability map for one resolved or configured dialect. */
+export function getDialectCapabilities(
+  dialectInput: Dialect | QueryDialect | undefined
+): DialectCapabilityMap {
+  const dialect = resolveCapabilityDialect(dialectInput);
+  const result = {} as Record<LanguageOperation, DialectCapability>;
+  for (const operation of LANGUAGE_OPERATIONS) {
+    result[operation] = getResolvedDialectCapability(dialect, operation);
+  }
+  return Object.freeze(result);
+}
+
+function getResolvedDialectCapability(
+  dialect: QueryDialect,
+  operation: LanguageOperation
+): DialectCapability {
   const normalized = operation.toUpperCase();
 
   if (normalized === "LATERAL_JOIN") {
@@ -47,15 +63,12 @@ export function getDialectCapability(
   return mapped && mapped.toUpperCase() !== normalized ? "rewritten" : "native";
 }
 
-/** Return the complete capability map for one resolved or configured dialect. */
-export function getDialectCapabilities(
+function resolveCapabilityDialect(
   dialectInput: Dialect | QueryDialect | undefined
-): DialectCapabilityMap {
-  const result = {} as Record<LanguageOperation, DialectCapability>;
-  for (const operation of LANGUAGE_OPERATIONS) {
-    result[operation] = getDialectCapability(dialectInput, operation);
-  }
-  return Object.freeze(result);
+): QueryDialect {
+  return isResolvedDialect(dialectInput)
+    ? dialectInput
+    : resolveDialect(dialectInput as Dialect | undefined);
 }
 
 /** Return the complete built-in capability matrix used for documentation and tests. */
@@ -83,7 +96,34 @@ function isResolvedDialect(value: unknown): value is QueryDialect {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Partial<QueryDialect>;
   return typeof candidate.name === "string"
-    && typeof candidate.parserDialect !== "undefined"
-    && typeof candidate.features === "object"
-    && typeof candidate.language === "object";
+    && (candidate.parserDialect === null || typeof candidate.parserDialect === "string")
+    && isResolvedFeatures(candidate.features)
+    && isResolvedLanguage(candidate.language);
+}
+
+function isResolvedFeatures(value: unknown): value is QueryDialect["features"] {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const candidate = value as Partial<QueryDialect["features"]>;
+  return typeof candidate.lateralJoinKeyword === "boolean"
+    && typeof candidate.recursiveCte === "boolean"
+    && typeof candidate.qualifyClause === "boolean";
+}
+
+function isResolvedLanguage(value: unknown): value is QueryDialect["language"] {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const candidate = value as Partial<QueryDialect["language"]>;
+  return isStringRecord(candidate.functions)
+    && isStringRecord(candidate.fallbacks)
+    && isStringArray(candidate.unsupported);
+}
+
+function isStringRecord(value: unknown): value is Record<string, string> {
+  return !!value
+    && typeof value === "object"
+    && !Array.isArray(value)
+    && Object.values(value).every((item) => typeof item === "string");
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
 }

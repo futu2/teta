@@ -31,6 +31,17 @@ describe("dialect capability matrix", () => {
     expect(getDialectCapabilities("postgresql").RECURSIVE_CTE).toBe("native");
   });
 
+  test("normalizes partial dialect-shaped values instead of trusting them as resolved", () => {
+    const partialDialect = {
+      name: "custom",
+      parserDialect: null,
+      features: {},
+      language: {},
+    };
+
+    expect(getDialectCapabilities(partialDialect as never).ABS).toBe("native");
+  });
+
   test("formats generated documentation from the same matrix", () => {
     const markdown = formatDialectCapabilityMatrixMarkdown();
     expect(markdown).toContain("| Operation | mysql | mariadb |");
