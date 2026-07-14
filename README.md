@@ -232,7 +232,7 @@ console.log(toSql(pending, { dialect: "postgresql" }));
 
 ## Supported dialects
 
-Built-in: `postgresql`, `sqlite`, `mysql`, `duckdb`, `trino`, `hetu`, `mariadb`, `hive`, `flinksql`, `bigquery`.
+Built-in: `postgresql`, `sqlite`, `mysql`, `duckdb`, `trino`, `mariadb`, `hive`, `flinksql`, `bigquery`.
 
 Custom: pass a `DialectSpec` with your own function mappings, expression fallbacks, and feature flags.
 

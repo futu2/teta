@@ -19,9 +19,6 @@ export const ORDERS_GROUPED_TOTALS_POSTGRES_COMPACT =
 export const ORDERS_GROUPED_ARRAY_AGG_POSTGRES_COMPACT =
   "SELECT orders_0.user_id, ARRAY_AGG(orders_0.total) AS totals FROM orders AS orders_0 GROUP BY orders_0.user_id";
 
-export const ORDERS_GROUPED_ARRAY_AGG_HETU_COMPACT =
-  "SELECT orders_0.user_id, ARRAY_AGG(orders_0.total) AS totals FROM orders AS orders_0 GROUP BY orders_0.user_id";
-
 export const ORDERS_GROUPED_ARRAY_AGG_HIVE_COMPACT =
   "SELECT orders_0.user_id, COLLECT_LIST(orders_0.total) AS totals FROM orders AS orders_0 GROUP BY orders_0.user_id";
 

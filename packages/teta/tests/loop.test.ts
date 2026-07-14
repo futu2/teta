@@ -144,7 +144,7 @@ describe("recursive loop queries", () => {
           )
         ))
       ),
-      { dialect: "hetu", format: "compact" }
+      { dialect: "trino", format: "compact" }
     );
 
     expect(sql.match(/\bWITH\b/g) ?? []).toHaveLength(1);

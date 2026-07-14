@@ -562,16 +562,16 @@ console.log(toSql(pipe(users, map((u) => ({ id: u.id }))), {
 }));
 
 console.log(toSql(users, { dialect: "sqlite" }));
-console.log(toSql(users, { dialect: "hetu" }));
+console.log(toSql(users, { dialect: "trino" }));
 ```
 
-### Built-in HetuEngine DQL dialect
+### Built-in Trino dialect
 
-Teta includes a built-in HetuEngine DQL profile. Use the canonical backend name:
+Teta includes a built-in Trino profile. Use the canonical backend name:
 
-- `"hetu"`
+- `"trino"`
 
-This profile uses `Trino` as parser fallback for SQL stringification and applies Hetu-oriented function naming
+This profile uses the Trino parser for SQL stringification and applies Trino function naming
 (for example array cardinality and slice mappings).
 
 ### Language specification

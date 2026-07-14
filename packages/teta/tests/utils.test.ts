@@ -16,7 +16,7 @@ describe("query helpers", () => {
   });
 
   test("suggests canonical builtin dialect names", () => {
-    expect(suggestCanonicalBuiltin("HetuEngine DQL")).toBe("hetu");
+    expect(suggestCanonicalBuiltin("Trino")).toBe("trino");
     expect(suggestCanonicalBuiltin("postgresql")).toBe("postgresql");
     expect(suggestCanonicalBuiltin("unknown dialect")).toBeNull();
   });

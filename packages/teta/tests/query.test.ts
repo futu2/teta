@@ -153,13 +153,13 @@ describe("toSql(query, options)", () => {
         const query = pipe(sessions, unnest((session) => session.tags, { value: "tag" }));
         expect(toSql(query, { dialect: "duckdb", format: "compact" })).toBe("SELECT sessions_0.id AS id, sessions_0.tags AS tags, unnest_1.tag AS tag FROM sessions AS sessions_0 CROSS JOIN UNNEST(sessions_0.tags) AS unnest_1(tag)");
     });
-    test("renders hetu unnest as lateral view outer posexplode", () => {
+    test("renders trino unnest as lateral view outer posexplode", () => {
         const sessions = table("sessions", {
             id: t.int(),
             tags: t.array(t.string()),
         });
         const query = pipe(sessions, unnest((session) => session.tags, { value: "tag", ordinality: "idx" }, { outer: true }));
-        expect(toSql(query, { dialect: "hetu", format: "compact" })).toBe("SELECT sessions_0.id AS id, sessions_0.tags AS tags, unnest_1.tag AS tag, unnest_1.idx AS idx FROM sessions AS sessions_0 LATERAL VIEW OUTER POSEXPLODE(sessions_0.tags) unnest_1 AS idx, tag");
+        expect(toSql(query, { dialect: "trino", format: "compact" })).toBe("SELECT sessions_0.id AS id, sessions_0.tags AS tags, unnest_1.tag AS tag, unnest_1.idx AS idx FROM sessions AS sessions_0 LATERAL VIEW OUTER POSEXPLODE(sessions_0.tags) unnest_1 AS idx, tag");
     });
     test("hoists a non-lateral subquery join into a CTE", () => {
         const users = createUsersTable();

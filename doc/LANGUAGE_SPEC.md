@@ -15,7 +15,7 @@ Dialect columns in this file:
 - **PostgreSQL**: built-in mapping/fallback in current code
 - **MySQL**: explicit column (currently mostly identity behavior; no MySQL-specific fallback pack yet)
 - **SQLite**: built-in mapping/fallback in current code
-- **HetuEngine DQL**: built-in profile (`Trino` parser fallback + selected function mappings)
+- **Trino**: built-in profile with selected function mappings and fallbacks
 - **Other built-ins**: mostly identity behavior unless overridden
 
 Function-first policy:
@@ -26,7 +26,7 @@ Function-first policy:
 
 ## 1) Math (basic arithmetic)
 
-| Spec item | Preferred functional entry | PostgreSQL | MySQL | SQLite | HetuEngine DQL | Other built-ins |
+| Spec item | Preferred functional entry | PostgreSQL | MySQL | SQLite | Trino | Other built-ins |
 |---|---|---|---|---|---|---|
 | `+` | `add(left, right)` | Direct | Direct | Direct | Direct | Direct |
 | `-` | `sub(left, right)` | Direct | Direct | Direct | Direct | Direct |
@@ -44,7 +44,7 @@ Function-first policy:
 
 ## 2) String manipulation
 
-| Spec item | Preferred functional entry | PostgreSQL | MySQL | SQLite | HetuEngine DQL | Other built-ins |
+| Spec item | Preferred functional entry | PostgreSQL | MySQL | SQLite | Trino | Other built-ins |
 |---|---|---|---|---|---|---|
 | `CONCAT` | `concat(value, ...parts)`, ``f`...` `` | Direct | Direct | Direct | Direct | Direct |
 | `UPPER` | `upper(value)` | Direct | Direct | Direct | Direct | Direct |
@@ -69,7 +69,7 @@ Function-first policy:
 
 ## 3) Logical operators
 
-| Spec item | Preferred functional entry | PostgreSQL | MySQL | SQLite | HetuEngine DQL | Other built-ins |
+| Spec item | Preferred functional entry | PostgreSQL | MySQL | SQLite | Trino | Other built-ins |
 |---|---|---|---|---|---|---|
 | `=` | `eq(left, right)` | Direct | Direct | Direct | Direct | Direct |
 | `!=` | `ne(left, right)` | Direct | Direct | Direct | Direct | Direct |
@@ -85,7 +85,7 @@ Function-first policy:
 
 ## 4) Date and time functions
 
-| Spec item | Preferred functional entry | PostgreSQL | MySQL | SQLite | HetuEngine DQL | Other built-ins |
+| Spec item | Preferred functional entry | PostgreSQL | MySQL | SQLite | Trino | Other built-ins |
 |---|---|---|---|---|---|---|
 | `CURRENT_DATE` | `currentDate()` | Direct | Direct | Direct | Direct | Direct |
 | `CURRENT_TIMESTAMP` | `currentTimestamp()` | Direct | Direct | Direct | Direct | Direct |
@@ -105,7 +105,7 @@ Convenience date-part helpers over `extract(...)`:
 
 ## 5) Type conversion and null handling
 
-| Spec item | Preferred functional entry | PostgreSQL | MySQL | SQLite | HetuEngine DQL | Other built-ins |
+| Spec item | Preferred functional entry | PostgreSQL | MySQL | SQLite | Trino | Other built-ins |
 |---|---|---|---|---|---|---|
 | `CAST` | `cast(value, type)`, `asXxx(value)` | Direct | Direct | Direct | Direct | Direct |
 | `COALESCE` | `coalesce(value, ...values)` | Direct | Direct | Direct | Direct | Direct |
@@ -116,7 +116,7 @@ Convenience date-part helpers over `extract(...)`:
 
 ## 6) Array manipulation
 
-| Spec item | Preferred functional entry | PostgreSQL | MySQL | SQLite | HetuEngine DQL | Other built-ins |
+| Spec item | Preferred functional entry | PostgreSQL | MySQL | SQLite | Trino | Other built-ins |
 |---|---|---|---|---|---|---|
 | `ARRAY_LENGTH` | `arrayLength(value)` | Fallback → `ARRAY_LENGTH(x, 1)` | Configurable | Fallback → `JSON_ARRAY_LENGTH(x)` | Mapped → `CARDINALITY` | Direct (dialect-dependent) |
 | `ARRAY_CONTAINS` | `arrayContains(value, item)` | Fallback → `ARRAY_POSITION(...) IS NOT NULL` | Configurable | Best-effort fallback via JSON text search | Direct (dialect-dependent) | Configurable |
@@ -130,7 +130,7 @@ Convenience date-part helpers over `extract(...)`:
 
 ## 7) Window / aggregation
 
-| Spec item | Preferred functional entry | PostgreSQL | MySQL | SQLite | HetuEngine DQL | Other built-ins |
+| Spec item | Preferred functional entry | PostgreSQL | MySQL | SQLite | Trino | Other built-ins |
 |---|---|---|---|---|---|---|
 | `COUNT` | `count(value)` | Direct | Direct | Direct | Direct | Direct |
 | `SUM` | `sum(value)`, `sumOver(value, spec)` | Direct | Direct | Direct | Direct | Direct |
@@ -148,22 +148,22 @@ Convenience date-part helpers over `extract(...)`:
 
 ## 8) Query features
 
-| Spec item | Preferred functional entry | PostgreSQL | MySQL | SQLite | HetuEngine DQL | Other built-ins |
+| Spec item | Preferred functional entry | PostgreSQL | MySQL | SQLite | Trino | Other built-ins |
 |---|---|---|---|---|---|---|
 | `LATERAL_JOIN` | `pipe(left, join(right, { on, lateral: true }))` | Direct (`LATERAL` kept) | Direct (MySQL 8+, engine-dependent) | Keyword removed when unsupported | Direct | Direct |
 | `RECURSIVE_CTE` | `pipe(base, loop(step))` | Direct | Direct (MySQL 8+) | Direct | Direct | Direct |
 
 If `dialect.features.recursiveCte = false`, SQL rendering throws an explicit error.
 
-## Built-in HetuEngine DQL profile
+## Built-in Trino profile
 
-`HetuEngine DQL` is available as a built-in canonical backend:
+`Trino` is available as a built-in canonical backend:
 
-- `"hetu"`
+- `"trino"`
 
 Current defaults:
 
-- Parser fallback: `Trino` (used for `node-sql-parser` SQL stringification)
+- Parser dialect: `Trino` (used for `node-sql-parser` SQL stringification)
 - Function mappings: `ARRAY_LENGTH -> CARDINALITY`, `ARRAY_SLICE -> SLICE`, `ARRAY_CONCAT -> CONCAT`
 - String mappings: `CHAR_LENGTH/CHARACTER_LENGTH -> LENGTH`
 

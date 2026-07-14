@@ -2,13 +2,6 @@ import type { BuiltinDialect } from "../types.ts";
 import { BUILTIN_DIALECTS } from "./builtin.ts";
 import type { BuiltinDialectDefinition } from "./types.ts";
 
-const COMPACT_ALIASES: Record<string, BuiltinDialect> = {
-  hetu: "hetu",
-  hetudql: "hetu",
-  hetuengine: "hetu",
-  hetuenginedql: "hetu",
-};
-
 /** Look up a built-in dialect by canonical name. */
 export function lookupBuiltinDialect(input: string): BuiltinDialectDefinition | undefined {
   const key = input.toString().trim() as BuiltinDialect;
@@ -40,8 +33,6 @@ export function suggestCanonicalBuiltin(input: string): BuiltinDialect | null {
   const compact = lower.replace(/[^a-z0-9]+/g, "");
   if (!compact) return null;
 
-  const aliased = COMPACT_ALIASES[compact];
-  if (aliased) return aliased;
   if (compact in BUILTIN_DIALECTS) {
     return compact as BuiltinDialect;
   }

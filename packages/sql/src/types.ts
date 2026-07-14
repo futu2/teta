@@ -89,8 +89,7 @@ export type BuiltinDialect =
   | "hive"
   | "flinksql"
   | "noql"
-  | "duckdb"
-  | "hetu";
+  | "duckdb";
 
 /** Optional feature flags that affect dialect-specific SQL lowering. */
 export type DialectFeatures = {

@@ -4,7 +4,6 @@ import { BIGQUERY_DIALECT } from "./bigquery.ts";
 import { DB2_DIALECT } from "./db2.ts";
 import { DUCKDB_DIALECT } from "./duckdb.ts";
 import { FLINKSQL_DIALECT } from "./flinksql.ts";
-import { HETU_DIALECT } from "./hetu.ts";
 import { HIVE_DIALECT } from "./hive.ts";
 import { MARIADB_DIALECT } from "./mariadb.ts";
 import { MYSQL_DIALECT } from "./mysql.ts";
@@ -34,5 +33,4 @@ export const BUILTIN_DIALECTS: Record<BuiltinDialect, BuiltinDialectDefinition> 
   flinksql: FLINKSQL_DIALECT,
   noql: NOQL_DIALECT,
   duckdb: DUCKDB_DIALECT,
-  hetu: HETU_DIALECT,
 };

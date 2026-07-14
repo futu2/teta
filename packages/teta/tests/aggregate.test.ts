@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { fold, filter, leftJoin, count, eq, group, gt, sum, lt, toSql, and, or, arrayAgg, pipe } from "../mod.ts";
-import { ORDERS_GROUPED_ARRAY_AGG_HETU_COMPACT, ORDERS_GROUPED_ARRAY_AGG_HIVE_COMPACT, ORDERS_GROUPED_ARRAY_AGG_POSTGRES_COMPACT, ORDERS_GROUPED_ARRAY_AGG_SQLITE_COMPACT, ORDERS_GROUPED_TOTALS_POSTGRES_COMPACT, ORDERS_GROUPED_TOTALS_HAVING_POSTGRES_COMPACT, ORDERS_GROUPED_TOTALS_WHERE_HAVING_POSTGRES_COMPACT, ORDERS_GROUPED_TOTALS_WHERE_HAVING_OR_POSTGRES_COMPACT, ORDERS_GROUPED_USER_RANGE_HAVING_OR_POSTGRES_COMPACT, USERS_ORDERS_LEFT_JOIN_AGG_POSTGRES_COMPACT, QUOTED_TOTAL_SPEND_AGG_LIST_POSTGRES_COMPACT } from "./helpers/expected-sql.ts";
+import { ORDERS_GROUPED_ARRAY_AGG_HIVE_COMPACT, ORDERS_GROUPED_ARRAY_AGG_POSTGRES_COMPACT, ORDERS_GROUPED_ARRAY_AGG_SQLITE_COMPACT, ORDERS_GROUPED_TOTALS_POSTGRES_COMPACT, ORDERS_GROUPED_TOTALS_HAVING_POSTGRES_COMPACT, ORDERS_GROUPED_TOTALS_WHERE_HAVING_POSTGRES_COMPACT, ORDERS_GROUPED_TOTALS_WHERE_HAVING_OR_POSTGRES_COMPACT, ORDERS_GROUPED_USER_RANGE_HAVING_OR_POSTGRES_COMPACT, USERS_ORDERS_LEFT_JOIN_AGG_POSTGRES_COMPACT, QUOTED_TOTAL_SPEND_AGG_LIST_POSTGRES_COMPACT } from "./helpers/expected-sql.ts";
 import { createOrdersTable, createUsersTable } from "./helpers/fixtures.ts";
 describe("joins and aggregates", () => {
     test("renders ARRAY_AGG in grouped folds for postgresql", () => {
@@ -11,13 +11,13 @@ describe("joins and aggregates", () => {
         })));
         expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe(ORDERS_GROUPED_ARRAY_AGG_POSTGRES_COMPACT);
     });
-    test("renders ARRAY_AGG in grouped folds for hetu", () => {
+    test("renders ARRAY_AGG in grouped folds for trino", () => {
         const orders = createOrdersTable();
         const query = pipe(orders, fold((order) => ({
             user_id: group(order.user_id),
             totals: arrayAgg(order.total),
         })));
-        expect(toSql(query, { dialect: "hetu", format: "compact" })).toBe(ORDERS_GROUPED_ARRAY_AGG_HETU_COMPACT);
+        expect(toSql(query, { dialect: "trino", format: "compact" })).toBe(ORDERS_GROUPED_ARRAY_AGG_POSTGRES_COMPACT);
     });
     test("renders COLLECT_LIST in grouped folds for hive", () => {
         const orders = createOrdersTable();
