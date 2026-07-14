@@ -1,7 +1,6 @@
 import type {
   ColumnType,
   ColumnTypeName,
-  BigIntLiteral,
   TableSourceInput,
   Value,
 } from "../core/types.ts";
@@ -31,11 +30,8 @@ import { isPlainObject } from "./value.ts";
 type ValuesInput = Value | bigint;
 type ValuesRow = Readonly<Record<string, ValuesInput>>;
 type NormalizedValuesRow = Readonly<Record<string, Value>>;
-type NormalizeValuesColumn<T> = T extends BigIntLiteral
-  ? SqlBigInt
-  : NormalizeExpressionLiteral<T>;
 type ValuesColumns<TRows extends readonly ValuesRow[]> = {
-  [K in keyof TRows[number] & string]: NormalizeValuesColumn<TRows[number][K]>;
+  [K in keyof TRows[number] & string]: NormalizeExpressionLiteral<TRows[number][K]>;
 };
 
 type TableColumnHelpers = {

@@ -86,6 +86,13 @@ describe("tagged EDSL value model", () => {
     expect(() => toExprNode({ kind: "expr", node: { kind: "bogus" } } as any)).toThrow(
       "Unsupported literal value"
     );
+    expect(() => lit({ kind: "bigint_literal", value: "not-a-bigint" } as never)).toThrow(
+      "Unsupported literal value"
+    );
+    expect(() => toExprNode({ kind: "date_literal" } as never)).toThrow(
+      "Unsupported literal value"
+    );
+    expect(() => lit(Number.NaN as never)).toThrow("Unsupported literal value");
   });
 
   test("rejects malformed query-like values", () => {

@@ -289,7 +289,7 @@ function isLiteralValue(value: unknown): value is Value {
   const type = typeof value;
   return value === null
     || type === "string"
-    || type === "number"
+    || (type === "number" && Number.isFinite(value))
     || type === "boolean"
     || isTemporalLiteral(value);
 }
@@ -421,11 +421,15 @@ export function lit(value: DateLiteral): Expr<SqlDate>;
 export function lit(value: TimestampLiteral): Expr<SqlTimestamp>;
 export function lit<T extends Value>(value: T): Expr<NormalizeExpressionLiteral<T>>;
 export function lit(value: Value | bigint): Expr<NormalizeExpressionLiteral<Value>> {
+  const literal = typeof value === "bigint"
+    ? { kind: "bigint_literal", value: value.toString() } as BigIntLiteral
+    : value;
+  if (!isLiteralValue(literal)) {
+    userError("INVALID_LITERAL_VALUE", `Unsupported literal value: ${String(value)}`);
+  }
   return exprOf<NormalizeExpressionLiteral<Value>>({
     kind: "literal",
-    value: typeof value === "bigint"
-      ? { kind: "bigint_literal", value: value.toString() } as BigIntLiteral
-      : value,
+    value: literal,
   });
 }
 
@@ -496,10 +500,7 @@ export function toExprNode<T>(value: ExprInput<T>): ExprNode<T> {
       value: { kind: "bigint_literal", value: value.toString() } as BigIntLiteral,
     } as ExprNode<T>;
   }
-  if (type === "string" || type === "number" || type === "boolean") {
-    return { kind: "literal", value: value as Value } as ExprNode<T>;
-  }
-  if (isTemporalLiteral(value)) {
+  if (isLiteralValue(value)) {
     return { kind: "literal", value } as ExprNode<T>;
   }
   userError("INVALID_LITERAL_VALUE", `Unsupported literal value: ${String(value)}`);
@@ -508,10 +509,9 @@ export function toExprNode<T>(value: ExprInput<T>): ExprNode<T> {
 function isTemporalLiteral(value: unknown): value is DateLiteral | TimestampLiteral | BigIntLiteral {
   if (typeof value !== "object" || value === null) return false;
   const candidate = value as { kind?: unknown; value?: unknown };
-  if (candidate.value !== undefined && typeof candidate.value !== "string") return false;
-  return candidate.kind === "date_literal"
-    || candidate.kind === "timestamp_literal"
-    || candidate.kind === "bigint_literal";
+  if (typeof candidate.value !== "string" || candidate.value.length === 0) return false;
+  if (candidate.kind === "date_literal" || candidate.kind === "timestamp_literal") return true;
+  return candidate.kind === "bigint_literal" && /^-?(0|[1-9][0-9]*)$/.test(candidate.value);
 }
 
 export { containsGroup, unwrapGroupExpr, dedupeExprs, shouldAlias };

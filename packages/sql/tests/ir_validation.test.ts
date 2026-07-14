@@ -20,7 +20,7 @@ function validTarget(): QueryIRSqlTarget {
       as: null,
     },
     stages: [],
-    scopeId: "__teta_scope_users" as QueryIRSqlTarget["scopeId"],
+    scopeId: "__teta_scope_users",
     columnNames: ["id"],
     columnIdentifiers: {
       id: { name: "id", quoted: false },
