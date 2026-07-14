@@ -223,6 +223,7 @@ console.log(toSql(pending, { dialect: "postgresql" }));
 | **[Types Guide](./doc/TYPES.md)** | `Expr<T>`, `Query<T>`, branded SQL types, type phases |
 | **[Type System](./doc/TYPE_SYSTEM.md)** | Formal type judgments and preservation rules |
 | **[Language Spec](./doc/LANGUAGE_SPEC.md)** | SQL function coverage and per-dialect support matrix |
+| **[Portable IR v1](./doc/PORTABLE_IR.md)** | Versioned cross-language query contract, validation, and rendering |
 | **[Dev Guide](./doc/DEV_GUIDE.md)** | Internal architecture, rendering pipeline, extension points |
 | **[Examples](./examples/)** | Runnable application-style examples |
 

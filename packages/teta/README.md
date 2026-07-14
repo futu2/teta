@@ -4,6 +4,10 @@ Type-safe SQL EDSL frontend for TypeScript.
 
 `@teta/teta` builds typed query IR and keeps direct convenience helpers such as `toSql(...)`. The reusable SQL backend lives in `@teta/sql`.
 
+When another language needs to produce the same query representation, use the
+[Portable IR v1 guide](../../doc/PORTABLE_IR.md) and render it through
+`@teta/sql`.
+
 ## Install
 
 ### Deno

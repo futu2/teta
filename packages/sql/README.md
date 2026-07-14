@@ -50,6 +50,9 @@ The decoder also tracks each stage's row scope and shaped output columns. It
 rejects references to unavailable scopes, stale pre-projection scopes, and
 declared join columns that do not exist.
 
+See the [Portable IR v1 guide](../../doc/PORTABLE_IR.md) for the complete
+cross-language contract, JSON Schema, validation rules, and lowering boundary.
+
 ```ts
 import { irToSql, type PortableQueryIR } from "@teta/sql";
 
