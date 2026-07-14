@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { TetaUserError, asc, count, eq, extend, filter, fold, fullJoin, group, innerJoin, innerJoinMerge, join, leftJoin, loop, map, onEq, prefixOverlapLeft, rightJoin, sort, t, table, take, takeWithin, toSql, unnest, usingCols, values, pipe } from "../mod.ts";
+import { TetaUserError, asc, count, eq, extend, filter, fold, fullJoin, group, innerJoin, innerJoinMerge, join, leftJoin, loop, map, onEq, prefixOverlapLeft, rightJoin, sort, t, table, take, takeWithin, toSql, unlessStep, unnest, usingCols, values, whenStep, pipe } from "../mod.ts";
 import type { TetaErrorCode } from "../mod.ts";
 import { GROUP_INSIDE_AGGREGATE_FUNCTION_ERROR, GROUP_OUTSIDE_AGGREGATE_ERROR, JOIN_MERGE_CONFLICT_ERROR, JOIN_OVERLAPPING_COLUMNS_ERROR, LEGACY_SELECTION_ARRAY_ERROR, LOOP_COLUMN_MISMATCH_ERROR, NON_CANONICAL_POSTGRES_DIALECT_ERROR, TABLE_SCHEMA_EMPTY_ERROR, TABLE_SCHEMA_INVALID_ERROR, VALUES_COLUMN_MISMATCH_ERROR, VALUES_EMPTY_ERROR, VALUES_NO_COLUMNS_ERROR, VALUES_ROW_INVALID_ERROR, VALUES_UNDEFINED_ERROR } from "./helpers/expected-errors.ts";
 import { createOrdersTable, createUsersTable } from "./helpers/fixtures.ts";
@@ -55,6 +55,21 @@ describe("error paths", () => {
                 () => take(count),
                 "QUERY_HELPER_INVALID_ARGUMENTS",
                 "take() expects a finite non-negative integer count"
+            );
+        }
+    });
+    test("conditional step helpers validate erased conditions and step brands", () => {
+        for (const [name, helper] of [["whenStep", whenStep], ["unlessStep", unlessStep]] as const) {
+            const message = `${name}() expects ${name}(condition, step)`;
+            expectUserError(
+                () => (helper as any)("yes", take(1)),
+                "QUERY_HELPER_INVALID_ARGUMENTS",
+                message
+            );
+            expectUserError(
+                () => (helper as any)(false, (query: unknown) => query),
+                "QUERY_HELPER_INVALID_ARGUMENTS",
+                message
             );
         }
     });
