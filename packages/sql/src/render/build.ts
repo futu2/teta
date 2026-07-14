@@ -1,4 +1,5 @@
 import type { With } from "node-sql-parser";
+import { createDictionary } from "../dictionary.ts";
 import type { QueryDialect, SqlRenderStrategy } from "../types.ts";
 import { generatedCteName, type GeneratedCteName, type ScopeId, type Source, type SqlIdentifier, type Stage } from "../ir/types.ts";
 import { columnNamesToIdentifierMap } from "../ir/utils.ts";
@@ -41,7 +42,9 @@ export function buildPipelineAst(
   const renderStrategy = options?.renderStrategy ?? "optimized";
   const allowJoinSubqueryHoist = options?.allowJoinSubqueryHoist ?? true;
   const allowIntermediateCtes = options?.allowIntermediateCtes ?? true;
-  const columnIdentifiers = options?.columnIdentifiers ?? columnNamesToIdentifierMap(columnNames);
+  const columnIdentifiers = options?.columnIdentifiers
+    ? createDictionary(options.columnIdentifiers)
+    : columnNamesToIdentifierMap(columnNames);
   const baseSource = compileSourceRef(source, columnIdentifiers, dialect);
 
   if (stages.length === 0) {
@@ -86,6 +89,7 @@ export function buildPipelineAst(
         stageAst,
         nextPlan.columnNames,
         nextPlan.columnIdentifiers,
+        dialect,
         allowIntermediateCtes
       );
       currentPlan = nextPlan;
@@ -113,6 +117,7 @@ export function buildPipelineAst(
         fused.ast,
         fused.output.columnNames,
         fused.output.columnIdentifiers,
+        dialect,
         allowIntermediateCtes
       );
       currentPlan = fused.output;
@@ -136,6 +141,7 @@ export function buildPipelineAst(
       stageAst,
       nextPlan.columnNames,
       nextPlan.columnIdentifiers,
+      dialect,
       allowIntermediateCtes
     );
     currentPlan = nextPlan;
@@ -149,10 +155,12 @@ function appendIntermediateCte(
   ctePrefix: string,
   stageIndex: number,
   ast: SelectAst,
-  columnNames: readonly string[]
+  columnNames: readonly string[],
+  columnIdentifiers: Readonly<Record<string, SqlIdentifier>>,
+  dialect: QueryDialect
 ): GeneratedCteName {
   const name = generatedCteName(ctePrefix, "cte", stageIndex);
-  ctes.push(buildNamedCte(name, ast, columnNames));
+  ctes.push(buildNamedCte(name, ast, columnNames, { columnIdentifiers, dialect }));
   return name;
 }
 
@@ -163,6 +171,7 @@ function buildIntermediateSourceRef(
   ast: SelectAst,
   columnNames: readonly string[],
   columnIdentifiers: Readonly<Record<string, SqlIdentifier>>,
+  dialect: QueryDialect,
   allowIntermediateCtes: boolean
 ): CompileSourceRef {
   if (!allowIntermediateCtes) {
@@ -176,7 +185,15 @@ function buildIntermediateSourceRef(
 
   return {
     kind: "cte",
-    name: appendIntermediateCte(ctes, ctePrefix, stageIndex, ast, columnNames),
+    name: appendIntermediateCte(
+      ctes,
+      ctePrefix,
+      stageIndex,
+      ast,
+      columnNames,
+      columnIdentifiers,
+      dialect
+    ),
     columnIdentifiers,
   };
 }

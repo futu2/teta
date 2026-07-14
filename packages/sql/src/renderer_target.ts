@@ -9,6 +9,10 @@ import type {
   RendererState,
 } from "./renderer_types.ts";
 import type { ExprNode } from "./ir/types.ts";
+import {
+  collectExprParameterNames,
+  collectQueryParameterNames,
+} from "./ir/parameters.ts";
 import { validateExprIR } from "./ir/validate.ts";
 import type { SqlResult } from "./types.ts";
 
@@ -16,7 +20,7 @@ export function renderQueryIRTarget(
   target: QueryIRSqlTarget,
   state: RendererState
 ): SqlResult {
-  const renderContext = createRenderContext(state);
+  const renderContext = createRenderContext(state, collectQueryParameterNames(target));
   const ast = withSqlRenderContext(renderContext, () =>
     applyDialectFixes(
       renderPipelineAst(target.source, target.stages, target.columnNames, target.scopeId, {
@@ -30,7 +34,7 @@ export function renderQueryIRTarget(
   );
 
   return {
-    sql: renderAst(ast, state, renderContext),
+    sql: renderAst(ast, state),
     params: renderContext.params,
   };
 }
@@ -40,13 +44,13 @@ export function renderExprTarget(
   state: RendererState
 ): SqlResult {
   validateExprIR(target);
-  const renderContext = createRenderContext(state);
   const node = unwrapExprTarget(target);
+  const renderContext = createRenderContext(state, collectExprParameterNames(node));
   const expr = applyDialectLanguage(node, state.dialect);
 
   return {
     sql: withSqlRenderContext(renderContext, () =>
-      renderExprNode(expr, state, renderContext)
+      renderExprNode(expr, state)
     ),
     params: renderContext.params,
   };

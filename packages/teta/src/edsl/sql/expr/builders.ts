@@ -10,6 +10,7 @@ import {
   type Expr,
 } from "./core.ts";
 import { group } from "./ops/aggregate.ts";
+import { createStringRecord, setStringRecordValue } from "../../record.ts";
 
 export type WhenArgs<TArgs extends readonly unknown[]> =
   TArgs extends readonly [
@@ -64,9 +65,13 @@ export function mapShape<
   value: T,
   mapper: (value: T[keyof T]) => TOutput
 ): { [K in keyof T]: TOutput } {
-  const result: Partial<{ [K in keyof T]: TOutput }> = {};
+  const result = createStringRecord<TOutput>() as Partial<{ [K in keyof T]: TOutput }>;
   for (const key of Object.keys(value) as Array<keyof T>) {
-    result[key] = mapper(value[key]);
+    setStringRecordValue(
+      result as Record<string, TOutput>,
+      key as string,
+      mapper(value[key])
+    );
   }
   return result as { [K in keyof T]: TOutput };
 }
@@ -78,7 +83,7 @@ export type GroupShapeResult<T extends Record<string, Expr<unknown>>> = {
 export function groupShape<T extends Record<string, Expr<unknown>>>(
   value: T
 ): GroupShapeResult<T> {
-  const result: Partial<GroupShapeResult<T>> = {};
+  const result = createStringRecord<unknown>() as Partial<GroupShapeResult<T>>;
   for (const key of Object.keys(value) as Array<keyof T>) {
     const item = value[key];
     if (!item) continue;
@@ -92,7 +97,11 @@ function assignGroupedShapeValue<T extends Record<string, Expr<unknown>>, K exte
   key: K,
   value: T[K]
 ): void {
-  target[key] = group(value) as GroupShapeResult<T>[K];
+  setStringRecordValue(
+    target as Record<string, unknown>,
+    key as string,
+    group(value)
+  );
 }
 
 export function f<const TExprs extends readonly ExprInput<unknown>[]>(

@@ -1,5 +1,6 @@
 import { OUTER_TABLE_ALIAS } from "../core/types.ts";
 import { columnOf, type Column, type ColumnRefs } from "../core/expr.ts";
+import { createStringRecord, setStringRecordValue } from "../record.ts";
 
 export {
   assertLoopColumns,
@@ -21,9 +22,9 @@ export {
 export function qualifyOuterColumns<TColumns extends Record<string, unknown>>(
   columns: ColumnRefs<TColumns>
 ): ColumnRefs<TColumns> {
-  const result: Record<string, Column<any, string>> = {};
+  const result = createStringRecord<Column<any, string>>();
   for (const key of Object.keys(columns)) {
-    result[key] = columnOf<any, string>(OUTER_TABLE_ALIAS, key);
+    setStringRecordValue(result, key, columnOf<any, string>(OUTER_TABLE_ALIAS, key));
   }
   return result as ColumnRefs<TColumns>;
 }

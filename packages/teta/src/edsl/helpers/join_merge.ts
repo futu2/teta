@@ -448,7 +448,12 @@ function assignJoinMergeColumn(
   if (Object.prototype.hasOwnProperty.call(target, key)) {
     userError("JOIN_MERGE_CONFLICT", `join merge helper still overlaps after renaming: ${key}`);
   }
-  target[key] = value;
+  Object.defineProperty(target, key, {
+    configurable: true,
+    enumerable: true,
+    value,
+    writable: true,
+  });
 }
 
 function joinColumn<TColumns extends Record<string, any>>(

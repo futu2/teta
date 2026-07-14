@@ -16,7 +16,7 @@
     "typecheck:sql": "bun run --cwd packages/sql typecheck",
     "typecheck:teta": "bun run --cwd packages/teta typecheck",
     "typecheck:dev": "bun run --cwd packages/dev typecheck",
-    "check": "bun run check:metadata && bun run check:sql && bun run check:teta && bun run check:dev",
+    "check": "bun run check:metadata && bun run typecheck:repo && bun run check:sql && bun run check:teta && bun run check:dev",
     "check:sql": "bun run --cwd packages/sql check",
     "check:teta": "bun run --cwd packages/teta check",
     "check:dev": "bun run --cwd packages/dev check",

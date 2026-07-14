@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { between, filter, filterEq, identityStep, isDistinctFrom, isNotIn, take, takeWithin, sort, map, toSql, asc, desc, eq, gte, replace, and, coalesce, join, leftJoin, leftJoinMerge, onEq, prefixOverlapLeft, table, t, pipe, flow, unlessStep, unionAll, union, unnest, whenStep } from "../mod.ts";
+import { between, composeSteps, filter, filterEq, identityStep, isDistinctFrom, isNotIn, take, takeWithin, sort, map, toSql, asc, desc, eq, gte, replace, and, coalesce, join, leftJoin, leftJoinMerge, onEq, prefixOverlapLeft, table, t, pipe, flow, unlessStep, unionAll, union, unnest, whenStep } from "../mod.ts";
 import { USER_PIPELINE_POSTGRES_COMPACT, USERS_ORDERS_LEFT_JOIN_SELECT_POSTGRES_COMPACT } from "./helpers/expected-sql.ts";
 import { createOrdersTable, createUsersPipelineTable, createUsersTable } from "./helpers/fixtures.ts";
 describe("function-first query api", () => {
@@ -45,11 +45,37 @@ describe("function-first query api", () => {
         expect(result).toBe("n=13");
     });
     test("query steps are callable values with stable metadata", () => {
-        const step = filterEq((user: ReturnType<typeof createUsersPipelineTable>["columns"]) => user.active, true);
+        const step = composeSteps(
+            filterEq((user: ReturnType<typeof createUsersPipelineTable>["columns"]) => user.active, true),
+            take(5)
+        );
 
         expect(step.kind).toBe("query_step");
-        expect(step.stepName).toBe("filterEq");
+        expect(step.stepName).toBe("composeSteps");
         expect(Object.isFrozen(step)).toBe(true);
+    });
+    test("composeSteps brands compatible query transforms", () => {
+        const users = createUsersTable();
+        const transform = (query: typeof users) => pipe(query, take(2));
+        const step = composeSteps(transform);
+
+        expect(step).not.toBe(transform as typeof step);
+        expect(step.kind).toBe("query_step");
+        expect(step.stepName).toBe("composeSteps");
+        expect(Object.isFrozen(step)).toBe(true);
+        expect(Object.isFrozen(transform)).toBe(false);
+        expect(toSql(step(users), { dialect: "postgresql", format: "compact" })).toBe(
+            toSql(pipe(users, take(2)), { dialect: "postgresql", format: "compact" })
+        );
+    });
+    test("composeSteps rejects non-functions", () => {
+        expect(() => (composeSteps as any)(null)).toThrow(
+            "composeSteps() expects only query transforms"
+        );
+        const users = createUsersTable();
+        expect(() => (composeSteps as any)((query: typeof users) => query, () => 42)(users)).toThrow(
+            "composeSteps() transforms must return a query"
+        );
     });
     test("pipe preserves types past eight steps", () => {
         const users = createUsersPipelineTable();
@@ -76,15 +102,23 @@ describe("function-first query api", () => {
     });
     test("uses simple boolean query-step combinators", () => {
         const users = createUsersPipelineTable();
+        const activeLimited = composeSteps(
+            filterEq((user: typeof users.columns) => user.active, true),
+            take(5)
+        );
         const query = pipe(
             users,
             identityStep(),
-            whenStep(true, filterEq((user) => user.active, true)),
+            whenStep(true, activeLimited),
             whenStep(false, filterEq((user) => user.age, 99)),
-            unlessStep(false, take(5))
+            unlessStep(true, take(1))
         );
+        const unlessQuery = pipe(users, unlessStep(false, activeLimited));
 
         expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe("SELECT users_0.id AS id, users_0.name AS name, users_0.age AS age, users_0.active AS active FROM users AS users_0 WHERE users_0.active = TRUE LIMIT 5");
+        expect(toSql(unlessQuery, { dialect: "postgresql", format: "compact" })).toBe(
+            toSql(query, { dialect: "postgresql", format: "compact" })
+        );
     });
     test("takes rows within a partition using row_number", () => {
         const employees = table("employees", {

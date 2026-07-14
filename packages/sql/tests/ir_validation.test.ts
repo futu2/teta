@@ -92,6 +92,33 @@ describe("public query IR v1", () => {
     );
   });
 
+  test("preserves prototype-named columns through portable lowering and rendering", () => {
+    const columnNames = ["__proto__", "constructor", "toString"];
+    const target = {
+      version: TETA_QUERY_IR_VERSION,
+      source: {
+        kind: "values",
+        rows: [Object.fromEntries(columnNames.map((name, index) => [name, index + 1]))],
+      },
+      stages: [],
+      scopeId: "__teta_scope_values",
+      columnNames,
+    } satisfies PortableQueryIR;
+
+    validateQueryIR(target);
+    const lowered = lowerPortableQueryIR(target);
+    expect(Object.getPrototypeOf(lowered.columnIdentifiers)).toBeNull();
+    expect(Object.keys(lowered.columnIdentifiers)).toEqual(columnNames);
+    for (const name of columnNames) {
+      expect(Object.hasOwn(lowered.columnIdentifiers, name)).toBe(true);
+      expect(lowered.columnIdentifiers[name]?.name).toBe(name);
+    }
+    expect(irToSql(target, { dialect: "postgresql" })).toBe(
+      "SELECT values_0.__proto__, values_0.constructor, values_0.\"toString\" "
+      + "FROM (SELECT 1 AS __proto__, 2 AS constructor, 3 AS \"toString\") AS values_0"
+    );
+  });
+
   test("rejects old or incomplete portable targets at the boundary", () => {
     const oldVersion = { ...validTarget(), version: 0 };
     expectInvalid(() => validateQueryIR(oldVersion), "query.version");

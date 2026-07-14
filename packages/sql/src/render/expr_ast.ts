@@ -28,9 +28,7 @@ export function exprNodeToAst(
       const table: ColumnRefAst["table"] =
         expr.table === null
           ? null
-          : renderContext?.mode === "ast"
-            ? (renderContext.identifierBindings[expr.table] ?? expr.table)
-            : expr.table;
+          : (renderContext?.identifierBindings[expr.table] ?? expr.table);
       const column: ColumnRefAst["column"] =
         expr.table === null
           ? expr.name
@@ -51,8 +49,8 @@ export function exprNodeToAst(
       const binaryExpr: BinaryExprAst = {
         type: "binary_expr",
         operator: expr.op,
-        left: renderBinaryOperand(expr.left, expr.op, renderContext),
-        right: renderBinaryOperand(expr.right, expr.op, renderContext),
+        left: renderBinaryOperand(expr.left, expr.op, "left", renderContext),
+        right: renderBinaryOperand(expr.right, expr.op, "right", renderContext),
       };
       return binaryExpr;
     }
@@ -60,7 +58,7 @@ export function exprNodeToAst(
       const unaryExpr: UnaryExprAst = {
         type: "unary_expr",
         operator: expr.op,
-        expr: exprNodeToAst(expr.expr, renderContext),
+        expr: renderUnaryOperand(expr.expr, renderContext),
       };
       return unaryExpr;
     }
@@ -124,17 +122,63 @@ function assertNever(value: never): never {
 function renderBinaryOperand(
   expr: ExprNode<unknown>,
   parentOp: BinaryExprAst["operator"],
+  side: "left" | "right",
   renderContext: SqlRenderContext | null
 ): ParserExprAst {
   const ast = exprNodeToAst(expr, renderContext);
   const normalized = unwrapGroups(expr);
-  if (parentOp === "BETWEEN" && normalized.kind === "binary" && normalized.op === "AND") {
+  if (
+    side === "right" &&
+    parentOp === "BETWEEN" &&
+    normalized.kind === "binary" &&
+    normalized.op === "AND"
+  ) {
     return ast;
   }
-  if (normalized.kind === "binary" && binaryPrecedence(normalized.op) < binaryPrecedence(parentOp)) {
+  if (
+    normalized.kind === "binary" &&
+    binaryOperandNeedsParentheses(parentOp, normalized.op, side)
+  ) {
     return parenthesizeAst(ast);
   }
   return ast;
+}
+
+function renderUnaryOperand(
+  expr: ExprNode<unknown>,
+  renderContext: SqlRenderContext | null
+): ParserExprAst {
+  const ast = exprNodeToAst(expr, renderContext);
+  return unwrapGroups(expr).kind === "binary" ? parenthesizeAst(ast) : ast;
+}
+
+function binaryOperandNeedsParentheses(
+  parentOp: BinaryExprAst["operator"],
+  childOp: BinaryExprAst["operator"],
+  side: "left" | "right"
+): boolean {
+  const parentPrecedence = binaryPrecedence(parentOp);
+  const childPrecedence = binaryPrecedence(childOp);
+
+  if (childPrecedence !== parentPrecedence) {
+    return childPrecedence < parentPrecedence;
+  }
+
+  if (parentPrecedence === 3) return true;
+
+  // SQL binary operators associate left-to-right. A same-precedence expression
+  // on the right therefore needs grouping unless the operation can be flattened.
+  return side === "right" && !isAssociativeChain(parentOp, childOp);
+}
+
+function isAssociativeChain(
+  parentOp: BinaryExprAst["operator"],
+  childOp: BinaryExprAst["operator"]
+): boolean {
+  return (
+    parentOp === childOp &&
+    (parentOp === "AND" || parentOp === "OR" || parentOp === "||")
+  );
 }
 
 function parenthesizeAst(ast: ParserExprAst): ParserExprAst {

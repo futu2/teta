@@ -4,6 +4,7 @@ import { projectionItemOutputName } from "../ir/utils.ts";
 import type { ScopeBindings } from "./types.ts";
 import { renderIdentifier } from "./identifiers.ts";
 import { internalError } from "../errors.ts";
+import { createDictionary } from "../dictionary.ts";
 import { bindExprScopes, exprToAst, getSqlRenderContext } from "./render.ts";
 
 export type ScopeExprLookup = Partial<Record<ScopeId, Record<string, ExprNode<unknown>>>>;
@@ -38,7 +39,7 @@ export function expandProjectedColumns(
 export function projectionItemsToScopeMap(
   items: readonly ProjectionItem[]
 ): Record<string, ExprNode<unknown>> {
-  const mapping: Record<string, ExprNode<unknown>> = {};
+  const mapping = createDictionary<ExprNode<unknown>>();
   for (const item of items) {
     const name = projectionItemOutputName(item);
     if (!name) {

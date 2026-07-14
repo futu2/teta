@@ -1,17 +1,30 @@
 import type { With } from "node-sql-parser";
+import type { SqlIdentifier } from "../ir/types.ts";
+import { normalizeIdentifier } from "../ir/utils.ts";
+import { getDefaultDialect } from "../dialect.ts";
+import type { QueryDialect } from "../types.ts";
 import type { ColumnRefAst, SelectAst } from "./types.ts";
 import { toParserSelect } from "./ast.ts";
+import { renderIdentifier } from "./identifiers.ts";
 
-export function toCteColumnRef(name: string): ColumnRefAst {
+type BuildNamedCteOptions = {
+  columnIdentifiers?: Readonly<Record<string, SqlIdentifier>>;
+  dialect?: QueryDialect;
+};
+
+export function toCteColumnRef(
+  name: string,
+  identifier: SqlIdentifier,
+  dialect: QueryDialect
+): ColumnRefAst {
+  const rendered = renderIdentifier(identifier, dialect, null);
+  const expr = typeof rendered === "string"
+    ? { type: "default" as const, value: rendered }
+    : rendered;
   return {
     type: "column_ref",
     table: null,
-    column: {
-      expr: {
-        type: "default",
-        value: name,
-      },
-    },
+    column: { expr: expr ?? { type: "default", value: name } },
     collate: null,
   };
 }
@@ -19,8 +32,10 @@ export function toCteColumnRef(name: string): ColumnRefAst {
 export function buildNamedCte(
   name: string,
   ast: SelectAst,
-  columnNames: readonly string[] = []
+  columnNames: readonly string[] = [],
+  options: BuildNamedCteOptions = {}
 ): With {
+  const dialect = options.dialect ?? getDefaultDialect();
   return {
     name: { value: name },
     stmt: {
@@ -28,6 +43,12 @@ export function buildNamedCte(
       tableList: [],
       columnList: [],
     },
-    columns: columnNames.map(toCteColumnRef),
+    columns: columnNames.map((columnName) =>
+      toCteColumnRef(
+        columnName,
+        options.columnIdentifiers?.[columnName]
+          ?? normalizeIdentifier(columnName, "CTE column"),
+        dialect
+      )),
   };
 }

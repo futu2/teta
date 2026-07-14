@@ -4,6 +4,7 @@ import {
   normalizeIdentifier,
   normalizeJoinType,
   normalizeTableSource,
+  projectionItemsToIdentifierMap,
   shouldQuoteIdentifierName,
 } from "../mod.ts";
 
@@ -100,5 +101,23 @@ describe("sql ir utilities", () => {
     expect(columnNamesToIdentifierMap(["id"])).toEqual({
       id: { name: "id", quoted: false },
     });
+  });
+
+  test("builds prototype-safe identifier maps for arbitrary column names", () => {
+    const names = ["__proto__", "constructor", "toString"];
+    const fromColumns = columnNamesToIdentifierMap(names);
+    const fromProjections = projectionItemsToIdentifierMap(names.map((name) => ({
+      expr: { kind: "column" as const, table: null, name },
+      as: null,
+    })));
+
+    for (const mapping of [fromColumns, fromProjections]) {
+      expect(Object.getPrototypeOf(mapping)).toBeNull();
+      expect(Object.keys(mapping)).toEqual(names);
+      for (const name of names) {
+        expect(Object.hasOwn(mapping, name)).toBe(true);
+        expect(mapping[name]?.name).toBe(name);
+      }
+    }
   });
 });

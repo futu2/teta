@@ -7,10 +7,10 @@ For a guided walkthrough, see the [Tutorial](./TUTORIAL.md).
 
 Teta is function-first. Row-transforming query helpers are curried query steps used with `pipe(...)`.
 
-Queries are opaque runtime values. Use `query.columns` for reusable column expressions and `toIR(query)` / `explain(query, ...)` for inspection. Query steps are callable values with `kind: "query_step"` and `stepName` metadata, and `pipe(...)` / `flow(...)` preserve exact intermediate types for up to 12 steps.
+Queries are opaque runtime values. Use `query.columns` for reusable column expressions and `toIR(query)` / `explain(query, ...)` for inspection. Query steps are callable values with `kind: "query_step"` and `stepName` metadata. `flow(...)` composes general unary functions; `composeSteps(...)` preserves the query-step brand and metadata. These composition helpers preserve exact intermediate types through 12 explicit steps and a checked variadic tail.
 
 ```ts
-import { add, and, arrayAppend, arrayContains, arrayJoin, arrayLength, arrayPosition, arraySlice, asBigInt, asBoolean, asBytes, asDate, asDecimal, asFloat, asInt, asJson, asString, asTimestamp, asUuid, asc, avg, bitLength, cast, charLength, characterLength, coalesce, concat, count, currentDate, currentTimestamp, dateAdd, dateDiff, dateFormat, dateLiteral, dateParse, dateTrunc, day, desc, drop, dropOverlapLeft, dropOverlapRight, eq, explain, Expr, extend, f, filter, filterEq, flow, fold, fromUnixTime, fullJoin, group, gt, gte, hour, innerJoin, isIn, isNotNull, isNull, JoinKind, JoinOptions, join, lag, lead, left, leftJoin, like, loop, lower, lt, lte, map, rename, max, min, minute, mod, month, mul, ne, not, ntile, nullIf, octetLength, onEq, over, overlay, param, percentRank, pick, pipe, position, pow, prefixAllLeft, prefixAllRight, prefixOverlapLeft, prefixOverlapRight, Query, rank, regexExtract, regexLike, regexReplace, replace, reverse, right, rightJoin, round, rowNumber, rpad, sort, sqrt, sub, substring, suffixAllLeft, suffixAllRight, sum, sumOver, t, table, take, takeWithin, timestampLiteral, toAst, toIR, toSql, toSqlResult, toUnixTime, trim, union, unionAll, unnest, upper, usingCols, values, when, year } from "@teta/teta";
+import { add, and, arrayAppend, arrayContains, arrayJoin, arrayLength, arrayPosition, arraySlice, asBigInt, asBoolean, asBytes, asDate, asDecimal, asFloat, asInt, asJson, asString, asTimestamp, asUuid, asc, avg, bitLength, cast, charLength, characterLength, coalesce, composeSteps, concat, count, currentDate, currentTimestamp, dateAdd, dateDiff, dateFormat, dateLiteral, dateParse, dateTrunc, day, desc, drop, dropOverlapLeft, dropOverlapRight, eq, explain, Expr, extend, f, filter, filterEq, flow, fold, fromUnixTime, fullJoin, group, gt, gte, hour, identityStep, innerJoin, isIn, isNotNull, isNull, JoinKind, JoinOptions, join, lag, lead, left, leftJoin, like, loop, lower, lt, lte, map, rename, max, min, minute, mod, month, mul, ne, not, ntile, nullIf, octetLength, onEq, over, overlay, param, percentRank, pick, pipe, position, pow, prefixAllLeft, prefixAllRight, prefixOverlapLeft, prefixOverlapRight, Query, rank, regexExtract, regexLike, regexReplace, replace, reverse, right, rightJoin, round, rowNumber, rpad, sort, sqrt, sub, substring, suffixAllLeft, suffixAllRight, sum, sumOver, t, table, take, takeWithin, timestampLiteral, toAst, toIR, toSql, toSqlResult, toUnixTime, trim, union, unionAll, unlessStep, unnest, upper, usingCols, values, when, whenStep, year } from "@teta/teta";
 import { fn, windowFn } from "@teta/teta/advanced";
 ```
 
@@ -76,6 +76,18 @@ const activePublicUsers = flow(
   filterEq((user) => user.active, true),
   pick("id", "name")
 );
+```
+
+Use `composeSteps(...)` to wrap compatible query transforms in one branded query
+step, such as when nesting composition inside a conditional step:
+
+```ts
+const activePage = composeSteps(
+  filterEq((user: typeof users.columns) => user.active, true),
+  take(50)
+);
+
+const visibleUsers = pipe(users, whenStep(includeActivePage, activePage));
 ```
 
 Use `identityStep()`, `whenStep(condition, step)`, and `unlessStep(condition, step)` for simple host-language conditional composition. These helpers include or skip schema-preserving query steps while building the query; they do not create SQL `CASE` logic.
@@ -242,6 +254,7 @@ const uniqueUsers = pipe(activeUsers, union(inactiveUsers));
 - `unionAll(right)`
 - `union(right)`
 - `loop(step)`
+- `composeSteps(...steps)`
 - `identityStep()`
 - `whenStep(condition, step)`
 - `unlessStep(condition, step)`

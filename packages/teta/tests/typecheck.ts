@@ -1,9 +1,14 @@
-import type { Column, Expr, JoinKind, JoinOptions, SqlBigInt, SqlBoolean, SqlBytes, SqlDate, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlNumber, SqlString, SqlTimestamp, SqlUuid, UnnestOptions, UnnestSelection, } from "../mod.ts";
+import type { Column, Expr, Query, JoinKind, JoinOptions, SqlBigInt, SqlBoolean, SqlBytes, SqlDate, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlNumber, SqlString, SqlTimestamp, SqlUuid, UnnestOptions, UnnestSelection, } from "../mod.ts";
 import * as publicApi from "../mod.ts";
-import { between, filter, filterEq, filterNe, filterGt, filterGte, filterLt, filterLte, fullJoin, fullJoinMerge, identityStep, innerJoin, innerJoinMap, innerJoinMerge, isDistinctFrom, isIn, isNotIn, join, leftJoin, leftJoinMap, leftJoinMerge, rightJoin, rightJoinMerge, take, takeWithin, sort, param, lit, map, rename, pipe, flow, table, t, fold, asc, desc, eq, gt, upper, add, mul, coalesce, count, group, loop, sum, and, or, isNotNull, sub, when, mapShape, groupShape, lt, unnest, unionAll, union, unlessStep, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, asBigInt, asBoolean, asBytes, asDate, asDecimal, asFloat, asInt, asJson, asString, asTimestamp, asUuid, pick, drop, extend, whenStep } from "../mod.ts";
+import { between, composeSteps, filter, filterEq, filterNe, filterGt, filterGte, filterLt, filterLte, fullJoin, fullJoinMerge, identityStep, innerJoin, innerJoinMap, innerJoinMerge, isDistinctFrom, isIn, isNotIn, join, leftJoin, leftJoinMap, leftJoinMerge, rightJoin, rightJoinMerge, take, takeWithin, sort, param, lit, map, rename, pipe, flow, table, t, fold, asc, desc, eq, gt, upper, add, mul, coalesce, count, group, loop, sum, and, or, isNotNull, sub, when, mapShape, groupShape, lt, unnest, unionAll, union, unlessStep, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, asBigInt, asBoolean, asBytes, asDate, asDecimal, asFloat, asInt, asJson, asString, asTimestamp, asUuid, pick, drop, extend, whenStep } from "../mod.ts";
 type Equal<A, B> = ((<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false);
 type Expect<T extends true> = T;
 type ExprType<TExpr> = TExpr extends Expr<infer TValue> ? TValue : TExpr extends Column<infer TValue, string> ? TValue : never;
+type NamedAggregateExpr = Expr<SqlInt, "aggregate">;
+declare const namedAggregateExpr: NamedAggregateExpr;
+void namedAggregateExpr;
+// @ts-expect-error public Query rows must contain only SQL value types
+type InvalidPublicQueryRow = Query<{ payload: Date }>;
 const users = table("users", {
     id: t.int(),
     name: t.string(),
@@ -198,6 +203,11 @@ const variadicAndFilteredUsers = pipe(users, filter((user) => and(eq(user.id, 1)
 const variadicOrFilteredUsers = pipe(users, filter((user) => or(eq(user.name, "Ada"), eq(user.name, "Grace"), eq(user.name, "Linus"))));
 const conditionalStepUsers = pipe(users, identityStep(), whenStep(true, filterEq((user) => user.name, "Ada")), unlessStep(false, take(10)));
 const unionStepUsers = pipe(users, union(users), unionAll(users));
+const usersReplica = table("users_replica", {
+    id: t.int(),
+    name: t.string(),
+});
+const exactUnionStepUsers = pipe(users, union(usersReplica), unionAll(usersReplica));
 const unnestStepSessions = pipe(sessions, unnest((session) => session.tags, { value: "tag" }));
 const predicateConvenienceUsers = pipe(users, filter((user) => and(
     between(user.id, 1, 10),
@@ -230,6 +240,46 @@ const flowPipeline = flow(
     pick("id"),
 );
 const flowPipelineResult = flowPipeline(users);
+const storedIdentityPipeline = composeSteps();
+const storedIdentityResult = storedIdentityPipeline(users);
+const storedIdentityName: Expr<SqlString> = storedIdentityResult.columns.name;
+const pipedStoredIdentityResult = pipe(users, storedIdentityPipeline);
+const pipedStoredIdentityName: Expr<SqlString> = pipedStoredIdentityResult.columns.name;
+const schemaBoundPickPipeline = composeSteps(
+    (query: typeof users) => pipe(query, pick("id")),
+    take(1),
+);
+const schemaBoundPickResult = pipe(users, schemaBoundPickPipeline);
+const schemaBoundPickId: Expr<SqlInt> = schemaBoundPickResult.columns.id;
+const schemaBoundPickKind: "query_step" = schemaBoundPickPipeline.kind;
+const composedPipeline = composeSteps(
+    filter((user: typeof users.columns) => gt(user.id, 0)),
+    map((user) => ({ id: user.id, name: upper(user.name) })),
+    filter((user) => eq(user.name, "ADA")),
+);
+const composedPipelineResult = composedPipeline(users);
+const conditionalComposedUsers = pipe(users, whenStep(true, composeSteps(
+    filterEq((user) => user.name, "Ada"),
+    take(10),
+)));
+const longComposedPipeline = composeSteps(
+    filter((user: typeof users.columns) => gt(user.id, 0)),
+    filter((user) => gt(user.id, 0)),
+    filter((user) => gt(user.id, 0)),
+    filter((user) => gt(user.id, 0)),
+    filter((user) => gt(user.id, 0)),
+    filter((user) => gt(user.id, 0)),
+    filter((user) => gt(user.id, 0)),
+    filter((user) => gt(user.id, 0)),
+    filter((user) => gt(user.id, 0)),
+    filter((user) => gt(user.id, 0)),
+    filter((user) => gt(user.id, 0)),
+    filter((user) => gt(user.id, 0)),
+    filter((user: typeof users.columns) => gt(user.id, 0)),
+    map((user: typeof users.columns) => ({ identifier: user.id })),
+);
+const longComposedPipelineResult = longComposedPipeline(users);
+const longComposedIdentifier: Expr<SqlInt> = longComposedPipelineResult.columns.identifier;
 const addOneForLongPipe = (value: number): number => value + 1;
 const labelLongPipeResult = (value: number): string => `n=${value}`;
 const longPipeResult: string = pipe(
@@ -286,6 +336,17 @@ const curriedJoin = pipe(users, leftJoin(
 ));
 const directPickedSelection = pipe(users, pick("id"));
 const directKeyMappedSelection = pipe(users, rename((key) => `prefix1_${key}`));
+const multiPrefixRenamedSelection = pipe(users, rename((key) => `pre_fix_${key}`));
+const multiPrefixRenamedId: Expr<SqlInt> = multiPrefixRenamedSelection.columns.pre_fix_id;
+// @ts-expect-error a multi-segment prefix must retain the finite source keys
+multiPrefixRenamedSelection.columns.pre_fix_missing;
+const fixedRenamedSelection = pipe(
+    table("rename_source", { id: t.int() }),
+    rename(() => "fixed_name" as const),
+);
+const fixedRenamedName: Expr<SqlInt> = fixedRenamedSelection.columns.fixed_name;
+// @ts-expect-error a fixed rename result must not invent a key-derived column name
+fixedRenamedSelection.columns.fixed_id;
 const droppedUsers = pipe(users, drop("name"));
 const directDroppedProfiles = pipe(profiles, drop("avatar", "metadata"));
 const directKeyMappedUsage = pipe(directKeyMappedSelection, map((user) => ({
@@ -541,6 +602,15 @@ void curriedPipeline;
 void flowNumberToString;
 void flowPipeline;
 void flowPipelineResult;
+void storedIdentityName;
+void pipedStoredIdentityName;
+void schemaBoundPickId;
+void schemaBoundPickKind;
+void fixedRenamedName;
+void multiPrefixRenamedId;
+void composedPipelineResult;
+void conditionalComposedUsers;
+void longComposedIdentifier;
 void curriedJoin;
 void inlineRows;
 void profileRows;
@@ -580,6 +650,7 @@ void variadicAndFilteredUsers;
 void variadicOrFilteredUsers;
 void conditionalStepUsers;
 void unionStepUsers;
+void exactUnionStepUsers;
 void loopStepUsers;
 void unnestStepSessions;
 void predicateConvenienceUsers;
@@ -602,6 +673,11 @@ void nullableFilterGtRightCallbackUsers;
 void invalidPickedUsers;
 // @ts-expect-error filter predicates must return boolean expressions
 pipe(users, filter((user) => user.name));
+composeSteps(
+    // @ts-expect-error composeSteps rejects a step that requires columns removed by the previous step
+    map((user: typeof users.columns) => ({ id: user.id })),
+    filter((user: typeof users.columns) => eq(user.name, "Ada")),
+);
 // @ts-expect-error and requires at least one expression
 and();
 // @ts-expect-error or requires at least one expression
@@ -799,6 +875,19 @@ gt(events.columns.event_date, 1);
 between(events.columns.event_date, 1, 2);
 // @ts-expect-error union rejects same column names with incompatible SQL value types
 pipe(users, union(table("users_v2", { id: t.string(), name: t.string() })));
+const unionIdOnly = table("union_id_only", { id: t.int() });
+// @ts-expect-error union rejects extra left-side columns
+pipe(users, union(unionIdOnly));
+// @ts-expect-error union rejects missing left-side columns
+pipe(unionIdOnly, union(users));
+// @ts-expect-error unionAll rejects incompatible SQL value types
+pipe(users, unionAll(table("users_v3", { id: t.int(), name: t.int() })));
+// @ts-expect-error loop recursive steps cannot drop columns
+pipe(users, loop((self) => pipe(self, pick("id"))));
+// @ts-expect-error loop recursive steps cannot add columns
+pipe(loopBase, loop((self) => pipe(self, extend("extra", (row) => row.id))));
+// @ts-expect-error loop recursive steps cannot change column value types
+pipe(loopBase, loop((self) => pipe(self, map((row) => ({ id: asString(row.id) })))));
 // @ts-expect-error unnest selectors must reject undefined
 pipe(sessions, unnest(undefined, { value: "tag" }));
 // @ts-expect-error rename should reject unknown direct renamed fields

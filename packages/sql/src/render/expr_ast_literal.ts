@@ -2,6 +2,7 @@ import type { Value } from "../ir/types.ts";
 import type { LiteralAst, ParamAst, SqlRenderContext } from "./types.ts";
 import { internalError, userError } from "../errors.ts";
 import { assertSqlNamedParameter, assertSqlPositionalParameter } from "../ir/tokens.ts";
+import { usesBackslashStringEscapes } from "../dialect/string_literals.ts";
 
 export function literalToAst(
   value: Value,
@@ -22,9 +23,9 @@ export function literalToAst(
   if (typeof value === "object") {
     switch (value.kind) {
       case "date_literal":
-        return { type: "date", value: value.value };
+        return { type: "date", value: escapeSqlStringValue(value.value) };
       case "timestamp_literal":
-        return { type: "timestamp", value: value.value };
+        return { type: "timestamp", value: escapeSqlStringValue(value.value) };
       case "bigint_literal":
         return { type: "number", value: value.value };
       default:
@@ -33,7 +34,7 @@ export function literalToAst(
   }
   switch (typeof value) {
     case "string":
-      return { type: "string", value };
+      return stringLiteralToAst(value, renderContext);
     case "number":
       return { type: "number", value };
     case "boolean":
@@ -41,6 +42,30 @@ export function literalToAst(
     default:
       return assertNever(value);
   }
+}
+
+function escapeSqlStringValue(value: string): string {
+  return value.replace(/'/g, "''");
+}
+
+function stringLiteralToAst(
+  value: string,
+  renderContext: SqlRenderContext | null
+): LiteralAst {
+  const dialect = (renderContext?.dialect?.parserDialect ?? renderContext?.dialect?.name ?? "")
+    .toLowerCase();
+
+  if (dialect === "postgresql" && value.includes("\\")) {
+    const escaped = value
+      .replace(/\\/g, "\\\\")
+      .replace(/'/g, "\\'");
+    return { type: "default", value: `E'${escaped}'` };
+  }
+
+  const escapedBackslashes = usesBackslashStringEscapes(dialect)
+    ? value.replace(/\\/g, "\\\\")
+    : value;
+  return { type: "string", value: escapeSqlStringValue(escapedBackslashes) };
 }
 
 export function paramToAst(
@@ -65,7 +90,9 @@ function parameterizeValue(
   config: ParameterRender
 ): ParamAst {
   const index = (renderContext?.params.length ?? 0) + 1;
-  const parameterName = config.mode === "named" ? (config.name ?? `p${index}`) : null;
+  const parameterName = config.mode === "named"
+    ? (config.name ?? allocateAutoParameterName(renderContext, index))
+    : null;
 
   renderContext?.params.push({
     value,
@@ -78,6 +105,20 @@ function parameterizeValue(
     value: config.mode === "named" ? (parameterName ?? `p${index}`) : String(index),
     prefix: config.prefix,
   };
+}
+
+function allocateAutoParameterName(
+  renderContext: SqlRenderContext | null,
+  fallbackIndex: number
+): string {
+  if (!renderContext) return `p${fallbackIndex}`;
+
+  let candidate: string;
+  do {
+    candidate = `p${renderContext.nextAutoParameterIndex}`;
+    renderContext.nextAutoParameterIndex += 1;
+  } while (renderContext.reservedParameterNames.has(candidate));
+  return candidate;
 }
 
 function parameterValue(value: Exclude<Value, null>): unknown {

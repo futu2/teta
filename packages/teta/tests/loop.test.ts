@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { add, charLength, eq, filter, innerJoinMap, isNotNull, isNull, loop, map, not, t, table, toSql, pipe } from "../mod.ts";
+import { add, charLength, eq, filter, gt, innerJoinMap, isNotNull, isNull, loop, map, not, t, table, toSql, union, pipe } from "../mod.ts";
 import { buildOrgTreeQuery, createEmployeesTable } from "./helpers/fixtures.ts";
 
 describe("recursive loop queries", () => {
@@ -31,6 +31,66 @@ describe("recursive loop queries", () => {
     expect(sql).toContain("SELECT employees_0.id, employees_0.name, employees_0.manager_id FROM employees AS employees_0 WHERE employees_0.manager_id IS NULL");
     expect(sql).toContain(`INNER JOIN ${loopName} AS loop_1 ON employees_0.manager_id = loop_1.id`);
     expect(sql).toContain(`SELECT ${loopName}_0.id, ${loopName}_0.name FROM ${loopName} AS ${loopName}_0`);
+  });
+
+  test("quotes recursive CTE header identifiers structurally", () => {
+    const base = pipe(
+      table("users", { id: t.int(), name: t.string() }),
+      map((user) => ({
+        ["User Id"]: user.id,
+        ["display-name"]: user.name,
+        MixedCase: user.id,
+      }))
+    );
+
+    const sql = toSql(
+      pipe(
+        base,
+        loop((self) => pipe(self, filter((row) => gt(row["User Id"], 0))))
+      ),
+      { dialect: "postgresql", format: "compact" }
+    );
+
+    expect(sql).toStartWith(
+      'WITH RECURSIVE loop_0("User Id", "display-name", "MixedCase") AS ('
+    );
+    expect(sql).toContain('loop_0_0."User Id"');
+  });
+
+  test("composes independently-created loops with distinct CTE names", () => {
+    const left = pipe(
+      table("left_nodes", { id: t.int() }),
+      loop((self) => pipe(self, filter((row) => gt(row.id, 0))))
+    );
+    const right = pipe(
+      table("right_nodes", { id: t.int() }),
+      loop((self) => pipe(self, filter((row) => gt(row.id, 1))))
+    );
+
+    const sql = toSql(pipe(left, union(right)), {
+      dialect: "postgresql",
+      format: "compact",
+    });
+
+    expect(sql).toContain("loop_0(id) AS");
+    expect(sql).toContain("loop_1(id) AS");
+    expect(sql).toContain("FROM loop_0 AS loop_0_0 UNION SELECT loop_1_0.id FROM loop_1 AS loop_1_0");
+
+    const joinedSql = toSql(
+      pipe(
+        left,
+        innerJoinMap(
+          right,
+          (leftRow, rightRow) => eq(leftRow.id, rightRow.id),
+          (leftRow) => ({ id: leftRow.id })
+        )
+      ),
+      { dialect: "postgresql", format: "compact" }
+    );
+
+    expect(joinedSql).toContain("loop_0(id) AS");
+    expect(joinedSql).toContain("loop_1(id) AS");
+    expect(joinedSql).toContain("INNER JOIN loop_1 AS loop_1 ON");
   });
 
   test("supports loop(step) as the recursive builder", () => {

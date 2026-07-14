@@ -88,6 +88,13 @@ describe("tagged EDSL value model", () => {
     expect(filteredIr.stages[0]?.kind).toBe("filter");
   });
 
+  test("keeps schema helper values immutable", () => {
+    const nullableString = t.nullable(t.string());
+
+    expect(Object.isFrozen(t)).toBe(true);
+    expect(Object.isFrozen(nullableString)).toBe(true);
+  });
+
   test("rejects malformed expression-like values", () => {
     expect(isExpr({ kind: "expr", node: { kind: "literal", value: 1 } })).toBe(false);
     expect(isExpr({ kind: "expr", node: null })).toBe(false);

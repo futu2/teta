@@ -106,7 +106,7 @@ export function buildTableFromRef(
       ? params.alias
       : renderIdentifier(params.alias, dialect, renderContext);
 
-  if (renderContext?.mode === "ast") {
+  if (renderContext?.mode === "ast" || params.db?.quoted || params.schema?.quoted || params.table.quoted) {
     return {
       type: "expr",
       expr: {
@@ -127,11 +127,12 @@ export function buildTableFromRef(
     };
   }
 
+  const renderedTable = resolveIdentifierName(params.table.name, renderContext);
   return {
-    db: renderIdentifier(params.db, dialect, renderContext) as string | null,
-    schema: renderIdentifier(params.schema, dialect, renderContext) as string | null,
-    table: renderIdentifier(params.table, dialect, renderContext) as string,
-    rawTable: resolveIdentifierName(identifierName(params.table), renderContext),
+    db: params.db?.name ?? null,
+    schema: params.schema?.name ?? null,
+    table: renderedTable,
+    rawTable: renderedTable,
     as: renderedAlias,
     rawAlias,
   };

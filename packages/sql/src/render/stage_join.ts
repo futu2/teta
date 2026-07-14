@@ -1,4 +1,5 @@
 import type { Stage } from "../ir/types.ts";
+import { createDictionary } from "../dictionary.ts";
 import type { FromAst, ScopeBindings, SelectAst, SubqueryFromRef, TableFromAst } from "./types.ts";
 import { ensureSelectAst, replaceOuterAlias, toParserSelect } from "./ast.ts";
 import { getSqlRenderContext, bindExprScopes, exprToAst, lateralJoinPrefix } from "./render.ts";
@@ -23,10 +24,8 @@ export function buildJoinStageAst(
 ): SelectAst {
   const join = `${stage.joinType} JOIN`;
   const rightAlias = stage.as ?? fail("Join stage requires an alias");
-  const joinBindings: ScopeBindings = {
-    ...context.baseBindings,
-    [stage.rightScopeId]: rightAlias,
-  };
+  const joinBindings = createDictionary<string | null>(context.baseBindings);
+  joinBindings[stage.rightScopeId] = rightAlias;
 
   registerColumnIdentifierBindings(
     rightAlias,

@@ -30,7 +30,7 @@ export function renderPipelineAst(
   options?: RenderPipelineOptions
 ): AST {
   const dialect = options?.dialect ?? getDefaultDialect();
-  return withPipelineAstRenderContext(() => {
+  return withPipelineAstRenderContext(dialect, () => {
     const baseCtes = materializeBaseCtes(options?.baseCtes ?? [], dialect);
     const { ast, ctes } = buildPipelineAst(source, stages, columnNames, scopeId, {
       ...options,

@@ -1,4 +1,5 @@
 import { userError } from "../errors.ts";
+import { createDictionary } from "../dictionary.ts";
 import type { QueryIRSqlTarget } from "../renderer_types.ts";
 import { isSqlIdentifierSegment } from "./tokens.ts";
 import type {
@@ -186,7 +187,7 @@ function deriveOutputIdentifiers(
     : finalStage.projectAll;
   if (!Array.isArray(items)) return defaults;
 
-  const output = { ...defaults };
+  const output = createDictionary(defaults);
   for (const item of items) {
     if (!isRecord(item) || !isRecord(item.as)) continue;
     const { name, quoted } = item.as;
@@ -202,8 +203,8 @@ function deriveOutputIdentifiers(
 }
 
 function identifiersForNames(value: unknown): Readonly<Record<string, SqlIdentifier>> {
-  if (!Array.isArray(value)) return {};
-  const identifiers: Record<string, SqlIdentifier> = {};
+  const identifiers = createDictionary<SqlIdentifier>();
+  if (!Array.isArray(value)) return identifiers;
   for (const name of value) {
     if (typeof name === "string") {
       identifiers[name] = { name, quoted: !isSqlIdentifierSegment(name) };

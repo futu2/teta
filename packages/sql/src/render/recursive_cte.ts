@@ -28,7 +28,10 @@ export function buildRecursiveCte(
   const stepAst = compileLoopPart(step, "step", dialect);
   const unionAst = attachUnion(baseAst, stepAst, "union all");
   return {
-    ...buildNamedCte(renderedName, unionAst, columnNames),
+    ...buildNamedCte(renderedName, unionAst, columnNames, {
+      columnIdentifiers: base.columnIdentifiers,
+      dialect,
+    }),
     recursive: true,
   } as With & { recursive: boolean };
 }
@@ -53,7 +56,10 @@ export function materializeCte(cte: CteSpec, dialect: QueryDialect): With {
       );
       const ast = compiled.ast;
       ast.with = compiled.ctes.length ? compiled.ctes : null;
-      return buildNamedCte(renderedName, ast, cte.query.columnNames);
+      return buildNamedCte(renderedName, ast, cte.query.columnNames, {
+        columnIdentifiers: cte.query.columnIdentifiers,
+        dialect,
+      });
     }
     default:
       return assertNever(cte);

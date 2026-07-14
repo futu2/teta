@@ -11,24 +11,38 @@ import { resolveFreezeFlag } from "../runtime_config.ts";
 const QUERY_BRAND: unique symbol = Symbol("teta.query");
 const QUERY_STATE: unique symbol = Symbol("teta.query.state");
 const QUERY_STEP_BRAND: unique symbol = Symbol("teta.query_step");
+declare const QUERY_ROW_TYPE: unique symbol;
 const SHOULD_FREEZE_QUERY_VALUES = resolveFreezeFlag("TETA_FREEZE_QUERY_VALUES");
 
-export type QueryStep<
-  TInputColumns extends QueryColumns,
-  TOutputColumns extends QueryColumns,
-> = ((query: Query<TInputColumns>) => Query<TOutputColumns>) & {
+// Index-signature rows are internal erasure points; finite rows retain exact identity.
+type QueryRowIdentity<TColumns extends QueryColumns> =
+  string extends keyof TColumns
+    ? (...args: any[]) => any
+    : (columns: TColumns) => TColumns;
+
+export type QueryStepMetadata = {
   readonly kind: "query_step";
   readonly stepName: string;
   readonly [QUERY_STEP_BRAND]: true;
 };
 
+export type QueryStep<
+  TInputColumns extends QueryColumns,
+  TOutputColumns extends QueryColumns,
+> = ((query: Query<TInputColumns>) => Query<TOutputColumns>) & QueryStepMetadata;
+
 export type QueryStageKind = "map" | "fold" | "filter" | "sort" | "take" | "join" | "unnest" | "union";
 
-/** Composable query builder value with typed columns and SQL rendering. */
-export type Query<TColumns extends QueryColumns> = Readonly<{
+/** Opaque query view for consumers that do not inspect the row schema. */
+export type AnyQuery = Readonly<{
   kind: "query";
-  columns: ColumnRefs<TColumns>;
   [QUERY_BRAND]: true;
+}>;
+
+/** Composable query builder value with typed columns and SQL rendering. */
+export type Query<TColumns extends QueryColumns> = AnyQuery & Readonly<{
+  columns: ColumnRefs<TColumns>;
+  readonly [QUERY_ROW_TYPE]?: QueryRowIdentity<TColumns>;
 }>;
 
 type QueryValue<TColumns extends QueryColumns> = Query<TColumns> & Readonly<{
@@ -51,6 +65,13 @@ export function createQueryStep<
   apply: (query: Query<TInputColumns>) => Query<TOutputColumns>
 ): QueryStep<TInputColumns, TOutputColumns> {
   const step = ((query: Query<TInputColumns>) => apply(query)) as QueryStep<TInputColumns, TOutputColumns>;
+  return defineQueryStepMetadata(stepName, step);
+}
+
+function defineQueryStepMetadata<TTransform extends (...args: any[]) => any>(
+  stepName: string,
+  step: TTransform
+): TTransform & QueryStepMetadata {
   Object.defineProperty(step, "kind", {
     enumerable: true,
     configurable: false,
@@ -69,7 +90,7 @@ export function createQueryStep<
     writable: false,
     value: true,
   });
-  return Object.freeze(step);
+  return Object.freeze(step) as TTransform & QueryStepMetadata;
 }
 
 export function createQuery<TColumns extends QueryColumns>(
@@ -148,13 +169,14 @@ function freezeQueryStateValue<T>(value: T, seen = new WeakMap<object, unknown>(
     return value;
   }
 
-  const copy: Record<PropertyKey, unknown> = {};
+  const copy = Object.create(Object.getPrototypeOf(value)) as Record<PropertyKey, unknown>;
   seen.set(object, copy);
   for (const key of Reflect.ownKeys(value)) {
-    copy[key] = freezeQueryStateValue(
-      (value as Record<PropertyKey, unknown>)[key],
-      seen
-    );
+    const descriptor = Object.getOwnPropertyDescriptor(value, key)!;
+    if ("value" in descriptor) {
+      descriptor.value = freezeQueryStateValue(descriptor.value, seen);
+    }
+    Object.defineProperty(copy, key, descriptor);
   }
   return Object.freeze(copy) as T;
 }

@@ -53,6 +53,7 @@ import type {
 } from "./state.ts";
 import { toQuerySpec } from "./state.ts";
 import { mergeNameSupply } from "./name_supply.ts";
+import { rebaseConflictingCtes } from "./cte_rebase.ts";
 
 type JoinOnInput<
   TLeft extends Record<string, unknown>,
@@ -154,6 +155,11 @@ export function resolveJoinQuery<
   joinType: TType,
   mergeColumns?: JoinMergeInput<TLeft, TRight, TType, TSelection>
 ): QueryDeriveInit<JoinSelectionResult<TSelection>> {
+  rightQuery = rebaseConflictingCtes(
+    rightQuery,
+    leftQuery.withs,
+    Math.max(leftQuery.nameSupply.cte, rightQuery.nameSupply.cte)
+  );
   const normalizedJoinType = normalizeJoinType(joinType);
   const alias = autoAlias(sourceAliasBase(rightQuery.source), leftQuery.stages);
   const rightKeys = [...rightQuery.columnNames];
@@ -324,6 +330,11 @@ export function resolveUnionQuery<TColumns extends Record<string, unknown>>(
   rightQuery: QueryState<TColumns>,
   op: "union" | "union all"
 ): QueryDeriveInit<TColumns> {
+  rightQuery = rebaseConflictingCtes(
+    rightQuery,
+    leftQuery.withs,
+    Math.max(leftQuery.nameSupply.cte, rightQuery.nameSupply.cte)
+  );
   assertUnionCompatible(leftQuery.columnNames, rightQuery.columnNames);
   const allocated = allocateScopeId({
     nameSupply: mergeNameSupply(leftQuery.nameSupply, rightQuery.nameSupply),

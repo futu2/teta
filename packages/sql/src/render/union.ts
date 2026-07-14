@@ -1,4 +1,5 @@
 import type { With } from "node-sql-parser";
+import { createDictionary } from "../dictionary.ts";
 import type { ScopeId, Stage } from "../ir/types.ts";
 import type { QueryDialect } from "../types.ts";
 import type { ScopeBindings, SelectAst } from "./types.ts";
@@ -26,10 +27,8 @@ export function compileUnionStage(
     dialect,
     getSqlRenderContext()
   );
-  const leftBindings: ScopeBindings = {
-    ...(inheritedBindings ?? {}),
-    [leftScopeId]: baseAlias,
-  };
+  const leftBindings = createDictionary<string | null>(inheritedBindings);
+  leftBindings[leftScopeId] = baseAlias;
   const leftAst = buildSqlSelectAst({
     from: [baseFrom],
     columns: stage.projectAll.map((item) => ({

@@ -1,4 +1,5 @@
 import type { QueryDialect } from "../types.ts";
+import { createDictionary } from "../dictionary.ts";
 import type {
   ExprNode,
   ScopeId,
@@ -64,15 +65,13 @@ export function createFusedBuildState(
     dialect,
     getSqlRenderContext()
   );
-  const currentBindings: ScopeBindings = {
-    ...(inheritedBindings ?? {}),
-    [sourceScopeId]: baseAlias,
-  };
+  const currentBindings = createDictionary<string | null>(inheritedBindings);
+  currentBindings[sourceScopeId] = baseAlias;
 
   return {
     baseAlias,
     from: [baseFrom],
-    scopeExprs: {},
+    scopeExprs: createDictionary(),
     currentBindings,
     currentScopeId: sourceScopeId,
     currentColumnNames: inputColumnNames,

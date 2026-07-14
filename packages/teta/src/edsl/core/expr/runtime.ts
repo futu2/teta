@@ -26,6 +26,8 @@ import {
   isBuiltinFunctionOperation,
   assertSqlFunctionName,
   assertSqlParameterName,
+  isSqlDateLiteral,
+  isSqlTimestampLiteral,
 } from "@teta/sql";
 import {
   containsGroup,
@@ -523,7 +525,8 @@ function isTemporalLiteral(value: unknown): value is DateLiteral | TimestampLite
   if (typeof value !== "object" || value === null) return false;
   const candidate = value as { kind?: unknown; value?: unknown };
   if (typeof candidate.value !== "string" || candidate.value.length === 0) return false;
-  if (candidate.kind === "date_literal" || candidate.kind === "timestamp_literal") return true;
+  if (candidate.kind === "date_literal") return isSqlDateLiteral(candidate.value);
+  if (candidate.kind === "timestamp_literal") return isSqlTimestampLiteral(candidate.value);
   return candidate.kind === "bigint_literal" && /^-?(0|[1-9][0-9]*)$/.test(candidate.value);
 }
 

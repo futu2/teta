@@ -139,7 +139,9 @@ function _take<TColumns extends QueryColumns>(
   return buildTake(query, count);
 }
 
-export function unionAll<TColumns extends QueryColumns>(right: Query<TColumns>): QueryStep<TColumns, TColumns>;
+export function unionAll<TColumns extends QueryColumns>(
+  right: Query<TColumns>
+): QueryStep<TColumns, TColumns>;
 
 export function unionAll(...args: unknown[]): unknown {
   assertCurriedQueryOperand("unionAll", "unionAll(right)", args);
@@ -155,7 +157,9 @@ function _unionAll<TColumns extends QueryColumns>(
   return buildUnion(left, right, "union all");
 }
 
-export function union<TColumns extends QueryColumns>(right: Query<TColumns>): QueryStep<TColumns, TColumns>;
+export function union<TColumns extends QueryColumns>(
+  right: Query<TColumns>
+): QueryStep<TColumns, TColumns>;
 
 export function union(...args: unknown[]): unknown {
   assertCurriedQueryOperand("union", "union(right)", args);

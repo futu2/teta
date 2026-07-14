@@ -4,7 +4,7 @@ import * as expr from "./src/edsl/expr.ts";
 import * as pipeModule from "./src/edsl/pipe.ts";
 
 /** Query builder value returned by query roots and stage helpers. */
-export type Query<TColumns extends Record<string, any>> = import("./src/edsl/query.ts").Query<TColumns>;
+export type Query<TColumns extends import("./src/edsl/query.ts").QueryColumns> = import("./src/edsl/query.ts").Query<TColumns>;
 
 /** Object-shaped row type carried by a query. */
 export type QueryColumns = import("./src/edsl/query.ts").QueryColumns;
@@ -17,6 +17,9 @@ export const pipe: typeof import("./src/edsl/pipe.ts").pipe = pipeModule.pipe;
 
 /** Composes unary steps from left to right into a reusable function. */
 export const flow: typeof import("./src/edsl/pipe.ts").flow = pipeModule.flow;
+
+/** Composes query steps into one frozen query step while preserving query types. */
+export const composeSteps: typeof import("./src/edsl/query.ts").composeSteps = query.composeSteps;
 
 /** Builds an aggregate projection over the current query. */
 export const fold: typeof import("./src/edsl/query.ts").fold = query.fold;
@@ -169,10 +172,10 @@ export const union: typeof import("./src/edsl/query.ts").union = query.union;
 export const unionAll: typeof import("./src/edsl/query.ts").unionAll = query.unionAll;
 
 /** Structured output returned by `explain(...)`. */
-export type QueryExplainResult<TColumns extends Record<string, any>> = import("./src/edsl/query.ts").QueryExplainResult<TColumns>;
+export type QueryExplainResult<TColumns extends import("./src/edsl/query.ts").QueryColumns> = import("./src/edsl/query.ts").QueryExplainResult<TColumns>;
 
 /** Intermediate representation produced during query lowering. */
-export type QueryIR<TColumns extends Record<string, any>> = import("./src/edsl/query.ts").QueryIR<TColumns>;
+export type QueryIR<TColumns extends import("./src/edsl/query.ts").QueryColumns> = import("./src/edsl/query.ts").QueryIR<TColumns>;
 
 /** Frontend query or backend SQL expression/target accepted by SQL render helpers. */
 export type SqlRenderable = import("./src/edsl/query.ts").SqlRenderable;
@@ -181,7 +184,10 @@ export type SqlRenderable = import("./src/edsl/query.ts").SqlRenderable;
 export type QueryStageKind = import("./src/edsl/query.ts").QueryStageKind;
 
 /** Single step in the lowered query plan. */
-export type QueryStep<TInputColumns extends Record<string, any>, TOutputColumns extends Record<string, any>> = import("./src/edsl/query.ts").QueryStep<TInputColumns, TOutputColumns>;
+export type QueryStep<
+  TInputColumns extends import("./src/edsl/query.ts").QueryColumns,
+  TOutputColumns extends import("./src/edsl/query.ts").QueryColumns,
+> = import("./src/edsl/query.ts").QueryStep<TInputColumns, TOutputColumns>;
 
 /** Lowercase join type accepted by the frontend query EDSL. */
 export type JoinKind = import("./src/edsl/query.ts").JoinKind;
@@ -190,7 +196,7 @@ export type JoinKind = import("./src/edsl/query.ts").JoinKind;
 export type JoinOptions<TType extends import("./src/edsl/query.ts").JoinKind | undefined = undefined> = import("./src/edsl/query.ts").JoinOptions<TType>;
 
 /** Options accepted by `takeWithin(...)`. */
-export type TakeWithinSpec<TColumns extends Record<string, any>> = import("./src/edsl/query.ts").TakeWithinSpec<TColumns>;
+export type TakeWithinSpec<TColumns extends import("./src/edsl/query.ts").QueryColumns> = import("./src/edsl/query.ts").TakeWithinSpec<TColumns>;
 
 /** Generated column names accepted by `unnest(...)`. */
 export type UnnestSelection<
@@ -202,7 +208,10 @@ export type UnnestSelection<
 export type UnnestOptions<TOuter extends boolean | undefined = undefined> = import("./src/edsl/query.ts").UnnestOptions<TOuter>;
 
 /** Typed SQL expression value used throughout the query DSL. */
-export type Expr<T> = import("./src/edsl/expr.ts").Expr<T>;
+export type Expr<
+  T,
+  TPhase extends import("./src/edsl/expr.ts").ExprPhase = "row",
+> = import("./src/edsl/expr.ts").Expr<T, TPhase>;
 
 /** Typed SQL column expression value with its projected column name. */
 export type Column<T, Name extends string> = import("./src/edsl/expr.ts").Column<T, Name>;
@@ -272,8 +281,8 @@ export type ProjectionSelection = import("./src/edsl/expr.ts").ProjectionSelecti
 
 /** Right-hand query input accepted by join helpers. */
 export type JoinRightInput<
-  TLeftColumns extends Record<string, any>,
-  TRightColumns extends Record<string, any>,
+  TLeftColumns extends import("./src/edsl/query.ts").QueryColumns,
+  TRightColumns extends import("./src/edsl/query.ts").QueryColumns,
 > = import("./src/edsl/query.ts").JoinRightInput<TLeftColumns, TRightColumns>;
 
 /** Returns true when a value is a Teta expression. */

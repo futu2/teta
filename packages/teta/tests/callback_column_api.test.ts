@@ -254,6 +254,15 @@ describe("callback column api", () => {
     );
   });
 
+  test("does not treat inherited object properties as columns", () => {
+    const users = createUsersTable();
+
+    expectTetaUserError(
+      () => pipe(users, pick("toString")),
+      "DEFERRED_COLUMN_UNKNOWN"
+    );
+  });
+
   test("reports missing dropped columns", () => {
     const users = createUsersTable();
 
@@ -286,6 +295,35 @@ describe("callback column api", () => {
 
     expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
       toSql(expected, { dialect: "postgresql", format: "compact" })
+    );
+  });
+
+  test("supports prototype-sensitive output names", () => {
+    const users = table("users", { id: t.int() });
+    const query = pipe(users, rename(() => "__proto__" as const));
+
+    expect(Object.keys(query.columns)).toEqual(["__proto__"]);
+    expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe(
+      "SELECT users_0.id AS __proto__ FROM users AS users_0"
+    );
+  });
+
+  test("keeps fixed literal rename keys aligned with runtime columns", () => {
+    const users = table("users", { id: t.int() });
+    const query = pipe(users, rename(() => "fixed_name" as const));
+
+    expect(Object.keys(query.columns)).toEqual(["fixed_name"]);
+    expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe(
+      "SELECT users_0.id AS fixed_name FROM users AS users_0"
+    );
+  });
+
+  test("rejects rename callbacks that collapse multiple columns", () => {
+    const users = createUsersTable();
+
+    expectTetaUserError(
+      () => pipe(users, rename(() => "duplicate" as const)),
+      "DEFERRED_INPUT_INVALID"
     );
   });
 

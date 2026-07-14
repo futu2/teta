@@ -2,8 +2,6 @@ import { internalCteLabel, isInternalCteName, type SqlIdentifier } from "../ir/t
 import type { QueryDialect } from "../types.ts";
 import type { AstIdentifierExpr, SqlRenderContext } from "./types.ts";
 
-const QUOTED_IDENTIFIER_PREFIX = "__TETA_QI_";
-
 export function renderIdentifier(
   identifier: SqlIdentifier | null,
   dialect: QueryDialect,
@@ -12,17 +10,7 @@ export function renderIdentifier(
   if (!identifier) return null;
   const resolvedName = resolveIdentifierName(identifier.name, renderContext);
   if (!identifier.quoted) return resolvedName;
-  if (renderContext?.mode === "ast") {
-    return quotedIdentifierExpr(resolvedName, dialect);
-  }
-  if (!renderContext) return resolvedName;
-
-  const token = `${QUOTED_IDENTIFIER_PREFIX}${renderContext.quotedIdentifiers.length}__`;
-  renderContext.quotedIdentifiers.push({
-    token,
-    sql: quoteIdentifier(resolvedName, dialect),
-  });
-  return token;
+  return quotedIdentifierExpr(resolvedName, dialect);
 }
 
 export function registerIdentifierBinding(
@@ -31,7 +19,7 @@ export function registerIdentifierBinding(
   dialect: QueryDialect,
   renderContext: SqlRenderContext | null
 ): void {
-  if (!bindingName || !identifier?.quoted || renderContext?.mode !== "ast") return;
+  if (!bindingName || !identifier?.quoted || !renderContext) return;
   renderContext.identifierBindings[bindingName] = quotedIdentifierExpr(identifier.name, dialect);
 }
 
@@ -46,7 +34,8 @@ export function registerColumnIdentifierBinding(
   if (!identifier.quoted && identifier.name === bindingName) return;
   const rendered = renderIdentifier(identifier, dialect, renderContext);
   if (!rendered) return;
-  renderContext.columnIdentifierBindings[`${tableAlias}.${bindingName}`] = rendered;
+  renderContext.columnIdentifierBindings[`${tableAlias}.${bindingName}`] =
+    typeof rendered === "string" ? rendered : { expr: rendered };
 }
 
 export function registerColumnIdentifierBindings(
@@ -92,22 +81,6 @@ export function resolveIdentifierName(
   return rendered;
 }
 
-export function restoreQuotedIdentifiers(
-  sql: string,
-  renderContext: SqlRenderContext
-): string {
-  let restored = sql;
-  for (const item of renderContext.quotedIdentifiers) {
-    const token = escapeRegExp(item.token);
-    restored = restored
-      .replace(new RegExp(`"${token}"`, "g"), item.sql)
-      .replace(new RegExp("`" + token + "`", "g"), item.sql)
-      .replace(new RegExp("\\[" + token + "\\]", "g"), item.sql)
-      .replace(new RegExp(`\\b${token}\\b`, "g"), item.sql);
-  }
-  return restored;
-}
-
 function quotedIdentifierExpr(name: string, dialect: QueryDialect): AstIdentifierExpr {
   return {
     type: "default",
@@ -116,6 +89,9 @@ function quotedIdentifierExpr(name: string, dialect: QueryDialect): AstIdentifie
 }
 
 function quoteIdentifier(name: string, dialect: QueryDialect): string {
+  if (isBigQueryDialect(dialect)) {
+    return `\`${escapeBigQueryIdentifier(name)}\``;
+  }
   const [open, close] = identifierDelimiters(dialect);
   return `${open}${escapeIdentifier(name, open, close)}${close}`;
 }
@@ -125,13 +101,22 @@ function identifierDelimiters(dialect: QueryDialect): [string, string] {
   switch (key) {
     case "mysql":
     case "mariadb":
-    case "bigquery":
       return ["`", "`"];
     case "transactsql":
       return ["[", "]"];
     default:
       return ['"', '"'];
   }
+}
+
+function isBigQueryDialect(dialect: QueryDialect): boolean {
+  return (dialect.parserDialect ?? dialect.name).toLowerCase() === "bigquery";
+}
+
+function escapeBigQueryIdentifier(name: string): string {
+  return name
+    .replace(/\\/g, "\\\\")
+    .replace(/`/g, "\\x60");
 }
 
 function escapeIdentifier(name: string, open: string, close: string): string {

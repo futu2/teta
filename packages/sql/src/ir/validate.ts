@@ -12,8 +12,10 @@ import {
 import {
   isSqlCastTarget,
   isSqlFunctionName,
+  isSqlDateLiteral,
   isSqlIdentifierSegment,
   isSqlParameterName,
+  isSqlTimestampLiteral,
 } from "./tokens.ts";
 import {
   formatBuiltinFunctionArity,
@@ -834,11 +836,8 @@ function validateValue(value: unknown, path: string): asserts value is Value {
   }
   const literal = asRecord(value, path);
   assertKnownKeys(literal, path, ["kind", "value"]);
-  if (
-    (literal.kind === "date_literal" || literal.kind === "timestamp_literal")
-    && typeof literal.value === "string"
-    && literal.value.length > 0
-  ) return;
+  if (literal.kind === "date_literal" && isSqlDateLiteral(literal.value as string)) return;
+  if (literal.kind === "timestamp_literal" && isSqlTimestampLiteral(literal.value as string)) return;
   if (
     literal.kind === "bigint_literal"
     && typeof literal.value === "string"

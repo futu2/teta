@@ -22,7 +22,12 @@ import {
 import { TETA_QUERY_IR_VERSION, toPortableQueryIR } from "@teta/sql";
 import type { PortableQueryIR } from "@teta/sql";
 import type { SqlCompilable } from "../sql.ts";
-import { getQueryState, type Query, type QueryStageKind } from "./core.ts";
+import {
+  getQueryState,
+  type AnyQuery,
+  type Query,
+  type QueryStageKind,
+} from "./core.ts";
 import { isQuery } from "./value.ts";
 import { canonicalizeIR } from "./canonicalize.ts";
 import type { QueryColumns } from "./types.ts";
@@ -31,7 +36,7 @@ export type QueryIR<TColumns extends QueryColumns> = PortableQueryIR & {
   columnNames: readonly (keyof TColumns & string)[];
 };
 
-export type SqlRenderable = Query<QueryColumns> | SqlCompilable;
+export type SqlRenderable = AnyQuery | SqlCompilable;
 
 export type QueryExplainStage = {
   index: number;
@@ -85,14 +90,18 @@ export function toSql<TTarget extends SqlRenderable>(
   query: TTarget,
   options: SqlOptions = {}
 ): string {
-  return isQuery(query) ? irToSql(toIR(query), options ?? {}) : renderSql(query, options ?? {});
+  return isQuery(query)
+    ? irToSql(toIR(query as Query<QueryColumns>), options ?? {})
+    : renderSql(query, options ?? {});
 }
 
 export function toSqlResult<TTarget extends SqlRenderable>(
   query: TTarget,
   options: SqlOptions = {}
 ): SqlResult {
-  return isQuery(query) ? irToSqlResult(toIR(query), options ?? {}) : renderSqlResult(query, options ?? {});
+  return isQuery(query)
+    ? irToSqlResult(toIR(query as Query<QueryColumns>), options ?? {})
+    : renderSqlResult(query, options ?? {});
 }
 
 export function explain<TColumns extends QueryColumns>(

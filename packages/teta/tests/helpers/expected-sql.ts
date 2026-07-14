@@ -85,10 +85,10 @@ export const ORDERS_TOTAL_SHARED_ROW_NUMBER_FILTER_POSTGRES_COMPACT =
   "SELECT t_0.order_id AS order_id, t_0.total AS total, t_0.row_num AS row_num FROM (SELECT orders_0.order_id, orders_0.total, row_number() OVER (ORDER BY orders_0.order_id ASC) AS row_num FROM orders AS orders_0 WHERE orders_0.total > 10) AS t_0 WHERE t_0.row_num = 1 OR t_0.row_num = 2";
 
 export const ORDERS_TOTAL_NOT_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT =
-  "SELECT orders_0.order_id, orders_0.total, row_number() OVER (ORDER BY orders_0.order_id ASC) AS row_num FROM orders AS orders_0 WHERE orders_0.total > 10 QUALIFY NOT row_number() OVER (ORDER BY orders_0.order_id ASC) = 1";
+  "SELECT orders_0.order_id, orders_0.total, row_number() OVER (ORDER BY orders_0.order_id ASC) AS row_num FROM orders AS orders_0 WHERE orders_0.total > 10 QUALIFY NOT (row_number() OVER (ORDER BY orders_0.order_id ASC) = 1)";
 
 export const ORDERS_TOTAL_NOT_ROW_NUMBER_FILTER_POSTGRES_COMPACT =
-  "SELECT t_0.order_id AS order_id, t_0.total AS total, t_0.row_num AS row_num FROM (SELECT orders_0.order_id, orders_0.total, row_number() OVER (ORDER BY orders_0.order_id ASC) AS row_num FROM orders AS orders_0 WHERE orders_0.total > 10) AS t_0 WHERE NOT t_0.row_num = 1";
+  "SELECT t_0.order_id AS order_id, t_0.total AS total, t_0.row_num AS row_num FROM (SELECT orders_0.order_id, orders_0.total, row_number() OVER (ORDER BY orders_0.order_id ASC) AS row_num FROM orders AS orders_0 WHERE orders_0.total > 10) AS t_0 WHERE NOT (t_0.row_num = 1)";
 
 export const ORDERS_SHARED_DISJUNCTION_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT =
   "SELECT orders_0.order_id, orders_0.total, row_number() OVER (ORDER BY orders_0.order_id ASC) AS row_num FROM orders AS orders_0 WHERE orders_0.order_id > 5 OR orders_0.total > 10 QUALIFY row_number() OVER (ORDER BY orders_0.order_id ASC) = 1 OR row_number() OVER (ORDER BY orders_0.order_id ASC) = 2";

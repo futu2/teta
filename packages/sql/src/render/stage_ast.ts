@@ -1,5 +1,6 @@
 import type { ScopeId, ProjectionItem, Stage } from "../ir/types.ts";
 import type { QueryDialect } from "../types.ts";
+import { createDictionary } from "../dictionary.ts";
 import type { FromAst, GroupByAst, ScopeBindings, SelectAst, SelectColumnAst } from "./types.ts";
 import { ensureAlias } from "./ast.ts";
 import {
@@ -33,13 +34,12 @@ export function createStageRenderContext(
   const baseFrom = sourceToFrom(source, dialect);
   const baseAlias = ensureAlias(baseFrom);
   registerSourceColumnBindings(source, baseAlias, dialect);
+  const baseBindings = createDictionary<string | null>(inheritedBindings);
+  baseBindings[sourceScopeId] = baseAlias;
   return {
     baseFrom,
     baseAlias,
-    baseBindings: {
-      ...(inheritedBindings ?? {}),
-      [sourceScopeId]: baseAlias,
-    },
+    baseBindings,
     dialect,
   };
 }

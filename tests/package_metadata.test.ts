@@ -4,6 +4,13 @@ import { readFileSync } from "node:fs";
 const readJson = <T>(path: string): T =>
   JSON.parse(readFileSync(new URL(`../${path}`, import.meta.url), "utf8")) as T;
 
+test("published source packages include the repository license", () => {
+  const license = readFileSync(new URL("../LICENSE", import.meta.url), "utf8");
+
+  expect(readFileSync(new URL("../packages/sql/LICENSE", import.meta.url), "utf8")).toBe(license);
+  expect(readFileSync(new URL("../packages/teta/LICENSE", import.meta.url), "utf8")).toBe(license);
+});
+
 test("package metadata stays in sync across publish manifests", () => {
   const sqlPackage = readJson<{
     name: string;
@@ -83,10 +90,18 @@ test("teta package does not re-export the sql backend subpath", () => {
   expect(tetaJsr.exports["./sql"]).toBeUndefined();
 });
 
-test("ci workflow checks and validates the sql package", () => {
+test("ci workflow runs the canonical check and validates the sql package", () => {
+  const rootPackage = readJson<{
+    scripts?: Record<string, string>;
+  }>("package.json");
   const ci = readFileSync(new URL("../.github/workflows/ci.yaml", import.meta.url), "utf8");
 
-  expect(ci).toContain("bun run check:sql && bun run check:teta && bun run check:dev");
+  expect(rootPackage.scripts?.check).toContain("bun run typecheck:repo");
+  expect(rootPackage.scripts?.check).toContain("bun run check:sql");
+  expect(rootPackage.scripts?.check).toContain("bun run check:teta");
+  expect(rootPackage.scripts?.check).toContain("bun run check:dev");
+  expect(ci).toContain("pull_request:");
+  expect(ci).toContain("run: bun run check");
   expect(ci).toContain("jsr-dry-run-sql:");
   expect(ci).toContain("working-directory: packages/sql");
   expect(ci).toContain("Validate @teta/sql publish bundle");

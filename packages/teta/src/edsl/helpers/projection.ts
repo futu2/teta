@@ -1,5 +1,9 @@
 import { userError } from "../errors.ts";
-import { createQueryStep, getQueryState, type Query } from "../query/core.ts";
+import {
+  createQueryStep,
+  getQueryState,
+  type Query,
+} from "../query/core.ts";
 import { deriveQuery } from "../query/derive.ts";
 import { map } from "../query/projection_builder.ts";
 import { assertProjectionShape } from "../query/projection_validation.ts";
@@ -35,16 +39,18 @@ type DropResult<
   [K in Exclude<StringKeyOf<TColumns>, TNames[number]>]: TColumns[K];
 };
 
+type RenamePatternPart<
+  TPart extends string,
+  TKey extends string,
+  TEmbedded extends boolean,
+> = string extends TPart
+  ? TEmbedded extends true ? TKey : string
+  : TPart extends `${infer THead}_${infer TTail}`
+    ? `${RenamePatternPart<THead, TKey, true>}_${RenamePatternPart<TTail, TKey, true>}`
+    : TPart;
+
 type RenamePattern<TPattern extends string, TKey extends string> =
-  TPattern extends `${infer TPrefix}_${string}`
-    ? string extends TPrefix
-      ? TPattern extends `${string}_${infer TSuffix}`
-        ? `${TKey}_${TSuffix}`
-        : string
-      : `${TPrefix}_${TKey}`
-    : TPattern extends `${string}_${infer TSuffix}`
-      ? `${TKey}_${TSuffix}`
-      : string;
+  RenamePatternPart<TPattern, TKey, false>;
 
 type RenameResult<TColumns extends QueryColumns, TPattern extends string> = {
   [K in StringKeyOf<TColumns> as RenamePattern<TPattern, K>]: TColumns[K];

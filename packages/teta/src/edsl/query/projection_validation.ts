@@ -11,7 +11,7 @@ export function assertProjectionShape(
     value === null
     || typeof value !== "object"
     || Array.isArray(value)
-    || Object.getPrototypeOf(value) !== Object.prototype
+    || (Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null)
     || Object.keys(value).length === 0
   ) {
     userError("LEGACY_SELECTION_ARRAY", LEGACY_SELECTION_ARRAY_ERROR);

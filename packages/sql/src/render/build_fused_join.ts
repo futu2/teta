@@ -1,4 +1,5 @@
 import type { QueryDialect } from "../types.ts";
+import { createDictionary } from "../dictionary.ts";
 import type { Stage } from "../ir/types.ts";
 import type { FromAst, ScopeBindings, SubqueryFromRef } from "./types.ts";
 import { ensureSelectAst, replaceOuterAlias, toParserSelect } from "./ast.ts";
@@ -24,10 +25,8 @@ export function buildFusedJoinFrom(
   allowIntermediateCtes = true
 ): FusedJoinFrom {
   const alias = stage.as ?? fail("Join stage requires an alias");
-  const joinBindings: ScopeBindings = {
-    ...currentBindings,
-    [stage.rightScopeId]: alias,
-  };
+  const joinBindings = createDictionary<string | null>(currentBindings);
+  joinBindings[stage.rightScopeId] = alias;
   const join = `${stage.joinType} JOIN`;
   registerColumnIdentifierBindings(
     alias,

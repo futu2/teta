@@ -26,6 +26,7 @@ import { initialScopeId, reserveQueryScopes } from "./planner.ts";
 import type { QueryValue } from "./types.ts";
 import { normalizeTableSource } from "./utils.ts";
 import { isPlainObject } from "./value.ts";
+import { createStringRecord, setStringRecordValue } from "../record.ts";
 
 type ValuesInput = Value | bigint;
 type ValuesRow = Readonly<Record<string, ValuesInput>>;
@@ -59,7 +60,7 @@ type TableColumnHelpers = {
   nullable: <T>(column: ColumnType<T>) => ColumnType<T | null>;
 };
 
-export const t: TableColumnHelpers = {
+export const t: TableColumnHelpers = Object.freeze({
   string: () => columnType<SqlString>("string"),
   int: () => columnType<SqlInt>("int"),
   float: () => columnType<SqlFloat>("float"),
@@ -77,12 +78,12 @@ export const t: TableColumnHelpers = {
   },
   nullable: <T>(column: ColumnType<T>): ColumnType<T | null> => {
     assertColumnType("t.nullable", column);
-    return {
+    return Object.freeze({
       ...column,
       nullable: true,
-    } as ColumnType<T | null>;
+    }) as ColumnType<T | null>;
   },
-};
+});
 
 function columnType<T>(
   type: ColumnTypeName,
@@ -226,7 +227,7 @@ function normalizeValuesRow(
     );
   }
 
-  const normalizedRow: Record<string, Value> = {};
+  const normalizedRow = createStringRecord<Value>();
   for (const columnName of columnNames) {
     const value = row[columnName];
     if (value === undefined) {
@@ -242,7 +243,7 @@ function normalizeValuesRow(
         `values() row ${rowIndex + 1} column '${columnName}' must be a literal value`
       );
     }
-    normalizedRow[columnName] = node.value;
+    setStringRecordValue(normalizedRow, columnName, node.value);
   }
 
   return normalizedRow;

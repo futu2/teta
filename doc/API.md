@@ -93,7 +93,9 @@ const q = pipe(
 
 ### `flow(...steps)`
 
-Composes steps into a reusable function without applying them.
+Composes unary functions into a reusable function without applying them. The
+result is an ordinary function; use `composeSteps(...)` when the composed value
+must remain a branded `QueryStep`.
 
 ```ts
 function flow<T extends readonly any[]>(
@@ -107,6 +109,42 @@ const activeUsers = flow(
   pick("id", "name"),
 );
 const q = activeUsers(users);
+```
+
+### `composeSteps(...transforms)`
+
+Composes compatible query-to-query transforms from left to right. The runtime
+result is frozen and branded with `kind: "query_step"` and
+`stepName: "composeSteps"`, so schema-preserving compositions can be passed to
+`whenStep(...)` and `unlessStep(...)`. Calling `composeSteps()` with no
+arguments produces an identity transform; use `identityStep()` when its
+metadata must also be visible in the static type.
+
+```ts
+function composeSteps<T0, T1, T2>(
+  transform1: (query: Query<T0>) => Query<T1>,
+  transform2: (query: Query<T1>) => Query<T2>,
+): QueryStep<T0, T2>
+```
+
+```ts
+const activePage = composeSteps(
+  filter((u) => eq(u.active, true)),
+  take(50),
+);
+
+const q = pipe(users, whenStep(includeActivePage, activePage));
+```
+
+TypeScript needs a concrete input schema before `composeSteps(...)` can wrap or
+compose schema-polymorphic helpers such as `pick(...)`, `drop(...)`, or
+`rename(...)`. Bind the schema with a plain wrapper:
+
+```ts
+const idPage = composeSteps(
+  (query: typeof users) => pipe(query, pick("id")),
+  take(50)
+);
 ```
 
 ### `filter(predicate)`

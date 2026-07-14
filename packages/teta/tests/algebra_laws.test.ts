@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+  composeSteps,
   eq,
   filter,
   gt,
@@ -12,7 +13,11 @@ import {
   toIR,
   toSql,
 } from "../mod.ts";
-import { filter as filterFromQuery, table as tableFromQuery } from "../query.ts";
+import {
+  composeSteps as composeStepsFromQuery,
+  filter as filterFromQuery,
+  table as tableFromQuery,
+} from "../query.ts";
 import { eq as eqFromExpr } from "../expr.ts";
 import { pipe as pipeFromSubpath } from "../pipe.ts";
 
@@ -37,6 +42,33 @@ describe("query algebra laws", () => {
     expect(toSql(pipe(query, identityStep()), options)).toBe(toSql(query, options));
   });
 
+  test("composeSteps has identity and associative rendering laws", () => {
+    const positiveId = filter((user: typeof users.columns) => gt(user.id, 0));
+    const namedAda = filter((user: typeof users.columns) => eq(user.name, "Ada"));
+    const belowHundred = filter((user: typeof users.columns) => gt(100, user.id));
+    const options = { dialect: "postgresql", format: "compact" } as const;
+
+    const expected = toSql(pipe(users, positiveId, namedAda, belowHundred), options);
+    const leftAssociated = composeSteps(
+      composeSteps(positiveId, namedAda),
+      belowHundred
+    );
+    const rightAssociated = composeSteps(
+      positiveId,
+      composeSteps(namedAda, belowHundred)
+    );
+
+    expect(toSql(pipe(users, composeSteps()), options)).toBe(toSql(users, options));
+    expect(toSql(pipe(users, composeSteps(identityStep(), positiveId)), options)).toBe(
+      toSql(pipe(users, positiveId), options)
+    );
+    expect(toSql(pipe(users, composeSteps(positiveId, identityStep())), options)).toBe(
+      toSql(pipe(users, positiveId), options)
+    );
+    expect(toSql(pipe(users, leftAssociated), options)).toBe(expected);
+    expect(toSql(pipe(users, rightAssociated), options)).toBe(expected);
+  });
+
   test("adjacent filters normalize to one conjunctive filter", () => {
     const separateFilters = pipe(
       users,
@@ -58,8 +90,10 @@ describe("query algebra laws", () => {
     });
     const query = pipeFromSubpath(
       accounts,
-      filterFromQuery((account) => eqFromExpr(account.id, 1)),
-      take(1)
+      composeStepsFromQuery(
+        filterFromQuery((account) => eqFromExpr(account.id, 1)),
+        take(1)
+      )
     );
 
     expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe(

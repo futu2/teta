@@ -1,5 +1,6 @@
 import type { ExprNode } from "../ir/types.ts";
 import type { DialectLanguageConfig, DialectLanguageFallback } from "../types.ts";
+import { assertSqlFunctionName } from "../ir/tokens.ts";
 import { rewriteArrayFallback } from "./fallback_array.ts";
 import { func } from "./fallback_ast.ts";
 import { rewriteDateFallback } from "./fallback_date.ts";
@@ -36,5 +37,7 @@ export function rewriteFallback(
 
 export function resolveFunctionName(name: string, language: ResolvedLanguage): string {
   const normalized = name.toUpperCase();
-  return language.functions[normalized] ?? name;
+  const resolved = language.functions[normalized] ?? name;
+  assertSqlFunctionName(resolved, `function mapping for ${normalized}`);
+  return resolved;
 }

@@ -1,11 +1,11 @@
 import type { SqlIdentifier } from "../core/types.ts";
 import { isExprNode } from "../expr.ts";
 import { getQueryState, hasQueryBrand } from "./core.ts";
-import type { Query } from "./core.ts";
+import type { AnyQuery, Query } from "./core.ts";
 import type { QueryState } from "./state.ts";
 import type { QueryColumns } from "./types.ts";
 
-export function isQuery(value: unknown): value is Query<QueryColumns> {
+export function isQuery(value: unknown): value is AnyQuery {
   if (!value || typeof value !== "object") return false;
   const candidate = value as {
     kind?: unknown;

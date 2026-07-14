@@ -22,6 +22,7 @@ export type {
 } from "./mod.ts";
 
 export {
+  composeSteps,
   drop,
   dropOverlapLeft,
   dropOverlapRight,

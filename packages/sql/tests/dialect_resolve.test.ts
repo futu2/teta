@@ -3,7 +3,24 @@ import { describe, expect, test } from "bun:test";
 import {
   buildSqlOptions,
   resolveDialect,
+  resolveDialectLanguage,
 } from "../src/dialect.ts";
+import { TetaUserError } from "../src/errors.ts";
+
+function expectUserError(
+  action: () => unknown,
+  code: "INVALID_RENDERER_OPTIONS" | "INVALID_FUNCTION_NAME",
+  message: string
+): void {
+  try {
+    action();
+    throw new Error("Expected TetaUserError");
+  } catch (error) {
+    expect(error).toBeInstanceOf(TetaUserError);
+    expect((error as TetaUserError).code).toBe(code);
+    expect((error as TetaUserError).message).toBe(message);
+  }
+}
 
 describe("dialect resolution", () => {
   test("inherits parser dialect features for custom specs", () => {
@@ -43,5 +60,28 @@ describe("dialect resolution", () => {
         database: "Postgresql",
       },
     });
+  });
+
+  test("rejects erased parameter modes and prefixes", () => {
+    expectUserError(
+      () => buildSqlOptions({ parameterMode: "named); SELECT 1 --" } as never),
+      "INVALID_RENDERER_OPTIONS",
+      "parameterMode must be inline, named, or positional"
+    );
+    expectUserError(
+      () => buildSqlOptions({ parameterPrefix: ":x); SELECT 1 --" } as never),
+      "INVALID_RENDERER_OPTIONS",
+      "parameterPrefix must be one of :, $, or @"
+    );
+  });
+
+  test("rejects unsafe dialect function mappings during resolution", () => {
+    expectUserError(
+      () => resolveDialectLanguage("custom", {
+        functions: { UPPER: "evil); SELECT 1 --" },
+      }),
+      "INVALID_FUNCTION_NAME",
+      "function mapping for UPPER must be a dot-separated SQL identifier"
+    );
   });
 });

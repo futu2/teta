@@ -30,4 +30,26 @@ describe("format helpers", () => {
       'SELECT users.name, "select" FROM orders JOIN [group] ON users.id = orders.user_id'
     );
   });
+
+  test("does not inspect SQL literals or comments while stripping quotes", () => {
+    const sql = [
+      `SELECT '"users"."name"', '__TETA_QI_0__', "users"."name"`,
+      `-- "commented_identifier"`,
+      `/* [hidden_identifier] */ SELECT $tag$"quoted_text"$tag$, \`orders\`."id"`,
+    ].join("\n");
+
+    expect(stripRedundantQuotes(sql)).toBe([
+      `SELECT '"users"."name"', '__TETA_QI_0__', users.name`,
+      `-- "commented_identifier"`,
+      `/* [hidden_identifier] */ SELECT $tag$"quoted_text"$tag$, orders.id`,
+    ].join("\n"));
+  });
+
+  test("preserves quoted-looking text after a backslash and doubled apostrophe", () => {
+    const sql = `SELECT 'x\\'' "quoted_text" [bracketed_text] \`backticked_text\`', "value"`;
+
+    expect(stripRedundantQuotes(sql)).toBe(
+      `SELECT 'x\\'' "quoted_text" [bracketed_text] \`backticked_text\`', value`
+    );
+  });
 });

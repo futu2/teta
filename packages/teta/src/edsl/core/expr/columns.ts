@@ -9,12 +9,13 @@ import {
   type Exprs,
 } from "./core.ts";
 import { internalError } from "../../errors.ts";
+import { createStringRecord } from "../../record.ts";
 
 export function createColumnRefs<TColumns extends Record<string, unknown>>(
   tableName: ScopeId | null,
   columnNames: readonly string[]
 ): ColumnRefs<TColumns> {
-  const refs: Record<string, Column<unknown, string>> = {};
+  const refs = createStringRecord<Column<unknown, string>>();
   for (const name of columnNames) {
     Object.defineProperty(refs, name, {
       enumerable: true,
@@ -36,7 +37,7 @@ export function mergeColumnRefs<
   rightKeys: readonly string[]
 ): ColumnRefs<TLeft & TRight> {
   const mergedKeys = mergeColumnNames(leftKeys, rightKeys);
-  const refs: Record<string, Column<unknown, string>> = {};
+  const refs = createStringRecord<Column<unknown, string>>();
   for (const prop of mergedKeys) {
     const leftHas = leftKeys.includes(prop);
     const rightHas = rightKeys.includes(prop);

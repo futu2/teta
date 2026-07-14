@@ -304,6 +304,6 @@ purity. The source of truth is:
 - immutable public values
 - normalization as a pure function
 
-Deep freezing is enabled by default outside `NODE_ENV=production`; explicit
-`TETA_FREEZE_QUERY_VALUES` and `TETA_FREEZE_EXPR_VALUES` environment variables
-override that default.
+Deep freezing is enabled by default in all environments. Set
+`TETA_FREEZE_QUERY_VALUES` or `TETA_FREEZE_EXPR_VALUES` to `0` or `false` to
+disable it explicitly.

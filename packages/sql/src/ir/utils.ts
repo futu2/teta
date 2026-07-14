@@ -11,11 +11,12 @@ import type {
 } from "./types.ts";
 import { internalCteLabel, isInternalCteName, isValuesSource } from "./types.ts";
 import { internalError, userError } from "../errors.ts";
+import { createDictionary } from "../dictionary.ts";
 import { isSqlIdentifierSegment } from "./tokens.ts";
 
 /** Return true when an identifier needs quoting to remain valid SQL. */
 export function shouldQuoteIdentifierName(name: string): boolean {
-  return !isSqlIdentifierSegment(name);
+  return !isSqlIdentifierSegment(name) || name !== name.toLowerCase();
 }
 
 /** Normalize a string or identifier object into a `SqlIdentifier`. */
@@ -60,7 +61,7 @@ export function projectionItemOutputName(item: ProjectionItem): string | null {
 export function projectionItemsToIdentifierMap(
   items: readonly ProjectionItem[]
 ): Readonly<Record<string, SqlIdentifier>> {
-  const mapping: Record<string, SqlIdentifier> = {};
+  const mapping = createDictionary<SqlIdentifier>();
   for (const item of items) {
     const identifier = projectionItemOutputIdentifier(item);
     if (!identifier) {
@@ -75,7 +76,7 @@ export function projectionItemsToIdentifierMap(
 export function columnNamesToIdentifierMap(
   columnNames: readonly string[]
 ): Readonly<Record<string, SqlIdentifier>> {
-  const mapping: Record<string, SqlIdentifier> = {};
+  const mapping = createDictionary<SqlIdentifier>();
   for (const name of columnNames) {
     mapping[name] = normalizeIdentifier(name, "column");
   }

@@ -272,4 +272,4 @@ bun run test:runtime:deno  # runtime smoke tests (deno)
 
 ## License
 
-MIT — see [LICENSE](./LICENSE).
+BSD-2-Clause-Patent — see [LICENSE](./LICENSE).

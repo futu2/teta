@@ -26,7 +26,15 @@ export function hoistJoinSubquery(
   }
 
   const cteName: GeneratedCteName = generatedCteName(ctePrefix, "join", ctes.length);
-  ctes.push(buildNamedCte(cteName, subqueryAst, stage.source.query.columnNames));
+  ctes.push(buildNamedCte(
+    cteName,
+    subqueryAst,
+    stage.source.query.columnNames,
+    {
+      columnIdentifiers: stage.source.query.columnIdentifiers,
+      dialect,
+    }
+  ));
 
   return {
     ...stage,

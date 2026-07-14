@@ -8,6 +8,7 @@ import type {
   SqlParameterPrefix,
   SqlRenderStrategy,
 } from "../types.ts";
+import { userError } from "../errors.ts";
 import { getDefaultDialect } from "./resolve_common.ts";
 import { resolveDialect } from "./resolve_dialect.ts";
 import { isDialectSpec } from "./resolve_spec.ts";
@@ -154,8 +155,32 @@ function applySqlOptions(input: SqlOptions, state: SqlOptionState): SqlOptionSta
     options: nextOptions,
     sqlFormat: format ?? state.sqlFormat,
     renderStrategy: renderStrategy ?? state.renderStrategy,
-    parameterMode: inlineParameterMode ?? state.parameterMode,
-    parameterPrefix: inlineParameterPrefix ?? state.parameterPrefix,
+    parameterMode: resolveParameterMode(inlineParameterMode, state.parameterMode),
+    parameterPrefix: resolveParameterPrefix(inlineParameterPrefix, state.parameterPrefix),
     params: inlineParams ?? state.params,
   };
+}
+
+function resolveParameterMode(
+  value: SqlParameterMode | undefined,
+  fallback: SqlParameterMode
+): SqlParameterMode {
+  if (value === undefined) return fallback;
+  if (value === "inline" || value === "named" || value === "positional") return value;
+  userError(
+    "INVALID_RENDERER_OPTIONS",
+    "parameterMode must be inline, named, or positional"
+  );
+}
+
+function resolveParameterPrefix(
+  value: SqlParameterPrefix | undefined,
+  fallback: SqlParameterPrefix
+): SqlParameterPrefix {
+  if (value === undefined) return fallback;
+  if (value === ":" || value === "$" || value === "@") return value;
+  userError(
+    "INVALID_RENDERER_OPTIONS",
+    "parameterPrefix must be one of :, $, or @"
+  );
 }

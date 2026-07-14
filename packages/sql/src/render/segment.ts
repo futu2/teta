@@ -1,4 +1,5 @@
 import type { QueryDialect } from "../types.ts";
+import { createDictionary } from "../dictionary.ts";
 import { isInternalScopeName, type ExprNode, type ScopeId, type SqlIdentifier, type Stage } from "../ir/types.ts";
 import { projectionItemsToIdentifierMap } from "../ir/utils.ts";
 import type { FromAst, GroupByAst, LimitAst, OrderByAst, ScopeBindings, SelectAst, SelectColumnAst } from "./types.ts";
@@ -30,10 +31,8 @@ export function buildBaseSelectAst(
     dialect,
     getSqlRenderContext()
   );
-  const baseBindings: ScopeBindings = {
-    ...(inheritedBindings ?? {}),
-    [sourceScopeId]: baseAlias,
-  };
+  const baseBindings = createDictionary<string | null>(inheritedBindings);
+  baseBindings[sourceScopeId] = baseAlias;
   return buildSqlSelectAst({
     from: [from],
     columns: columnNames.map((name) => {
@@ -132,7 +131,7 @@ export function buildCompiledSegment(
           projection
             ? bindExprScopes(
                 item.expr,
-                { [projection.outputScopeId]: null },
+                createDictionary({ [projection.outputScopeId]: null }),
                 dialect
               )
             : bindFusedExpr(item.expr, scopeExprs, currentBindings, dialect)

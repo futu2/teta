@@ -17,6 +17,7 @@ export type AstKeywordExpr = AstValueExpr<string> & {
 export type LiteralAst =
   | { type: "null"; value: null }
   | { type: "string"; value: string }
+  | { type: "default"; value: string }
   | { type: "number"; value: number | string }
   | { type: "bool"; value: boolean }
   | { type: "date"; value: string }
@@ -227,13 +228,15 @@ export type ScopeBindings = Readonly<Partial<Record<ScopeId, string | null>>>;
 
 export type SqlRenderContext = {
   mode: "sql" | "ast";
+  dialect: import("../types.ts").QueryDialect | null;
   parameterMode: SqlParameterMode;
   parameterPrefix: SqlParameterPrefix;
   paramBindings: SqlParamBindings | undefined;
   params: SqlParam[];
-  quotedIdentifiers: Array<{ token: string; sql: string }>;
+  reservedParameterNames: ReadonlySet<string>;
+  nextAutoParameterIndex: number;
   identifierBindings: Record<string, AstIdentifierExpr>;
-  columnIdentifierBindings: Record<string, string | AstIdentifierExpr>;
+  columnIdentifierBindings: Record<string, ColumnRefAst["column"]>;
   cteNameBindings: Partial<Record<InternalCteName, string>>;
   nextInternalCteIndex: number;
 };

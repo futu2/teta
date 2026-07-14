@@ -1,4 +1,5 @@
 import type { QueryDialect } from "../types.ts";
+import { createDictionary } from "../dictionary.ts";
 import type { Stage } from "../ir/types.ts";
 import type { FromAst, ScopeBindings } from "./types.ts";
 import { exprToAst, getSqlRenderContext } from "./render.ts";
@@ -19,10 +20,8 @@ export function buildFusedUnnestFrom(
   dialect: QueryDialect
 ): FusedUnnestFrom {
   const alias = stage.as ?? fail("Unnest stage requires an alias");
-  const bindings: ScopeBindings = {
-    ...currentBindings,
-    [stage.rightScopeId]: alias,
-  };
+  const bindings = createDictionary<string | null>(currentBindings);
+  bindings[stage.rightScopeId] = alias;
 
   registerColumnIdentifierBindings(
     alias,

@@ -69,7 +69,7 @@ building or rendering public IR from another frontend.
 Reusable functional pipelines can be saved with `flow(...)`, and `extend(...)` keeps existing columns while adding computed ones:
 
 ```ts
-import { extend, filterEq, flow, lower, pick, take, whenStep } from "@teta/teta";
+import { composeSteps, extend, filterEq, flow, lower, pick, pipe, take, whenStep } from "@teta/teta";
 
 const activePublicUsers = flow(
   filterEq((user) => user.active, true),
@@ -79,12 +79,26 @@ const activePublicUsers = flow(
 );
 ```
 
+`flow(...)` remains the general-purpose function composer. Use
+`composeSteps(...)` when compatible query transforms should become one frozen,
+metadata-bearing query step, including when the result will be passed to
+`whenStep(...)` or `unlessStep(...)`:
+
+```ts
+const activePage = composeSteps(
+  filterEq((user: typeof users.columns) => user.active, true),
+  take(50)
+);
+
+const usersQuery = pipe(users, whenStep(includeActivePage, activePage));
+```
+
 Query values expose `columns` for typed expression reuse, but internal compiler details such as sources, stages, CTEs, and generated names are intentionally opaque. Use `toIR(query)` or `explain(query, ...)` when you need to inspect lowered query structure. Query steps are callable values with lightweight `kind` and `stepName` metadata for tooling/debugging.
 
 Query construction is immutable and normalization is handled as a pure compiler
-pass. Runtime deep-freezing is enabled by default outside
-`NODE_ENV=production`; set `TETA_FREEZE_QUERY_VALUES` or
-`TETA_FREEZE_EXPR_VALUES` to `1`/`0` to override that behavior explicitly.
+pass. Runtime deep-freezing is enabled by default in all environments. Set
+`TETA_FREEZE_QUERY_VALUES` or `TETA_FREEZE_EXPR_VALUES` to `0` or `false` to
+disable it explicitly.
 
 Row shapes are constrained to SQL value types, and table schemas must be non-empty objects built from `t.*` column helpers. Aggregate projections are checked separately from row projections. In `fold(...)`, use `group(...)` / `groupShape(...)` for grouping keys and aggregate helpers such as `count(...)`, `sum(...)`, or `arrayAgg(...)` for aggregate outputs.
 

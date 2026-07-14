@@ -1,4 +1,5 @@
 import type { Stage } from "../ir/types.ts";
+import { createDictionary } from "../dictionary.ts";
 import type { ScopeBindings, SelectAst } from "./types.ts";
 import { bindExprScopes, exprToAst, getSqlRenderContext } from "./render.ts";
 import { registerColumnIdentifierBindings } from "./identifiers.ts";
@@ -15,10 +16,8 @@ export function buildUnnestStageAst(
   context: StageRenderContext
 ): SelectAst {
   const alias = stage.as ?? fail("Unnest stage requires an alias");
-  const bindings: ScopeBindings = {
-    ...context.baseBindings,
-    [stage.rightScopeId]: alias,
-  };
+  const bindings = createDictionary<string | null>(context.baseBindings);
+  bindings[stage.rightScopeId] = alias;
 
   registerColumnIdentifierBindings(
     alias,

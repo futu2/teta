@@ -81,4 +81,20 @@ describe("values(query root)", () => {
     });
     expect(toSql(seed, { dialect: "postgresql" })).toContain("9007199254740993");
   });
+
+  test("preserves prototype-sensitive column names", () => {
+    const seed = values([{
+      ["__proto__"]: "safe",
+      constructor: "ctor",
+      toString: "method",
+    }]);
+    const source = toIR(seed).source;
+
+    expect("kind" in source && source.kind).toBe("values");
+    if (!("kind" in source) || source.kind !== "values") throw new Error("Expected values source");
+    expect(Object.keys(source.rows[0]!)).toEqual(["__proto__", "constructor", "toString"]);
+    expect(toSql(seed, { dialect: "postgresql", format: "compact" })).toBe(
+      `SELECT values_0.__proto__, values_0.constructor, values_0."toString" FROM (SELECT 'safe' AS __proto__, 'ctor' AS constructor, 'method' AS "toString") AS values_0`
+    );
+  });
 });

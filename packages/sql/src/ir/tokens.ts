@@ -3,6 +3,8 @@ import { userError } from "../errors.ts";
 const IDENTIFIER_SEGMENT = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const POSITIONAL_PARAMETER = /^[1-9][0-9]*$/;
 const CAST_TYPE = /^[A-Za-z_][A-Za-z0-9_]*(?:\s+[A-Za-z_][A-Za-z0-9_]*)*(?:\s*\(\s*[0-9]+(?:\s*,\s*[0-9]+)?\s*\))?(?:\s*\[\s*\])*$/;
+const DATE_LITERAL = /^\d{4,}-\d{2}-\d{2}$/;
+const TIMESTAMP_LITERAL = /^\d{4,}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:?\d{2})?$/;
 
 /** Return true when a value is a bare SQL identifier segment. */
 export function isSqlIdentifierSegment(value: string): boolean {
@@ -33,6 +35,16 @@ export function isSqlPositionalParameter(value: string): boolean {
 /** Return true when a value is a supported safe SQL cast target declaration. */
 export function isSqlCastTarget(value: string): boolean {
   return typeof value === "string" && CAST_TYPE.test(value);
+}
+
+/** Return true when a value uses the portable ISO date literal syntax. */
+export function isSqlDateLiteral(value: string): boolean {
+  return typeof value === "string" && DATE_LITERAL.test(value);
+}
+
+/** Return true when a value uses the portable ISO timestamp literal syntax. */
+export function isSqlTimestampLiteral(value: string): boolean {
+  return typeof value === "string" && TIMESTAMP_LITERAL.test(value);
 }
 
 /** Assert that a public function name cannot inject SQL syntax. */

@@ -1,4 +1,5 @@
 import type { BuiltinDialect, DialectLanguageConfig } from "../types.ts";
+import { assertSqlFunctionName } from "../ir/tokens.ts";
 import { BUILTIN_DIALECTS } from "./builtin.ts";
 
 /** Empty language config that leaves function names unchanged. */
@@ -16,10 +17,18 @@ export function resolveDialectLanguage(
   const normalizedName = dialectName.toLowerCase() as BuiltinDialect;
   const builtin = BUILTIN_DIALECTS[normalizedName];
   const base = builtin?.language ?? IDENTITY_LANGUAGE;
+  const functions = { ...base.functions, ...(override?.functions ?? {}) };
+  validateFunctionMappings(functions);
 
   return {
-    functions: { ...base.functions, ...(override?.functions ?? {}) },
+    functions,
     fallbacks: { ...base.fallbacks, ...(override?.fallbacks ?? {}) },
     unsupported: [...(base.unsupported ?? []), ...(override?.unsupported ?? [])],
   };
+}
+
+function validateFunctionMappings(functions: Readonly<Record<string, string>>): void {
+  for (const [operation, functionName] of Object.entries(functions)) {
+    assertSqlFunctionName(functionName, `function mapping for ${operation}`);
+  }
 }
