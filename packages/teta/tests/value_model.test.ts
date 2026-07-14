@@ -84,8 +84,15 @@ describe("tagged EDSL value model", () => {
 
     const filtered = pipe(users, filter((user) => eq(user.id, lit(1))));
     const filteredIr = toIR(filtered);
+    expect(Object.isFrozen(filteredIr)).toBe(true);
+    expect(Object.isFrozen(filteredIr.source)).toBe(true);
+    expect(Object.isFrozen(filteredIr.stages)).toBe(true);
+    expect(Object.isFrozen(filteredIr.stages[0])).toBe(true);
     expect(filteredIr.stages).toHaveLength(1);
     expect(filteredIr.stages[0]?.kind).toBe("filter");
+    if (filteredIr.stages[0]?.kind === "filter") {
+      expect(Object.isFrozen(filteredIr.stages[0].predicate)).toBe(true);
+    }
   });
 
   test("keeps schema helper values immutable", () => {

@@ -34,6 +34,10 @@ toSql(adults, { dialect: "sqlite" });     // → SQLite SQL
 toSql(adults, { dialect: "mysql" });      // → MySQL SQL
 ```
 
+<p align="center">
+  <img src="./demo1.gif" width="640" alt="Teta SQL EDSL autocomplete and compile-time type checking in TypeScript">
+</p>
+
 <br>
 
 ## What makes Teta different

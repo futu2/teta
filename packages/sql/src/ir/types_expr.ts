@@ -1,9 +1,9 @@
 /** SQL date literal represented independently of JavaScript `Date`. */
-export type DateLiteral = { kind: "date_literal"; value: string };
+export type DateLiteral = Readonly<{ kind: "date_literal"; value: string }>;
 /** SQL timestamp literal represented independently of JavaScript `Date`. */
-export type TimestampLiteral = { kind: "timestamp_literal"; value: string };
+export type TimestampLiteral = Readonly<{ kind: "timestamp_literal"; value: string }>;
 /** SQL bigint literal represented as decimal text for JSON-compatible IR transport. */
-export type BigIntLiteral = { kind: "bigint_literal"; value: string };
+export type BigIntLiteral = Readonly<{ kind: "bigint_literal"; value: string }>;
 /** Primitive literal value accepted by the SQL IR. */
 export type Value = string | number | boolean | null | DateLiteral | TimestampLiteral | BigIntLiteral;
 
@@ -64,134 +64,134 @@ export type ExprNode<T> = (
 ) & ExprNodeResult<T>;
 
 /** Resolved column reference. */
-export type ColumnNode = {
+export type ColumnNode = Readonly<{
   kind: "column";
   table: string | null;
   name: string;
-};
+}>;
 
 /** Literal expression node. */
-export type LiteralNode = {
+export type LiteralNode = Readonly<{
   kind: "literal";
   value: Value;
-};
+}>;
 
 /** Parameter expression node. */
-export type ParamNode = {
+export type ParamNode = Readonly<{
   kind: "param";
   name: string;
-};
+}>;
 
 /** Binary expression node. */
-export type BinaryNode = {
+export type BinaryNode = Readonly<{
   kind: "binary";
   op: BinaryOp;
   left: ExprNode<any>;
   right: ExprNode<any>;
-};
+}>;
 
 /** Unary expression node. */
-export type UnaryNode = {
+export type UnaryNode = Readonly<{
   kind: "unary";
   op: UnaryOp;
   expr: ExprNode<any>;
-};
+}>;
 
 /** Aggregate function expression node. */
-export type AggNode = {
+export type AggNode = Readonly<{
   kind: "agg";
   name: AggFuncName;
   arg: ExprNode<any>;
   distinct: boolean;
-};
+}>;
 
 /** Grouping marker used while lowering fold projections. */
-export type GroupNode = {
+export type GroupNode = Readonly<{
   kind: "group";
   expr: ExprNode<any>;
-};
+}>;
 
 /** Portable scalar function call from Teta's built-in language catalog. */
-export type BuiltinFuncNode = {
+export type BuiltinFuncNode = Readonly<{
   kind: "builtin";
   op: BuiltinFunctionOperation;
-  args: ExprNode<any>[];
-};
+  args: readonly ExprNode<any>[];
+}>;
 
 /** Database-specific scalar function call expression node. */
-export type FuncNode = {
+export type FuncNode = Readonly<{
   kind: "func";
   name: string;
-  args: ExprNode<any>[];
-};
+  args: readonly ExprNode<any>[];
+}>;
 
 /** SQL expression-list node. */
-export type ListNode = {
+export type ListNode = Readonly<{
   kind: "list";
-  items: ExprNode<any>[];
-};
+  items: readonly ExprNode<any>[];
+}>;
 
 /** SQL array expression node. */
-export type ArrayNode = {
+export type ArrayNode = Readonly<{
   kind: "array";
-  items: ExprNode<any>[];
-};
+  items: readonly ExprNode<any>[];
+}>;
 
 /** SQL `EXTRACT` expression node. */
-export type ExtractNode = {
+export type ExtractNode = Readonly<{
   kind: "extract";
   field: string;
   source: ExprNode<any>;
-};
+}>;
 
 /** SQL `CAST` expression node. */
-export type CastNode = {
+export type CastNode = Readonly<{
   kind: "cast";
   expr: ExprNode<any>;
   target: string;
-};
+}>;
 
 /** SQL window-function expression node. */
-export type WindowNode = {
+export type WindowNode = Readonly<{
   kind: "window";
   name: string;
-  args: ExprNode<any>[];
-  partitionBy: OrderExpr[] | null;
-  orderBy: OrderItem[] | null;
-};
+  args: readonly ExprNode<any>[];
+  partitionBy: readonly OrderExpr[] | null;
+  orderBy: readonly OrderItem[] | null;
+}>;
 
 /** One branch of a SQL `CASE` expression. */
-export type CaseWhenNode = {
+export type CaseWhenNode = Readonly<{
   when: ExprNode<boolean | null>;
   then: ExprNode<any>;
-};
+}>;
 
 /** SQL `CASE WHEN ... THEN ... ELSE ... END` expression node. */
-export type CaseNode = {
+export type CaseNode = Readonly<{
   kind: "case";
-  whens: CaseWhenNode[];
+  whens: readonly CaseWhenNode[];
   elseExpr: ExprNode<any> | null;
-};
+}>;
 
 /** Expression accepted in an order or partition list. */
 export type OrderExpr = ExprNode<any>;
 
 /** Projection item with an optional output alias. */
-export type ProjectionItem = { expr: ExprNode<any>; as: SqlIdentifier | null };
+export type ProjectionItem = Readonly<{ expr: ExprNode<any>; as: SqlIdentifier | null }>;
 /** Sort expression and direction. */
-export type OrderItem = { expr: ExprNode<any>; direction: "ASC" | "DESC" };
+export type OrderItem = Readonly<{ expr: ExprNode<any>; direction: "ASC" | "DESC" }>;
 
 /** Normalized SQL identifier plus whether it should be quoted. */
-export type SqlIdentifier<Name extends string = string> = {
+export type SqlIdentifier<Name extends string = string> = Readonly<{
   name: Name;
   quoted: boolean;
-};
+}>;
 
 /** User-facing identifier input accepted by IR helper utilities. */
 export type IdentifierInput<Name extends string = string> =
   | Name
-  | {
+  | Readonly<{
       name: Name;
       quoted?: boolean;
-    };
+    }>;
 import type { BuiltinFunctionOperation } from "../language/spec.ts";

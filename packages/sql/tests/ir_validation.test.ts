@@ -12,8 +12,24 @@ import {
   lowerPortableQueryIR,
   validateExprIR,
   validateQueryIR,
+  type ExprNode,
   type PortableQueryIR,
 } from "../mod.ts";
+
+function assertReadonlyIrTypes(target: PortableQueryIR, expr: ExprNode<unknown>): void {
+  // @ts-expect-error portable query roots are readonly
+  target.scopeId = "__teta_scope_mutated";
+  // @ts-expect-error portable stage collections are readonly
+  target.stages.push({ kind: "take", count: 1, projectAll: [] });
+  if (expr.kind === "builtin") {
+    // @ts-expect-error nested expression collections are readonly
+    expr.args.push({ kind: "literal", value: 1 });
+  }
+  // @ts-expect-error expression discriminants are readonly
+  expr.kind = "literal";
+}
+
+void assertReadonlyIrTypes;
 
 function validTarget(): PortableQueryIR {
   return {

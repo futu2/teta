@@ -13,6 +13,11 @@ const users = table("users", {
     id: t.int(),
     name: t.string(),
 });
+const readonlyUsersIr = publicApi.toIR(users);
+// @ts-expect-error frontend query IR roots are readonly
+readonlyUsersIr.scopeId = "__teta_scope_mutated";
+// @ts-expect-error frontend query IR stage collections are readonly
+readonlyUsersIr.stages.push({ kind: "take", count: 1, projectAll: [] });
 const joinKind: JoinKind = "left";
 const joinOptions: JoinOptions<typeof joinKind> = { type: joinKind, lateral: true };
 const unnestSelection: UnnestSelection<"tag", "tag_index"> = { value: "tag", ordinality: "tag_index" };
@@ -241,6 +246,7 @@ const flowPipeline = flow(
 );
 const flowPipelineResult = flowPipeline(users);
 const storedIdentityPipeline = composeSteps();
+const storedIdentityKind: "query_step" = storedIdentityPipeline.kind;
 const storedIdentityResult = storedIdentityPipeline(users);
 const storedIdentityName: Expr<SqlString> = storedIdentityResult.columns.name;
 const pipedStoredIdentityResult = pipe(users, storedIdentityPipeline);
@@ -602,6 +608,7 @@ void curriedPipeline;
 void flowNumberToString;
 void flowPipeline;
 void flowPipelineResult;
+void storedIdentityKind;
 void storedIdentityName;
 void pipedStoredIdentityName;
 void schemaBoundPickId;

@@ -5,6 +5,7 @@ import {
   hasQueryStepBrand,
   type Query,
   type QueryStep,
+  type QueryStepMetadata,
 } from "./core.ts";
 import type { QueryColumns } from "./types.ts";
 
@@ -18,6 +19,11 @@ type AnyQueryTransform = QueryTransform<any, any>;
 export type IdentityQueryTransform = {
   <TColumns extends QueryColumns>(query: Query<TColumns>): Query<TColumns>;
 };
+
+/** Branded schema-polymorphic query step that returns its input unchanged. */
+export interface IdentityQueryStep extends QueryStepMetadata {
+  <TColumns extends QueryColumns>(query: Query<TColumns>): Query<TColumns>;
+}
 
 type QueryStepTail<
   TInput extends QueryColumns,
@@ -48,7 +54,7 @@ export function identityStep<TColumns extends QueryColumns>(): QueryStep<TColumn
 }
 
 /** Composes compatible query transforms from left to right into one branded query step. */
-export function composeSteps(): IdentityQueryTransform;
+export function composeSteps(): IdentityQueryStep;
 export function composeSteps<TInput extends QueryColumns, T1 extends QueryColumns>(
   step1: QueryStep<TInput, T1>
 ): QueryStep<TInput, T1>;

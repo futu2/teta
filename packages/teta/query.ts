@@ -9,6 +9,7 @@ export type {
   JoinKind,
   JoinOptions,
   JoinRightInput,
+  IdentityQueryStep,
   Query,
   QueryColumns,
   QueryExplainResult,

@@ -12,42 +12,42 @@ import type {
 import { validateQueryIRSqlTarget } from "./validate.ts";
 
 /** A query body in the portable cross-language IR contract. */
-export type PortableQuerySpec = Omit<QuerySpec, "stages" | "columnIdentifiers"> & {
+export type PortableQuerySpec = Readonly<Omit<QuerySpec, "stages" | "columnIdentifiers"> & {
   stages: readonly PortableStage[];
-};
+}>;
 
 /** A join input in the portable cross-language IR contract. */
 export type PortableJoinSource =
-  | (Omit<Extract<JoinSource, { kind: "table" }>, "columnIdentifiers"> & {
+  | Readonly<Omit<Extract<JoinSource, { kind: "table" }>, "columnIdentifiers"> & {
       columnNames: readonly string[];
-    })
-  | {
+    }>
+  | Readonly<{
       kind: "subquery";
       query: PortableQuerySpec;
       inheritedBindings: Readonly<Partial<Record<string, string | null>>> | null;
-    };
+    }>;
 
 /** One query stage in the portable cross-language IR contract. */
 export type PortableStage =
   | Exclude<Stage, { kind: "join" } | { kind: "union" } | { kind: "unnest" }>
-  | (Omit<Extract<Stage, { kind: "join" }>, "source"> & {
+  | Readonly<Omit<Extract<Stage, { kind: "join" }>, "source"> & {
       source: PortableJoinSource;
-    })
-  | Omit<Extract<Stage, { kind: "unnest" }>, "columnIdentifiers">
-  | (Omit<Extract<Stage, { kind: "union" }>, "right"> & {
+    }>
+  | Readonly<Omit<Extract<Stage, { kind: "unnest" }>, "columnIdentifiers">>
+  | Readonly<Omit<Extract<Stage, { kind: "union" }>, "right"> & {
       right: PortableQuerySpec;
-    });
+    }>;
 
 /** A common table expression in the portable cross-language IR contract. */
 export type PortableCteSpec =
-  | { kind: "query"; name: string; query: PortableQuerySpec }
-  | {
+  | Readonly<{ kind: "query"; name: string; query: PortableQuerySpec }>
+  | Readonly<{
       kind: "recursive";
       name: string;
       columnNames: readonly string[];
       base: PortableQuerySpec;
       step: PortableQuerySpec;
-    };
+    }>;
 
 /**
  * Cross-language query IR accepted by the public renderer entrypoints.
@@ -56,13 +56,13 @@ export type PortableCteSpec =
  * backend derives those maps during `lowerPortableQueryIR(...)` after this
  * portable contract has been validated.
  */
-export type PortableQueryIR = Omit<
+export type PortableQueryIR = Readonly<Omit<
   QueryIRSqlTarget,
   "stages" | "columnIdentifiers" | "withs"
 > & {
   stages: readonly PortableStage[];
   withs?: readonly PortableCteSpec[];
-};
+}>;
 
 /**
  * Validate the portable cross-language query IR contract.

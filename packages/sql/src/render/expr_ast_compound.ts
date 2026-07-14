@@ -162,8 +162,8 @@ export function caseExprToAst(
 }
 
 function buildWindowOver(
-  partitionBy: ExprNode<unknown>[] | null,
-  orderBy: OrderItem[] | null,
+  partitionBy: readonly ExprNode<unknown>[] | null,
+  orderBy: readonly OrderItem[] | null,
   renderContext: SqlRenderContext | null,
   renderExpr: RenderExpr
 ): WindowOverAst {

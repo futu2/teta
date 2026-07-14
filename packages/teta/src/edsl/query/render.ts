@@ -24,6 +24,7 @@ import type { PortableQueryIR } from "@teta/sql";
 import type { SqlCompilable } from "../sql.ts";
 import {
   getQueryState,
+  freezeQueryValue,
   type AnyQuery,
   type Query,
   type QueryStageKind,
@@ -32,9 +33,9 @@ import { isQuery } from "./value.ts";
 import { canonicalizeIR } from "./canonicalize.ts";
 import type { QueryColumns } from "./types.ts";
 
-export type QueryIR<TColumns extends QueryColumns> = PortableQueryIR & {
+export type QueryIR<TColumns extends QueryColumns> = Readonly<PortableQueryIR & {
   columnNames: readonly (keyof TColumns & string)[];
-};
+}>;
 
 export type SqlRenderable = AnyQuery | SqlCompilable;
 
@@ -65,7 +66,7 @@ export type QueryExplainResult<TColumns extends QueryColumns> = {
 
 export function toIR<TColumns extends QueryColumns>(query: Query<TColumns>): QueryIR<TColumns> {
   const state = getQueryState(query);
-  return toPortableQueryIR(canonicalizeIR({
+  return freezeQueryValue(toPortableQueryIR(canonicalizeIR({
     version: TETA_QUERY_IR_VERSION,
     source: state.source,
     stages: state.stages,
@@ -73,7 +74,7 @@ export function toIR<TColumns extends QueryColumns>(query: Query<TColumns>): Que
     columnNames: state.columnNames,
     columnIdentifiers: state.columnIdentifiers,
     withs: state.withs,
-  })) as QueryIR<TColumns>;
+  }))) as QueryIR<TColumns>;
 }
 
 export function toAst<TColumns extends QueryColumns>(

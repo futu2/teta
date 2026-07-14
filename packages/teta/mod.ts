@@ -9,6 +9,9 @@ export type Query<TColumns extends import("./src/edsl/query.ts").QueryColumns> =
 /** Object-shaped row type carried by a query. */
 export type QueryColumns = import("./src/edsl/query.ts").QueryColumns;
 
+/** Branded identity query step that can be reused with any query schema. */
+export type IdentityQueryStep = import("./src/edsl/query.ts").IdentityQueryStep;
+
 /** Explains a query's lowered stages, CTEs, and rendered SQL. */
 export const explain: typeof import("./src/edsl/query.ts").explain = queryRender.explain;
 

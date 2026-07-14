@@ -108,17 +108,17 @@ export function getQueryState<TColumns extends QueryColumns>(
 function queryOf<TColumns extends QueryColumns>(
   state: QueryState<TColumns>
 ): Query<TColumns> {
-  const source = freezeQueryStateValue(state.source);
-  const stages = freezeQueryStateValue(state.stages) as QueryState<TColumns>["stages"];
-  const columnNames = freezeQueryStateValue(state.columnNames);
-  const withs = freezeQueryStateValue(state.withs) as QueryState<TColumns>["withs"];
-  const columnIdentifiers = freezeQueryStateValue(state.columnIdentifiers);
-  const nameSupply = freezeQueryStateValue(state.nameSupply);
+  const source = freezeQueryValue(state.source);
+  const stages = freezeQueryValue(state.stages) as QueryState<TColumns>["stages"];
+  const columnNames = freezeQueryValue(state.columnNames);
+  const withs = freezeQueryValue(state.withs) as QueryState<TColumns>["withs"];
+  const columnIdentifiers = freezeQueryValue(state.columnIdentifiers);
+  const nameSupply = freezeQueryValue(state.nameSupply);
   const resolvedState = {
     ...state,
     source,
     stages,
-    columns: freezeQueryStateValue(state.columns),
+    columns: freezeQueryValue(state.columns),
     columnNames,
     withs,
     columnIdentifiers,
@@ -148,7 +148,7 @@ function queryOf<TColumns extends QueryColumns>(
   return freezeIfEnabled(query) as QueryValue<TColumns>;
 }
 
-function freezeQueryStateValue<T>(value: T, seen = new WeakMap<object, unknown>()): T {
+export function freezeQueryValue<T>(value: T, seen = new WeakMap<object, unknown>()): T {
   if (!SHOULD_FREEZE_QUERY_VALUES) return value;
   if (!value || typeof value !== "object") return value;
 
@@ -160,7 +160,7 @@ function freezeQueryStateValue<T>(value: T, seen = new WeakMap<object, unknown>(
     const copy: unknown[] = [];
     seen.set(object, copy);
     for (const item of value) {
-      copy.push(freezeQueryStateValue(item, seen));
+      copy.push(freezeQueryValue(item, seen));
     }
     return Object.freeze(copy) as T;
   }
@@ -174,7 +174,7 @@ function freezeQueryStateValue<T>(value: T, seen = new WeakMap<object, unknown>(
   for (const key of Reflect.ownKeys(value)) {
     const descriptor = Object.getOwnPropertyDescriptor(value, key)!;
     if ("value" in descriptor) {
-      descriptor.value = freezeQueryStateValue(descriptor.value, seen);
+      descriptor.value = freezeQueryValue(descriptor.value, seen);
     }
     Object.defineProperty(copy, key, descriptor);
   }

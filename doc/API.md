@@ -117,10 +117,12 @@ Composes compatible query-to-query transforms from left to right. The runtime
 result is frozen and branded with `kind: "query_step"` and
 `stepName: "composeSteps"`, so schema-preserving compositions can be passed to
 `whenStep(...)` and `unlessStep(...)`. Calling `composeSteps()` with no
-arguments produces an identity transform; use `identityStep()` when its
-metadata must also be visible in the static type.
+arguments produces a schema-polymorphic `IdentityQueryStep` whose metadata is
+also visible in the static type.
 
 ```ts
+function composeSteps(): IdentityQueryStep
+
 function composeSteps<T0, T1, T2>(
   transform1: (query: Query<T0>) => Query<T1>,
   transform2: (query: Query<T1>) => Query<T2>,
@@ -153,7 +155,7 @@ Filters rows with a predicate expression.
 
 ```ts
 function filter<T extends QueryColumns>(
-  predicate: (row: ProxyRow<T>) => Expr<SqlBoolean | null>,
+  predicate: (row: ColumnRefs<T>) => Expr<SqlBoolean | null>,
 ): QueryStep<T, T>
 ```
 
@@ -169,7 +171,7 @@ Filters rows where a column equals a value.
 
 ```ts
 function filterEq<T extends QueryColumns, K extends keyof T>(
-  columnSelector: (row: ProxyRow<T>) => Expr<T[K]>,
+  columnSelector: (row: ColumnRefs<T>) => Expr<T[K]>,
   value: ExprInput<T[K]>,
 ): QueryStep<T, T>
 ```
@@ -186,7 +188,7 @@ Projects each row into a new shape.
 
 ```ts
 function map<T extends QueryColumns, TOut extends QueryColumns>(
-  selector: (row: ProxyRow<T>) => { [K in keyof TOut]: Expr<TOut[K]> },
+  selector: (row: ColumnRefs<T>) => { [K in keyof TOut]: Expr<TOut[K]> },
 ): QueryStep<T, TOut>
 ```
 
@@ -200,7 +202,7 @@ Aggregate projection. Every returned expression must be grouped (`group(...)`) o
 
 ```ts
 function fold<T extends QueryColumns, TOut extends QueryColumns>(
-  selector: (row: ProxyRow<T>) => { [K in keyof TOut]: GroupedOrAggregate<TOut[K]> },
+  selector: (row: ColumnRefs<T>) => { [K in keyof TOut]: GroupedOrAggregate<TOut[K]> },
 ): QueryStep<T, TOut>
 ```
 
@@ -220,7 +222,7 @@ Adds an `ORDER BY` clause.
 
 ```ts
 function sort<T extends QueryColumns>(
-  selector: (row: ProxyRow<T>) => OrderItem | readonly OrderItem[],
+  selector: (row: ColumnRefs<T>) => OrderItem | readonly OrderItem[],
 ): QueryStep<T, T>
 ```
 
@@ -263,7 +265,7 @@ Joins two query inputs.
 
 ```ts
 function join<TLeft extends QueryColumns, TRight extends QueryColumns, TKind extends JoinKind>(
-  right: Query<TRight> | ((left: ProxyRow<TLeft>) => Query<TRight>),
+  right: Query<TRight> | ((left: ColumnRefs<TLeft>) => Query<TRight>),
   options: JoinOptions<TLeft, TRight, TKind>,
 ): QueryStep<TLeft, JoinResult<TLeft, TRight, TKind>>
 ```
@@ -341,7 +343,7 @@ Expands an array-valued expression into rows.
 
 ```ts
 function unnest<T extends QueryColumns, TV extends string, TO extends string | undefined>(
-  selector: (row: ProxyRow<T>) => Expr<any[] | null>,
+  selector: (row: ColumnRefs<T>) => Expr<any[] | null>,
   columns: UnnestSelection<TV, TO>,
   options?: UnnestOptions,
 ): QueryStep<T, UnnestResult<T, TV, TO>>
@@ -411,7 +413,7 @@ Adds or replaces one named column while preserving others.
 ```ts
 function extend<T extends QueryColumns, N extends string, V>(
   name: N,
-  selector: (row: ProxyRow<T>) => Expr<V>,
+  selector: (row: ColumnRefs<T>) => Expr<V>,
 ): QueryStep<T, T & { [K in N]: V }>
 ```
 
@@ -811,6 +813,7 @@ All available through the `t` namespace:
 | `Query<T>` | Opaque query value with row shape `T` |
 | `QueryColumns` | Constraint for object-shaped query rows |
 | `QueryStep<TIn, TOut>` | Curried query transformation |
+| `IdentityQueryStep` | Branded schema-polymorphic identity transformation |
 | `Column<T, Name>` | Typed column reference |
 | `JoinKind` | `"inner"` \| `"left"` \| `"right"` \| `"full"` |
 

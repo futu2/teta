@@ -32,6 +32,7 @@ export {
 } from "../helpers/filter_comparison.ts";
 export { drop, extend, pick, rename } from "../helpers/projection.ts";
 export { composeSteps, identityStep, unlessStep, whenStep } from "./steps.ts";
+export type { IdentityQueryStep } from "./steps.ts";
 export {
   dropOverlapLeft,
   dropOverlapRight,
