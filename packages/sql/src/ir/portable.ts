@@ -17,7 +17,9 @@ export type PortableQuerySpec = Omit<QuerySpec, "stages" | "columnIdentifiers"> 
 
 /** A join input in the portable cross-language IR contract. */
 export type PortableJoinSource =
-  | Omit<Extract<JoinSource, { kind: "table" }>, "columnIdentifiers">
+  | (Omit<Extract<JoinSource, { kind: "table" }>, "columnIdentifiers"> & {
+      columnNames: readonly string[];
+    })
   | {
       kind: "subquery";
       query: PortableQuerySpec;
@@ -69,6 +71,7 @@ export type PortableQueryIR = Omit<
  */
 export function validateQueryIR(value: unknown): asserts value is PortableQueryIR {
   rejectRendererMetadata(value, "query");
+  validatePortableJoinColumnNames(value, "query");
   validateQueryIRSqlTarget(lowerPortableQueryIRUnchecked(value));
 }
 
@@ -156,13 +159,14 @@ function lowerStage(value: unknown): unknown {
   return value;
 }
 
-function lowerJoinSource(value: unknown, stage: Record<string, unknown>): unknown {
+function lowerJoinSource(value: unknown, _stage: Record<string, unknown>): unknown {
   if (!isRecord(value)) return value;
   if (value.kind === "subquery") return { ...value, query: lowerQuerySpec(value.query) };
   if (value.kind === "table") {
+    const { columnNames, ...source } = value;
     return {
-      ...value,
-      columnIdentifiers: identifiersForScope(stage, stage.rightScopeId),
+      ...source,
+      columnIdentifiers: identifiersForNames(columnNames),
     };
   }
   return value;
@@ -197,29 +201,6 @@ function deriveOutputIdentifiers(
   return output;
 }
 
-function identifiersForScope(
-  value: Record<string, unknown>,
-  scopeId: unknown
-): Readonly<Record<string, SqlIdentifier>> {
-  if (typeof scopeId !== "string") return {};
-  const names = new Set<string>();
-  collectScopeColumnNames(value.on, scopeId, names);
-  collectScopeColumnNames(value.projectAll, scopeId, names);
-  return identifiersForNames([...names]);
-}
-
-function collectScopeColumnNames(value: unknown, scopeId: string, names: Set<string>): void {
-  if (Array.isArray(value)) {
-    value.forEach((item) => collectScopeColumnNames(item, scopeId, names));
-    return;
-  }
-  if (!isRecord(value)) return;
-  if (value.kind === "column" && value.table === scopeId && typeof value.name === "string") {
-    names.add(value.name);
-  }
-  Object.values(value).forEach((item) => collectScopeColumnNames(item, scopeId, names));
-}
-
 function identifiersForNames(value: unknown): Readonly<Record<string, SqlIdentifier>> {
   if (!Array.isArray(value)) return {};
   const identifiers: Record<string, SqlIdentifier> = {};
@@ -236,7 +217,10 @@ function toPortableStage(stage: Stage): PortableStage {
     return {
       ...stage,
       source: stage.source.kind === "table"
-        ? withoutKey(stage.source, "columnIdentifiers")
+        ? {
+            ...withoutKey(stage.source, "columnIdentifiers"),
+            columnNames: Object.keys(stage.source.columnIdentifiers),
+          }
         : { ...stage.source, query: toPortableQuerySpec(stage.source.query) },
     } as PortableStage;
   }
@@ -290,6 +274,47 @@ function rejectRendererMetadata(value: unknown, path: string): void {
         rejectRendererMetadata(cte.step, `${path}.withs[${index}].step`);
       }
     });
+  }
+}
+
+function validatePortableJoinColumnNames(value: unknown, path: string): void {
+  if (!isRecord(value)) return;
+  if (Array.isArray(value.stages)) {
+    value.stages.forEach((stage, index) => {
+      if (!isRecord(stage)) return;
+      const stagePath = `${path}.stages[${index}]`;
+      if (stage.kind === "join" && isRecord(stage.source)) {
+        if (stage.source.kind === "table") {
+          validatePortableColumnNames(stage.source.columnNames, `${stagePath}.source.columnNames`);
+        } else if (stage.source.kind === "subquery") {
+          validatePortableJoinColumnNames(stage.source.query, `${stagePath}.source.query`);
+        }
+      }
+      if (stage.kind === "union") validatePortableJoinColumnNames(stage.right, `${stagePath}.right`);
+    });
+  }
+  if (Array.isArray(value.withs)) {
+    value.withs.forEach((cte, index) => {
+      if (!isRecord(cte)) return;
+      if (cte.kind === "query") validatePortableJoinColumnNames(cte.query, `${path}.withs[${index}].query`);
+      if (cte.kind === "recursive") {
+        validatePortableJoinColumnNames(cte.base, `${path}.withs[${index}].base`);
+        validatePortableJoinColumnNames(cte.step, `${path}.withs[${index}].step`);
+      }
+    });
+  }
+}
+
+function validatePortableColumnNames(value: unknown, path: string): void {
+  if (!Array.isArray(value) || value.length === 0) {
+    invalid(path, "must contain at least one column name");
+  }
+  const names = value.filter((name): name is string => typeof name === "string");
+  if (names.length !== value.length || new Set(names).size !== names.length) {
+    invalid(path, "must contain unique string column names");
+  }
+  if (names.some((name) => !name.length || name.includes("\0"))) {
+    invalid(path, "must contain non-empty column names without null characters");
   }
 }
 

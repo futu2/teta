@@ -31,6 +31,47 @@ function validTarget(): PortableQueryIR {
   };
 }
 
+function validTableJoinTarget(): PortableQueryIR {
+  const usersScope = "__teta_scope_users";
+  const ordersScope = "__teta_scope_orders";
+  return {
+    version: TETA_QUERY_IR_VERSION,
+    source: {
+      db: null,
+      schema: null,
+      table: { name: "users", quoted: false },
+      as: null,
+    },
+    stages: [{
+      kind: "join",
+      joinType: "INNER",
+      lateral: false,
+      source: {
+        kind: "table",
+        db: null,
+        schema: null,
+        table: { name: "orders", quoted: false },
+        columnNames: ["id", "user_id"],
+      },
+      as: "orders_1",
+      on: {
+        kind: "binary",
+        op: "=",
+        left: { kind: "column", table: usersScope, name: "id" },
+        right: { kind: "column", table: ordersScope, name: "id" },
+      },
+      projectAll: [
+        { expr: { kind: "column", table: usersScope, name: "id" }, as: null },
+        { expr: { kind: "column", table: ordersScope, name: "user_id" }, as: null },
+      ],
+      rightScopeId: ordersScope,
+      outputScopeId: "__teta_scope_joined",
+    }],
+    scopeId: usersScope,
+    columnNames: ["id", "user_id"],
+  };
+}
+
 function expectInvalid(action: () => unknown, fragment: string): void {
   try {
     action();
@@ -86,6 +127,24 @@ describe("public query IR v1", () => {
       }],
     };
     expectInvalid(() => irToSql(unsafeFunction as never, { dialect: "postgresql" }), "name");
+  });
+
+  test("lowers semantic table-join columns into renderer identifiers", () => {
+    const target = validTableJoinTarget();
+    validateQueryIR(target);
+    const stage = lowerPortableQueryIR(target).stages[0];
+    expect(stage?.kind).toBe("join");
+    if (!stage || stage.kind !== "join" || stage.source.kind !== "table") {
+      throw new Error("Expected a lowered table join");
+    }
+    expect(stage.source.columnIdentifiers).toEqual({
+      id: { name: "id", quoted: false },
+      user_id: { name: "user_id", quoted: false },
+    });
+
+    const missingColumns = structuredClone(target) as Record<string, any>;
+    delete missingColumns.stages[0].source.columnNames;
+    expectInvalid(() => validateQueryIR(missingColumns), "query.stages[0].source.columnNames");
   });
 
   test("rejects properties outside the v1 contract at every decoder boundary", () => {

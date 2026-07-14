@@ -43,6 +43,9 @@ Portable `builtin` expressions are canonical uppercase operations. Their
 accepted argument counts are published as `BUILTIN_FUNCTION_ARITIES` and are
 validated by both EDSL constructors and the IR decoder.
 
+Portable table join sources declare their logical `columnNames`. The renderer
+uses those names to derive its private physical identifier map.
+
 ```ts
 import { irToSql, type PortableQueryIR } from "@teta/sql";
 
