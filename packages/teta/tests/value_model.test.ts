@@ -44,6 +44,13 @@ describe("tagged EDSL value model", () => {
     });
   });
 
+  test("rejects invalid arity for portable built-ins", () => {
+    expect(() => fn("UPPER")).toThrow("UPPER expects exactly 1 argument");
+    expect(() => fn("DATE_ADD", "2025-01-01")).toThrow(
+      "DATE_ADD expects exactly 3 arguments"
+    );
+  });
+
   test("creates immutable tagged column expressions", () => {
     const users = table("users", {
       id: t.int(),

@@ -21,6 +21,8 @@ import type {
   SqlUuid,
 } from "../../sql/types.ts";
 import {
+  formatBuiltinFunctionArity,
+  isBuiltinFunctionArityValid,
   isBuiltinFunctionOperation,
   assertSqlFunctionName,
   assertSqlParameterName,
@@ -335,7 +337,8 @@ function isBuiltinFuncNode(value: { kind?: unknown }): boolean {
   const candidate = value as { op?: unknown; args?: unknown };
   return typeof candidate.op === "string"
     && isBuiltinFunctionOperation(candidate.op)
-    && isExprNodeArray(candidate.args);
+    && isExprNodeArray(candidate.args)
+    && isBuiltinFunctionArityValid(candidate.op, candidate.args.length);
 }
 
 function isFuncNode(value: { kind?: unknown }): boolean {
@@ -563,6 +566,12 @@ export function funcExpr<T>(name: string, args: ExprNode<unknown>[]): Expr<T> {
   assertSqlFunctionName(name);
   const operation = name.toUpperCase();
   if (isBuiltinFunctionOperation(operation)) {
+    if (!isBuiltinFunctionArityValid(operation, args.length)) {
+      userError(
+        "INVALID_FUNCTION_NAME",
+        `${operation} expects ${formatBuiltinFunctionArity(operation)}`
+      );
+    }
     return exprOf<T>({ kind: "builtin", op: operation, args });
   }
   return exprOf<T>({ kind: "func", name, args });

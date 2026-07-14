@@ -6,11 +6,17 @@ export {
   /** Catalog of language functions and features covered by Teta's dialect layer. */
   LANGUAGE_SPEC,
   /** Scalar operations emitted as typed portable IR nodes. */
+  BUILTIN_FUNCTION_ARITIES,
   BUILTIN_FUNCTION_OPERATIONS,
+  /** Format one operation's accepted argument count. */
+  formatBuiltinFunctionArity,
   /** Return the language support catalog. */
   getLanguageSpec,
   /** Return true when a name is a portable scalar operation. */
+  isBuiltinFunctionArityValid,
   isBuiltinFunctionOperation,
+  /** Arity constraints for one portable scalar operation. */
+  type BuiltinFunctionArity,
   /** Category key from `LANGUAGE_SPEC`. */
   type LanguageCategory,
   /** Canonical scalar operation represented by a portable `builtin` node. */

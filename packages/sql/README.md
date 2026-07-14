@@ -39,6 +39,10 @@ invariants such as projection metadata and safe SQL tokens. Physical
 derives them from logical column names and projection aliases during
 `lowerPortableQueryIR(...)`.
 
+Portable `builtin` expressions are canonical uppercase operations. Their
+accepted argument counts are published as `BUILTIN_FUNCTION_ARITIES` and are
+validated by both EDSL constructors and the IR decoder.
+
 ```ts
 import { irToSql, type PortableQueryIR } from "@teta/sql";
 

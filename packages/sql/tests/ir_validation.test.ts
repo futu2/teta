@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import {
+  BUILTIN_FUNCTION_ARITIES,
   BUILTIN_FUNCTION_OPERATIONS,
   TETA_QUERY_IR_VERSION,
   TetaUserError,
@@ -227,8 +228,28 @@ describe("public query IR v1", () => {
 
   test("accepts every declared portable scalar operation", () => {
     for (const op of BUILTIN_FUNCTION_OPERATIONS) {
-      validateExprIR({ kind: "builtin", op, args: [] });
+      const { min } = BUILTIN_FUNCTION_ARITIES[op];
+      validateExprIR({
+        kind: "builtin",
+        op,
+        args: Array.from({ length: min }, () => ({ kind: "literal", value: null })),
+      });
     }
+  });
+
+  test("rejects invalid portable builtin arities", () => {
+    expectInvalid(
+      () => validateExprIR({ kind: "builtin", op: "UPPER", args: [] }),
+      "UPPER expects exactly 1 argument"
+    );
+    expectInvalid(
+      () => validateExprIR({
+        kind: "builtin",
+        op: "DATE_ADD",
+        args: [{ kind: "literal", value: "2025-01-01" }],
+      }),
+      "DATE_ADD expects exactly 3 arguments"
+    );
   });
 
   test("keeps the published JSON Schema synchronized with portable IR", () => {

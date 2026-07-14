@@ -14,7 +14,11 @@ import {
   isSqlIdentifierSegment,
   isSqlParameterName,
 } from "./tokens.ts";
-import { isBuiltinFunctionOperation } from "../language/spec.ts";
+import {
+  formatBuiltinFunctionArity,
+  isBuiltinFunctionArityValid,
+  isBuiltinFunctionOperation,
+} from "../language/spec.ts";
 
 const BINARY_OPS = new Set<BinaryOp>([
   "=", "!=", "<", "<=", ">", ">=", "AND", "OR", "+", "-", "*", "/", "||",
@@ -312,7 +316,14 @@ function validateExprNode(value: unknown, path: string): asserts value is ExprNo
       if (typeof node.op !== "string" || !isBuiltinFunctionOperation(node.op)) {
         invalid(`${path}.op`, "must be a portable built-in operation");
       }
-      validateExprArray(node.args, `${path}.args`);
+      const args = asArray(node.args, `${path}.args`);
+      validateExprArray(args, `${path}.args`);
+      if (!isBuiltinFunctionArityValid(node.op, args.length)) {
+        invalid(
+          `${path}.args`,
+          `${node.op} expects ${formatBuiltinFunctionArity(node.op)}`
+        );
+      }
       return;
     case "func":
       assertKnownKeys(node, path, ["kind", "name", "args"]);
