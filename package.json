@@ -27,6 +27,7 @@
     "bench:render:check": "bun run --cwd packages/teta bench:render:check"
   },
   "devDependencies": {
+    "@types/bun": "latest",
     "typescript": "^5.9.3"
   }
 }

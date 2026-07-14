@@ -230,6 +230,56 @@ const flowPipeline = flow(
     pick("id"),
 );
 const flowPipelineResult = flowPipeline(users);
+const addOneForLongPipe = (value: number): number => value + 1;
+const labelLongPipeResult = (value: number): string => `n=${value}`;
+const longPipeResult: string = pipe(
+    0,
+    addOneForLongPipe,
+    addOneForLongPipe,
+    addOneForLongPipe,
+    addOneForLongPipe,
+    addOneForLongPipe,
+    addOneForLongPipe,
+    addOneForLongPipe,
+    addOneForLongPipe,
+    addOneForLongPipe,
+    addOneForLongPipe,
+    addOneForLongPipe,
+    addOneForLongPipe,
+    addOneForLongPipe,
+    labelLongPipeResult,
+);
+const invalidLongPipe = pipe(
+    0,
+    addOneForLongPipe,
+    addOneForLongPipe,
+    addOneForLongPipe,
+    addOneForLongPipe,
+    addOneForLongPipe,
+    addOneForLongPipe,
+    addOneForLongPipe,
+    addOneForLongPipe,
+    addOneForLongPipe,
+    addOneForLongPipe,
+    addOneForLongPipe,
+    addOneForLongPipe,
+    // @ts-expect-error long pipelines reject a step whose input does not match the previous output
+    labelLongPipeResult,
+    addOneForLongPipe,
+);
+const elevenStepFlowResult: number = flow(
+    (value: number) => value + 1,
+    (value) => value + 1,
+    (value) => value + 1,
+    (value) => value + 1,
+    (value) => value + 1,
+    (value) => value + 1,
+    (value) => value + 1,
+    (value) => value + 1,
+    (value) => value + 1,
+    (value) => value + 1,
+    (value) => value + 1,
+)(0);
 const curriedJoin = pipe(users, leftJoin(
     orders,
     (user: typeof users.columns, order: typeof orders.columns) => eq(user.id, order.user_id)

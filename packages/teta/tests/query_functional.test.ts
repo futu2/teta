@@ -33,6 +33,17 @@ describe("function-first query api", () => {
 
         expect(flow(addOne, toLabel)(41)).toBe("n=42");
     });
+    test("preserves flow results beyond twelve functions", () => {
+        const addOne = (value: number) => value + 1;
+        const toLabel = (value: number) => `n=${value}`;
+        const pipeline = flow(
+            addOne, addOne, addOne, addOne, addOne, addOne, addOne,
+            addOne, addOne, addOne, addOne, addOne, addOne, toLabel
+        );
+
+        const result: string = pipeline(0);
+        expect(result).toBe("n=13");
+    });
     test("query steps are callable values with stable metadata", () => {
         const step = filterEq((user: ReturnType<typeof createUsersPipelineTable>["columns"]) => user.active, true);
 
