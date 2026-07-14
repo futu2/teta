@@ -108,13 +108,26 @@ export type BuiltinFunctionArity = Readonly<{
   max: number | null;
 }>;
 
+/** Canonical scalar operation represented by a portable `builtin` expression. */
+export type BuiltinFunctionOperation =
+  | Exclude<(typeof LANGUAGE_SPEC)["math"][number], "+" | "-" | "*" | "/">
+  | (typeof LANGUAGE_SPEC)["string"][number]
+  | Exclude<(typeof LANGUAGE_SPEC)["dateTime"][number], "EXTRACT">
+  | Extract<(typeof LANGUAGE_SPEC)["conversionAndNull"][number], "COALESCE" | "NULLIF">
+  | (typeof LANGUAGE_SPEC)["array"][number];
+
+/** Immutable arity catalog for all portable scalar operations. */
+export type BuiltinFunctionArityCatalog = Readonly<
+  Record<BuiltinFunctionOperation, BuiltinFunctionArity>
+>;
+
 /**
  * Portable scalar operations and their canonical EDSL arities.
  *
  * `max: null` permits additional arguments. Operations with optional SQL
  * arguments record the forms emitted by Teta's portable helpers.
  */
-export const BUILTIN_FUNCTION_ARITIES = {
+export const BUILTIN_FUNCTION_ARITIES: BuiltinFunctionArityCatalog = {
   MOD: { min: 2, max: 2 },
   ABS: { min: 1, max: 1 },
   CEIL: { min: 1, max: 1 },
@@ -164,10 +177,7 @@ export const BUILTIN_FUNCTION_ARITIES = {
   ARRAY_PREPEND: { min: 2, max: 2 },
   ARRAY_CONCAT: { min: 2, max: null },
   ARRAY_DISTINCT: { min: 1, max: 1 },
-} as const satisfies Record<string, BuiltinFunctionArity>;
-
-/** Canonical scalar operation represented by a portable `builtin` expression. */
-export type BuiltinFunctionOperation = keyof typeof BUILTIN_FUNCTION_ARITIES;
+} as const;
 
 /** Scalar operations emitted by the portable EDSL as typed `builtin` nodes. */
 export const BUILTIN_FUNCTION_OPERATIONS = Object.freeze(
