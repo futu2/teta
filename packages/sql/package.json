@@ -1,7 +1,7 @@
 {
   "name": "@teta/sql",
   "module": "./mod.ts",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "exports": {
     ".": "./mod.ts",
     "./ir-v1.schema.json": "./ir.v1.schema.json"

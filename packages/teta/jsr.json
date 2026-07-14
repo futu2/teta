@@ -1,6 +1,6 @@
 {
   "name": "@teta/teta",
-  "version": "0.4.23",
+  "version": "0.4.24",
   "description": "Type-safe SQL EDSL for building composable queries.",
   "license": "BSD-2-Clause-Patent",
   "exports": {
@@ -11,7 +11,7 @@
     "./advanced": "./advanced.ts"
   },
   "imports": {
-    "@teta/sql": "jsr:@teta/sql@^0.1.7"
+    "@teta/sql": "jsr:@teta/sql@^0.1.8"
   },
   "compatibility": {
     "deno": true,
