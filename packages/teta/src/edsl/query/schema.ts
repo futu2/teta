@@ -4,7 +4,7 @@ import type {
   TableSourceInput,
   Value,
 } from "../core/types.ts";
-import { createColumnRefs } from "../expr.ts";
+import { createColumnRefs, toExprNode, type ExprInput } from "../expr.ts";
 import { userError } from "../errors.ts";
 import type {
   NormalizeExpressionLiteral,
@@ -32,6 +32,15 @@ type ValuesRow = Readonly<Record<string, ValuesInput>>;
 type NormalizedValuesRow = Readonly<Record<string, Value>>;
 type ValuesColumns<TRows extends readonly ValuesRow[]> = {
   [K in keyof TRows[number] & string]: NormalizeExpressionLiteral<TRows[number][K]>;
+};
+type MatchingValuesRows<TRows extends readonly [ValuesRow, ...ValuesRow[]]> = {
+  readonly [TIndex in keyof TRows]: TRows[TIndex] extends ValuesRow
+    ? Exclude<keyof TRows[0], keyof TRows[TIndex]> extends never
+      ? Exclude<keyof TRows[TIndex], keyof TRows[0]> extends never
+        ? TRows[TIndex]
+        : never
+      : never
+    : never;
 };
 
 type TableColumnHelpers = {
@@ -118,7 +127,7 @@ export function table<S extends TableSchema>(
 
 /** Define an inline row set and return a typed query builder. */
 export function values<const TRows extends readonly [ValuesRow, ...ValuesRow[]]>(
-  rows: TRows
+  rows: TRows & MatchingValuesRows<TRows>
 ): Query<ValuesColumns<TRows>> {
   const normalizedRows = normalizeValuesRows(rows);
   const columnNames = Object.keys(normalizedRows[0]!);
@@ -143,6 +152,7 @@ function normalizeValuesRows(rows: readonly ValuesRow[]): readonly NormalizedVal
   }
 
   const firstRow = rows[0]!;
+  assertValuesRow(firstRow, 0);
   const columnNames = Object.keys(firstRow);
   if (columnNames.length === 0) {
     userError("VALUES_NO_COLUMNS", "values() rows must define at least one column");
@@ -203,6 +213,7 @@ function normalizeValuesRow(
   rowIndex: number,
   columnNames: readonly string[]
 ): NormalizedValuesRow {
+  assertValuesRow(row, rowIndex);
   const rowKeys = Object.keys(row);
   const hasSameColumns =
     rowKeys.length === columnNames.length
@@ -224,10 +235,21 @@ function normalizeValuesRow(
         `values() row ${rowIndex + 1} column '${columnName}' cannot be undefined`
       );
     }
-    normalizedRow[columnName] = typeof value === "bigint"
-      ? { kind: "bigint_literal", value: value.toString() }
-      : value;
+    const node = toExprNode(value as ExprInput<unknown>);
+    if (node.kind !== "literal") {
+      userError(
+        "INVALID_LITERAL_VALUE",
+        `values() row ${rowIndex + 1} column '${columnName}' must be a literal value`
+      );
+    }
+    normalizedRow[columnName] = node.value;
   }
 
   return normalizedRow;
+}
+
+function assertValuesRow(value: unknown, rowIndex: number): asserts value is ValuesRow {
+  if (!isPlainObject(value)) {
+    userError("VALUES_ROW_INVALID", `values() row ${rowIndex + 1} must be an object`);
+  }
 }

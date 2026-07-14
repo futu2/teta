@@ -315,7 +315,7 @@ This metadata is useful for debugging, logging, and tooling. It is not needed fo
 
 You usually do not need to write `QueryStep<...>` explicitly, but it is the right type when building higher-level query utilities.
 
-`pipe(...)` and `flow(...)` keep exact intermediate types through 12 steps. Longer pipelines still run normally, but TypeScript falls back to a less precise result type after that point. Split very long pipelines with `flow(...)` if you need precise types across every step.
+`pipe(...)` and `flow(...)` keep exact intermediate types through long pipelines. The first 12 steps use contextual overloads, while longer tails are checked recursively so their final result type remains precise.
 
 ## 6) `values(...)` infers row types from data
 

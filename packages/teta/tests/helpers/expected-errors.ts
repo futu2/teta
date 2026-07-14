@@ -24,6 +24,9 @@ export const VALUES_COLUMN_MISMATCH_ERROR =
 export const VALUES_NO_COLUMNS_ERROR =
   "values() rows must define at least one column";
 
+export const VALUES_ROW_INVALID_ERROR =
+  "values() row 1 must be an object";
+
 export const VALUES_UNDEFINED_ERROR =
   "values() row 1 column 'id' cannot be undefined";
 

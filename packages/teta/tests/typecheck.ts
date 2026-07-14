@@ -776,6 +776,11 @@ users[Symbol("teta.query.state")];
 table("empty_rows", {});
 // @ts-expect-error table schemas reject arbitrary non-SQL row values
 table("bad_rows", { payload: {} });
+values([
+    { id: 1, name: "Ada" },
+    // @ts-expect-error values rows must have exactly the same columns
+    { id: 2, email: "grace@example.com" },
+]);
 // @ts-expect-error t.array expects a column type
 t.array({});
 // @ts-expect-error map projections reject arbitrary objects
