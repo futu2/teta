@@ -14,6 +14,7 @@ import {
   isSqlIdentifierSegment,
   isSqlParameterName,
 } from "./tokens.ts";
+import { isBuiltinFunctionOperation } from "../language/spec.ts";
 
 const BINARY_OPS = new Set<BinaryOp>([
   "=", "!=", "<", "<=", ">", ">=", "AND", "OR", "+", "-", "*", "/", "||",
@@ -29,7 +30,8 @@ const ORDER_DIRECTIONS = new Set(["ASC", "DESC"]);
  * It intentionally validates runtime shape, SQL tokens, and renderer-required
  * metadata rather than trusting TypeScript's compile-time declarations.
  */
-export function validateQueryIR(value: unknown): asserts value is QueryIRSqlTarget {
+/** Validate the renderer's private query target after portable IR lowering. */
+export function validateQueryIRSqlTarget(value: unknown): asserts value is QueryIRSqlTarget {
   const target = asRecord(value, "query");
   assertKnownKeys(target, "query", [
     "version",
@@ -63,7 +65,13 @@ function validateQueryTarget(value: Record<string, unknown>, path: string): void
   validateColumnMetadata(value.columnNames, value.columnIdentifiers, path);
 
   const stages = asArray(value.stages, `${path}.stages`);
-  stages.forEach((stage, index) => validateStage(stage, `${path}.stages[${index}]`));
+  const stageOutputs = stages.map((stage, index) =>
+    validateStage(stage, `${path}.stages[${index}]`)
+  );
+  const finalStageOutput = stageOutputs.at(-1);
+  if (finalStageOutput && !sameNames(finalStageOutput, value.columnNames)) {
+    invalid(`${path}.columnNames`, "must match the output columns of the final stage");
+  }
 
   if (value.withs !== undefined) {
     asArray(value.withs, `${path}.withs`).forEach((cte, index) =>
@@ -109,32 +117,27 @@ function validateSource(value: unknown, path: string): void {
   validateNullableIdentifier(source.as, `${path}.as`);
 }
 
-function validateStage(value: unknown, path: string): void {
+function validateStage(value: unknown, path: string): readonly string[] {
   const stage = asRecord(value, path);
   switch (stage.kind) {
     case "map":
       assertKnownKeys(stage, path, ["kind", "items", "keys", "groupBy", "outputScopeId"]);
-      validateProjectionStage(stage, path, false);
-      return;
+      return validateProjectionStage(stage, path, false);
     case "fold":
       assertKnownKeys(stage, path, ["kind", "items", "keys", "groupBy", "outputScopeId"]);
-      validateProjectionStage(stage, path, true);
-      return;
+      return validateProjectionStage(stage, path, true);
     case "filter":
       assertKnownKeys(stage, path, ["kind", "predicate", "projectAll"]);
       validateExprNode(stage.predicate, `${path}.predicate`);
-      validateProjectionItems(stage.projectAll, `${path}.projectAll`);
-      return;
+      return validateProjectionItems(stage.projectAll, `${path}.projectAll`);
     case "sort":
       assertKnownKeys(stage, path, ["kind", "items", "projectAll"]);
       validateOrderItems(stage.items, `${path}.items`);
-      validateProjectionItems(stage.projectAll, `${path}.projectAll`);
-      return;
+      return validateProjectionItems(stage.projectAll, `${path}.projectAll`);
     case "take":
       assertKnownKeys(stage, path, ["kind", "count", "projectAll"]);
       if (!isNonNegativeInteger(stage.count)) invalid(`${path}.count`, "must be a finite non-negative integer");
-      validateProjectionItems(stage.projectAll, `${path}.projectAll`);
-      return;
+      return validateProjectionItems(stage.projectAll, `${path}.projectAll`);
     case "join":
       assertKnownKeys(stage, path, [
         "kind",
@@ -156,10 +159,10 @@ function validateStage(value: unknown, path: string): void {
       validateJoinSource(stage.source, `${path}.source`);
       validateNullableAlias(stage.as, `${path}.as`);
       validateExprNode(stage.on, `${path}.on`);
-      validateProjectionItems(stage.projectAll, `${path}.projectAll`);
+      const joinOutputNames = validateProjectionItems(stage.projectAll, `${path}.projectAll`);
       validateScope(stage.rightScopeId, `${path}.rightScopeId`);
       validateScope(stage.outputScopeId, `${path}.outputScopeId`);
-      return;
+      return joinOutputNames;
     case "unnest":
       assertKnownKeys(stage, path, [
         "kind",
@@ -182,19 +185,19 @@ function validateStage(value: unknown, path: string): void {
       }
       validateNullableAlias(stage.as, `${path}.as`);
       validateColumnMetadata(stage.columnNames, stage.columnIdentifiers, path);
-      validateProjectionItems(stage.projectAll, `${path}.projectAll`);
+      const unnestOutputNames = validateProjectionItems(stage.projectAll, `${path}.projectAll`);
       validateScope(stage.rightScopeId, `${path}.rightScopeId`);
       validateScope(stage.outputScopeId, `${path}.outputScopeId`);
-      return;
+      return unnestOutputNames;
     case "union":
       assertKnownKeys(stage, path, ["kind", "op", "projectAll", "right", "outputScopeId"]);
       if (stage.op !== "union" && stage.op !== "union all") {
         invalid(`${path}.op`, "must be union or union all");
       }
-      validateProjectionItems(stage.projectAll, `${path}.projectAll`);
+      const unionOutputNames = validateProjectionItems(stage.projectAll, `${path}.projectAll`);
       validateQuerySpec(stage.right, `${path}.right`);
       validateScope(stage.outputScopeId, `${path}.outputScopeId`);
-      return;
+      return unionOutputNames;
     default:
       invalid(`${path}.kind`, "is not a supported query stage");
   }
@@ -204,12 +207,11 @@ function validateProjectionStage(
   stage: Record<string, unknown>,
   path: string,
   isFold: boolean
-): void {
-  validateProjectionItems(stage.items, `${path}.items`);
+): readonly string[] {
+  const itemNames = validateProjectionItems(stage.items, `${path}.items`);
   const keys = validateColumnNames(stage.keys, `${path}.keys`);
-  const items = asArray(stage.items, `${path}.items`);
-  if (keys.length !== items.length) {
-    invalid(`${path}.keys`, "must describe every projected item");
+  if (!sameNames(keys, itemNames)) {
+    invalid(`${path}.keys`, "must describe each projected item in order");
   }
   if (isFold) {
     if (stage.groupBy !== null) validateExprArray(stage.groupBy, `${path}.groupBy`);
@@ -217,6 +219,7 @@ function validateProjectionStage(
     invalid(`${path}.groupBy`, "must be null for a map stage");
   }
   validateScope(stage.outputScopeId, `${path}.outputScopeId`);
+  return keys;
 }
 
 function validateJoinSource(value: unknown, path: string): void {
@@ -304,6 +307,13 @@ function validateExprNode(value: unknown, path: string): asserts value is ExprNo
       assertKnownKeys(node, path, ["kind", "expr"]);
       validateExprNode(node.expr, `${path}.expr`);
       return;
+    case "builtin":
+      assertKnownKeys(node, path, ["kind", "op", "args"]);
+      if (typeof node.op !== "string" || !isBuiltinFunctionOperation(node.op)) {
+        invalid(`${path}.op`, "must be a portable built-in operation");
+      }
+      validateExprArray(node.args, `${path}.args`);
+      return;
     case "func":
       assertKnownKeys(node, path, ["kind", "name", "args"]);
       validateFunctionName(node.name, `${path}.name`);
@@ -352,13 +362,23 @@ function validateExprNode(value: unknown, path: string): asserts value is ExprNo
   }
 }
 
-function validateProjectionItems(value: unknown, path: string): void {
-  asArray(value, path).forEach((item, index) => {
+function validateProjectionItems(value: unknown, path: string): string[] {
+  const names = asArray(value, path).map((item, index) => {
     const projection = asRecord(item, `${path}[${index}]`);
     assertKnownKeys(projection, `${path}[${index}]`, ["expr", "as"]);
     validateExprNode(projection.expr, `${path}[${index}].expr`);
     validateNullableIdentifier(projection.as, `${path}[${index}].as`);
+    if (projection.as && typeof projection.as === "object") {
+      return (projection.as as { name: string }).name;
+    }
+    const expr = asRecord(projection.expr, `${path}[${index}].expr`);
+    if (expr.kind === "column" && typeof expr.name === "string") return expr.name;
+    invalid(`${path}[${index}].as`, "is required when the expression is not a column");
   });
+  if (names.length === 0 || new Set(names).size !== names.length) {
+    invalid(path, "must contain one or more uniquely named output columns");
+  }
+  return names;
 }
 
 function validateOrderItems(value: unknown, path: string): void {
@@ -459,6 +479,11 @@ function validateColumnNames(value: unknown, path: string): string[] {
     invalid(path, "must be a non-empty list of unique names");
   }
   return names;
+}
+
+function sameNames(left: readonly string[], right: unknown): boolean {
+  if (!Array.isArray(right) || left.length !== right.length) return false;
+  return left.every((name, index) => name === right[index]);
 }
 
 function validateValue(value: unknown, path: string): asserts value is Value {

@@ -5,10 +5,16 @@ import { rewriteDialectExpr, validateDialectExpr } from "./language/rewrite.ts";
 export {
   /** Catalog of language functions and features covered by Teta's dialect layer. */
   LANGUAGE_SPEC,
+  /** Scalar operations emitted as typed portable IR nodes. */
+  BUILTIN_FUNCTION_OPERATIONS,
   /** Return the language support catalog. */
   getLanguageSpec,
+  /** Return true when a name is a portable scalar operation. */
+  isBuiltinFunctionOperation,
   /** Category key from `LANGUAGE_SPEC`. */
   type LanguageCategory,
+  /** Canonical scalar operation represented by a portable `builtin` node. */
+  type BuiltinFunctionOperation,
 } from "./language/spec.ts";
 export {
   /** Return the generated implementation status for one dialect operation. */

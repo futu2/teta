@@ -1,18 +1,16 @@
 import {
-  columnNamesToIdentifierMap,
   exprToSql,
   exprToSqlResult,
   irToSql,
   irToSqlResult,
-  type CteSpec,
   type ExprSqlTarget,
-  type QueryIRSqlTarget,
+  type PortableCteSpec,
+  type PortableQueryIR,
+  type PortableStage,
   type ScopeId,
   type Source,
   type SqlOptions,
-  type SqlIdentifier,
   type SqlResult,
-  type Stage,
 } from "@teta/sql";
 import { userError } from "@teta/sql";
 import { isExpr } from "./core/expr.ts";
@@ -28,12 +26,11 @@ export type SqlCompilable = QuerySqlTarget | ExprSqlTarget;
 export type QuerySqlTarget = {
   version: 1;
   source: Source;
-  stages: readonly Stage[];
+  stages: readonly PortableStage[];
   columnNames: readonly string[];
   sourceScopeId?: ScopeId;
   scopeId?: ScopeId;
-  withs?: readonly CteSpec[];
-  columnIdentifiers?: Readonly<Record<string, SqlIdentifier>>;
+  withs?: readonly PortableCteSpec[];
 };
 
 export function renderSql<TTarget extends SqlCompilable>(
@@ -64,7 +61,7 @@ function isQuerySqlTarget(value: SqlCompilable): value is QuerySqlTarget {
   );
 }
 
-function toBackendTarget(target: QuerySqlTarget): QueryIRSqlTarget {
+function toBackendTarget(target: QuerySqlTarget): PortableQueryIR {
   const scopeId = target.sourceScopeId ?? target.scopeId;
   if (!scopeId) {
     userError("QUERY_SQL_TARGET_MISSING_SCOPE", "Query SQL target is missing scopeId");
@@ -75,7 +72,6 @@ function toBackendTarget(target: QuerySqlTarget): QueryIRSqlTarget {
     stages: target.stages,
     columnNames: target.columnNames,
     scopeId,
-    columnIdentifiers: target.columnIdentifiers ?? columnNamesToIdentifierMap(target.columnNames),
     withs: target.withs,
   };
 }

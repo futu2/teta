@@ -101,6 +101,7 @@ export function exprNodeToAst(
       };
       return castExpr;
     }
+    case "builtin":
     case "func":
       return funcExprToAst(expr, renderContext, exprNodeToAst);
     case "list":

@@ -102,6 +102,69 @@ export const LANGUAGE_SPEC = {
 /** Category key from `LANGUAGE_SPEC`. */
 export type LanguageCategory = keyof typeof LANGUAGE_SPEC;
 
+/** Scalar operations emitted by the portable EDSL as typed `builtin` nodes. */
+export const BUILTIN_FUNCTION_OPERATIONS = [
+  "MOD",
+  "ABS",
+  "CEIL",
+  "FLOOR",
+  "SQRT",
+  "ROUND",
+  "POWER",
+  "GREATEST",
+  "LEAST",
+  "CONCAT",
+  "UPPER",
+  "LOWER",
+  "TRIM",
+  "SUBSTRING",
+  "POSITION",
+  "OVERLAY",
+  "CHAR_LENGTH",
+  "CHARACTER_LENGTH",
+  "OCTET_LENGTH",
+  "BIT_LENGTH",
+  "REPLACE",
+  "REVERSE",
+  "LEFT",
+  "RIGHT",
+  "LPAD",
+  "RPAD",
+  "REGEXP_LIKE",
+  "REGEXP_REPLACE",
+  "REGEXP_EXTRACT",
+  "CURRENT_DATE",
+  "CURRENT_TIMESTAMP",
+  "DATE_TRUNC",
+  "DATE_ADD",
+  "DATE_DIFF",
+  "DATE_PARSE",
+  "DATE_FORMAT",
+  "TO_UNIXTIME",
+  "FROM_UNIXTIME",
+  "COALESCE",
+  "NULLIF",
+  "ARRAY_LENGTH",
+  "ARRAY_CONTAINS",
+  "ARRAY_POSITION",
+  "ARRAY_SLICE",
+  "ARRAY_JOIN",
+  "ARRAY_APPEND",
+  "ARRAY_PREPEND",
+  "ARRAY_CONCAT",
+  "ARRAY_DISTINCT",
+] as const;
+
+/** Canonical scalar operation represented by a portable `builtin` expression. */
+export type BuiltinFunctionOperation = (typeof BUILTIN_FUNCTION_OPERATIONS)[number];
+
+const BUILTIN_FUNCTION_OPERATION_SET = new Set<string>(BUILTIN_FUNCTION_OPERATIONS);
+
+/** Return true when a name belongs to Teta's portable scalar-function catalog. */
+export function isBuiltinFunctionOperation(value: string): value is BuiltinFunctionOperation {
+  return BUILTIN_FUNCTION_OPERATION_SET.has(value);
+}
+
 /** Return the language support catalog. */
 export function getLanguageSpec(): typeof LANGUAGE_SPEC {
   return LANGUAGE_SPEC;

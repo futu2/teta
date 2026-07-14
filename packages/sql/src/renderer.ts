@@ -13,6 +13,8 @@ import type {
   QueryIRSqlTarget,
   RendererState,
 } from "./renderer_types.ts";
+import { lowerPortableQueryIR } from "./ir/portable.ts";
+import type { PortableQueryIR } from "./ir/types.ts";
 import type {
   QueryDialect,
   SqlFormat,
@@ -23,19 +25,18 @@ import type {
   SqlResult,
 } from "./types.ts";
 import type { CteSpec, Stage } from "./ir/types.ts";
-import { validateQueryIR } from "./ir/validate.ts";
 
 const { Parser } = nodeSqlParser;
 
 export type {
   ExprSqlTarget,
-  QueryIRSqlTarget,
 } from "./renderer_types.ts";
+export type { PortableQueryIR } from "./ir/types.ts";
 
 /** Diagnostic rendering output for a query IR. */
 export type ExplainIRResult = {
   /** Original query IR passed to `explainIR`. */
-  ir: QueryIRSqlTarget;
+  ir: PortableQueryIR;
   /** Parser AST produced before SQL stringification. */
   ast: AST;
   /** Rendered SQL string. */
@@ -67,17 +68,16 @@ export type ExplainIRResult = {
  * database client. `irToSql(...)` is the string-only convenience wrapper.
  */
 export function irToSqlResult<TResult extends SqlResult = SqlResult>(
-  target: QueryIRSqlTarget,
+  target: PortableQueryIR,
   options: SqlOptions = {}
 ): TResult {
-  validateQueryIR(target);
   const state = createRendererState(options);
-  return renderQueryIRTarget(target, state) as TResult;
+  return renderQueryIRTarget(lowerPortableQueryIR(target), state) as TResult;
 }
 
 /** Render a query IR to a SQL string. */
 export function irToSql(
-  target: QueryIRSqlTarget,
+  target: PortableQueryIR,
   options: SqlOptions = {}
 ): string {
   return irToSqlResult(target, options).sql;
@@ -111,20 +111,20 @@ export function exprToSql(
  * Use this when integrating with tooling that consumes parser ASTs directly.
  */
 export function irToAst(
-  target: QueryIRSqlTarget,
+  target: PortableQueryIR,
   options: Pick<SqlOptions, "dialect" | "renderStrategy"> = {}
 ): AST {
-  validateQueryIR(target);
+  const lowered = lowerPortableQueryIR(target);
   const resolved = buildSqlOptions(options);
   return applyDialectFixes(
     renderPipelineAst(
-      target.source,
-      target.stages,
-      target.columnNames,
-      target.scopeId,
+      lowered.source,
+      lowered.stages,
+      lowered.columnNames,
+      lowered.scopeId,
       {
-        baseCtes: target.withs ?? [],
-        columnIdentifiers: target.columnIdentifiers,
+        baseCtes: lowered.withs ?? [],
+        columnIdentifiers: lowered.columnIdentifiers,
         dialect: resolved.dialect,
         renderStrategy: resolved.renderStrategy,
       }
@@ -135,7 +135,7 @@ export function irToAst(
 
 /** Return the rendered SQL, AST, resolved options, stages, and CTE metadata for a query IR. */
 export function explainIR(
-  target: QueryIRSqlTarget,
+  target: PortableQueryIR,
   options: SqlOptions = {}
 ): ExplainIRResult {
   const resolved = buildSqlOptions(options);

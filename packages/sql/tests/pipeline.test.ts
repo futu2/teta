@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
 
 import { renderPipelineAst } from "../mod.ts";
-import type { QueryIRSqlTarget, ScopeId } from "../mod.ts";
+import type { QueryIRSqlTarget } from "../src/renderer_types.ts";
+import type { ScopeId } from "../mod.ts";
 
 const usersScope = "__teta_scope_users" as ScopeId;
 const usersMapScope = "__teta_scope_users_map" as ScopeId;

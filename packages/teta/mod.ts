@@ -684,6 +684,8 @@ export {
   TetaInternalError,
   TetaUserError,
   isTetaError,
+  isTetaErrorCode,
+  TETA_ERROR_CODES,
 } from "@teta/sql";
 export type {
   TetaErrorCode,

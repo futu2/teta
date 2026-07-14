@@ -19,14 +19,15 @@ import {
   renderSqlResult,
   resolveDialect,
 } from "../sql.ts";
-import { TETA_QUERY_IR_VERSION } from "@teta/sql";
-import type { QueryIRSqlTarget, SqlCompilable } from "../sql.ts";
+import { TETA_QUERY_IR_VERSION, toPortableQueryIR } from "@teta/sql";
+import type { PortableQueryIR } from "@teta/sql";
+import type { SqlCompilable } from "../sql.ts";
 import { getQueryState, type Query, type QueryStageKind } from "./core.ts";
 import { isQuery } from "./value.ts";
 import { canonicalizeIR } from "./canonicalize.ts";
 import type { QueryColumns } from "./types.ts";
 
-export type QueryIR<TColumns extends QueryColumns> = QueryIRSqlTarget & {
+export type QueryIR<TColumns extends QueryColumns> = PortableQueryIR & {
   columnNames: readonly (keyof TColumns & string)[];
 };
 
@@ -59,7 +60,7 @@ export type QueryExplainResult<TColumns extends QueryColumns> = {
 
 export function toIR<TColumns extends QueryColumns>(query: Query<TColumns>): QueryIR<TColumns> {
   const state = getQueryState(query);
-  return canonicalizeIR({
+  return toPortableQueryIR(canonicalizeIR({
     version: TETA_QUERY_IR_VERSION,
     source: state.source,
     stages: state.stages,
@@ -67,7 +68,7 @@ export function toIR<TColumns extends QueryColumns>(query: Query<TColumns>): Que
     columnNames: state.columnNames,
     columnIdentifiers: state.columnIdentifiers,
     withs: state.withs,
-  }) as QueryIR<TColumns>;
+  })) as QueryIR<TColumns>;
 }
 
 export function toAst<TColumns extends QueryColumns>(

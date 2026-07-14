@@ -35,6 +35,7 @@ export function normalizePredicateExpr(
         ...predicate,
         arg: normalizePredicateExpr(predicate.arg),
       };
+    case "builtin":
     case "func":
       return {
         ...predicate,

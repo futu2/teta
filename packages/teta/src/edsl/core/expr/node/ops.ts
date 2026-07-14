@@ -13,6 +13,7 @@ export function containsGroup(expr: ExprNode<unknown>, inAgg = false): boolean {
       return containsGroup(expr.expr, inAgg);
     case "agg":
       return containsGroup(expr.arg, true);
+    case "builtin":
     case "func":
       return expr.args.some((arg) => containsGroup(arg, inAgg));
     case "list":
@@ -73,6 +74,7 @@ export function unwrapGroupExpr(
         ...expr,
         arg: unwrapGroupExpr(expr.arg, groupBy, true),
       };
+    case "builtin":
     case "func":
       return {
         ...expr,

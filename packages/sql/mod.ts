@@ -20,7 +20,12 @@ export * from "./src/errors.ts";
 export * from "./src/ir/types.ts";
 export * from "./src/ir/utils.ts";
 export * from "./src/ir/tokens.ts";
-export { validateExprIR, validateQueryIR } from "./src/ir/validate.ts";
+export { validateExprIR } from "./src/ir/validate.ts";
+export {
+  lowerPortableQueryIR,
+  toPortableQueryIR,
+  validateQueryIR,
+} from "./src/ir/portable.ts";
 export * as ir from "./src/ir/builders.ts";
 export * from "./src/types.ts";
 export * from "./src/dialect.ts";
@@ -35,7 +40,6 @@ export {
 } from "./src/renderer.ts";
 export type {
   ExprSqlTarget,
-  QueryIRSqlTarget,
 } from "./src/renderer_types.ts";
 export {
   buildRecursiveCte,

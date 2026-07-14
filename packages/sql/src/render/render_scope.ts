@@ -45,6 +45,7 @@ function resolveExprScopes(
         ...expr,
         expr: resolveExprScopes(expr.expr, scopeBindings),
       };
+    case "builtin":
     case "func":
       return {
         ...expr,

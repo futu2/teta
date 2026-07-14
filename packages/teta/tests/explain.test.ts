@@ -60,7 +60,7 @@ describe("explain api", () => {
         const ir = toIR(users);
         expect(ir.version).toBe(1);
         expect(ir.columnNames).toEqual(["user-id"]);
-        expect(ir.columnIdentifiers["user-id"]).toEqual({ name: "user-id", quoted: true });
+        expect(ir).not.toHaveProperty("columnIdentifiers");
         expect(ir.withs).toEqual([]);
         expect(irToSql(ir, { dialect: "postgresql", format: "compact" })).toBe("SELECT users_0.\"user-id\" AS \"user-id\" FROM users AS users_0");
     });

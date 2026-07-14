@@ -1,5 +1,6 @@
 import type {
   ArrayNode,
+  BuiltinFuncNode,
   CaseNode,
   ExprNode,
   FuncNode,
@@ -29,11 +30,11 @@ type RenderExpr = (
 ) => ParserExprAst;
 
 export function funcExprToAst(
-  expr: FuncNode,
+  expr: BuiltinFuncNode | FuncNode,
   renderContext: SqlRenderContext | null,
   renderExpr: RenderExpr
 ): FunctionAst {
-  const normalized = expr.name.trim();
+  const normalized = expr.kind === "builtin" ? expr.op : expr.name.trim();
   const upperName = normalized.toUpperCase();
   if (upperName === "POSITION" && expr.args.length === 2) {
     const positionName: AstKeywordExpr = { type: "origin", value: "position" };

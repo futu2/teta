@@ -7,6 +7,7 @@ import {
   isQuery,
   lit,
   param,
+  upper,
   table,
   t,
   toIR,
@@ -15,7 +16,7 @@ import {
   sort,
   pipe,
 } from "../mod.ts";
-import { windowFn } from "../advanced.ts";
+import { fn, windowFn } from "../advanced.ts";
 import { toExprNode } from "../src/edsl/expr.ts";
 
 describe("tagged EDSL value model", () => {
@@ -28,6 +29,19 @@ describe("tagged EDSL value model", () => {
     expect(Object.isFrozen(expr)).toBe(true);
     expect(Object.isFrozen(expr.node)).toBe(true);
     expect(toExprNode(expr)).toEqual({ kind: "literal", value: 1 });
+  });
+
+  test("distinguishes portable built-ins from advanced custom functions", () => {
+    expect(toExprNode(upper("Ada"))).toEqual({
+      kind: "builtin",
+      op: "UPPER",
+      args: [{ kind: "literal", value: "Ada" }],
+    });
+    expect(toExprNode(fn("vendor_normalize", "Ada"))).toEqual({
+      kind: "func",
+      name: "vendor_normalize",
+      args: [{ kind: "literal", value: "Ada" }],
+    });
   });
 
   test("creates immutable tagged column expressions", () => {

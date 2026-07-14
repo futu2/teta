@@ -49,6 +49,7 @@ function countBooleanPredicateOps(predicate: ExprNode<unknown>): number {
       return (predicate.op === "NOT" ? 1 : 0) + countBooleanPredicateOps(predicate.expr);
     case "agg":
       return countBooleanPredicateOps(predicate.arg);
+    case "builtin":
     case "func":
       return predicate.args.reduce((count, arg) => count + countBooleanPredicateOps(arg), 0);
     case "list":
@@ -99,6 +100,7 @@ function countPredicateNodes(predicate: ExprNode<unknown>): number {
       return 1 + countPredicateNodes(predicate.expr);
     case "agg":
       return 1 + countPredicateNodes(predicate.arg);
+    case "builtin":
     case "func":
       return 1 + predicate.args.reduce((count, arg) => count + countPredicateNodes(arg), 0);
     case "list":

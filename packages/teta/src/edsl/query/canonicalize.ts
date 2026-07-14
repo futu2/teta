@@ -8,10 +8,15 @@ import type {
   Source,
   Stage,
 } from "../core/types.ts";
-import type { QueryIR } from "./render.ts";
-import type { QueryColumns } from "./types.ts";
 type ScopeRewriteMap = Map<string, ScopeId>;
 type CteRewriteMap = Map<string, InternalCteName>;
+
+type CanonicalizableQueryIR = {
+  source: Source;
+  stages: readonly Stage[];
+  scopeId: ScopeId;
+  withs?: readonly CteSpec[];
+};
 
 type CanonicalizeContext = {
   scopes: ScopeRewriteMap;
@@ -20,9 +25,7 @@ type CanonicalizeContext = {
   nextCteIndex: number;
 };
 
-export function canonicalizeIR<TColumns extends QueryColumns>(
-  ir: QueryIR<TColumns>
-): QueryIR<TColumns> {
+export function canonicalizeIR<T extends CanonicalizableQueryIR>(ir: T): T {
   const context: CanonicalizeContext = {
     scopes: new Map(),
     ctes: new Map(),
@@ -36,7 +39,7 @@ export function canonicalizeIR<TColumns extends QueryColumns>(
     scopeId: rewriteScopeId(ir.scopeId, context),
     stages: ir.stages.map((stage) => rewriteStage(stage, context)),
     withs: ir.withs?.map((cte) => rewriteCte(cte, context)) ?? [],
-  };
+  } as T;
 }
 
 function rewriteQuerySpec(spec: QuerySpec, context: CanonicalizeContext): QuerySpec {
@@ -192,6 +195,7 @@ function rewriteExprNode<T>(expr: ExprNode<T>, context: CanonicalizeContext): Ex
         ...expr,
         arg: rewriteExprNode(expr.arg, context),
       } as ExprNode<T>;
+    case "builtin":
     case "func":
       return {
         ...expr,

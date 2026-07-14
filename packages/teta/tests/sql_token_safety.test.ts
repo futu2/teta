@@ -7,9 +7,10 @@ import {
   param,
   toSql,
 } from "../mod.ts";
+import type { TetaErrorCode } from "../mod.ts";
 import { fn, windowFn } from "../advanced.ts";
 
-function expectUserError(action: () => unknown, code: string): void {
+function expectUserError(action: () => unknown, code: TetaErrorCode): void {
   try {
     action();
     throw new Error("Expected TetaUserError");

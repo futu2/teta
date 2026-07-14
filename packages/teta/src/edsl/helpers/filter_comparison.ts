@@ -336,6 +336,7 @@ function isKnownExprNodeKind(kind: string): boolean {
     || kind === "unary"
     || kind === "agg"
     || kind === "group"
+    || kind === "builtin"
     || kind === "func"
     || kind === "list"
     || kind === "array"
@@ -360,6 +361,7 @@ function validateOperandTree(node: unknown): void {
     case "agg":
       validateOperandTree(exprNode.arg);
       return;
+    case "builtin":
     case "func":
       validateArray(exprNode.args).forEach(validateOperandTree);
       return;

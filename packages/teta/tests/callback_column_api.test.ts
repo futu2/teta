@@ -39,13 +39,14 @@ import {
   unnest,
   when,
 } from "../mod.ts";
+import type { TetaErrorCode } from "../mod.ts";
 import {
   createOrdersTable,
   createUsersPipelineTable,
   createUsersTable,
 } from "./helpers/fixtures.ts";
 
-function expectTetaUserError(fn: () => unknown, code: string): void {
+function expectTetaUserError(fn: () => unknown, code: TetaErrorCode): void {
   try {
     fn();
     throw new Error("Expected TetaUserError");

@@ -14,7 +14,12 @@ export {
   isSqlParameterName,
   isSqlPositionalParameter,
 } from "./tokens.ts";
-export { validateExprIR, validateQueryIR } from "./validate.ts";
+export { validateExprIR } from "./validate.ts";
+export {
+  lowerPortableQueryIR,
+  toPortableQueryIR,
+  validateQueryIR,
+} from "./portable.ts";
 export {
   assertLoopColumns,
   assertUnionCompatible,

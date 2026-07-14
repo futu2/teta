@@ -498,6 +498,7 @@ function rewriteExprScope<T>(expr: ExprNode<T>, from: ScopeId, to: ScopeId): Exp
         ...expr,
         arg: rewriteExprScope(expr.arg, from, to),
       } as ExprNode<T>;
+    case "builtin":
     case "func":
       return {
         ...expr,

@@ -21,6 +21,7 @@ import type {
   SqlUuid,
 } from "../../sql/types.ts";
 import {
+  isBuiltinFunctionOperation,
   assertSqlFunctionName,
   assertSqlParameterName,
 } from "@teta/sql";
@@ -212,6 +213,8 @@ export function isExprNode(value: unknown): value is ExprNode<unknown> {
       return isAggNode(candidate);
     case "group":
       return isGroupNode(candidate);
+    case "builtin":
+      return isBuiltinFuncNode(candidate);
     case "func":
       return isFuncNode(candidate);
     case "list":
@@ -326,6 +329,13 @@ function isAggNode(value: { kind?: unknown }): boolean {
 
 function isGroupNode(value: { kind?: unknown }): boolean {
   return isExprNode((value as { expr?: unknown }).expr);
+}
+
+function isBuiltinFuncNode(value: { kind?: unknown }): boolean {
+  const candidate = value as { op?: unknown; args?: unknown };
+  return typeof candidate.op === "string"
+    && isBuiltinFunctionOperation(candidate.op)
+    && isExprNodeArray(candidate.args);
 }
 
 function isFuncNode(value: { kind?: unknown }): boolean {
@@ -551,5 +561,9 @@ export function binaryExpr(
 
 export function funcExpr<T>(name: string, args: ExprNode<unknown>[]): Expr<T> {
   assertSqlFunctionName(name);
+  const operation = name.toUpperCase();
+  if (isBuiltinFunctionOperation(operation)) {
+    return exprOf<T>({ kind: "builtin", op: operation, args });
+  }
   return exprOf<T>({ kind: "func", name, args });
 }

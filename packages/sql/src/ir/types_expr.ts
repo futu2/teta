@@ -53,6 +53,7 @@ export type ExprNode<T> = (
   | UnaryNode
   | AggNode
   | GroupNode
+  | BuiltinFuncNode
   | FuncNode
   | ListNode
   | ArrayNode
@@ -110,7 +111,14 @@ export type GroupNode = {
   expr: ExprNode<any>;
 };
 
-/** Scalar function call expression node. */
+/** Portable scalar function call from Teta's built-in language catalog. */
+export type BuiltinFuncNode = {
+  kind: "builtin";
+  op: BuiltinFunctionOperation;
+  args: ExprNode<any>[];
+};
+
+/** Database-specific scalar function call expression node. */
 export type FuncNode = {
   kind: "func";
   name: string;
@@ -186,3 +194,4 @@ export type IdentifierInput<Name extends string = string> =
       name: Name;
       quoted?: boolean;
     };
+import type { BuiltinFunctionOperation } from "../language/spec.ts";

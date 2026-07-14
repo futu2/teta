@@ -72,6 +72,13 @@ describe("sql backend public api", () => {
     expect(typeof sql.TetaInternalError).toBe("function");
   });
 
+  test("exports a closed runtime error-code catalog", () => {
+    expect(sql.TETA_ERROR_CODES).toContain("INVALID_QUERY_IR");
+    expect(sql.isTetaErrorCode("INVALID_QUERY_IR")).toBe(true);
+    expect(sql.isTetaErrorCode("future_error_code")).toBe(false);
+    expect(new Set(sql.TETA_ERROR_CODES).size).toBe(sql.TETA_ERROR_CODES.length);
+  });
+
   test("validateQueryIR rejects non-IR values", () => {
     expect(() => sql.validateQueryIR(null)).toThrow(sql.TetaUserError);
     expect(() => sql.ir.validateQueryIR(null)).toThrow(sql.TetaUserError);

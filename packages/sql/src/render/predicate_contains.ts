@@ -12,6 +12,7 @@ export function containsWindow(expr: ExprNode<unknown>): boolean {
       return containsWindow(expr.arg);
     case "group":
       return containsWindow(expr.expr);
+    case "builtin":
     case "func":
       return expr.args.some(containsWindow);
     case "list":
@@ -42,6 +43,7 @@ export function containsAggregate(expr: ExprNode<unknown>): boolean {
       return containsAggregate(expr.expr);
     case "group":
       return containsAggregate(expr.expr);
+    case "builtin":
     case "func":
       return expr.args.some(containsAggregate);
     case "list":

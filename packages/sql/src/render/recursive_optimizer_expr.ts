@@ -30,6 +30,7 @@ export function collectExprColumns(
     case "group":
       collectExprColumns(expr.expr, out, options);
       return;
+    case "builtin":
     case "func":
       expr.args.forEach((arg) => collectExprColumns(arg, out, options));
       return;

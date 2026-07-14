@@ -1,7 +1,10 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 import {
   BUILTIN_DIALECTS,
+  BUILTIN_FUNCTION_OPERATIONS,
   formatDialectCapabilityMatrixMarkdown,
   getDialectCapabilities,
   getDialectCapabilityMatrix,
@@ -20,6 +23,9 @@ describe("dialect capability matrix", () => {
         expect(["native", "rewritten", "emulated", "unsupported"])
           .toContain(capabilities[operation]);
       }
+    }
+    for (const operation of BUILTIN_FUNCTION_OPERATIONS) {
+      expect(operations).toContain(operation);
     }
   });
 
@@ -47,5 +53,11 @@ describe("dialect capability matrix", () => {
     expect(markdown).toContain("| Operation | mysql | mariadb |");
     expect(markdown).toContain("| BIT_LENGTH | ");
     expect(markdown).toContain("| RECURSIVE_CTE | ");
+  });
+
+  test("keeps the checked-in capability reference generated", () => {
+    const documentPath = fileURLToPath(new URL("../CAPABILITIES.md", import.meta.url));
+    const document = readFileSync(documentPath, "utf8");
+    expect(document).toContain(formatDialectCapabilityMatrixMarkdown());
   });
 });

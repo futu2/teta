@@ -6,7 +6,7 @@ import {
   irToSql,
   irToSqlResult,
   type ExprNode,
-  type QueryIR,
+  type PortableQueryIR,
 } from "../mod.ts";
 
 const idColumn = {
@@ -24,17 +24,10 @@ const simpleIR = {
     as: null,
   },
   stages: [],
-  scopeId: "__teta_scope_test" as QueryIR["scopeId"],
+  scopeId: "__teta_scope_test" as PortableQueryIR["scopeId"],
   columnNames: ["id"],
-  columnIdentifiers: {
-    id: { name: "id", quoted: false },
-  },
   withs: [],
-} satisfies QueryIR & {
-  columnNames: readonly string[];
-  columnIdentifiers: Record<string, { name: string; quoted: boolean }>;
-  withs: [];
-};
+} satisfies PortableQueryIR;
 
 describe("sql backend renderer", () => {
   test("renders expression IR directly", () => {
@@ -56,7 +49,7 @@ describe("sql backend renderer", () => {
     });
   });
 
-  test("renders query IR with physical column identifiers", () => {
+  test("derives quoted physical identifiers from portable logical names", () => {
     const userIdIR = {
       version: 1,
       source: {
@@ -66,21 +59,14 @@ describe("sql backend renderer", () => {
         as: null,
       },
       stages: [],
-      scopeId: "__teta_scope_user" as QueryIR["scopeId"],
-      columnNames: ["userId"],
-      columnIdentifiers: {
-        userId: { name: "user_id", quoted: false },
-      },
+      scopeId: "__teta_scope_user" as PortableQueryIR["scopeId"],
+      columnNames: ["user-id"],
       withs: [],
-    } satisfies QueryIR & {
-      columnNames: readonly string[];
-      columnIdentifiers: Record<string, { name: string; quoted: boolean }>;
-      withs: [];
-    };
+    } satisfies PortableQueryIR;
 
     ir.validateQueryIR(userIdIR);
     expect(irToSql(userIdIR, { dialect: "postgresql", format: "compact" })).toBe(
-      "SELECT users_0.user_id FROM users AS users_0"
+      "SELECT users_0.\"user-id\" AS \"user-id\" FROM users AS users_0"
     );
   });
 });

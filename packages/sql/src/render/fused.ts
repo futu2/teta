@@ -84,6 +84,7 @@ function expandScopeExprs(
       return { ...expr, arg: expandScopeExprs(expr.arg, scopeExprs) };
     case "group":
       return { ...expr, expr: expandScopeExprs(expr.expr, scopeExprs) };
+    case "builtin":
     case "func":
       return {
         ...expr,

@@ -1,16 +1,20 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 import {
+  BUILTIN_FUNCTION_OPERATIONS,
   TETA_QUERY_IR_VERSION,
   TetaUserError,
   exprToSql,
   irToSql,
+  lowerPortableQueryIR,
   validateExprIR,
   validateQueryIR,
-  type QueryIRSqlTarget,
+  type PortableQueryIR,
 } from "../mod.ts";
 
-function validTarget(): QueryIRSqlTarget {
+function validTarget(): PortableQueryIR {
   return {
     version: TETA_QUERY_IR_VERSION,
     source: {
@@ -22,9 +26,6 @@ function validTarget(): QueryIRSqlTarget {
     stages: [],
     scopeId: "__teta_scope_users",
     columnNames: ["id"],
-    columnIdentifiers: {
-      id: { name: "id", quoted: false },
-    },
     withs: [],
   };
 }
@@ -49,7 +50,7 @@ describe("public query IR v1", () => {
     );
   });
 
-  test("rejects old or incomplete renderer targets at the boundary", () => {
+  test("rejects old or incomplete portable targets at the boundary", () => {
     const oldVersion = { ...validTarget(), version: 0 };
     expectInvalid(() => validateQueryIR(oldVersion), "query.version");
     expectInvalid(() => irToSql(oldVersion as never, { dialect: "postgresql" }), "query.version");
@@ -59,12 +60,16 @@ describe("public query IR v1", () => {
     expectInvalid(() => irToSql(missingMetadata as never, { dialect: "postgresql" }), "query.columnNames");
   });
 
-  test("rejects malformed column metadata and SQL syntax in raw IR", () => {
-    const missingIdentifier = {
+  test("rejects renderer metadata and SQL syntax in raw IR", () => {
+    const rendererMetadata = {
       ...validTarget(),
       columnIdentifiers: {},
     };
-    expectInvalid(() => validateQueryIR(missingIdentifier), "query.columnIdentifiers");
+    expectInvalid(() => validateQueryIR(rendererMetadata), "query.columnIdentifiers");
+
+    expect(lowerPortableQueryIR(validTarget()).columnIdentifiers).toEqual({
+      id: { name: "id", quoted: false },
+    });
 
     const unsafeFunction = {
       ...validTarget(),
@@ -125,7 +130,7 @@ describe("public query IR v1", () => {
           outputScopeId: "__teta_scope_result",
         }],
       }),
-      "query.stages[0].keys"
+      "query.stages[0].items"
     );
 
     expectInvalid(
@@ -138,7 +143,6 @@ describe("public query IR v1", () => {
           withOrdinality: false,
           as: null,
           columnNames: [],
-          columnIdentifiers: {},
           projectAll: [],
           rightScopeId: "__teta_scope_unnest",
           outputScopeId: "__teta_scope_result",
@@ -154,6 +158,41 @@ describe("public query IR v1", () => {
       }),
       "query.source.rows[0] key"
     );
+
+    expectInvalid(
+      () => validateQueryIR({
+        ...validTarget(),
+        stages: [{
+          kind: "map",
+          items: [{
+            expr: { kind: "literal", value: 1 },
+            as: { name: "actual_id", quoted: false },
+          }],
+          keys: ["claimed_id"],
+          groupBy: null,
+          outputScopeId: "__teta_scope_result",
+        }],
+      }),
+      "query.stages[0].keys"
+    );
+
+    expectInvalid(
+      () => validateQueryIR({
+        ...validTarget(),
+        columnNames: ["different_id"],
+        stages: [{
+          kind: "map",
+          items: [{
+            expr: { kind: "literal", value: 1 },
+            as: { name: "id", quoted: false },
+          }],
+          keys: ["id"],
+          groupBy: null,
+          outputScopeId: "__teta_scope_result",
+        }],
+      }),
+      "query.columnNames"
+    );
   });
 
   test("validates standalone expression IR before stringification", () => {
@@ -165,5 +204,41 @@ describe("public query IR v1", () => {
     const bigint = { kind: "literal", value: { kind: "bigint_literal", value: "9007199254740993" } } as const;
     validateExprIR(bigint);
     expect(exprToSql(bigint, { dialect: "postgresql" })).toBe("9007199254740993");
+  });
+
+  test("validates and renders cataloged built-in operations", () => {
+    const builtin = {
+      kind: "builtin",
+      op: "UPPER",
+      args: [{ kind: "literal", value: "ada" }],
+    } as const;
+
+    validateExprIR(builtin);
+    expect(exprToSql(builtin, { dialect: "postgresql" })).toBe("upper('ada')");
+    expectInvalid(
+      () => validateExprIR({ ...builtin, op: "DATABASE_ONLY_FUNCTION" } as never),
+      "op"
+    );
+    expectInvalid(
+      () => validateExprIR({ ...builtin, op: "upper" } as never),
+      "op"
+    );
+  });
+
+  test("accepts every declared portable scalar operation", () => {
+    for (const op of BUILTIN_FUNCTION_OPERATIONS) {
+      validateExprIR({ kind: "builtin", op, args: [] });
+    }
+  });
+
+  test("keeps the published JSON Schema synchronized with portable IR", () => {
+    const schemaPath = fileURLToPath(new URL("../ir.v1.schema.json", import.meta.url));
+    const schema = JSON.parse(readFileSync(schemaPath, "utf8")) as {
+      required: string[];
+      $defs: { builtinOperation: { enum: string[] } };
+    };
+
+    expect(schema.required).not.toContain("columnIdentifiers");
+    expect(schema.$defs.builtinOperation.enum).toEqual([...BUILTIN_FUNCTION_OPERATIONS]);
   });
 });

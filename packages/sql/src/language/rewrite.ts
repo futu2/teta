@@ -32,6 +32,11 @@ export function rewriteDialectExpr(
       };
     case "group":
       return { ...expr, expr: rewriteDialectExpr(expr.expr, language) };
+    case "builtin": {
+      const mappedName = resolveFunctionName(expr.op, language);
+      const rewrittenArgs = expr.args.map((arg) => rewriteDialectExpr(arg, language));
+      return applyFallback(mappedName, rewrittenArgs, language);
+    }
     case "list":
       return {
         ...expr,
@@ -117,6 +122,9 @@ export function validateDialectExpr(
       return;
     case "group":
       validateDialectExpr(expr.expr, language);
+      return;
+    case "builtin":
+      expr.args.forEach((item) => validateDialectExpr(item, language));
       return;
     case "extract":
       validateDialectExpr(expr.source, language);
