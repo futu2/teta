@@ -116,7 +116,7 @@ Filters rows with a predicate expression.
 ```ts
 function filter<T extends QueryColumns>(
   predicate: (row: ProxyRow<T>) => Expr<SqlBoolean | null>,
-): QueryStep<Query<T>, Query<T>>
+): QueryStep<T, T>
 ```
 
 ```ts
@@ -133,7 +133,7 @@ Filters rows where a column equals a value.
 function filterEq<T extends QueryColumns, K extends keyof T>(
   columnSelector: (row: ProxyRow<T>) => Expr<T[K]>,
   value: ExprInput<T[K]>,
-): QueryStep<Query<T>, Query<T>>
+): QueryStep<T, T>
 ```
 
 ```ts
@@ -149,7 +149,7 @@ Projects each row into a new shape.
 ```ts
 function map<T extends QueryColumns, TOut extends QueryColumns>(
   selector: (row: ProxyRow<T>) => { [K in keyof TOut]: Expr<TOut[K]> },
-): QueryStep<Query<T>, Query<TOut>>
+): QueryStep<T, TOut>
 ```
 
 ```ts
@@ -163,7 +163,7 @@ Aggregate projection. Every returned expression must be grouped (`group(...)`) o
 ```ts
 function fold<T extends QueryColumns, TOut extends QueryColumns>(
   selector: (row: ProxyRow<T>) => { [K in keyof TOut]: GroupedOrAggregate<TOut[K]> },
-): QueryStep<Query<T>, Query<TOut>>
+): QueryStep<T, TOut>
 ```
 
 ```ts
@@ -183,7 +183,7 @@ Adds an `ORDER BY` clause.
 ```ts
 function sort<T extends QueryColumns>(
   selector: (row: ProxyRow<T>) => OrderItem | readonly OrderItem[],
-): QueryStep<Query<T>, Query<T>>
+): QueryStep<T, T>
 ```
 
 ```ts
@@ -195,7 +195,7 @@ pipe(users, sort((u) => [desc(u.age), asc(u.id)]));
 Limits the number of rows.
 
 ```ts
-function take<T extends QueryColumns>(count: number): QueryStep<Query<T>, Query<T>>
+function take<T extends QueryColumns>(count: number): QueryStep<T, T>
 ```
 
 ### `takeWithin({ partitionBy, orderBy, count })`
@@ -205,7 +205,7 @@ Keeps the first N rows within each partition.
 ```ts
 function takeWithin<T extends QueryColumns>(
   spec: TakeWithinSpec<T>,
-): QueryStep<Query<T>, Query<T>>
+): QueryStep<T, T>
 ```
 
 ```ts
@@ -227,7 +227,7 @@ Joins two query inputs.
 function join<TLeft extends QueryColumns, TRight extends QueryColumns, TKind extends JoinKind>(
   right: Query<TRight> | ((left: ProxyRow<TLeft>) => Query<TRight>),
   options: JoinOptions<TLeft, TRight, TKind>,
-): QueryStep<Query<TLeft>, JoinResult<TLeft, TRight, TKind>>
+): QueryStep<TLeft, JoinResult<TLeft, TRight, TKind>>
 ```
 
 ```ts
@@ -253,7 +253,7 @@ Convenience wrappers around `join()` with fixed join types.
 function innerJoin<TLeft extends QueryColumns, TRight extends QueryColumns>(
   right: Query<TRight>,
   on: JoinOn<TLeft, TRight>,
-): QueryStep<Query<TLeft>, Query<TLeft & TRight>>
+): QueryStep<TLeft, TLeft & TRight>
 ```
 
 ### `union(right)`, `unionAll(right)`
@@ -263,11 +263,11 @@ Set operations. Both sides must have compatible row shapes.
 ```ts
 function union<T extends QueryColumns>(
   right: Query<T>,
-): QueryStep<Query<T>, Query<T>>
+): QueryStep<T, T>
 
 function unionAll<T extends QueryColumns>(
   right: Query<T>,
-): QueryStep<Query<T>, Query<T>>
+): QueryStep<T, T>
 ```
 
 ```ts
@@ -281,7 +281,7 @@ Builds a recursive CTE from a base query and a recursive step.
 ```ts
 function loop<T extends QueryColumns>(
   step: (self: Query<T>) => Query<T>,
-): QueryStep<Query<T>, Query<T>>
+): QueryStep<T, T>
 ```
 
 ```ts
@@ -306,7 +306,7 @@ function unnest<T extends QueryColumns, TV extends string, TO extends string | u
   selector: (row: ProxyRow<T>) => Expr<any[] | null>,
   columns: UnnestSelection<TV, TO>,
   options?: UnnestOptions,
-): QueryStep<Query<T>, Query<UnnestResult<T, TV, TO>>>
+): QueryStep<T, UnnestResult<T, TV, TO>>
 ```
 
 ```ts
@@ -318,7 +318,7 @@ pipe(users, unnest((u) => u.tags, { value: "tag", ordinality: "tag_index" }));
 Returns a step that leaves its input unchanged.
 
 ```ts
-function identityStep<T extends QueryColumns>(): QueryStep<Query<T>, Query<T>>
+function identityStep<T extends QueryColumns>(): QueryStep<T, T>
 ```
 
 ### `whenStep(condition, step)`, `unlessStep(condition, step)`
@@ -328,8 +328,8 @@ Conditionally include or skip a shape-preserving step based on a host-language b
 ```ts
 function whenStep<T extends QueryColumns>(
   condition: boolean,
-  step: QueryStep<Query<T>, Query<T>>,
-): QueryStep<Query<T>, Query<T>>
+  step: QueryStep<T, T>,
+): QueryStep<T, T>
 ```
 
 ---
@@ -343,7 +343,7 @@ Keeps only the named columns.
 ```ts
 function pick<T extends QueryColumns, K extends readonly (keyof T)[]>(
   ...keys: K
-): QueryStep<Query<T>, Query<Pick<T, K[number]>>>
+): QueryStep<T, Pick<T, K[number]>>
 ```
 
 ### `drop(...keys)`
@@ -353,7 +353,7 @@ Removes the named columns.
 ```ts
 function drop<T extends QueryColumns, K extends readonly (keyof T)[]>(
   ...keys: K
-): QueryStep<Query<T>, Query<Omit<T, K[number]>>>
+): QueryStep<T, Omit<T, K[number]>>
 ```
 
 ### `rename(mapper)`
@@ -363,7 +363,7 @@ Renames every projected column.
 ```ts
 function rename<T extends QueryColumns>(
   mapper: (key: string) => string,
-): QueryStep<Query<T>, Query<RenameResult<T>>>
+): QueryStep<T, RenameResult<T>>
 ```
 
 ### `extend(name, selector)`
@@ -374,7 +374,7 @@ Adds or replaces one named column while preserving others.
 function extend<T extends QueryColumns, N extends string, V>(
   name: N,
   selector: (row: ProxyRow<T>) => Expr<V>,
-): QueryStep<Query<T>, Query<T & { [K in N]: V }>>
+): QueryStep<T, T & { [K in N]: V }>
 ```
 
 ---
