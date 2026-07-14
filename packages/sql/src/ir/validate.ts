@@ -1,6 +1,7 @@
 import { userError } from "../errors.ts";
 import type { ExprSqlTarget, QueryIRSqlTarget } from "../renderer_types.ts";
 import {
+  OUTER_TABLE_ALIAS,
   TETA_QUERY_IR_VERSION,
   type BinaryOp,
   type ExprNode,
@@ -27,6 +28,9 @@ const BINARY_OPS = new Set<BinaryOp>([
 const JOIN_TYPES = new Set(["INNER", "LEFT", "RIGHT", "FULL"]);
 const ORDER_DIRECTIONS = new Set(["ASC", "DESC"]);
 
+type ScopeColumns = ReadonlySet<string> | null;
+type ScopeEnvironment = Map<string, ScopeColumns>;
+
 /**
  * Decode and validate a versioned query IR target before it reaches the renderer.
  *
@@ -50,6 +54,8 @@ export function validateQueryIRSqlTarget(value: unknown): asserts value is Query
     invalid("query.version", `must equal ${TETA_QUERY_IR_VERSION}`);
   }
   validateQueryTarget(target, "query");
+  validateCteScopeSemantics(target.withs, "query.withs");
+  validateQueryScopeSemantics(target, "query", new Map());
 }
 
 /** Decode and validate a standalone public expression IR target. */
@@ -88,6 +94,329 @@ function validateQuerySpec(value: unknown, path: string): void {
   const query = asRecord(value, path);
   assertKnownKeys(query, path, ["source", "stages", "scopeId", "columnNames", "columnIdentifiers"]);
   validateQueryTarget(query, path);
+}
+
+function validateCteScopeSemantics(value: unknown, path: string): void {
+  if (value === undefined) return;
+  asArray(value, path).forEach((cte, index) => {
+    const record = asRecord(cte, `${path}[${index}]`);
+    if (record.kind === "query") {
+      validateQueryScopeSemantics(
+        asRecord(record.query, `${path}[${index}].query`),
+        `${path}[${index}].query`,
+        new Map()
+      );
+      return;
+    }
+    if (record.kind === "recursive") {
+      validateQueryScopeSemantics(
+        asRecord(record.base, `${path}[${index}].base`),
+        `${path}[${index}].base`,
+        new Map()
+      );
+      validateQueryScopeSemantics(
+        asRecord(record.step, `${path}[${index}].step`),
+        `${path}[${index}].step`,
+        new Map()
+      );
+    }
+  });
+}
+
+/** Validate that each query stage only refers to row scopes available at that point. */
+function validateQueryScopeSemantics(
+  query: Record<string, unknown>,
+  path: string,
+  outerScopes: ScopeEnvironment
+): void {
+  const scopeId = query.scopeId as string;
+  if (outerScopes.has(scopeId)) {
+    invalid(`${path}.scopeId`, "must not shadow an inherited scope");
+  }
+  const stages = asArray(query.stages, `${path}.stages`);
+  const environment = new Map(outerScopes);
+  let currentScopeId = scopeId;
+  environment.set(currentScopeId, sourceColumnNames(query, stages));
+
+  stages.forEach((value, index) => {
+    const stage = asRecord(value, `${path}.stages[${index}]`);
+    const stagePath = `${path}.stages[${index}]`;
+    switch (stage.kind) {
+      case "map":
+      case "fold": {
+        validateProjectionScopeExpressions(stage.items, `${stagePath}.items`, environment);
+        if (stage.kind === "fold" && stage.groupBy !== null) {
+          validateExpressionScopeArray(stage.groupBy, `${stagePath}.groupBy`, environment);
+        }
+        const outputNames = projectionOutputNames(stage.items, `${stagePath}.items`);
+        currentScopeId = advanceScope(
+          environment,
+          currentScopeId,
+          stage.outputScopeId,
+          outputNames,
+          `${stagePath}.outputScopeId`
+        );
+        return;
+      }
+      case "filter":
+        validateExpressionScopes(stage.predicate, `${stagePath}.predicate`, environment);
+        validateProjectionScopeExpressions(stage.projectAll, `${stagePath}.projectAll`, environment);
+        return;
+      case "sort":
+        validateOrderScopeExpressions(stage.items, `${stagePath}.items`, environment);
+        validateProjectionScopeExpressions(stage.projectAll, `${stagePath}.projectAll`, environment);
+        return;
+      case "take":
+        validateProjectionScopeExpressions(stage.projectAll, `${stagePath}.projectAll`, environment);
+        return;
+      case "join": {
+        const source = asRecord(stage.source, `${stagePath}.source`);
+        const rightColumns = joinSourceColumnNames(
+          source,
+          stage,
+          stagePath,
+          environment,
+          environment.get(currentScopeId) ?? null
+        );
+        const rightScopeId = stage.rightScopeId as string;
+        assertFreshScope(environment, rightScopeId, `${stagePath}.rightScopeId`);
+        environment.set(rightScopeId, rightColumns);
+        validateExpressionScopes(stage.on, `${stagePath}.on`, environment);
+        validateProjectionScopeExpressions(stage.projectAll, `${stagePath}.projectAll`, environment);
+        const outputNames = projectionOutputNames(stage.projectAll, `${stagePath}.projectAll`);
+        environment.delete(rightScopeId);
+        currentScopeId = advanceScope(
+          environment,
+          currentScopeId,
+          stage.outputScopeId,
+          outputNames,
+          `${stagePath}.outputScopeId`
+        );
+        return;
+      }
+      case "unnest": {
+        validateExpressionScopes(stage.expr, `${stagePath}.expr`, environment);
+        const rightScopeId = stage.rightScopeId as string;
+        assertFreshScope(environment, rightScopeId, `${stagePath}.rightScopeId`);
+        environment.set(rightScopeId, new Set(stage.columnNames as string[]));
+        validateProjectionScopeExpressions(stage.projectAll, `${stagePath}.projectAll`, environment);
+        const outputNames = projectionOutputNames(stage.projectAll, `${stagePath}.projectAll`);
+        environment.delete(rightScopeId);
+        currentScopeId = advanceScope(
+          environment,
+          currentScopeId,
+          stage.outputScopeId,
+          outputNames,
+          `${stagePath}.outputScopeId`
+        );
+        return;
+      }
+      case "union": {
+        const right = asRecord(stage.right, `${stagePath}.right`);
+        validateQueryScopeSemantics(right, `${stagePath}.right`, new Map());
+        validateProjectionScopeExpressions(stage.projectAll, `${stagePath}.projectAll`, environment);
+        const outputNames = projectionOutputNames(stage.projectAll, `${stagePath}.projectAll`);
+        if (!sameNames(outputNames, right.columnNames)) {
+          invalid(`${stagePath}.right.columnNames`, "must match the union projection columns");
+        }
+        currentScopeId = advanceScope(
+          environment,
+          currentScopeId,
+          stage.outputScopeId,
+          outputNames,
+          `${stagePath}.outputScopeId`
+        );
+        return;
+      }
+    }
+  });
+}
+
+function sourceColumnNames(
+  query: Record<string, unknown>,
+  stages: readonly unknown[]
+): ScopeColumns {
+  const source = asRecord(query.source, "query source");
+  if (source.kind === "values") {
+    const firstRow = asRecord(asArray(source.rows, "query source rows")[0], "query source row");
+    return new Set(Object.keys(firstRow));
+  }
+  return stages.length === 0 ? new Set(query.columnNames as string[]) : null;
+}
+
+function joinSourceColumnNames(
+  source: Record<string, unknown>,
+  stage: Record<string, unknown>,
+  stagePath: string,
+  environment: ScopeEnvironment,
+  outerColumns: ScopeColumns
+): ScopeColumns {
+  if (source.kind === "table") {
+    return new Set(Object.keys(asRecord(source.columnIdentifiers, `${stagePath}.source.columnIdentifiers`)));
+  }
+  if (source.kind === "subquery") {
+    const inherited = inheritedScopeEnvironment(
+      source.inheritedBindings,
+      environment,
+      `${stagePath}.source.inheritedBindings`
+    );
+    if (stage.lateral === true) inherited.set(OUTER_TABLE_ALIAS, outerColumns);
+    const query = asRecord(source.query, `${stagePath}.source.query`);
+    validateQueryScopeSemantics(query, `${stagePath}.source.query`, inherited);
+    return new Set(query.columnNames as string[]);
+  }
+  invalid(`${stagePath}.source.kind`, "must be table or subquery");
+}
+
+function inheritedScopeEnvironment(
+  value: unknown,
+  environment: ScopeEnvironment,
+  path: string
+): ScopeEnvironment {
+  if (value === null) return new Map();
+  const bindings = asRecord(value, path);
+  const inherited: ScopeEnvironment = new Map();
+  for (const scopeId of Object.keys(bindings)) {
+    const columns = environment.get(scopeId);
+    if (columns === undefined) invalid(`${path}.${scopeId}`, "must reference an available outer scope");
+    inherited.set(scopeId, columns);
+  }
+  return inherited;
+}
+
+function advanceScope(
+  environment: ScopeEnvironment,
+  currentScopeId: string,
+  outputScopeId: unknown,
+  columns: readonly string[],
+  path: string
+): string {
+  if (typeof outputScopeId !== "string") invalid(path, "must be a SQL scope identifier");
+  environment.delete(currentScopeId);
+  assertFreshScope(environment, outputScopeId, path);
+  environment.set(outputScopeId, new Set(columns));
+  return outputScopeId;
+}
+
+function assertFreshScope(environment: ScopeEnvironment, scopeId: string, path: string): void {
+  if (environment.has(scopeId)) invalid(path, "must introduce a new scope");
+}
+
+function projectionOutputNames(value: unknown, path: string): string[] {
+  return asArray(value, path).map((item, index) => {
+    const projection = asRecord(item, `${path}[${index}]`);
+    if (projection.as !== null) return (projection.as as { name: string }).name;
+    return (projection.expr as { name: string }).name;
+  });
+}
+
+function validateProjectionScopeExpressions(
+  value: unknown,
+  path: string,
+  environment: ScopeEnvironment
+): void {
+  asArray(value, path).forEach((item, index) => {
+    const projection = asRecord(item, `${path}[${index}]`);
+    validateExpressionScopes(projection.expr, `${path}[${index}].expr`, environment);
+  });
+}
+
+function validateOrderScopeExpressions(
+  value: unknown,
+  path: string,
+  environment: ScopeEnvironment
+): void {
+  asArray(value, path).forEach((item, index) => {
+    const order = asRecord(item, `${path}[${index}]`);
+    validateExpressionScopes(order.expr, `${path}[${index}].expr`, environment);
+  });
+}
+
+function validateExpressionScopeArray(
+  value: unknown,
+  path: string,
+  environment: ScopeEnvironment
+): void {
+  asArray(value, path).forEach((item, index) =>
+    validateExpressionScopes(item, `${path}[${index}]`, environment)
+  );
+}
+
+function validateExpressionScopes(
+  value: unknown,
+  path: string,
+  environment: ScopeEnvironment
+): void {
+  const expr = asRecord(value, path);
+  switch (expr.kind) {
+    case "column":
+      validateColumnScope(expr, path, environment);
+      return;
+    case "literal":
+    case "param":
+      return;
+    case "binary":
+      validateExpressionScopes(expr.left, `${path}.left`, environment);
+      validateExpressionScopes(expr.right, `${path}.right`, environment);
+      return;
+    case "unary":
+    case "group":
+    case "cast":
+      validateExpressionScopes(expr.expr, `${path}.expr`, environment);
+      return;
+    case "agg":
+      validateExpressionScopes(expr.arg, `${path}.arg`, environment);
+      return;
+    case "builtin":
+    case "func":
+      validateExpressionScopeArray(expr.args, `${path}.args`, environment);
+      return;
+    case "list":
+    case "array":
+      validateExpressionScopeArray(expr.items, `${path}.items`, environment);
+      return;
+    case "extract":
+      validateExpressionScopes(expr.source, `${path}.source`, environment);
+      return;
+    case "window":
+      validateExpressionScopeArray(expr.args, `${path}.args`, environment);
+      if (expr.partitionBy !== null) {
+        validateExpressionScopeArray(expr.partitionBy, `${path}.partitionBy`, environment);
+      }
+      if (expr.orderBy !== null) {
+        validateOrderScopeExpressions(expr.orderBy, `${path}.orderBy`, environment);
+      }
+      return;
+    case "case":
+      asArray(expr.whens, `${path}.whens`).forEach((branch, index) => {
+        const record = asRecord(branch, `${path}.whens[${index}]`);
+        validateExpressionScopes(record.when, `${path}.whens[${index}].when`, environment);
+        validateExpressionScopes(record.then, `${path}.whens[${index}].then`, environment);
+      });
+      if (expr.elseExpr !== null) {
+        validateExpressionScopes(expr.elseExpr, `${path}.elseExpr`, environment);
+      }
+      return;
+  }
+}
+
+function validateColumnScope(
+  column: Record<string, unknown>,
+  path: string,
+  environment: ScopeEnvironment
+): void {
+  const name = column.name as string;
+  if (column.table === null) {
+    if (![...environment.values()].some((columns) => columns === null || columns.has(name))) {
+      invalid(`${path}.name`, "must reference an available column");
+    }
+    return;
+  }
+  const columns = environment.get(column.table as string);
+  if (columns === undefined) invalid(`${path}.table`, "must reference an available scope");
+  if (columns !== null && !columns.has(name)) {
+    invalid(`${path}.name`, "must reference a column exposed by its scope");
+  }
 }
 
 function validateSource(value: unknown, path: string): void {

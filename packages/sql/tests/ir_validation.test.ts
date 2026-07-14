@@ -147,6 +147,58 @@ describe("public query IR v1", () => {
     expectInvalid(() => validateQueryIR(missingColumns), "query.stages[0].source.columnNames");
   });
 
+  test("enforces scope and column visibility across stages", () => {
+    expectInvalid(() => validateQueryIR({
+      ...validTarget(),
+      stages: [{
+        kind: "map",
+        items: [{
+          expr: { kind: "column", table: "__teta_scope_missing", name: "id" },
+          as: null,
+        }],
+        keys: ["id"],
+        groupBy: null,
+        outputScopeId: "__teta_scope_result",
+      }],
+    }), "query.stages[0].items[0].expr.table");
+
+    expectInvalid(() => validateQueryIR({
+      ...validTarget(),
+      stages: [
+        {
+          kind: "map",
+          items: [{
+            expr: { kind: "column", table: "__teta_scope_users", name: "id" },
+            as: null,
+          }],
+          keys: ["id"],
+          groupBy: null,
+          outputScopeId: "__teta_scope_result",
+        },
+        {
+          kind: "filter",
+          predicate: {
+            kind: "binary",
+            op: "=",
+            left: { kind: "column", table: "__teta_scope_users", name: "id" },
+            right: { kind: "literal", value: 1 },
+          },
+          projectAll: [{
+            expr: { kind: "column", table: "__teta_scope_result", name: "id" },
+            as: null,
+          }],
+        },
+      ],
+    }), "query.stages[1].predicate.left.table");
+
+    const unknownJoinColumn = structuredClone(validTableJoinTarget()) as Record<string, any>;
+    unknownJoinColumn.stages[0].on.right.name = "missing";
+    expectInvalid(
+      () => validateQueryIR(unknownJoinColumn),
+      "query.stages[0].on.right.name"
+    );
+  });
+
   test("rejects properties outside the v1 contract at every decoder boundary", () => {
     expectInvalid(
       () => validateQueryIR({ ...validTarget(), debug: true }),

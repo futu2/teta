@@ -46,6 +46,10 @@ validated by both EDSL constructors and the IR decoder.
 Portable table join sources declare their logical `columnNames`. The renderer
 uses those names to derive its private physical identifier map.
 
+The decoder also tracks each stage's row scope and shaped output columns. It
+rejects references to unavailable scopes, stale pre-projection scopes, and
+declared join columns that do not exist.
+
 ```ts
 import { irToSql, type PortableQueryIR } from "@teta/sql";
 
