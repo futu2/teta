@@ -58,6 +58,7 @@ describe("explain api", () => {
             "user-id": t.int(),
         });
         const ir = toIR(users);
+        expect(ir.version).toBe(1);
         expect(ir.columnNames).toEqual(["user-id"]);
         expect(ir.columnIdentifiers["user-id"]).toEqual({ name: "user-id", quoted: true });
         expect(ir.withs).toEqual([]);

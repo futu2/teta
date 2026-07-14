@@ -6,7 +6,8 @@
     ".": "./mod.ts",
     "./query": "./query.ts",
     "./expr": "./expr.ts",
-    "./pipe": "./pipe.ts"
+    "./pipe": "./pipe.ts",
+    "./advanced": "./advanced.ts"
   },
   "types": "./mod.ts",
   "type": "module",

@@ -2,8 +2,10 @@
 export type DateLiteral = { kind: "date_literal"; value: string };
 /** SQL timestamp literal represented independently of JavaScript `Date`. */
 export type TimestampLiteral = { kind: "timestamp_literal"; value: string };
+/** SQL bigint literal represented as decimal text for JSON-compatible IR transport. */
+export type BigIntLiteral = { kind: "bigint_literal"; value: string };
 /** Primitive literal value accepted by the SQL IR. */
-export type Value = string | number | bigint | boolean | null | DateLiteral | TimestampLiteral;
+export type Value = string | number | boolean | null | DateLiteral | TimestampLiteral | BigIntLiteral;
 
 /** Binary operator supported by expression IR nodes. */
 export type BinaryOp =

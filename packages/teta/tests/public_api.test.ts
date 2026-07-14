@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import * as publicApi from "../mod.ts";
+import * as advancedApi from "../advanced.ts";
 
 test("does not export public constructor values", () => {
   const removedExprRefExport = "Expr" + "Ref";
@@ -11,6 +12,25 @@ test("does not export public constructor values", () => {
   expect(typeof publicApi.isQuery).toBe("function");
   expect(typeof publicApi.isExpr).toBe("function");
   expect(typeof publicApi.isColumn).toBe("function");
+});
+
+test("keeps compiler constructors and custom functions out of the default surface", () => {
+  const rootOnlyInternals = [
+    "exprOf",
+    "columnOf",
+    "toExprNode",
+    "funcExpr",
+    "windowExpr",
+    "createColumnRefs",
+    "fn",
+    "windowFn",
+  ];
+
+  for (const name of rootOnlyInternals) {
+    expect(name in publicApi).toBe(false);
+  }
+  expect(typeof advancedApi.fn).toBe("function");
+  expect(typeof advancedApi.windowFn).toBe("function");
 });
 
 test("schema helpers use short names only", () => {

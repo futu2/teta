@@ -7,7 +7,8 @@
     ".": "./mod.ts",
     "./query": "./query.ts",
     "./expr": "./expr.ts",
-    "./pipe": "./pipe.ts"
+    "./pipe": "./pipe.ts",
+    "./advanced": "./advanced.ts"
   },
   "imports": {
     "@teta/sql": "jsr:@teta/sql@^0.1.6"

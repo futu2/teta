@@ -1,0 +1,201 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://teta.dev/schema/query-ir/v1.json",
+  "title": "Teta Query IR v1",
+  "description": "Portable query IR accepted by @teta/sql render entrypoints. The runtime decoder is normative for semantic invariants not expressible in JSON Schema.",
+  "type": "object",
+  "required": ["version", "source", "stages", "scopeId", "columnNames", "columnIdentifiers"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "const": 1 },
+    "source": { "$ref": "#/$defs/source" },
+    "stages": { "type": "array", "items": { "$ref": "#/$defs/stage" } },
+    "scopeId": { "$ref": "#/$defs/scope" },
+    "columnNames": { "$ref": "#/$defs/columnNames" },
+    "columnIdentifiers": { "$ref": "#/$defs/columnIdentifiers" },
+    "withs": { "type": "array", "items": { "$ref": "#/$defs/cte" } }
+  },
+  "$defs": {
+    "identifierSegment": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+    "scope": { "$ref": "#/$defs/identifierSegment" },
+    "logicalName": { "type": "string", "minLength": 1, "not": { "pattern": "\\u0000" } },
+    "identifier": {
+      "type": "object",
+      "required": ["name", "quoted"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "$ref": "#/$defs/logicalName" },
+        "quoted": { "type": "boolean" }
+      }
+    },
+    "nullableIdentifier": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/identifier" }] },
+    "columnNames": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/logicalName" }
+    },
+    "columnIdentifiers": {
+      "type": "object",
+      "propertyNames": { "$ref": "#/$defs/logicalName" },
+      "additionalProperties": { "$ref": "#/$defs/identifier" }
+    },
+    "value": {
+      "oneOf": [
+        { "type": "string" },
+        { "type": "number" },
+        { "type": "boolean" },
+        { "type": "null" },
+        {
+          "type": "object",
+          "required": ["kind", "value"],
+          "additionalProperties": false,
+          "properties": { "kind": { "const": "date_literal" }, "value": { "type": "string", "minLength": 1 } }
+        },
+        {
+          "type": "object",
+          "required": ["kind", "value"],
+          "additionalProperties": false,
+          "properties": { "kind": { "const": "timestamp_literal" }, "value": { "type": "string", "minLength": 1 } }
+        },
+        {
+          "type": "object",
+          "required": ["kind", "value"],
+          "additionalProperties": false,
+          "properties": { "kind": { "const": "bigint_literal" }, "value": { "type": "string", "pattern": "^-?(0|[1-9][0-9]*)$" } }
+        }
+      ]
+    },
+    "functionName": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*$" },
+    "parameterName": { "type": "string", "pattern": "^(?:[A-Za-z_][A-Za-z0-9_]*|[1-9][0-9]*)$" },
+    "castTarget": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*(?:\\s+[A-Za-z_][A-Za-z0-9_]*)*(?:\\s*\\(\\s*[0-9]+(?:\\s*,\\s*[0-9]+)?\\s*\\))?(?:\\s*\\[\\s*\\])*$" },
+    "expression": {
+      "oneOf": [
+        { "$ref": "#/$defs/columnExpr" },
+        { "$ref": "#/$defs/literalExpr" },
+        { "$ref": "#/$defs/paramExpr" },
+        { "$ref": "#/$defs/binaryExpr" },
+        { "$ref": "#/$defs/unaryExpr" },
+        { "$ref": "#/$defs/aggregateExpr" },
+        { "$ref": "#/$defs/groupExpr" },
+        { "$ref": "#/$defs/functionExpr" },
+        { "$ref": "#/$defs/listExpr" },
+        { "$ref": "#/$defs/arrayExpr" },
+        { "$ref": "#/$defs/extractExpr" },
+        { "$ref": "#/$defs/castExpr" },
+        { "$ref": "#/$defs/windowExpr" },
+        { "$ref": "#/$defs/caseExpr" }
+      ]
+    },
+    "columnExpr": {
+      "type": "object", "required": ["kind", "table", "name"], "additionalProperties": false,
+      "properties": { "kind": { "const": "column" }, "table": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/scope" }] }, "name": { "$ref": "#/$defs/logicalName" } }
+    },
+    "literalExpr": {
+      "type": "object", "required": ["kind", "value"], "additionalProperties": false,
+      "properties": { "kind": { "const": "literal" }, "value": { "$ref": "#/$defs/value" } }
+    },
+    "paramExpr": {
+      "type": "object", "required": ["kind", "name"], "additionalProperties": false,
+      "properties": { "kind": { "const": "param" }, "name": { "$ref": "#/$defs/parameterName" } }
+    },
+    "binaryExpr": {
+      "type": "object", "required": ["kind", "op", "left", "right"], "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "binary" },
+        "op": { "enum": ["=", "!=", "<", "<=", ">", ">=", "AND", "OR", "+", "-", "*", "/", "||", "LIKE", "IS", "IS NOT", "IN", "NOT IN", "BETWEEN", "IS DISTINCT FROM"] },
+        "left": { "$ref": "#/$defs/expression" }, "right": { "$ref": "#/$defs/expression" }
+      }
+    },
+    "unaryExpr": {
+      "type": "object", "required": ["kind", "op", "expr"], "additionalProperties": false,
+      "properties": { "kind": { "const": "unary" }, "op": { "const": "NOT" }, "expr": { "$ref": "#/$defs/expression" } }
+    },
+    "aggregateExpr": {
+      "type": "object", "required": ["kind", "name", "arg", "distinct"], "additionalProperties": false,
+      "properties": { "kind": { "const": "agg" }, "name": { "$ref": "#/$defs/functionName" }, "arg": { "$ref": "#/$defs/expression" }, "distinct": { "type": "boolean" } }
+    },
+    "groupExpr": {
+      "type": "object", "required": ["kind", "expr"], "additionalProperties": false,
+      "properties": { "kind": { "const": "group" }, "expr": { "$ref": "#/$defs/expression" } }
+    },
+    "functionExpr": {
+      "type": "object", "required": ["kind", "name", "args"], "additionalProperties": false,
+      "properties": { "kind": { "const": "func" }, "name": { "$ref": "#/$defs/functionName" }, "args": { "type": "array", "items": { "$ref": "#/$defs/expression" } } }
+    },
+    "listExpr": {
+      "type": "object", "required": ["kind", "items"], "additionalProperties": false,
+      "properties": { "kind": { "const": "list" }, "items": { "type": "array", "items": { "$ref": "#/$defs/expression" } } }
+    },
+    "arrayExpr": {
+      "type": "object", "required": ["kind", "items"], "additionalProperties": false,
+      "properties": { "kind": { "const": "array" }, "items": { "type": "array", "items": { "$ref": "#/$defs/expression" } } }
+    },
+    "extractExpr": {
+      "type": "object", "required": ["kind", "field", "source"], "additionalProperties": false,
+      "properties": { "kind": { "const": "extract" }, "field": { "$ref": "#/$defs/identifierSegment" }, "source": { "$ref": "#/$defs/expression" } }
+    },
+    "castExpr": {
+      "type": "object", "required": ["kind", "expr", "target"], "additionalProperties": false,
+      "properties": { "kind": { "const": "cast" }, "expr": { "$ref": "#/$defs/expression" }, "target": { "$ref": "#/$defs/castTarget" } }
+    },
+    "windowExpr": {
+      "type": "object", "required": ["kind", "name", "args", "partitionBy", "orderBy"], "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "window" }, "name": { "$ref": "#/$defs/functionName" }, "args": { "type": "array", "items": { "$ref": "#/$defs/expression" } },
+        "partitionBy": { "oneOf": [{ "type": "null" }, { "type": "array", "items": { "$ref": "#/$defs/expression" } }] },
+        "orderBy": { "oneOf": [{ "type": "null" }, { "type": "array", "items": { "$ref": "#/$defs/orderItem" } }] }
+      }
+    },
+    "caseExpr": {
+      "type": "object", "required": ["kind", "whens", "elseExpr"], "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "case" },
+        "whens": { "type": "array", "minItems": 1, "items": { "type": "object", "required": ["when", "then"], "additionalProperties": false, "properties": { "when": { "$ref": "#/$defs/expression" }, "then": { "$ref": "#/$defs/expression" } } } },
+        "elseExpr": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/expression" }] }
+      }
+    },
+    "projectionItem": {
+      "type": "object", "required": ["expr", "as"], "additionalProperties": false,
+      "properties": { "expr": { "$ref": "#/$defs/expression" }, "as": { "$ref": "#/$defs/nullableIdentifier" } }
+    },
+    "orderItem": {
+      "type": "object", "required": ["expr", "direction"], "additionalProperties": false,
+      "properties": { "expr": { "$ref": "#/$defs/expression" }, "direction": { "enum": ["ASC", "DESC"] } }
+    },
+    "source": {
+      "oneOf": [
+        { "type": "object", "required": ["db", "schema", "table", "as"], "additionalProperties": false, "properties": { "db": { "$ref": "#/$defs/nullableIdentifier" }, "schema": { "$ref": "#/$defs/nullableIdentifier" }, "table": { "$ref": "#/$defs/identifier" }, "as": { "$ref": "#/$defs/nullableIdentifier" } } },
+        { "type": "object", "required": ["kind", "rows"], "additionalProperties": false, "properties": { "kind": { "const": "values" }, "rows": { "type": "array", "minItems": 1, "items": { "type": "object", "minProperties": 1, "propertyNames": { "$ref": "#/$defs/logicalName" }, "additionalProperties": { "$ref": "#/$defs/value" } } } } }
+      ]
+    },
+    "querySpec": {
+      "type": "object", "required": ["source", "stages", "scopeId", "columnNames", "columnIdentifiers"], "additionalProperties": false,
+      "properties": { "source": { "$ref": "#/$defs/source" }, "stages": { "type": "array", "items": { "$ref": "#/$defs/stage" } }, "scopeId": { "$ref": "#/$defs/scope" }, "columnNames": { "$ref": "#/$defs/columnNames" }, "columnIdentifiers": { "$ref": "#/$defs/columnIdentifiers" } }
+    },
+    "joinSource": {
+      "oneOf": [
+        { "type": "object", "required": ["kind", "db", "schema", "table", "columnIdentifiers"], "additionalProperties": false, "properties": { "kind": { "const": "table" }, "db": { "$ref": "#/$defs/nullableIdentifier" }, "schema": { "$ref": "#/$defs/nullableIdentifier" }, "table": { "$ref": "#/$defs/identifier" }, "columnIdentifiers": { "$ref": "#/$defs/columnIdentifiers" } } },
+        { "type": "object", "required": ["kind", "query", "inheritedBindings"], "additionalProperties": false, "properties": { "kind": { "const": "subquery" }, "query": { "$ref": "#/$defs/querySpec" }, "inheritedBindings": { "oneOf": [{ "type": "null" }, { "type": "object", "propertyNames": { "$ref": "#/$defs/identifierSegment" }, "additionalProperties": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/identifierSegment" }] } }] } } }
+      ]
+    },
+    "stage": {
+      "oneOf": [
+        { "type": "object", "required": ["kind", "items", "keys", "groupBy", "outputScopeId"], "additionalProperties": false, "properties": { "kind": { "const": "map" }, "items": { "type": "array", "items": { "$ref": "#/$defs/projectionItem" } }, "keys": { "$ref": "#/$defs/columnNames" }, "groupBy": { "type": "null" }, "outputScopeId": { "$ref": "#/$defs/scope" } } },
+        { "type": "object", "required": ["kind", "items", "keys", "groupBy", "outputScopeId"], "additionalProperties": false, "properties": { "kind": { "const": "fold" }, "items": { "type": "array", "items": { "$ref": "#/$defs/projectionItem" } }, "keys": { "$ref": "#/$defs/columnNames" }, "groupBy": { "oneOf": [{ "type": "null" }, { "type": "array", "items": { "$ref": "#/$defs/expression" } }] }, "outputScopeId": { "$ref": "#/$defs/scope" } } },
+        { "type": "object", "required": ["kind", "predicate", "projectAll"], "additionalProperties": false, "properties": { "kind": { "const": "filter" }, "predicate": { "$ref": "#/$defs/expression" }, "projectAll": { "type": "array", "items": { "$ref": "#/$defs/projectionItem" } } } },
+        { "type": "object", "required": ["kind", "items", "projectAll"], "additionalProperties": false, "properties": { "kind": { "const": "sort" }, "items": { "type": "array", "items": { "$ref": "#/$defs/orderItem" } }, "projectAll": { "type": "array", "items": { "$ref": "#/$defs/projectionItem" } } } },
+        { "type": "object", "required": ["kind", "count", "projectAll"], "additionalProperties": false, "properties": { "kind": { "const": "take" }, "count": { "type": "integer", "minimum": 0 }, "projectAll": { "type": "array", "items": { "$ref": "#/$defs/projectionItem" } } } },
+        { "type": "object", "required": ["kind", "joinType", "source", "as", "on", "projectAll", "rightScopeId", "outputScopeId"], "additionalProperties": false, "properties": { "kind": { "const": "join" }, "joinType": { "enum": ["INNER", "LEFT", "RIGHT", "FULL"] }, "lateral": { "type": "boolean" }, "source": { "$ref": "#/$defs/joinSource" }, "as": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/identifierSegment" }] }, "on": { "$ref": "#/$defs/expression" }, "projectAll": { "type": "array", "items": { "$ref": "#/$defs/projectionItem" } }, "rightScopeId": { "$ref": "#/$defs/scope" }, "outputScopeId": { "$ref": "#/$defs/scope" } } },
+        { "type": "object", "required": ["kind", "mode", "expr", "withOrdinality", "as", "columnNames", "columnIdentifiers", "projectAll", "rightScopeId", "outputScopeId"], "additionalProperties": false, "properties": { "kind": { "const": "unnest" }, "mode": { "enum": ["inner", "outer"] }, "expr": { "$ref": "#/$defs/expression" }, "withOrdinality": { "type": "boolean" }, "as": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/identifierSegment" }] }, "columnNames": { "$ref": "#/$defs/columnNames" }, "columnIdentifiers": { "$ref": "#/$defs/columnIdentifiers" }, "projectAll": { "type": "array", "items": { "$ref": "#/$defs/projectionItem" } }, "rightScopeId": { "$ref": "#/$defs/scope" }, "outputScopeId": { "$ref": "#/$defs/scope" } } },
+        { "type": "object", "required": ["kind", "op", "projectAll", "right", "outputScopeId"], "additionalProperties": false, "properties": { "kind": { "const": "union" }, "op": { "enum": ["union", "union all"] }, "projectAll": { "type": "array", "items": { "$ref": "#/$defs/projectionItem" } }, "right": { "$ref": "#/$defs/querySpec" }, "outputScopeId": { "$ref": "#/$defs/scope" } } }
+      ]
+    },
+    "cte": {
+      "oneOf": [
+        { "type": "object", "required": ["kind", "name", "query"], "additionalProperties": false, "properties": { "kind": { "const": "query" }, "name": { "$ref": "#/$defs/identifierSegment" }, "query": { "$ref": "#/$defs/querySpec" } } },
+        { "type": "object", "required": ["kind", "name", "columnNames", "base", "step"], "additionalProperties": false, "properties": { "kind": { "const": "recursive" }, "name": { "$ref": "#/$defs/identifierSegment" }, "columnNames": { "$ref": "#/$defs/columnNames" }, "base": { "$ref": "#/$defs/querySpec" }, "step": { "$ref": "#/$defs/querySpec" } } }
+      ]
+    }
+  }
+}

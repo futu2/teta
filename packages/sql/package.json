@@ -3,7 +3,8 @@
   "module": "./mod.ts",
   "version": "0.1.6",
   "exports": {
-    ".": "./mod.ts"
+    ".": "./mod.ts",
+    "./ir-v1.schema.json": "./ir.v1.schema.json"
   },
   "types": "./mod.ts",
   "type": "module",

@@ -9,6 +9,7 @@ const usersFinalScope = "__teta_scope_users_final" as ScopeId;
 const baseUsersScope = "__teta_scope_base_users" as ScopeId;
 
 const usersIR = {
+  version: 1,
   source: {
     db: null,
     schema: null,
@@ -74,6 +75,7 @@ const usersIR = {
 } satisfies QueryIRSqlTarget;
 
 const baseIR = {
+  version: 1,
   source: {
     db: null,
     schema: null,

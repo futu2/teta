@@ -19,6 +19,7 @@ import {
   renderSqlResult,
   resolveDialect,
 } from "../sql.ts";
+import { TETA_QUERY_IR_VERSION } from "@teta/sql";
 import type { QueryIRSqlTarget, SqlCompilable } from "../sql.ts";
 import { getQueryState, type Query, type QueryStageKind } from "./core.ts";
 import { isQuery } from "./value.ts";
@@ -59,6 +60,7 @@ export type QueryExplainResult<TColumns extends QueryColumns> = {
 export function toIR<TColumns extends QueryColumns>(query: Query<TColumns>): QueryIR<TColumns> {
   const state = getQueryState(query);
   return canonicalizeIR({
+    version: TETA_QUERY_IR_VERSION,
     source: state.source,
     stages: state.stages,
     scopeId: state.sourceScopeId,

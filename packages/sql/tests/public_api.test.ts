@@ -58,6 +58,7 @@ describe("sql backend public api", () => {
     expect(typeof sql.exprToSql).toBe("function");
     expect(typeof sql.exprToSqlResult).toBe("function");
     expect(typeof sql.explainIR).toBe("function");
+    expect(typeof sql.validateExprIR).toBe("function");
   });
 
   test("exports the ir helper namespace", () => {

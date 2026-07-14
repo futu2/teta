@@ -1,6 +1,20 @@
 export { generatedCteName } from "./types_internal.ts";
 export { isValuesSource } from "./types_query.ts";
-export { validateQueryIR } from "./validate.ts";
+export {
+  assertSqlCastTarget,
+  assertSqlExtractField,
+  assertSqlFunctionName,
+  assertSqlNamedParameter,
+  assertSqlParameterName,
+  assertSqlPositionalParameter,
+  isSqlCastTarget,
+  isSqlFunctionName,
+  isSqlIdentifierSegment,
+  isSqlNamedParameter,
+  isSqlParameterName,
+  isSqlPositionalParameter,
+} from "./tokens.ts";
+export { validateExprIR, validateQueryIR } from "./validate.ts";
 export {
   assertLoopColumns,
   assertUnionCompatible,

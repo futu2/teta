@@ -17,7 +17,7 @@ import {
   type Expr,
   type PropagateNull,
 } from "../core.ts";
-import { userError } from "../../../errors.ts";
+import { assertSqlExtractField } from "@teta/sql";
 import { cast } from "./math.ts";
 
 type NullableDateLike = SqlDate | SqlTimestamp | string | null;
@@ -46,9 +46,7 @@ export function timestampLiteral(value: string): Expr<SqlTimestamp> {
 }
 
 export function extract<TValue>(value: ExprInput<TValue>, field: string): Expr<PropagateNull<TValue, SqlFloat>> {
-  if (!field.trim()) {
-    userError("INVALID_FUNCTION_NAME", "extract requires a field");
-  }
+  assertSqlExtractField(field);
   return exprOf<PropagateNull<TValue, SqlFloat>>({
     kind: "extract",
     field,

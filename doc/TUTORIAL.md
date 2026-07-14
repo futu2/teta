@@ -786,7 +786,8 @@ WHERE t_0.__teta_take_within_row_number <= 1
 ### Custom SQL functions (UDF)
 
 ```ts
-import { desc, fn, over, map, type SqlFloat, type SqlString, table, t, toSql, windowFn, pipe } from "@teta/teta";
+import { desc, over, map, type SqlFloat, type SqlString, table, t, toSql, pipe } from "@teta/teta";
+import { fn, windowFn } from "@teta/teta/advanced";
 
 const users = table("users", {
   id: t.int(),

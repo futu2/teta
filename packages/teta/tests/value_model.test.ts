@@ -14,8 +14,8 @@ import {
   filter,
   sort,
   pipe,
-  windowFn,
 } from "../mod.ts";
+import { windowFn } from "../advanced.ts";
 import { toExprNode } from "../src/edsl/expr.ts";
 
 describe("tagged EDSL value model", () => {

@@ -1,6 +1,7 @@
 import {
   OUTER_TABLE_ALIAS,
   type AggFunc,
+  type BigIntLiteral,
   type BinaryOp,
   type DateLiteral,
   type ExprNode,
@@ -19,6 +20,10 @@ import type {
   SqlTimestamp,
   SqlUuid,
 } from "../../sql/types.ts";
+import {
+  assertSqlFunctionName,
+  assertSqlParameterName,
+} from "@teta/sql";
 import {
   containsGroup,
   dedupeExprs,
@@ -155,6 +160,7 @@ export function windowBuilderOf<T>(
   name: string,
   args: readonly ExprNode<unknown>[]
 ): WindowBuilder<T> {
+  assertSqlFunctionName(name, "window function name");
   return defineHiddenBrand({
     kind: "window_builder" as const,
     name,
@@ -285,7 +291,6 @@ function isLiteralValue(value: unknown): value is Value {
     || type === "string"
     || type === "number"
     || type === "boolean"
-    || type === "bigint"
     || isTemporalLiteral(value);
 }
 
@@ -415,15 +420,18 @@ export function lit(value: null): Expr<null>;
 export function lit(value: DateLiteral): Expr<SqlDate>;
 export function lit(value: TimestampLiteral): Expr<SqlTimestamp>;
 export function lit<T extends Value>(value: T): Expr<NormalizeExpressionLiteral<T>>;
-export function lit(value: Value): Expr<NormalizeExpressionLiteral<Value>> {
-  return exprOf<NormalizeExpressionLiteral<Value>>({ kind: "literal", value });
+export function lit(value: Value | bigint): Expr<NormalizeExpressionLiteral<Value>> {
+  return exprOf<NormalizeExpressionLiteral<Value>>({
+    kind: "literal",
+    value: typeof value === "bigint"
+      ? { kind: "bigint_literal", value: value.toString() } as BigIntLiteral
+      : value,
+  });
 }
 
 export function param<T = unknown>(name: string): Expr<T>;
 export function param(name: string): Expr<unknown> {
-  if (!name.trim()) {
-    userError("INVALID_PARAM_NAME", "param name cannot be empty");
-  }
+  assertSqlParameterName(name);
   return exprOf<unknown>({ kind: "param", name });
 }
 
@@ -441,9 +449,7 @@ export function fn<
   name: string,
   ...args: TArgs
 ): Expr<T> {
-  if (!name.trim()) {
-    userError("INVALID_FUNCTION_NAME", "fn requires a function name");
-  }
+  assertSqlFunctionName(name);
   return funcExpr(name, args.map((arg) => toExprNode(arg)));
 }
 
@@ -451,9 +457,7 @@ export function windowFn<T = unknown>(
   name: string,
   ...args: ExprInput<unknown>[]
 ): WindowBuilder<T> {
-  if (!name.trim()) {
-    userError("INVALID_WINDOW_FUNCTION_NAME", "windowFn requires a function name");
-  }
+  assertSqlFunctionName(name, "window function name");
   return windowBuilderOf<T>(name, args.map((arg) => toExprNode(arg)));
 }
 
@@ -475,6 +479,7 @@ export function aggregateExpr<T, TArg extends ExprInput<unknown>>(
 }
 
 export function windowExpr<T>(name: string, ...args: ExprInput<unknown>[]): WindowBuilder<T> {
+  assertSqlFunctionName(name, "window function name");
   return windowBuilderOf<T>(name, args.map((arg) => toExprNode(arg)));
 }
 
@@ -485,7 +490,13 @@ export function toExprNode<T>(value: ExprInput<T>): ExprNode<T> {
   }
   if (value === null) return { kind: "literal", value: null };
   const type = typeof value;
-  if (type === "string" || type === "number" || type === "boolean" || type === "bigint") {
+  if (type === "bigint") {
+    return {
+      kind: "literal",
+      value: { kind: "bigint_literal", value: value.toString() } as BigIntLiteral,
+    } as ExprNode<T>;
+  }
+  if (type === "string" || type === "number" || type === "boolean") {
     return { kind: "literal", value: value as Value } as ExprNode<T>;
   }
   if (isTemporalLiteral(value)) {
@@ -494,11 +505,13 @@ export function toExprNode<T>(value: ExprInput<T>): ExprNode<T> {
   userError("INVALID_LITERAL_VALUE", `Unsupported literal value: ${String(value)}`);
 }
 
-function isTemporalLiteral(value: unknown): value is DateLiteral | TimestampLiteral {
+function isTemporalLiteral(value: unknown): value is DateLiteral | TimestampLiteral | BigIntLiteral {
   if (typeof value !== "object" || value === null) return false;
   const candidate = value as { kind?: unknown; value?: unknown };
   if (candidate.value !== undefined && typeof candidate.value !== "string") return false;
-  return candidate.kind === "date_literal" || candidate.kind === "timestamp_literal";
+  return candidate.kind === "date_literal"
+    || candidate.kind === "timestamp_literal"
+    || candidate.kind === "bigint_literal";
 }
 
 export { containsGroup, unwrapGroupExpr, dedupeExprs, shouldAlias };
@@ -537,5 +550,6 @@ export function binaryExpr(
 }
 
 export function funcExpr<T>(name: string, args: ExprNode<unknown>[]): Expr<T> {
+  assertSqlFunctionName(name);
   return exprOf<T>({ kind: "func", name, args });
 }

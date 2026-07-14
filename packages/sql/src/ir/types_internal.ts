@@ -4,6 +4,10 @@ export const OUTER_TABLE_ALIAS = "__teta_outer__";
 export const INTERNAL_SCOPE_PREFIX = "__teta_scope_";
 /** Prefix for internal CTE names. */
 export const INTERNAL_CTE_PREFIX = "__teta_cte_";
+/** Current version of the public, cross-language query IR contract. */
+export const TETA_QUERY_IR_VERSION = 1 as const;
+/** Version accepted by the public query IR decoder. */
+export type TetaQueryIrVersion = typeof TETA_QUERY_IR_VERSION;
 
 /** Branded identifier for a query scope. */
 export type ScopeId = string & { readonly __brand: "TetaScopeId" };

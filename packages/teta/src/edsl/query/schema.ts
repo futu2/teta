@@ -1,6 +1,7 @@
 import type {
   ColumnType,
   ColumnTypeName,
+  BigIntLiteral,
   TableSourceInput,
   Value,
 } from "../core/types.ts";
@@ -27,9 +28,14 @@ import type { QueryValue } from "./types.ts";
 import { normalizeTableSource } from "./utils.ts";
 import { isPlainObject } from "./value.ts";
 
-type ValuesRow = Readonly<Record<string, Value>>;
+type ValuesInput = Value | bigint;
+type ValuesRow = Readonly<Record<string, ValuesInput>>;
+type NormalizedValuesRow = Readonly<Record<string, Value>>;
+type NormalizeValuesColumn<T> = T extends BigIntLiteral
+  ? SqlBigInt
+  : NormalizeExpressionLiteral<T>;
 type ValuesColumns<TRows extends readonly ValuesRow[]> = {
-  [K in keyof TRows[number] & string]: NormalizeExpressionLiteral<TRows[number][K]>;
+  [K in keyof TRows[number] & string]: NormalizeValuesColumn<TRows[number][K]>;
 };
 
 type TableColumnHelpers = {
@@ -135,7 +141,7 @@ export function values<const TRows extends readonly [ValuesRow, ...ValuesRow[]]>
   });
 }
 
-function normalizeValuesRows(rows: readonly ValuesRow[]): readonly ValuesRow[] {
+function normalizeValuesRows(rows: readonly ValuesRow[]): readonly NormalizedValuesRow[] {
   if (rows.length === 0) {
     userError("VALUES_EMPTY", "values() requires at least one row");
   }
@@ -200,7 +206,7 @@ function normalizeValuesRow(
   row: ValuesRow,
   rowIndex: number,
   columnNames: readonly string[]
-): ValuesRow {
+): NormalizedValuesRow {
   const rowKeys = Object.keys(row);
   const hasSameColumns =
     rowKeys.length === columnNames.length
@@ -222,7 +228,9 @@ function normalizeValuesRow(
         `values() row ${rowIndex + 1} column '${columnName}' cannot be undefined`
       );
     }
-    normalizedRow[columnName] = value;
+    normalizedRow[columnName] = typeof value === "bigint"
+      ? { kind: "bigint_literal", value: value.toString() }
+      : value;
   }
 
   return normalizedRow;

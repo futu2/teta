@@ -1,6 +1,7 @@
 import type { Value } from "../ir/types.ts";
 import type { LiteralAst, ParamAst, SqlRenderContext } from "./types.ts";
 import { internalError, userError } from "../errors.ts";
+import { assertSqlNamedParameter, assertSqlPositionalParameter } from "../ir/tokens.ts";
 
 export function literalToAst(
   value: Value,
@@ -24,6 +25,8 @@ export function literalToAst(
         return { type: "date", value: value.value };
       case "timestamp_literal":
         return { type: "timestamp", value: value.value };
+      case "bigint_literal":
+        return { type: "number", value: value.value };
       default:
         return assertNever(value);
     }
@@ -33,8 +36,6 @@ export function literalToAst(
       return { type: "string", value };
     case "number":
       return { type: "number", value };
-    case "bigint":
-      return { type: "number", value: value.toString() };
     case "boolean":
       return { type: "bool", value };
     default:
@@ -91,12 +92,19 @@ function resolveExplicitParameterRender(
   renderContext: SqlRenderContext | null
 ): ParameterRender {
   if (renderContext && renderContext.parameterMode !== "inline") {
+    if (renderContext.parameterMode === "named") {
+      assertSqlNamedParameter(name);
+    } else {
+      assertSqlPositionalParameter(name);
+    }
     return {
       mode: renderContext.parameterMode,
       prefix: renderContext.parameterPrefix,
       name,
     };
   }
+
+  assertSqlNamedParameter(name);
 
   return {
     mode: "named",

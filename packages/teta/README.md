@@ -54,8 +54,13 @@ boundaries, the package also exposes subpath entrypoints:
 import { table, t, filter } from "@teta/teta/query";
 import { eq } from "@teta/teta/expr";
 import { pipe } from "@teta/teta/pipe";
-import { toSql } from "@teta/teta/sql";
+import { fn, windowFn } from "@teta/teta/advanced";
 ```
+
+The default entrypoint intentionally excludes compiler-node constructors and
+database-specific function builders. Use `@teta/teta/advanced` for validated
+custom `fn(...)` and `windowFn(...)` calls; use `@teta/sql` directly when
+building or rendering public IR from another frontend.
 
 Reusable functional pipelines can be saved with `flow(...)`, and `extend(...)` keeps existing columns while adding computed ones:
 

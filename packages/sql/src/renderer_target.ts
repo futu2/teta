@@ -9,6 +9,7 @@ import type {
   RendererState,
 } from "./renderer_types.ts";
 import type { ExprNode } from "./ir/types.ts";
+import { validateExprIR } from "./ir/validate.ts";
 import type { SqlResult } from "./types.ts";
 
 export function renderQueryIRTarget(
@@ -38,6 +39,7 @@ export function renderExprTarget(
   target: ExprSqlTarget,
   state: RendererState
 ): SqlResult {
+  validateExprIR(target);
   const renderContext = createRenderContext(state);
   const node = unwrapExprTarget(target);
   const expr = applyDialectLanguage(node, state.dialect);

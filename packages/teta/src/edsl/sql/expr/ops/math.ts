@@ -22,6 +22,7 @@ import {
   type PropagateNull,
 } from "../core.ts";
 import { userError } from "../../../errors.ts";
+import { assertSqlCastTarget } from "@teta/sql";
 
 type NullableSqlNumber = SqlNumber | number | bigint | null;
 type NumericBinaryResult<
@@ -162,9 +163,7 @@ export function cast<TTarget = unknown, TInput extends ExprInput<unknown> = Expr
   value: TInput,
   target: string
 ): Expr<TTarget> {
-  if (!target.trim()) {
-    userError("INVALID_FUNCTION_NAME", "cast requires a target type");
-  }
+  assertSqlCastTarget(target);
   return exprOf<TTarget>({
     kind: "cast",
     expr: toExprNode(value as ExprInput<unknown>),

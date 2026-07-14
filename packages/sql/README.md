@@ -29,10 +29,18 @@ Query IR arrays such as `stages`, projection items, and CTE lists are treated as
 readonly inputs by the renderer; optimizer/build phases allocate fresh arrays
 when they need to rewrite a plan.
 
+The portable contract is **Teta Query IR v1**. Every renderable query target
+must include `version: 1`; all `irTo*` entrypoints strictly decode it before
+rendering and throw `TetaUserError` with `INVALID_QUERY_IR` for invalid input.
+The JSON Schema for non-TypeScript frontends is exported as
+`@teta/sql/ir-v1.schema.json`. The decoder additionally checks semantic
+invariants such as projection metadata and safe SQL tokens.
+
 ```ts
 import { irToSql, type QueryIRSqlTarget } from "@teta/sql";
 
 const query = {
+  version: 1,
   source: {
     db: null,
     schema: null,

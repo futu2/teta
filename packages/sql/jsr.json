@@ -4,7 +4,8 @@
   "description": "Reusable SQL IR and rendering backend for Teta frontends.",
   "license": "BSD-2-Clause-Patent",
   "exports": {
-    ".": "./mod.ts"
+    ".": "./mod.ts",
+    "./ir-v1.schema.json": "./ir.v1.schema.json"
   },
   "compatibility": {
     "deno": true,

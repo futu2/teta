@@ -33,6 +33,14 @@ type PredicateResult<TValue> = null extends TValue ? SqlBoolean | null : SqlBool
 type BinaryPredicateResult<TLeft, TRight> = PredicateResult<
   ExprInputValue<TLeft> | ExprInputValue<TRight>
 >;
+type CompatibleInputList<TValue, TValues extends readonly unknown[]> =
+  TValues extends readonly [infer THead, ...infer TTail]
+    ? THead extends ExprInput<unknown>
+      ? CompatibleExprInput<TValue, THead> extends never
+        ? never
+        : CompatibleInputList<TValue, TTail>
+      : never
+    : unknown;
 
 export function eq<T, TLeft extends ExprInput<T>, TRight extends ExprInput<T>>(
   left: TLeft,
@@ -56,47 +64,59 @@ export function ne<T, TLeft extends ExprInput<T>, TRight extends ExprInput<T>>(
   ) as Expr<BinaryPredicateResult<TLeft, TRight>>;
 }
 
-export function gt<T extends ComparableInput, TLeft extends ExprInput<T>, TRight extends ExprInput<T>>(
+export function gt<
+  TLeft extends ExprInput<ComparableInput>,
+  TRight extends ExprInput<ComparableInput>,
+>(
   left: TLeft,
-  right: TRight
+  right: TRight & CompatibleExprInput<TLeft, TRight>
 ): Expr<BinaryPredicateResult<TLeft, TRight>> {
   return binaryExpr(
     ">",
-    toExprNode(left as ExprInput<T>),
-    toExprNode(right as ExprInput<T>)
+    toExprNode(left as ExprInput<ComparableInput>),
+    toExprNode(right as ExprInput<ComparableInput>)
   ) as Expr<BinaryPredicateResult<TLeft, TRight>>;
 }
 
-export function gte<T extends ComparableInput, TLeft extends ExprInput<T>, TRight extends ExprInput<T>>(
+export function gte<
+  TLeft extends ExprInput<ComparableInput>,
+  TRight extends ExprInput<ComparableInput>,
+>(
   left: TLeft,
-  right: TRight
+  right: TRight & CompatibleExprInput<TLeft, TRight>
 ): Expr<BinaryPredicateResult<TLeft, TRight>> {
   return binaryExpr(
     ">=",
-    toExprNode(left as ExprInput<T>),
-    toExprNode(right as ExprInput<T>)
+    toExprNode(left as ExprInput<ComparableInput>),
+    toExprNode(right as ExprInput<ComparableInput>)
   ) as Expr<BinaryPredicateResult<TLeft, TRight>>;
 }
 
-export function lt<T extends ComparableInput, TLeft extends ExprInput<T>, TRight extends ExprInput<T>>(
+export function lt<
+  TLeft extends ExprInput<ComparableInput>,
+  TRight extends ExprInput<ComparableInput>,
+>(
   left: TLeft,
-  right: TRight
+  right: TRight & CompatibleExprInput<TLeft, TRight>
 ): Expr<BinaryPredicateResult<TLeft, TRight>> {
   return binaryExpr(
     "<",
-    toExprNode(left as ExprInput<T>),
-    toExprNode(right as ExprInput<T>)
+    toExprNode(left as ExprInput<ComparableInput>),
+    toExprNode(right as ExprInput<ComparableInput>)
   ) as Expr<BinaryPredicateResult<TLeft, TRight>>;
 }
 
-export function lte<T extends ComparableInput, TLeft extends ExprInput<T>, TRight extends ExprInput<T>>(
+export function lte<
+  TLeft extends ExprInput<ComparableInput>,
+  TRight extends ExprInput<ComparableInput>,
+>(
   left: TLeft,
-  right: TRight
+  right: TRight & CompatibleExprInput<TLeft, TRight>
 ): Expr<BinaryPredicateResult<TLeft, TRight>> {
   return binaryExpr(
     "<=",
-    toExprNode(left as ExprInput<T>),
-    toExprNode(right as ExprInput<T>)
+    toExprNode(left as ExprInput<ComparableInput>),
+    toExprNode(right as ExprInput<ComparableInput>)
   ) as Expr<BinaryPredicateResult<TLeft, TRight>>;
 }
 
@@ -111,54 +131,59 @@ export function like<TLeft extends ExprInput<string | null>, TRight extends Expr
   ) as Expr<BinaryPredicateResult<TLeft, TRight>>;
 }
 
-export function isIn<T, TValue extends ExprInput<T>, const TValues extends readonly ExprInput<T>[]>(
+export function isIn<
+  TValue extends ExprInput<unknown>,
+  const TValues extends readonly [ExprInput<unknown>, ...ExprInput<unknown>[]],
+>(
   value: TValue,
-  values: TValues
+  values: TValues & CompatibleInputList<TValue, TValues>
 ): Expr<PredicateResult<ExprInputValue<TValue> | ExprInputValue<TValues[number]>>> {
   if (values.length === 0) {
     userError("INVALID_FUNCTION_NAME", "in requires at least one value");
   }
-  return binaryExpr("IN", toExprNode(value as ExprInput<T>), {
+  return binaryExpr("IN", toExprNode(value as ExprInput<unknown>), {
     kind: "list",
-    items: values.map((item) => toExprNode(item as ExprInput<T>)),
+    items: values.map((item) => toExprNode(item as ExprInput<unknown>)),
   }) as Expr<PredicateResult<ExprInputValue<TValue> | ExprInputValue<TValues[number]>>>;
 }
 
-export function isNotIn<T, TValue extends ExprInput<T>, const TValues extends readonly ExprInput<T>[]>(
+export function isNotIn<
+  TValue extends ExprInput<unknown>,
+  const TValues extends readonly [ExprInput<unknown>, ...ExprInput<unknown>[]],
+>(
   value: TValue,
-  values: TValues
+  values: TValues & CompatibleInputList<TValue, TValues>
 ): Expr<PredicateResult<ExprInputValue<TValue> | ExprInputValue<TValues[number]>>> {
   if (values.length === 0) {
     userError("INVALID_FUNCTION_NAME", "notIn requires at least one value");
   }
-  return binaryExpr("NOT IN", toExprNode(value as ExprInput<T>), {
+  return binaryExpr("NOT IN", toExprNode(value as ExprInput<unknown>), {
     kind: "list",
-    items: values.map((item) => toExprNode(item as ExprInput<T>)),
+    items: values.map((item) => toExprNode(item as ExprInput<unknown>)),
   }) as Expr<PredicateResult<ExprInputValue<TValue> | ExprInputValue<TValues[number]>>>;
 }
 
 export const notIn = isNotIn;
 
 export function between<
-  T extends ComparableInput,
-  TValue extends ExprInput<T>,
-  TLower extends ExprInput<T>,
-  TUpper extends ExprInput<T>,
+  TValue extends ExprInput<ComparableInput>,
+  TLower extends ExprInput<ComparableInput>,
+  TUpper extends ExprInput<ComparableInput>,
 >(
   value: TValue,
-  lower: TLower,
-  upper: TUpper
+  lower: TLower & CompatibleExprInput<TValue, TLower>,
+  upper: TUpper & CompatibleExprInput<TValue, TUpper>
 ): Expr<PredicateResult<
   ExprInputValue<TValue> | ExprInputValue<TLower> | ExprInputValue<TUpper>
 >> {
   return binaryExpr(
     "BETWEEN",
-    toExprNode(value as ExprInput<T>),
+    toExprNode(value as ExprInput<ComparableInput>),
     {
       kind: "binary",
       op: "AND",
-      left: toExprNode(lower as ExprInput<T>),
-      right: toExprNode(upper as ExprInput<T>),
+      left: toExprNode(lower as ExprInput<ComparableInput>),
+      right: toExprNode(upper as ExprInput<ComparableInput>),
     }
   ) as Expr<PredicateResult<
     ExprInputValue<TValue> | ExprInputValue<TLower> | ExprInputValue<TUpper>
@@ -167,7 +192,7 @@ export function between<
 
 export function isDistinctFrom<T, TLeft extends ExprInput<T>, TRight extends ExprInput<T>>(
   left: TLeft,
-  right: TRight
+  right: TRight & CompatibleExprInput<TLeft, TRight>
 ): Expr<SqlBoolean> {
   return binaryExpr(
     "IS DISTINCT FROM",

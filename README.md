@@ -232,7 +232,10 @@ console.log(toSql(pending, { dialect: "postgresql" }));
 
 ## Supported dialects
 
-Built-in: `postgresql`, `sqlite`, `mysql`, `duckdb`, `trino`, `mariadb`, `hive`, `flinksql`, `bigquery`.
+Built-in: `postgresql`, `sqlite`, `mysql`, `mariadb`, `duckdb`, `trino`, `hive`, `flinksql`, `bigquery`, `athena`, `db2`, `noql`, `redshift`, `snowflake`, `transactsql`.
+
+Use `getDialectCapabilityMatrix()` from `@teta/sql` to inspect whether each
+catalog operation is native, rewritten, emulated, or unsupported for a target.
 
 Custom: pass a `DialectSpec` with your own function mappings, expression fallbacks, and feature flags.
 

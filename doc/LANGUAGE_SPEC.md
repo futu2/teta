@@ -155,6 +155,16 @@ Convenience date-part helpers over `extract(...)`:
 
 If `dialect.features.recursiveCte = false`, SQL rendering throws an explicit error.
 
+## Generated capability matrix
+
+`@teta/sql` exposes the renderer-derived capability matrix as the authoritative
+source for support status. It classifies every operation as `native`,
+`rewritten`, `emulated`, or `unsupported`, including query features. Use
+`getDialectCapabilityMatrix()` when tooling needs structured data, or
+`formatDialectCapabilityMatrixMarkdown()` to produce a Markdown table. This
+matrix is generated from the same function mappings, fallbacks, and feature
+flags used during rendering.
+
 ## Built-in Trino profile
 
 `Trino` is available as a built-in canonical backend:

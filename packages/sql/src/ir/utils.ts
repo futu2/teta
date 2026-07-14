@@ -11,12 +11,11 @@ import type {
 } from "./types.ts";
 import { internalCteLabel, isInternalCteName, isValuesSource } from "./types.ts";
 import { internalError, userError } from "../errors.ts";
-
-const BARE_IDENTIFIER_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
+import { isSqlIdentifierSegment } from "./tokens.ts";
 
 /** Return true when an identifier needs quoting to remain valid SQL. */
 export function shouldQuoteIdentifierName(name: string): boolean {
-  return !BARE_IDENTIFIER_PATTERN.test(name);
+  return !isSqlIdentifierSegment(name);
 }
 
 /** Normalize a string or identifier object into a `SqlIdentifier`. */

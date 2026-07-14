@@ -7,7 +7,12 @@ import type {
   SqlIdentifier,
   Value,
 } from "./types_expr.ts";
-import type { GeneratedCteName, InternalCteName, ScopeId } from "./types_internal.ts";
+import type {
+  GeneratedCteName,
+  InternalCteName,
+  ScopeId,
+  TetaQueryIrVersion,
+} from "./types_internal.ts";
 
 /** Structured physical table source. */
 export type StructuredTableSource = {
@@ -167,6 +172,8 @@ export type Stage =
 
 /** Root query IR before renderer-only output-column metadata is attached. */
 export type QueryIR = {
+  /** Version of the cross-language query IR contract. */
+  version: TetaQueryIrVersion;
   source: Source;
   stages: readonly Stage[];
   scopeId: ScopeId;

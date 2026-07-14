@@ -23,6 +23,7 @@ import type {
   SqlResult,
 } from "./types.ts";
 import type { CteSpec, Stage } from "./ir/types.ts";
+import { validateQueryIR } from "./ir/validate.ts";
 
 const { Parser } = nodeSqlParser;
 
@@ -69,6 +70,7 @@ export function irToSqlResult<TResult extends SqlResult = SqlResult>(
   target: QueryIRSqlTarget,
   options: SqlOptions = {}
 ): TResult {
+  validateQueryIR(target);
   const state = createRendererState(options);
   return renderQueryIRTarget(target, state) as TResult;
 }
@@ -112,6 +114,7 @@ export function irToAst(
   target: QueryIRSqlTarget,
   options: Pick<SqlOptions, "dialect" | "renderStrategy"> = {}
 ): AST {
+  validateQueryIR(target);
   const resolved = buildSqlOptions(options);
   return applyDialectFixes(
     renderPipelineAst(

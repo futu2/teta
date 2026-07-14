@@ -647,6 +647,9 @@ toSqlResult(q, { dialect: "postgresql", params: { id: 42 } });
 
 ### `fn<T>(name, ...args)` and `windowFn<T>(name, ...args)`
 
+Import these database-specific builders from `@teta/teta/advanced`. Names must
+be SQL identifiers; arbitrary SQL fragments are rejected.
+
 ```ts
 map((u) => ({ hash: fn<SqlString>("md5", u.email) }));
 map((u) => ({ pct: over(windowFn<SqlFloat>("percent_rank"), { orderBy: desc(u.score) }) }));

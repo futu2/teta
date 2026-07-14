@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { Parser } from "node-sql-parser";
-import { toSql } from "../mod.ts";
+import { BUILTIN_DIALECTS } from "@teta/sql";
+import { t, table, toSql } from "../mod.ts";
 import { DIALECT_MATRIX_SQL } from "./helpers/expected-sql.ts";
 import { buildDialectMatrixQuery } from "./helpers/fixtures.ts";
 const DIALECTS = ["postgresql", "mysql", "duckdb", "sqlite"] as const;
@@ -22,4 +23,11 @@ describe("dialect SQL generation", () => {
             expect(() => parser.astify(sql, { database: PARSER_DATABASES[dialect] })).not.toThrow();
         });
     }
+
+    test("renders a portable query for every registered built-in dialect", () => {
+        const users = table("users", { id: t.int() });
+        for (const dialect of Object.keys(BUILTIN_DIALECTS)) {
+            expect(toSql(users, { dialect })).toContain("SELECT");
+        }
+    });
 });

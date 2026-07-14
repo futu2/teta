@@ -16,6 +16,7 @@ const idColumn = {
 } satisfies ExprNode<number>;
 
 const simpleIR = {
+  version: 1,
   source: {
     db: null,
     schema: null,
@@ -57,6 +58,7 @@ describe("sql backend renderer", () => {
 
   test("renders query IR with physical column identifiers", () => {
     const userIdIR = {
+      version: 1,
       source: {
         db: null,
         schema: null,
