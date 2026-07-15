@@ -46,12 +46,10 @@ export function resolveNamedDialect(rawName: string): QueryDialect {
   assertCanonicalBuiltinName(rawName);
   const builtin = lookupBuiltinDialect(rawName);
   if (!builtin) {
-    return {
-      name: rawName,
-      parserDialect: null,
-      features: defaultDialectFeatures(),
-      language: resolveDialectLanguage(rawName),
-    };
+    userError(
+      "INVALID_BUILTIN_DIALECT_NAME",
+      `Unknown built-in dialect '${rawName}'. Use a canonical built-in name or a DialectSpec.`
+    );
   }
   return {
     name: builtin.name,
@@ -95,12 +93,4 @@ export function assertCanonicalBuiltinName(rawName: string): void {
       `Invalid built-in dialect '${rawName}'. Use canonical lowercase '${canonicalBuiltin}'.`
     );
   }
-}
-
-function defaultDialectFeatures(): QueryDialect["features"] {
-  return {
-    lateralJoinKeyword: true,
-    recursiveCte: true,
-    qualifyClause: false,
-  };
 }

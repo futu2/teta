@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { Parser } from "node-sql-parser";
 import { BUILTIN_DIALECTS } from "@teta/sql";
+import type { BuiltinDialect } from "@teta/sql";
 import { t, table, toSql } from "../mod.ts";
 import { DIALECT_MATRIX_SQL } from "./helpers/expected-sql.ts";
 import { buildDialectMatrixQuery } from "./helpers/fixtures.ts";
@@ -26,7 +27,7 @@ describe("dialect SQL generation", () => {
 
     test("renders a portable query for every registered built-in dialect", () => {
         const users = table("users", { id: t.int() });
-        for (const dialect of Object.keys(BUILTIN_DIALECTS)) {
+        for (const dialect of Object.keys(BUILTIN_DIALECTS) as BuiltinDialect[]) {
             expect(toSql(users, { dialect })).toContain("SELECT");
         }
     });

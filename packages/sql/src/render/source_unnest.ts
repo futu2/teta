@@ -26,6 +26,7 @@ export function buildUnnestFrom(
         `UNNEST(${collectionSql})${stage.withOrdinality ? " WITH ORDINALITY" : ""} AS ${alias}(${columnSql})`,
         dialect.features.lateralJoinKeyword ? "LATERAL" : undefined
       );
+    case "trino":
     case "athena":
     case "duckdb":
       return buildJoinUnnestFrom(
@@ -33,7 +34,6 @@ export function buildUnnestFrom(
         `UNNEST(${collectionSql})${stage.withOrdinality ? " WITH ORDINALITY" : ""} AS ${alias}(${columnSql})`
       );
     case "hive":
-    case "trino":
       return buildLateralViewFrom(stage, alias, collectionSql, columnSql, dialect);
     default:
       userError(

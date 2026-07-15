@@ -361,9 +361,14 @@ describe("error paths", () => {
             "Unsupported literal value: [object Object]"
         );
     });
-    test("rejects non-canonical built-in dialect names", () => {
+    test("rejects non-canonical and unregistered built-in dialect names", () => {
         const users = createUsersTable();
-        expect(() => toSql(pipe(users, map((user) => ({ id: user.id }))), { dialect: "PostgreSQL" })).toThrow(NON_CANONICAL_POSTGRES_DIALECT_ERROR);
+        expect(() => toSql(pipe(users, map((user) => ({ id: user.id }))), { dialect: "PostgreSQL" as never })).toThrow(NON_CANONICAL_POSTGRES_DIALECT_ERROR);
+        expectUserError(
+            () => toSql(users, { dialect: "hetu" as never }),
+            "INVALID_BUILTIN_DIALECT_NAME",
+            "Unknown built-in dialect 'hetu'. Use a canonical built-in name or a DialectSpec."
+        );
     });
     test("rejects empty values() inputs", () => {
         expect(() => values([] as unknown as [{ id: number }])).toThrow(VALUES_EMPTY_ERROR);

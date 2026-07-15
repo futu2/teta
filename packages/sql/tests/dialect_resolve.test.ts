@@ -9,7 +9,7 @@ import { TetaUserError } from "../src/errors.ts";
 
 function expectUserError(
   action: () => unknown,
-  code: "INVALID_RENDERER_OPTIONS" | "INVALID_FUNCTION_NAME",
+  code: "INVALID_BUILTIN_DIALECT_NAME" | "INVALID_RENDERER_OPTIONS" | "INVALID_FUNCTION_NAME",
   message: string
 ): void {
   try {
@@ -23,6 +23,14 @@ function expectUserError(
 }
 
 describe("dialect resolution", () => {
+  test("rejects unregistered string dialects", () => {
+    expectUserError(
+      () => resolveDialect("hetu" as never),
+      "INVALID_BUILTIN_DIALECT_NAME",
+      "Unknown built-in dialect 'hetu'. Use a canonical built-in name or a DialectSpec."
+    );
+  });
+
   test("inherits parser dialect features for custom specs", () => {
     expect(
       resolveDialect({

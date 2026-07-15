@@ -154,7 +154,7 @@ export type DialectSpec = {
 };
 
 /** Dialect input accepted by renderer options. */
-export type Dialect = BuiltinDialect | DialectSpec | (string & {});
+export type Dialect = BuiltinDialect | DialectSpec;
 
 /** Fully resolved dialect metadata used by the renderer. */
 export type QueryDialect = {
