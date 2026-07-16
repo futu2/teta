@@ -1,6 +1,6 @@
 <div align="center">
 
-# <img src="" width="0" alt=""> Teta
+# <img src="./logo.png" width="160" alt="Teta">
 
 ### The functional SQL EDSL for TypeScript
 
