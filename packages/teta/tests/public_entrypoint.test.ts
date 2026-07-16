@@ -5,6 +5,8 @@ import ts from "typescript";
 
 const MOD_PATH = fileURLToPath(new URL("../mod.ts", import.meta.url));
 const JOIN_HELPERS_PATH = fileURLToPath(new URL("../src/edsl/helpers/join_merge.ts", import.meta.url));
+const TETA_ROOT = fileURLToPath(new URL("..", import.meta.url));
+const TSCONFIG_PATH = fileURLToPath(new URL("../tsconfig.json", import.meta.url));
 
 function getModSourceFile(): ts.SourceFile {
   const program = ts.createProgram({
@@ -78,5 +80,71 @@ describe("public entrypoint typings", () => {
     }
 
     expect(missingTypes).toEqual([]);
+  });
+
+  test("projection key helpers suggest columns from the preceding pipe query", () => {
+    const virtualPath = fileURLToPath(new URL("./__projection_completion__.ts", import.meta.url));
+    const source = [
+      'import { drop, pipe, pick, table, t } from "../mod.ts";',
+      'const users = table("users", { id: t.int(), name: t.string(), active: t.boolean() });',
+      'const firstPick = pipe(users, pick(""));',
+      'const nextPick = pipe(users, pick("id", ""));',
+      'const firstDrop = pipe(users, drop(""));',
+      'const nextDrop = pipe(users, drop("id", ""));',
+      'const chainedDrop = pipe(users, pick("id", "name"), drop(""));',
+    ].join("\n");
+    const configFile = ts.readConfigFile(TSCONFIG_PATH, ts.sys.readFile);
+    if (configFile.error) {
+      throw new Error(ts.flattenDiagnosticMessageText(configFile.error.messageText, "\n"));
+    }
+    const config = ts.parseJsonConfigFileContent(configFile.config, ts.sys, TETA_ROOT);
+    const host: ts.LanguageServiceHost = {
+      getScriptFileNames: () => [...config.fileNames, virtualPath],
+      getScriptVersion: () => "0",
+      getScriptSnapshot: (path) => {
+        const contents = path === virtualPath ? source : ts.sys.readFile(path);
+        return contents === undefined ? undefined : ts.ScriptSnapshot.fromString(contents);
+      },
+      getCurrentDirectory: () => TETA_ROOT,
+      getCompilationSettings: () => config.options,
+      getDefaultLibFileName: (options) => ts.getDefaultLibFilePath(options),
+      fileExists: ts.sys.fileExists,
+      readFile: ts.sys.readFile,
+      readDirectory: ts.sys.readDirectory,
+      directoryExists: ts.sys.directoryExists,
+      getDirectories: ts.sys.getDirectories,
+    };
+    const service = ts.createLanguageService(host);
+    const firstCompletionPosition = source.indexOf('pick("")') + 'pick("'.length;
+    const nextCompletionPosition = source.indexOf('pick("id", "")') + 'pick("id", "'.length;
+    const firstDropCompletionPosition = source.indexOf('drop("")') + 'drop("'.length;
+    const nextDropCompletionPosition = source.indexOf('drop("id", "")') + 'drop("id", "'.length;
+    const chainedDropMarker = 'pick("id", "name"), drop("")';
+    const chainedDropCompletionPosition = source.indexOf(chainedDropMarker) + chainedDropMarker.length - 2;
+    const completionOptions = {
+      includeCompletionsForModuleExports: false,
+    };
+    const firstCompletionNames = service
+      .getCompletionsAtPosition(virtualPath, firstCompletionPosition, completionOptions)
+      ?.entries.map((entry) => entry.name);
+    const nextCompletionNames = service
+      .getCompletionsAtPosition(virtualPath, nextCompletionPosition, completionOptions)
+      ?.entries.map((entry) => entry.name);
+    const firstDropCompletionNames = service
+      .getCompletionsAtPosition(virtualPath, firstDropCompletionPosition, completionOptions)
+      ?.entries.map((entry) => entry.name);
+    const nextDropCompletionNames = service
+      .getCompletionsAtPosition(virtualPath, nextDropCompletionPosition, completionOptions)
+      ?.entries.map((entry) => entry.name);
+    const chainedDropCompletionNames = service
+      .getCompletionsAtPosition(virtualPath, chainedDropCompletionPosition, completionOptions)
+      ?.entries.map((entry) => entry.name);
+    service.dispose();
+
+    expect(firstCompletionNames).toEqual(["id", "name", "active"]);
+    expect(nextCompletionNames).toEqual(["id", "name", "active"]);
+    expect(firstDropCompletionNames).toEqual(["id", "name", "active"]);
+    expect(nextDropCompletionNames).toEqual(["id", "name", "active"]);
+    expect(chainedDropCompletionNames).toEqual(["id", "name"]);
   });
 });

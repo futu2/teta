@@ -24,11 +24,20 @@ type GenericQueryStep<TInput extends QueryColumns, TOutput extends QueryColumns>
   (query: Query<TInput>) => Query<TOutput>;
 
 type PickResult<
-  TColumns extends Record<TNames[number], any>,
-  TNames extends readonly [string, ...string[]],
+  TColumns extends QueryColumns,
+  TNames extends readonly string[],
 > = {
-  [K in TNames[number]]: TColumns[K];
+  [K in Extract<TNames[number], keyof TColumns>]: TColumns[K];
 };
+
+type PickStep<
+  TContextColumns extends QueryColumns,
+  TNames extends readonly string[],
+> =
+  & (<TColumns extends QueryColumns & Record<TNames[number], any>>(
+    query: Query<TColumns>
+  ) => Query<PickResult<TColumns, TNames>>)
+  & ((query: Query<TContextColumns>) => Query<PickResult<TContextColumns, TNames>>);
 
 type DropResult<
   TColumns extends QueryColumns,
@@ -36,6 +45,15 @@ type DropResult<
 > = {
   [K in Exclude<StringKeyOf<TColumns>, TNames[number]>]: TColumns[K];
 };
+
+type DropStep<
+  TContextColumns extends QueryColumns,
+  TNames extends readonly string[],
+> =
+  & (<TColumns extends QueryColumns & Record<TNames[number], any>>(
+    query: Query<TColumns>
+  ) => Query<DropResult<TColumns, TNames>>)
+  & ((query: Query<TContextColumns>) => Query<DropResult<TContextColumns, TNames>>);
 
 type RenamePatternPart<
   TPart extends string,
@@ -62,11 +80,12 @@ export type DropResultInternal<
   TNames extends readonly string[],
 > = DropResult<TColumns, TNames>;
 
-export function pick<const TNames extends readonly [string, ...string[]]>(
+export function pick<
+  TColumns extends QueryColumns,
+  const TNames extends readonly [StringKeyOf<TColumns>, ...StringKeyOf<TColumns>[]],
+>(
   ...names: TNames
-): <TColumns extends Record<TNames[number], any>>(
-  query: Query<TColumns>
-) => Query<PickResult<TColumns, TNames>> {
+): PickStep<TColumns, TNames> {
   return typedProjectionStep("pick", (query: Query<QueryColumns>) => {
     const state = getQueryState(query);
     const columns = query.columns as ColumnRefs<QueryColumns>;
@@ -74,7 +93,25 @@ export function pick<const TNames extends readonly [string, ...string[]]>(
     const selection = selectColumnsByName(columns, names);
     assertProjectionShape(selection);
     return deriveQuery(query, resolveMapQuery(state, selection));
-  });
+  }) as unknown as PickStep<TColumns, TNames>;
+}
+
+export function drop<
+  TColumns extends QueryColumns,
+  const TNames extends readonly [StringKeyOf<TColumns>, ...StringKeyOf<TColumns>[]],
+>(
+  ...names: TNames
+): DropStep<TColumns, TNames> {
+  return typedProjectionStep("drop", (query: Query<QueryColumns>) => {
+    const state = getQueryState(query);
+    const columns = query.columns as ColumnRefs<QueryColumns>;
+    assertKnownColumns(columns, names);
+    const dropped = new Set<string>(names);
+    const kept = state.columnNames.filter((name: string) => !dropped.has(name));
+    const selection = selectColumnsByName(columns, kept);
+    assertProjectionShape(selection);
+    return deriveQuery(query, resolveMapQuery(state, selection));
+  }) as unknown as DropStep<TColumns, TNames>;
 }
 
 export function rename<const TPattern extends string>(

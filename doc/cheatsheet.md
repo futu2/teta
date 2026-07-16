@@ -232,6 +232,7 @@ const uniqueUsers = pipe(activeUsers, union(inactiveUsers));
 
 - `map(selector)`
 - `pick(...names)`
+- `drop(...names)`
 - `rename(mapper)`
 - `fold(selector)`
 - `filter(predicate)`

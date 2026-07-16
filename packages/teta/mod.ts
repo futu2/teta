@@ -144,6 +144,9 @@ export const sort: typeof import("./src/edsl/query.ts").sort = query.sort;
 /** Projects each row into a new selected shape. */
 export const map: typeof import("./src/edsl/query.ts").map = query.map;
 
+/** Drops the named columns and keeps the remaining columns in query order. */
+export const drop: typeof import("./src/edsl/query.ts").drop = query.drop;
+
 /** Keeps only the named columns in their provided order. */
 export const pick: typeof import("./src/edsl/query.ts").pick = query.pick;
 

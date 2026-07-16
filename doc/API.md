@@ -197,10 +197,20 @@ pipe(users, map((u) => ({ id: u.id, name: upper(u.name) })));
 
 ### `pick(...names)`
 
-Keeps only the named columns, in the order provided.
+Keeps only the named columns, in the order provided. Inside `pipe(...)`, editors
+suggest columns from the query produced by the preceding step.
 
 ```ts
 pipe(users, pick("name", "id"));
+```
+
+### `drop(...names)`
+
+Drops the named columns and retains the remaining columns in query order. Inside
+`pipe(...)`, editors suggest columns from the query produced by the preceding step.
+
+```ts
+pipe(users, drop("internal_note", "legacy_status"));
 ```
 
 ### `rename(mapper)`
