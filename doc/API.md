@@ -195,6 +195,14 @@ function map<T extends QueryColumns, TOut extends QueryColumns>(
 pipe(users, map((u) => ({ id: u.id, name: upper(u.name) })));
 ```
 
+### `pick(...names)`
+
+Keeps only the named columns, in the order provided.
+
+```ts
+pipe(users, pick("name", "id"));
+```
+
 ### `rename(mapper)`
 
 Renames every projected column while preserving its value type and column order.

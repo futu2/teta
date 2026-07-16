@@ -50,6 +50,7 @@ export {
   loop,
   map,
   onEq,
+  pick,
   prefixAllLeft,
   prefixAllRight,
   prefixOverlapLeft,

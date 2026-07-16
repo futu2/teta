@@ -3,11 +3,13 @@ import * as publicApi from "../mod.ts";
 import * as advancedApi from "../advanced.ts";
 import * as queryApi from "../query.ts";
 
-test("exports rename but not the other removed projection helpers", () => {
+test("exports pick and rename but not the other removed projection helpers", () => {
+  expect(typeof publicApi.pick).toBe("function");
+  expect(typeof queryApi.pick).toBe("function");
   expect(typeof publicApi.rename).toBe("function");
   expect(typeof queryApi.rename).toBe("function");
 
-  for (const name of ["pick", "extend", "drop"]) {
+  for (const name of ["extend", "drop"]) {
     expect(name in publicApi).toBe(false);
     expect(name in queryApi).toBe(false);
   }

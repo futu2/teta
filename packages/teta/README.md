@@ -107,7 +107,7 @@ Comparison filter helpers require at least one row callback; direct values are a
 Use `map(...)` for explicit object-shaped projections:
 
 ```ts
-import { map, rename, upper } from "@teta/teta";
+import { map, pick, rename, upper } from "@teta/teta";
 
 const publicUsers = pipe(
   users,
@@ -116,6 +116,12 @@ const publicUsers = pipe(
     email_upper: upper(user.email),
   }))
 );
+```
+
+Use `pick(...)` to retain existing columns in a specific order:
+
+```ts
+const publicUsers = pipe(users, pick("id", "email"));
 ```
 
 Use `rename(...)` when every column name follows the same mapping rule:

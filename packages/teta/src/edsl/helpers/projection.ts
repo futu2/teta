@@ -23,6 +23,13 @@ type StringKeyOf<T> = Extract<keyof T, string>;
 type GenericQueryStep<TInput extends QueryColumns, TOutput extends QueryColumns> =
   (query: Query<TInput>) => Query<TOutput>;
 
+type PickResult<
+  TColumns extends Record<TNames[number], any>,
+  TNames extends readonly [string, ...string[]],
+> = {
+  [K in TNames[number]]: TColumns[K];
+};
+
 type DropResult<
   TColumns extends QueryColumns,
   TNames extends readonly string[],
@@ -54,6 +61,21 @@ export type DropResultInternal<
   TColumns extends QueryColumns,
   TNames extends readonly string[],
 > = DropResult<TColumns, TNames>;
+
+export function pick<const TNames extends readonly [string, ...string[]]>(
+  ...names: TNames
+): <TColumns extends Record<TNames[number], any>>(
+  query: Query<TColumns>
+) => Query<PickResult<TColumns, TNames>> {
+  return typedProjectionStep("pick", (query: Query<QueryColumns>) => {
+    const state = getQueryState(query);
+    const columns = query.columns as ColumnRefs<QueryColumns>;
+    assertKnownColumns(columns, names);
+    const selection = selectColumnsByName(columns, names);
+    assertProjectionShape(selection);
+    return deriveQuery(query, resolveMapQuery(state, selection));
+  });
+}
 
 export function rename<const TPattern extends string>(
   renameKey: (key: string) => TPattern
