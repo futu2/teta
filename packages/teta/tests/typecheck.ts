@@ -1,6 +1,6 @@
 import type { Column, Expr, Query, JoinKind, JoinOptions, SqlBigInt, SqlBoolean, SqlBytes, SqlDate, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlNumber, SqlString, SqlTimestamp, SqlUuid, UnnestOptions, UnnestSelection, } from "../mod.ts";
 import * as publicApi from "../mod.ts";
-import { between, composeSteps, currentDate, currentTimestamp, dateAdd, filter, filterEq, filterNe, filterGt, filterGte, filterLt, filterLte, fullJoin, fullJoinMerge, identityStep, innerJoin, innerJoinMap, innerJoinMerge, isDistinctFrom, isIn, isNotIn, join, leftJoin, leftJoinMap, leftJoinMerge, rightJoin, rightJoinMerge, take, takeWithin, sort, param, lit, map, pipe, flow, table, t, fold, asc, desc, eq, gt, upper, add, mul, coalesce, count, group, loop, sum, and, or, isNotNull, sub, when, mapShape, groupShape, lt, unnest, unionAll, union, unlessStep, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, asBigInt, asBoolean, asBytes, asDate, asDecimal, asFloat, asInt, asJson, asString, asTimestamp, asUuid, whenStep } from "../mod.ts";
+import { between, composeSteps, currentDate, currentTimestamp, dateAdd, filter, filterEq, filterNe, filterGt, filterGte, filterLt, filterLte, fullJoin, fullJoinMerge, identityStep, innerJoin, innerJoinMap, innerJoinMerge, isDistinctFrom, isIn, isNotIn, join, leftJoin, leftJoinMap, leftJoinMerge, rightJoin, rightJoinMerge, take, takeWithin, sort, param, lit, map, rename, pipe, flow, table, t, fold, asc, desc, eq, gt, upper, add, mul, coalesce, count, group, loop, sum, and, or, isNotNull, sub, when, mapShape, groupShape, lt, unnest, unionAll, union, unlessStep, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, asBigInt, asBoolean, asBytes, asDate, asDecimal, asFloat, asInt, asJson, asString, asTimestamp, asUuid, whenStep } from "../mod.ts";
 type Equal<A, B> = ((<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false);
 type Expect<T extends true> = T;
 type ExprType<TExpr> = TExpr extends Expr<infer TValue> ? TValue : TExpr extends Column<infer TValue, string> ? TValue : never;
@@ -343,17 +343,17 @@ const curriedJoin = pipe(users, leftJoin(
     (user: typeof users.columns, order: typeof orders.columns) => eq(user.id, order.user_id)
 ));
 const directPickedSelection = pipe(users, map((user) => ({ id: user.id })));
-const directKeyMappedSelection = pipe(users, map((user) => ({ prefix1_id: user.id, prefix1_name: user.name })));
-const multiPrefixRenamedSelection = pipe(users, map((user) => ({ pre_fix_id: user.id, pre_fix_name: user.name })));
+const directKeyMappedSelection = pipe(users, rename((key) => `prefix1_${key}`));
+const multiPrefixRenamedSelection = pipe(users, rename((key) => `pre_fix_${key}`));
 const multiPrefixRenamedId: Expr<SqlInt> = multiPrefixRenamedSelection.columns.pre_fix_id;
 // @ts-expect-error a multi-segment prefix must retain the finite source keys
 multiPrefixRenamedSelection.columns.pre_fix_missing;
 const fixedRenamedSelection = pipe(
     table("rename_source", { id: t.int() }),
-    map((row) => ({ fixed_name: row.id })),
+    rename(() => "fixed_name" as const),
 );
 const fixedRenamedName: Expr<SqlInt> = fixedRenamedSelection.columns.fixed_name;
-// @ts-expect-error a fixed projection must not invent another column name
+// @ts-expect-error a fixed rename result must not invent a key-derived column name
 fixedRenamedSelection.columns.fixed_id;
 const droppedUsers = pipe(users, map((user) => ({ id: user.id })));
 const directDroppedProfiles = pipe(profiles, map((profile) => ({

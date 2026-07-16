@@ -57,6 +57,7 @@ export {
   rightJoin,
   rightJoinMap,
   rightJoinMerge,
+  rename,
   sort,
   suffixAllLeft,
   suffixAllRight,

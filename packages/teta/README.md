@@ -107,7 +107,7 @@ Comparison filter helpers require at least one row callback; direct values are a
 Use `map(...)` for explicit object-shaped projections:
 
 ```ts
-import { map, upper } from "@teta/teta";
+import { map, rename, upper } from "@teta/teta";
 
 const publicUsers = pipe(
   users,
@@ -116,6 +116,12 @@ const publicUsers = pipe(
     email_upper: upper(user.email),
   }))
 );
+```
+
+Use `rename(...)` when every column name follows the same mapping rule:
+
+```ts
+const prefixedUsers = pipe(users, rename((key) => `user_${key}`));
 ```
 
 Use `join(...)` for joins; the older join-kind helpers are convenience wrappers over the same primitive:

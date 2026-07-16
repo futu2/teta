@@ -231,6 +231,7 @@ const uniqueUsers = pipe(activeUsers, union(inactiveUsers));
 ## 2) Query helpers
 
 - `map(selector)`
+- `rename(mapper)`
 - `fold(selector)`
 - `filter(predicate)`
 - `sort(selector)`

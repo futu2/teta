@@ -144,6 +144,9 @@ export const sort: typeof import("./src/edsl/query.ts").sort = query.sort;
 /** Projects each row into a new selected shape. */
 export const map: typeof import("./src/edsl/query.ts").map = query.map;
 
+/** Renames every projected column with the provided key mapper. */
+export const rename: typeof import("./src/edsl/query.ts").rename = query.rename;
+
 /** Schema type helpers used when declaring tables. */
 export const t: typeof import("./src/edsl/query.ts").t = query.t;
 

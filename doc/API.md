@@ -195,6 +195,14 @@ function map<T extends QueryColumns, TOut extends QueryColumns>(
 pipe(users, map((u) => ({ id: u.id, name: upper(u.name) })));
 ```
 
+### `rename(mapper)`
+
+Renames every projected column while preserving its value type and column order.
+
+```ts
+pipe(users, rename((key) => `user_${key}`));
+```
+
 ### `fold(selector)`
 
 Aggregate projection. Every returned expression must be grouped (`group(...)`) or an aggregate (`count(...)`, `sum(...)`, etc.).

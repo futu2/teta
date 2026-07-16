@@ -15,6 +15,7 @@ import type {
 } from "../expr.ts";
 import {
   assertKnownColumns,
+  mapColumnNames,
   selectColumnsByName,
 } from "../query/projection_utils.ts";
 import type { QueryColumns } from "../query/types.ts";
@@ -29,6 +30,23 @@ type DropResult<
   [K in Exclude<StringKeyOf<TColumns>, TNames[number]>]: TColumns[K];
 };
 
+type RenamePatternPart<
+  TPart extends string,
+  TKey extends string,
+  TEmbedded extends boolean,
+> = string extends TPart
+  ? TEmbedded extends true ? TKey : string
+  : TPart extends `${infer THead}_${infer TTail}`
+    ? `${RenamePatternPart<THead, TKey, true>}_${RenamePatternPart<TTail, TKey, true>}`
+    : TPart;
+
+type RenamePattern<TPattern extends string, TKey extends string> =
+  RenamePatternPart<TPattern, TKey, false>;
+
+type RenameResult<TColumns extends QueryColumns, TPattern extends string> = {
+  [K in StringKeyOf<TColumns> as RenamePattern<TPattern, K>]: TColumns[K];
+};
+
 type ExtendResult<TColumns extends QueryColumns, TExtension extends QueryColumns> =
   Omit<TColumns, StringKeyOf<TExtension>> & TExtension;
 
@@ -36,6 +54,23 @@ export type DropResultInternal<
   TColumns extends QueryColumns,
   TNames extends readonly string[],
 > = DropResult<TColumns, TNames>;
+
+export function rename<const TPattern extends string>(
+  renameKey: (key: string) => TPattern
+): <TColumns extends QueryColumns>(
+  query: Query<TColumns>
+) => Query<RenameResult<TColumns, TPattern>> {
+  return typedProjectionStep("rename", (query: Query<QueryColumns>) => {
+    const state = getQueryState(query);
+    const selection = mapColumnNames(
+      query.columns as ColumnRefs<QueryColumns>,
+      state.columnNames,
+      renameKey
+    );
+    assertProjectionShape(selection);
+    return deriveQuery(query, resolveMapQuery(state, selection));
+  });
+}
 
 export function extendInternal<
   TColumns extends QueryColumns,
