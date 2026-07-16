@@ -10,7 +10,7 @@ Teta is function-first. Row-transforming query helpers are curried query steps u
 Queries are opaque runtime values. Use `query.columns` for reusable column expressions and `toIR(query)` / `explain(query, ...)` for inspection. Query steps are callable values with `kind: "query_step"` and `stepName` metadata. `flow(...)` composes general unary functions; `composeSteps(...)` preserves the query-step brand and metadata. These composition helpers preserve exact intermediate types through 12 explicit steps and a checked variadic tail.
 
 ```ts
-import { add, and, arrayAppend, arrayContains, arrayJoin, arrayLength, arrayPosition, arraySlice, asBigInt, asBoolean, asBytes, asDate, asDecimal, asFloat, asInt, asJson, asString, asTimestamp, asUuid, asc, avg, bitLength, cast, charLength, characterLength, coalesce, composeSteps, concat, count, currentDate, currentTimestamp, dateAdd, dateDiff, dateFormat, dateLiteral, dateParse, dateTrunc, day, desc, drop, dropOverlapLeft, dropOverlapRight, eq, explain, Expr, extend, f, filter, filterEq, flow, fold, fromUnixTime, fullJoin, group, gt, gte, hour, identityStep, innerJoin, isIn, isNotNull, isNull, JoinKind, JoinOptions, join, lag, lead, left, leftJoin, like, loop, lower, lt, lte, map, rename, max, min, minute, mod, month, mul, ne, not, ntile, nullIf, octetLength, onEq, over, overlay, param, percentRank, pick, pipe, position, pow, prefixAllLeft, prefixAllRight, prefixOverlapLeft, prefixOverlapRight, Query, rank, regexExtract, regexLike, regexReplace, replace, reverse, right, rightJoin, round, rowNumber, rpad, sort, sqrt, sub, substring, suffixAllLeft, suffixAllRight, sum, sumOver, t, table, take, takeWithin, timestampLiteral, toAst, toIR, toSql, toSqlResult, toUnixTime, trim, union, unionAll, unlessStep, unnest, upper, usingCols, values, when, whenStep, year } from "@teta/teta";
+import { add, and, arrayAppend, arrayContains, arrayJoin, arrayLength, arrayPosition, arraySlice, asBigInt, asBoolean, asBytes, asDate, asDecimal, asFloat, asInt, asJson, asString, asTimestamp, asUuid, asc, avg, bitLength, cast, charLength, characterLength, coalesce, composeSteps, concat, count, currentDate, currentTimestamp, dateAdd, dateDiff, dateFormat, dateLiteral, dateParse, dateTrunc, day, desc, dropOverlapLeft, dropOverlapRight, eq, explain, Expr, f, filter, filterEq, flow, fold, fromUnixTime, fullJoin, group, gt, gte, hour, identityStep, innerJoin, isIn, isNotNull, isNull, JoinKind, JoinOptions, join, lag, lead, left, leftJoin, like, loop, lower, lt, lte, map, max, min, minute, mod, month, mul, ne, not, ntile, nullIf, octetLength, onEq, over, overlay, param, percentRank, pipe, position, pow, prefixAllLeft, prefixAllRight, prefixOverlapLeft, prefixOverlapRight, Query, rank, regexExtract, regexLike, regexReplace, replace, reverse, right, rightJoin, round, rowNumber, rpad, sort, sqrt, sub, substring, suffixAllLeft, suffixAllRight, sum, sumOver, t, table, take, takeWithin, timestampLiteral, toAst, toIR, toSql, toSqlResult, toUnixTime, trim, union, unionAll, unlessStep, unnest, upper, usingCols, values, when, whenStep, year } from "@teta/teta";
 import { fn, windowFn } from "@teta/teta/advanced";
 ```
 
@@ -74,7 +74,7 @@ Use `flow(...)` to save reusable pipelines:
 ```ts
 const activePublicUsers = flow(
   filterEq((user) => user.active, true),
-  pick("id", "name")
+  map((user) => ({ id: user.id, name: user.name }))
 );
 ```
 
@@ -136,11 +136,11 @@ const joined = pipe(
 );
 ```
 
-Use `pick(...)` for same-name projections:
+Use `map(...)` to select, omit, compute, or alias columns:
 
 ```ts
-const compactUsers = pipe(users, pick("id", "name"));
-const activeUserColumns = pipe(users, drop("deleted_at"));
+const compactUsers = pipe(users, map((user) => ({ id: user.id, name: user.name })));
+const aliasedUsers = pipe(users, map((user) => ({ user_id: user.id, user_name: user.name })));
 ```
 
 Callback selectors carry the current query shape through the row parameter.
@@ -471,10 +471,10 @@ const explicitSql = irToSql(ir, { dialect: "postgresql" });
 filter((user) => and(eq(user.active, true), gte(user.age, 18), isNotNull(user.email)))
 ```
 
-### Projection helpers
+### Projections
 
 ```ts
-import { drop, extend, fold, groupShape, map, rename, pick, pipe, upper } from "@teta/teta";
+import { fold, groupShape, map, pipe, upper } from "@teta/teta";
 
 const compactUsers = pipe(
   users,
@@ -485,13 +485,18 @@ const compactUsers = pipe(
   }))
 );
 
-const publicUsers = pipe(users, pick("id", "name"));
+const publicUsers = pipe(users, map((user) => ({ id: user.id, name: user.name })));
 
-const enrichedUsers = pipe(users, extend("name_upper", (user) => upper(user.name)));
+const enrichedUsers = pipe(users, map((user) => ({
+  id: user.id,
+  name: user.name,
+  name_upper: upper(user.name),
+})));
 
-const internalUsers = pipe(users, drop("password_hash"));
-
-const prefixedUsers = pipe(users, rename((key) => `user_${key}`));
+const prefixedUsers = pipe(users, map((user) => ({
+  user_id: user.id,
+  user_name: user.name,
+})));
 
 const groupedUsers = pipe(
   users,

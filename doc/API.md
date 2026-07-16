@@ -106,7 +106,7 @@ function flow<T extends readonly any[]>(
 ```ts
 const activeUsers = flow(
   filter((u) => u.active),
-  pick("id", "name"),
+  map((u) => ({ id: u.id, name: u.name })),
 );
 const q = activeUsers(users);
 ```
@@ -138,13 +138,12 @@ const activePage = composeSteps(
 const q = pipe(users, whenStep(includeActivePage, activePage));
 ```
 
-TypeScript needs a concrete input schema before `composeSteps(...)` can wrap or
-compose schema-polymorphic helpers such as `pick(...)`, `drop(...)`, or
-`rename(...)`. Bind the schema with a plain wrapper:
+TypeScript needs a concrete input schema before `composeSteps(...)` can wrap a
+schema-changing projection. Bind the schema with a plain wrapper:
 
 ```ts
 const idPage = composeSteps(
-  (query: typeof users) => pipe(query, pick("id")),
+  (query: typeof users) => pipe(query, map((user) => ({ id: user.id }))),
   take(50)
 );
 ```
@@ -370,51 +369,6 @@ function whenStep<T extends QueryColumns>(
   condition: boolean,
   step: QueryStep<T, T>,
 ): QueryStep<T, T>
-```
-
----
-
-## Projection Helpers
-
-### `pick(...keys)`
-
-Keeps only the named columns.
-
-```ts
-function pick<T extends QueryColumns, K extends readonly (keyof T)[]>(
-  ...keys: K
-): QueryStep<T, Pick<T, K[number]>>
-```
-
-### `drop(...keys)`
-
-Removes the named columns.
-
-```ts
-function drop<T extends QueryColumns, K extends readonly (keyof T)[]>(
-  ...keys: K
-): QueryStep<T, Omit<T, K[number]>>
-```
-
-### `rename(mapper)`
-
-Renames every projected column.
-
-```ts
-function rename<T extends QueryColumns>(
-  mapper: (key: string) => string,
-): QueryStep<T, RenameResult<T>>
-```
-
-### `extend(name, selector)`
-
-Adds or replaces one named column while preserving others.
-
-```ts
-function extend<T extends QueryColumns, N extends string, V>(
-  name: N,
-  selector: (row: ColumnRefs<T>) => Expr<V>,
-): QueryStep<T, T & { [K in N]: V }>
 ```
 
 ---

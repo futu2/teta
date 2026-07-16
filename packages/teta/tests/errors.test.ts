@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { TetaUserError, asc, count, eq, extend, filter, fold, fullJoin, group, innerJoin, innerJoinMerge, join, leftJoin, loop, map, onEq, prefixOverlapLeft, rightJoin, sort, t, table, take, takeWithin, toSql, unlessStep, unnest, usingCols, values, whenStep, pipe } from "../mod.ts";
+import { TetaUserError, asc, count, eq, filter, fold, fullJoin, group, innerJoin, innerJoinMerge, join, leftJoin, loop, map, onEq, prefixOverlapLeft, rightJoin, sort, t, table, take, takeWithin, toSql, unlessStep, unnest, usingCols, values, whenStep, pipe } from "../mod.ts";
 import type { TetaErrorCode } from "../mod.ts";
 import { GROUP_INSIDE_AGGREGATE_FUNCTION_ERROR, GROUP_OUTSIDE_AGGREGATE_ERROR, JOIN_MERGE_CONFLICT_ERROR, JOIN_OVERLAPPING_COLUMNS_ERROR, LEGACY_SELECTION_ARRAY_ERROR, LOOP_COLUMN_MISMATCH_ERROR, NON_CANONICAL_POSTGRES_DIALECT_ERROR, TABLE_SCHEMA_EMPTY_ERROR, TABLE_SCHEMA_INVALID_ERROR, VALUES_COLUMN_MISMATCH_ERROR, VALUES_EMPTY_ERROR, VALUES_NO_COLUMNS_ERROR, VALUES_ROW_INVALID_ERROR, VALUES_UNDEFINED_ERROR } from "./helpers/expected-errors.ts";
 import { createOrdersTable, createUsersTable } from "./helpers/fixtures.ts";
@@ -168,11 +168,6 @@ describe("error paths", () => {
             "map() expects map(selector)"
         );
         expectUserError(
-            () => (extend as any)(users, (user: typeof users.columns) => ({ name: user.name })),
-            "QUERY_HELPER_INVALID_ARGUMENTS",
-            "extend() expects extend(name, selector)"
-        );
-        expectUserError(
             () => (filter as any)(users, (user: typeof users.columns) => eq(user.id, 1)),
             "QUERY_HELPER_INVALID_ARGUMENTS",
             "filter() expects filter(predicate)"
@@ -336,29 +331,6 @@ describe("error paths", () => {
             () => pipe(orders, fold(() => ({} as never))),
             "LEGACY_SELECTION_ARRAY",
             LEGACY_SELECTION_ARRAY_ERROR
-        );
-    });
-    test("rejects erased invalid extend inputs with user errors", () => {
-        const users = createUsersTable();
-        expectUserError(
-            () => pipe(users, (extend as any)(undefined)),
-            "QUERY_HELPER_INVALID_ARGUMENTS",
-            "extend() expects extend(name, selector)"
-        );
-        expectUserError(
-            () => pipe(users, extend("broken", undefined as never)),
-            "QUERY_HELPER_INVALID_SELECTOR",
-            "extend() expects a row callback"
-        );
-        expectUserError(
-            () => pipe(users, extend("broken", () => undefined as never)),
-            "INVALID_LITERAL_VALUE",
-            "Unsupported literal value: undefined"
-        );
-        expectUserError(
-            () => pipe(users, extend("broken", () => ({} as never))),
-            "INVALID_LITERAL_VALUE",
-            "Unsupported literal value: [object Object]"
         );
     });
     test("rejects non-canonical and unregistered built-in dialect names", () => {

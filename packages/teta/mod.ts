@@ -144,9 +144,6 @@ export const sort: typeof import("./src/edsl/query.ts").sort = query.sort;
 /** Projects each row into a new selected shape. */
 export const map: typeof import("./src/edsl/query.ts").map = query.map;
 
-/** Adds or replaces columns while preserving existing query columns. */
-export const extend: typeof import("./src/edsl/query.ts").extend = query.extend;
-
 /** Schema type helpers used when declaring tables. */
 export const t: typeof import("./src/edsl/query.ts").t = query.t;
 
@@ -299,15 +296,6 @@ export const isQuery: typeof import("./src/edsl/query.ts").isQuery = query.isQue
 
 /** Builds an equality predicate. */
 export const eq: typeof import("./src/edsl/expr.ts").eq = expr.eq;
-
-/** Keeps only the named columns in their provided order. */
-export const pick: typeof import("./src/edsl/query.ts").pick = query.pick;
-
-/** Drops the named columns and keeps the remaining columns in query order. */
-export const drop: typeof import("./src/edsl/query.ts").drop = query.drop;
-
-/** Renames every projected column with the provided key mapper. */
-export const rename: typeof import("./src/edsl/query.ts").rename = query.rename;
 
 /** Builds an inequality predicate. */
 export const ne: typeof import("./src/edsl/expr.ts").ne = expr.ne;

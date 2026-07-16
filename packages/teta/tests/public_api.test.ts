@@ -1,6 +1,14 @@
 import { expect, test } from "bun:test";
 import * as publicApi from "../mod.ts";
 import * as advancedApi from "../advanced.ts";
+import * as queryApi from "../query.ts";
+
+test("does not export removed projection helpers", () => {
+  for (const name of ["pick", "extend", "drop", "rename"]) {
+    expect(name in publicApi).toBe(false);
+    expect(name in queryApi).toBe(false);
+  }
+});
 
 test("does not export public constructor values", () => {
   const removedExprRefExport = "Expr" + "Ref";

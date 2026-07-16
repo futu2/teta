@@ -22,6 +22,10 @@ import { cast } from "./math.ts";
 
 type NullableDateLike = SqlDate | SqlTimestamp | string | null;
 type NullableSqlNumber = SqlNumber | null;
+type DateAddResult<TValue> =
+  TValue extends null ? null
+  : TValue extends SqlDate ? SqlDate
+  : SqlTimestamp;
 
 export function currentDate(): Expr<SqlDate> {
   return funcExpr("CURRENT_DATE", []);
@@ -65,8 +69,8 @@ export function dateAdd<TValue extends NullableDateLike>(
   value: ExprInput<TValue>,
   unit: ExprInput<string>,
   amount: ExprInput<SqlInt>
-): Expr<PropagateNull<TValue, SqlTimestamp>> {
-  return fn<PropagateNull<TValue, SqlTimestamp>>("DATE_ADD", unit, amount, value);
+): Expr<DateAddResult<TValue>> {
+  return fn<DateAddResult<TValue>>("DATE_ADD", unit, amount, value);
 }
 
 export function dateDiff<

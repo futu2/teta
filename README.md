@@ -151,7 +151,7 @@ const byName = pipe(activeUsers, map((u) => ({ name: u.name })), sort((u) => asc
 const byAge = pipe(activeUsers, sort((u) => asc(u.age)));
 ```
 
-`filter`, `map`, `sort`, `pick` — each is a curried `QueryStep` you can assign to a variable, pass to a higher-order function, or compose further. No builder to clone, no mutation to worry about.
+`filter`, `map`, and `sort` are curried `QueryStep` values you can assign to a variable, pass to a higher-order function, or compose further. No builder to clone, no mutation to worry about.
 
 <br>
 

@@ -31,7 +31,7 @@ npx jsr add @teta/teta
 ## Quick start
 
 ```ts
-import { and, asc, eq, filter, gte, pick, sort, table, t, take, toSql, pipe } from "@teta/teta";
+import { and, asc, eq, filter, gte, map, sort, table, t, take, toSql, pipe } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -43,7 +43,7 @@ const users = table("users", {
 const activeUsers = pipe(
   users,
   filter((user) => and(eq(user.active, true), gte(user.age, 18))),
-  pick("id", "email"),
+  map((user) => ({ id: user.id, email: user.email })),
   sort((user) => asc(user.email)),
   take(10)
 );
@@ -66,15 +66,14 @@ database-specific function builders. Use `@teta/teta/advanced` for validated
 custom `fn(...)` and `windowFn(...)` calls; use `@teta/sql` directly when
 building or rendering public IR from another frontend.
 
-Reusable functional pipelines can be saved with `flow(...)`, and `extend(...)` keeps existing columns while adding computed ones:
+Reusable functional pipelines can be saved with `flow(...)`, while `map(...)` selects and computes output columns:
 
 ```ts
-import { composeSteps, extend, filterEq, flow, lower, pick, pipe, take, whenStep } from "@teta/teta";
+import { composeSteps, filterEq, flow, lower, map, pipe, take, whenStep } from "@teta/teta";
 
 const activePublicUsers = flow(
   filterEq((user) => user.active, true),
-  extend("normalized_email", (user) => lower(user.email)),
-  pick("id", "normalized_email"),
+  map((user) => ({ id: user.id, normalized_email: lower(user.email) })),
   whenStep(includeLimit, take(50))
 );
 ```
@@ -192,12 +191,12 @@ const positional = toSqlResult(byPosition, {
 The callback form gives autocomplete and compile-time column checks while keeping query steps reusable:
 
 ```ts
-import { and, asc, eq, filter, gte, pick, sort, pipe } from "@teta/teta";
+import { and, asc, eq, filter, gte, map, sort, pipe } from "@teta/teta";
 
 const activeUsers = pipe(
   users,
   filter((user) => and(eq(user.active, true), gte(user.age, 18))),
-  pick("id", "email"),
+  map((user) => ({ id: user.id, email: user.email })),
   sort((user) => asc(user.email))
 );
 ```

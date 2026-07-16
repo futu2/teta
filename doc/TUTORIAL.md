@@ -379,12 +379,12 @@ Quick rule of thumb:
 - `readable` preserves stage boundaries as `cte_0`, `cte_1`, ...
 - nested subqueries usually mean the compiler introduced a deliberate scope barrier
 
-### Projection shaping helpers
+### Projection shaping
 
-Teta includes projection helpers for common object-shaped `map(...)` and `fold(...)` callbacks.
+Use object-shaped `map(...)` callbacks to select, omit, compute, and alias columns.
 
 ```ts
-import { col, drop, extend, filterEq, flow, map, rename, pick, pipe, replace, table, t, upper } from "@teta/teta";
+import { filterEq, flow, map, pipe, replace, table, t, upper } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -403,23 +403,25 @@ const compact = pipe(
   }))
 );
 
-const publicUsers = pipe(users, pick("id", "name", "age"));
+const publicUsers = pipe(users, map((user) => ({
+  id: user.id,
+  name: user.name,
+  age: user.age,
+})));
 
 const namespacedUsers = pipe(
   users,
-  pick("id", "name"),
-  rename((key) => `user_${key}`)
+  map((user) => ({
+    user_id: user.id,
+    user_name: user.name,
+  }))
 );
-
-const publicAuditUsers = pipe(users, drop("internal_notes"));
 ```
 
 Typical patterns:
 
-- `pick(...)` for reusable column subsets
-- `drop(...)` when it is easier to name columns to remove
-- `map(...)` with explicit object literals when you want to reshape columns and add computed fields
-- `rename(...)` for systematic renaming like prefixes or namespaces
+- `map(...)` with explicit object literals to select or omit columns
+- object keys to alias columns or add computed fields
 - `pipe(...)` when the reshaping reads better as query steps
 
 `map(...)` projects from an explicit object shape:
@@ -431,16 +433,15 @@ const q = pipe(users, map((user) => ({
 })));
 ```
 
-Type note:
-`rename(...)` works best with template literals because TypeScript can keep exact renamed keys.
-
-For example:
+For example, aliases remain concrete properties in downstream callbacks:
 
 ```ts
 const prefixed = pipe(
   users,
-  pick("id", "name"),
-  rename((key) => `user_${key}`)
+  map((user) => ({
+    user_id: user.id,
+    user_name: user.name,
+  }))
 );
 ```
 
@@ -453,8 +454,7 @@ Downstream code can then access concrete properties such as `user_id` and `user_
 ```ts
 const publicActiveUsers = flow(
   filterEq((user) => user.active, true),
-  extend("name_upper", (user) => upper(user.name)),
-  pick("id", "name_upper")
+  map((user) => ({ id: user.id, name_upper: upper(user.name) }))
 );
 
 const q = publicActiveUsers(users);
@@ -725,12 +725,10 @@ console.log(toSql(q, { dialect: "postgresql", format: "pretty" }));
 
 ### Take rows within each partition
 
-When you want the first N rows inside each partition according to an ordering, you can compose the
-primitive helpers directly: add a row number with `extend(...)`, filter it, and then remove the helper
-column with `drop(...)`.
+When you want the first N rows inside each partition according to an ordering, use `takeWithin(...)`:
 
 ```ts
-import { asc, drop, extend, filter, lte, over, pipe, rowNumber, table, t, toSql } from "@teta/teta";
+import { asc, pipe, table, t, takeWithin, toSql } from "@teta/teta";
 
 const employees = table("employees", {
   id: t.int(),
@@ -738,27 +736,6 @@ const employees = table("employees", {
   role: t.string(),
   join_date: t.date(),
 });
-
-const q = pipe(
-  employees,
-  extend("row_num", (employee) =>
-    over(rowNumber(), {
-      partitionBy: employee.role,
-      orderBy: asc(employee.join_date),
-    })
-  ),
-  filter((employee) => lte(employee.row_num, 1)),
-  drop("row_num")
-);
-
-console.log(toSql(q, { dialect: "postgresql", format: "pretty" }));
-```
-
-`takeWithin(...)` packages that `extend(...) -> filter(...) -> drop(...)` pattern into a reusable
-query step:
-
-```ts
-import { asc, pipe, table, t, takeWithin, toSql } from "@teta/teta";
 
 const q = pipe(
   employees,
@@ -1008,7 +985,7 @@ const allUsers = pipe(activeUsers, unionAll(inactiveUsers));
 ### Recursive loop (WITH RECURSIVE)
 
 ```ts
-import { eq, filter, isNull, join, loop, pick, pipe, table, t } from "@teta/teta";
+import { eq, filter, isNull, join, loop, map, pipe, table, t } from "@teta/teta";
 
 const employees = table("employees", {
   id: t.int(),
@@ -1019,7 +996,7 @@ const employees = table("employees", {
 const base = pipe(
   employees,
   filter((e) => isNull(e.manager_id)),
-  pick("id", "name", "manager_id")
+  map((e) => ({ id: e.id, name: e.name, manager_id: e.manager_id }))
 );
 
 const orgTree = pipe(
@@ -1037,5 +1014,5 @@ const orgTree = pipe(
   ))
 );
 
-const q = pipe(orgTree, pick("id", "name"));
+const q = pipe(orgTree, map((e) => ({ id: e.id, name: e.name })));
 ```

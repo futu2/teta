@@ -3,9 +3,7 @@ import {
   TetaUserError,
   add,
   and,
-  coalesce,
   eq,
-  extend,
   filter,
   filterEq,
   filterGt,
@@ -27,17 +25,12 @@ import {
   ne,
   onEq,
   or,
-  drop,
-  pick,
   pipe,
-  rename,
-  replace,
   sort,
   t,
   table,
   toSql,
   unnest,
-  when,
 } from "../mod.ts";
 import type { TetaErrorCode } from "../mod.ts";
 import {
@@ -58,12 +51,6 @@ function expectTetaUserError(fn: () => unknown, code: TetaErrorCode): void {
 }
 
 describe("callback column api", () => {
-  test("exports projection helpers as query steps", () => {
-    expect(typeof pick("id")).toBe("function");
-    expect(typeof drop("id")).toBe("function");
-    expect(typeof rename((key) => key)).toBe("function");
-  });
-
   test("supports variadic and for callback filters", () => {
     const users = createUsersPipelineTable();
     const expected = pipe(
@@ -160,171 +147,6 @@ describe("callback column api", () => {
         toSql(expected, { dialect: "postgresql", format: "compact" })
       );
     }
-  });
-
-  test("supports drop as a direct query step", () => {
-    const users = createUsersPipelineTable();
-    const expected = pipe(users, map((user) => ({
-      id: user.id,
-      name: user.name,
-      active: user.active,
-    })));
-    const actual = pipe(users, drop("age"));
-
-    expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
-      toSql(expected, { dialect: "postgresql", format: "compact" })
-    );
-  });
-
-  test("supports extend as a direct query step", () => {
-    const users = createUsersPipelineTable();
-    const expected = pipe(users, map((user) => ({
-      id: user.id,
-      name: user.name,
-      age: user.age,
-      active: user.active,
-      normalized_name: coalesce(replace(user.name, " ", "_"), "unknown"),
-    })));
-    const actual = pipe(users, extend("normalized_name", (user) =>
-      coalesce(replace(user.name, " ", "_"), "unknown")
-    ));
-
-    expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
-      toSql(expected, { dialect: "postgresql", format: "compact" })
-    );
-  });
-
-  test("supports extend with callback selection", () => {
-    const users = createUsersPipelineTable();
-    const expected = pipe(users, map((user) => ({
-      id: user.id,
-      name: user.name,
-      age: user.age,
-      active: user.active,
-      active_label: when(user.active, "active", true, "inactive"),
-    })));
-    const actual = pipe(users, extend("active_label", (user) =>
-      when(user.active, "active", true, "inactive")
-    ));
-
-    expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
-      toSql(expected, { dialect: "postgresql", format: "compact" })
-    );
-  });
-
-  test("supports extend replacing an existing column", () => {
-    const users = createUsersPipelineTable();
-    const expected = pipe(users, map((user) => ({
-      id: user.id,
-      name: coalesce(replace(user.name, " ", "_"), "unknown"),
-      age: user.age,
-      active: user.active,
-    })));
-    const actual = pipe(users, extend("name", (user) =>
-      coalesce(replace(user.name, " ", "_"), "unknown")
-    ));
-
-    expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
-      toSql(expected, { dialect: "postgresql", format: "compact" })
-    );
-  });
-
-  test("supports extend with a single named column", () => {
-    const users = createUsersPipelineTable();
-    const expected = pipe(users, map((user) => ({
-      id: add(user.id, 100),
-      name: user.name,
-      age: user.age,
-      active: user.active,
-    })));
-    const actual = pipe(users, extend("id", (user) => add(user.id, 100)));
-
-    expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
-      toSql(expected, { dialect: "postgresql", format: "compact" })
-    );
-  });
-
-  test("reports missing picked columns", () => {
-    const users = createUsersTable();
-
-    expectTetaUserError(
-      // @ts-expect-error exercising runtime validation for an unknown dynamic column
-      () => pipe(users, pick("missing")),
-      "DEFERRED_COLUMN_UNKNOWN"
-    );
-  });
-
-  test("does not treat inherited object properties as columns", () => {
-    const users = createUsersTable();
-
-    expectTetaUserError(
-      () => pipe(users, pick("toString")),
-      "DEFERRED_COLUMN_UNKNOWN"
-    );
-  });
-
-  test("reports missing dropped columns", () => {
-    const users = createUsersTable();
-
-    expectTetaUserError(
-      // @ts-expect-error exercising runtime validation for an unknown dynamic column
-      () => pipe(users, drop("missing")),
-      "DEFERRED_COLUMN_UNKNOWN"
-    );
-  });
-
-  test("supports pick as a direct query step", () => {
-    const users = createUsersTable();
-    const expected = pipe(users, map((user) => ({ id: user.id, name: user.name })));
-    const actual = pipe(users, pick("id", "name"));
-
-    expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
-      toSql(expected, { dialect: "postgresql", format: "compact" })
-    );
-  });
-
-  test("supports rename as a direct query step", () => {
-    const users = createUsersPipelineTable();
-    const expected = pipe(users, map((user) => ({
-      user_id: user.id,
-      user_name: user.name,
-      user_age: user.age,
-      user_active: user.active,
-    })));
-    const actual = pipe(users, rename((key) => `user_${key}`));
-
-    expect(toSql(actual, { dialect: "postgresql", format: "compact" })).toBe(
-      toSql(expected, { dialect: "postgresql", format: "compact" })
-    );
-  });
-
-  test("supports prototype-sensitive output names", () => {
-    const users = table("users", { id: t.int() });
-    const query = pipe(users, rename(() => "__proto__" as const));
-
-    expect(Object.keys(query.columns)).toEqual(["__proto__"]);
-    expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe(
-      "SELECT users_0.id AS __proto__ FROM users AS users_0"
-    );
-  });
-
-  test("keeps fixed literal rename keys aligned with runtime columns", () => {
-    const users = table("users", { id: t.int() });
-    const query = pipe(users, rename(() => "fixed_name" as const));
-
-    expect(Object.keys(query.columns)).toEqual(["fixed_name"]);
-    expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe(
-      "SELECT users_0.id AS fixed_name FROM users AS users_0"
-    );
-  });
-
-  test("rejects rename callbacks that collapse multiple columns", () => {
-    const users = createUsersTable();
-
-    expectTetaUserError(
-      () => pipe(users, rename(() => "duplicate" as const)),
-      "DEFERRED_INPUT_INVALID"
-    );
   });
 
   test("matches callback SQL for onEq join predicates", () => {

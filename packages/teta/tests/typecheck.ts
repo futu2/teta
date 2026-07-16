@@ -1,6 +1,6 @@
 import type { Column, Expr, Query, JoinKind, JoinOptions, SqlBigInt, SqlBoolean, SqlBytes, SqlDate, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlNumber, SqlString, SqlTimestamp, SqlUuid, UnnestOptions, UnnestSelection, } from "../mod.ts";
 import * as publicApi from "../mod.ts";
-import { between, composeSteps, filter, filterEq, filterNe, filterGt, filterGte, filterLt, filterLte, fullJoin, fullJoinMerge, identityStep, innerJoin, innerJoinMap, innerJoinMerge, isDistinctFrom, isIn, isNotIn, join, leftJoin, leftJoinMap, leftJoinMerge, rightJoin, rightJoinMerge, take, takeWithin, sort, param, lit, map, rename, pipe, flow, table, t, fold, asc, desc, eq, gt, upper, add, mul, coalesce, count, group, loop, sum, and, or, isNotNull, sub, when, mapShape, groupShape, lt, unnest, unionAll, union, unlessStep, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, asBigInt, asBoolean, asBytes, asDate, asDecimal, asFloat, asInt, asJson, asString, asTimestamp, asUuid, pick, drop, extend, whenStep } from "../mod.ts";
+import { between, composeSteps, currentDate, currentTimestamp, dateAdd, filter, filterEq, filterNe, filterGt, filterGte, filterLt, filterLte, fullJoin, fullJoinMerge, identityStep, innerJoin, innerJoinMap, innerJoinMerge, isDistinctFrom, isIn, isNotIn, join, leftJoin, leftJoinMap, leftJoinMerge, rightJoin, rightJoinMerge, take, takeWithin, sort, param, lit, map, pipe, flow, table, t, fold, asc, desc, eq, gt, upper, add, mul, coalesce, count, group, loop, sum, and, or, isNotNull, sub, when, mapShape, groupShape, lt, unnest, unionAll, union, unlessStep, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, asBigInt, asBoolean, asBytes, asDate, asDecimal, asFloat, asInt, asJson, asString, asTimestamp, asUuid, whenStep } from "../mod.ts";
 type Equal<A, B> = ((<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false);
 type Expect<T extends true> = T;
 type ExprType<TExpr> = TExpr extends Expr<infer TValue> ? TValue : TExpr extends Column<infer TValue, string> ? TValue : never;
@@ -30,6 +30,10 @@ const booleanLiteralExpr = lit(true);
 const nullLiteralExpr = lit(null);
 const dateLiteralExpr = lit({ kind: "date_literal", value: "2026-06-03" });
 const timestampLiteralExpr = lit({ kind: "timestamp_literal", value: "2026-06-03 12:00:00" });
+const currentDateExpr = currentDate();
+const currentTimestampExpr = currentTimestamp();
+const currentDatePlusDayExpr = dateAdd(currentDateExpr, "day", 1);
+const currentTimestampPlusDayExpr = dateAdd(currentTimestampExpr, "day", 1);
 const stringParamExpr = param<SqlString>("some_string");
 const numberParamExpr = param<SqlNumber>("some_number");
 const bigintParamExpr = param<SqlBigInt>("some_bigint");
@@ -191,10 +195,10 @@ pipe(users, takeWithin({
     orderBy: (user) => user.id,
     count: 1,
 }));
-const extendedUsers = pipe(users, extend("name_upper", (user) => upper(user.name)));
-const singleReplacedExtendedUsers = pipe(users, extend("id", (user) => add(user.id, 100)));
-const replacedExtendedUsers = pipe(users, extend("id", (user) => asString(user.id)));
-const pickedUsers = pipe(users, pick("id", "name"));
+const extendedUsers = pipe(users, map((user) => ({ id: user.id, name: user.name, name_upper: upper(user.name) })));
+const singleReplacedExtendedUsers = pipe(users, map((user) => ({ id: add(user.id, 100), name: user.name })));
+const replacedExtendedUsers = pipe(users, map((user) => ({ id: asString(user.id), name: user.name })));
+const pickedUsers = pipe(users, map((user) => ({ id: user.id, name: user.name })));
 const callbackFilteredUsers = pipe(users, filter((user) => eq(user.id, 1)));
 const filterEqCallbackNameUsers = pipe(users, filterEq((user) => user.name, "Ada"));
 const filterEqCallbackIdUsers = pipe(users, filterEq((user) => user.id, 1));
@@ -230,8 +234,6 @@ const callbackAggregatedOrders = pipe(orders, fold((order) => ({
     total_spend: sum(order.total),
 })));
 const callbackExplodedSessions = pipe(sessions, unnest((session) => session.tags, { value: "tag" }));
-// @ts-expect-error pick rejects unknown columns when applied to a typed query
-const invalidPickedUsers = pipe(users, pick("missing"));
 const curriedPipeline = pipe(users, filter((user: typeof users.columns) => gt(user.id, 0)), map((user) => ({
     id: user.id,
     name: upper(user.name),
@@ -242,7 +244,7 @@ const flowNumberToString = flow(
 );
 const flowPipeline = flow(
     filter((user: typeof users.columns) => gt(user.id, 0)),
-    pick("id"),
+    map((user) => ({ id: user.id })),
 );
 const flowPipelineResult = flowPipeline(users);
 const storedIdentityPipeline = composeSteps();
@@ -252,7 +254,7 @@ const storedIdentityName: Expr<SqlString> = storedIdentityResult.columns.name;
 const pipedStoredIdentityResult = pipe(users, storedIdentityPipeline);
 const pipedStoredIdentityName: Expr<SqlString> = pipedStoredIdentityResult.columns.name;
 const schemaBoundPickPipeline = composeSteps(
-    (query: typeof users) => pipe(query, pick("id")),
+    (query: typeof users) => pipe(query, map((user) => ({ id: user.id }))),
     take(1),
 );
 const schemaBoundPickResult = pipe(users, schemaBoundPickPipeline);
@@ -340,21 +342,26 @@ const curriedJoin = pipe(users, leftJoin(
     orders,
     (user: typeof users.columns, order: typeof orders.columns) => eq(user.id, order.user_id)
 ));
-const directPickedSelection = pipe(users, pick("id"));
-const directKeyMappedSelection = pipe(users, rename((key) => `prefix1_${key}`));
-const multiPrefixRenamedSelection = pipe(users, rename((key) => `pre_fix_${key}`));
+const directPickedSelection = pipe(users, map((user) => ({ id: user.id })));
+const directKeyMappedSelection = pipe(users, map((user) => ({ prefix1_id: user.id, prefix1_name: user.name })));
+const multiPrefixRenamedSelection = pipe(users, map((user) => ({ pre_fix_id: user.id, pre_fix_name: user.name })));
 const multiPrefixRenamedId: Expr<SqlInt> = multiPrefixRenamedSelection.columns.pre_fix_id;
 // @ts-expect-error a multi-segment prefix must retain the finite source keys
 multiPrefixRenamedSelection.columns.pre_fix_missing;
 const fixedRenamedSelection = pipe(
     table("rename_source", { id: t.int() }),
-    rename(() => "fixed_name" as const),
+    map((row) => ({ fixed_name: row.id })),
 );
 const fixedRenamedName: Expr<SqlInt> = fixedRenamedSelection.columns.fixed_name;
-// @ts-expect-error a fixed rename result must not invent a key-derived column name
+// @ts-expect-error a fixed projection must not invent another column name
 fixedRenamedSelection.columns.fixed_id;
-const droppedUsers = pipe(users, drop("name"));
-const directDroppedProfiles = pipe(profiles, drop("avatar", "metadata"));
+const droppedUsers = pipe(users, map((user) => ({ id: user.id })));
+const directDroppedProfiles = pipe(profiles, map((profile) => ({
+    id: profile.id,
+    external_id: profile.external_id,
+    credit_limit: profile.credit_limit,
+    nickname: profile.nickname,
+})));
 const directKeyMappedUsage = pipe(directKeyMappedSelection, map((user) => ({
     id: user.prefix1_id,
     name: user.prefix1_name,
@@ -459,6 +466,8 @@ const nullableEventTimestamp = asTimestamp(events.columns.event_ts);
 const rawTimestampDate = asDate(rawTimestampRows.columns.raw_ts);
 const rawTimestampTimestamp = asTimestamp(rawTimestampRows.columns.raw_ts);
 const nullableEventDate = asDate(events.columns.event_ts);
+const eventDatePlusDay = dateAdd(events.columns.event_date, "day", 1);
+const nullableEventTimestampPlusDay = dateAdd(events.columns.event_ts, "day", 1);
 type _LeftJoinTotal = Expect<Equal<ExprType<typeof leftJoined.columns.total>, SqlFloat | null>>;
 type _ExplodedTag = Expect<Equal<ExprType<typeof explodedSessions.columns.tag>, SqlString>>;
 type _ExplodedTagIndex = Expect<Equal<ExprType<typeof explodedSessions.columns.tag_index>, SqlInt>>;
@@ -511,6 +520,10 @@ type _BooleanLiteralExpr = Expect<Equal<ExprType<typeof booleanLiteralExpr>, Sql
 type _NullLiteralExpr = Expect<Equal<ExprType<typeof nullLiteralExpr>, null>>;
 type _DateLiteralExpr = Expect<Equal<ExprType<typeof dateLiteralExpr>, SqlDate>>;
 type _TimestampLiteralExpr = Expect<Equal<ExprType<typeof timestampLiteralExpr>, SqlTimestamp>>;
+type _CurrentDateExpr = Expect<Equal<ExprType<typeof currentDateExpr>, SqlDate>>;
+type _CurrentTimestampExpr = Expect<Equal<ExprType<typeof currentTimestampExpr>, SqlTimestamp>>;
+type _CurrentDatePlusDayExpr = Expect<Equal<ExprType<typeof currentDatePlusDayExpr>, SqlDate>>;
+type _CurrentTimestampPlusDayExpr = Expect<Equal<ExprType<typeof currentTimestampPlusDayExpr>, SqlTimestamp>>;
 type _StringParamExpr = Expect<Equal<ExprType<typeof stringParamExpr>, SqlString>>;
 type _NumberParamExpr = Expect<Equal<ExprType<typeof numberParamExpr>, SqlNumber>>;
 type _BigintParamExpr = Expect<Equal<ExprType<typeof bigintParamExpr>, SqlBigInt>>;
@@ -601,6 +614,8 @@ type _NullableEventTimestamp = Expect<Equal<ExprType<typeof nullableEventTimesta
 type _RawTimestampDate = Expect<Equal<ExprType<typeof rawTimestampDate>, SqlDate>>;
 type _RawTimestampTimestamp = Expect<Equal<ExprType<typeof rawTimestampTimestamp>, SqlTimestamp>>;
 type _NullableEventDate = Expect<Equal<ExprType<typeof nullableEventDate>, SqlDate | null>>;
+type _EventDatePlusDay = Expect<Equal<ExprType<typeof eventDatePlusDay>, SqlDate>>;
+type _NullableEventTimestampPlusDay = Expect<Equal<ExprType<typeof nullableEventTimestampPlusDay>, SqlTimestamp | null>>;
 void leftSelected;
 void rightSelected;
 void fullSelected;
@@ -677,7 +692,6 @@ void uuidFilteredProfiles;
 void bigintFilteredProfiles;
 void nullableFilterGtCallbackUsers;
 void nullableFilterGtRightCallbackUsers;
-void invalidPickedUsers;
 // @ts-expect-error filter predicates must return boolean expressions
 pipe(users, filter((user) => user.name));
 composeSteps(
@@ -765,10 +779,6 @@ pipe(users, map((user) => ({
     // @ts-expect-error callbacks reject unknown current-row columns in map context
     missing: user.missing,
 })));
-// @ts-expect-error extend rejects unknown callback columns when applied to a typed query
-pipe(users, extend("broken", (user) => user.missing));
-// @ts-expect-error extend expects a single column name before the callback
-pipe(users, extend((user) => ({ broken: user.id })));
 pipe(orders, fold((order) => ({
     // @ts-expect-error callbacks reject unknown current-row columns in fold context
     total: sum(order.missing),
@@ -820,7 +830,7 @@ const profileRowsWithUserId = values([
 pipe(users, innerJoinMerge(
     profileRowsWithUserId,
     (user, profile) => eq(user.id, profile.user_id),
-    // @ts-expect-error prefixOverlapLeft can still collide with right-side keys after rename
+    // @ts-expect-error prefixOverlapLeft can still collide with right-side keys after prefixing
     prefixOverlapLeft("user_")
 ));
 const leftRowsWithUserId = values([
@@ -890,23 +900,15 @@ pipe(unionIdOnly, union(users));
 // @ts-expect-error unionAll rejects incompatible SQL value types
 pipe(users, unionAll(table("users_v3", { id: t.int(), name: t.int() })));
 // @ts-expect-error loop recursive steps cannot drop columns
-pipe(users, loop((self) => pipe(self, pick("id"))));
+pipe(users, loop((self) => pipe(self, map((row) => ({ id: row.id })))));
 // @ts-expect-error loop recursive steps cannot add columns
-pipe(loopBase, loop((self) => pipe(self, extend("extra", (row) => row.id))));
+pipe(loopBase, loop((self) => pipe(self, map((row) => ({ id: row.id, extra: row.id })))));
 // @ts-expect-error loop recursive steps cannot change column value types
 pipe(loopBase, loop((self) => pipe(self, map((row) => ({ id: asString(row.id) })))));
 // @ts-expect-error unnest selectors must reject undefined
 pipe(sessions, unnest(undefined, { value: "tag" }));
-// @ts-expect-error rename should reject unknown direct renamed fields
+// @ts-expect-error map should reject unknown source fields
 pipe(directKeyMappedSelection, map((user) => ({ broken: user.prefix1_na })));
-// @ts-expect-error drop rejects unknown columns when applied to a typed query
-pipe(users, drop("missing"));
-// @ts-expect-error pick is a query step, not a map selector
-pipe(users, map(pick("id")));
-// @ts-expect-error drop is a query step, not a map selector
-pipe(users, map(drop("name")));
-// @ts-expect-error rename is a query step, not a map selector
-pipe(users, map(rename((key) => `prefix2_${key}`)));
 // @ts-expect-error map is curried-only
 map(users, (user) => ({ id: user.id }));
 // @ts-expect-error filter is curried-only
