@@ -6,6 +6,7 @@ import {
   exprToSql,
   exprToSqlResult,
   ir,
+  irToAst,
   irToSql,
   irToSqlResult,
   type ExprNode,
@@ -70,6 +71,39 @@ describe("sql backend renderer", () => {
       sql: "SELECT users_0.id FROM users AS users_0",
       params: [],
     });
+  });
+
+  test("lowers portable take stages through dialect-native syntax", () => {
+    const target = {
+      ...simpleIR,
+      stages: [{
+        kind: "take",
+        count: 10,
+        projectAll: [{
+          expr: {
+            kind: "column",
+            table: simpleIR.scopeId,
+            name: "id",
+          },
+          as: null,
+        }],
+      }],
+    } satisfies PortableQueryIR;
+
+    expect(irToSql(target, { dialect: "db2" })).toEndWith(
+      "FETCH FIRST 10 ROWS ONLY"
+    );
+    expect(irToSql(target, { dialect: "transactsql" })).toStartWith(
+      "SELECT TOP 10 "
+    );
+    expect(irToAst(target, { dialect: "db2" })).toHaveProperty(
+      "limit.fetch.value.value",
+      10
+    );
+    expect(irToAst(target, { dialect: "transactsql" })).toHaveProperty(
+      "top.value",
+      10
+    );
   });
 
   test("reserves an explicit parameter name emitted before an automatic parameter", () => {

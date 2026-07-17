@@ -86,10 +86,20 @@ function validateQueryTarget(value: Record<string, unknown>, path: string): void
   }
 
   if (value.withs !== undefined) {
-    asArray(value.withs, `${path}.withs`).forEach((cte, index) =>
-      validateCte(cte, `${path}.withs[${index}]`)
-    );
+    validateCteList(value.withs, `${path}.withs`);
   }
+}
+
+function validateCteList(value: unknown, path: string): void {
+  const names = new Set<string>();
+  asArray(value, path).forEach((cte, index) => {
+    const ctePath = `${path}[${index}]`;
+    const name = validateCte(cte, ctePath);
+    if (names.has(name)) {
+      invalid(`${ctePath}.name`, "must be unique within the WITH list");
+    }
+    names.add(name);
+  });
 }
 
 function validateQuerySpec(value: unknown, path: string): void {
@@ -586,21 +596,29 @@ function validateJoinSource(value: unknown, path: string): void {
   invalid(`${path}.kind`, "must be table or subquery");
 }
 
-function validateCte(value: unknown, path: string): void {
+function validateCte(value: unknown, path: string): string {
   const cte = asRecord(value, path);
   if (cte.kind === "query") {
     assertKnownKeys(cte, path, ["kind", "name", "query"]);
     validateAlias(cte.name, `${path}.name`);
     validateQuerySpec(cte.query, `${path}.query`);
-    return;
+    return cte.name as string;
   }
   if (cte.kind === "recursive") {
     assertKnownKeys(cte, path, ["kind", "name", "columnNames", "base", "step"]);
     validateAlias(cte.name, `${path}.name`);
-    validateColumnNames(cte.columnNames, `${path}.columnNames`);
+    const columnNames = validateColumnNames(cte.columnNames, `${path}.columnNames`);
     validateQuerySpec(cte.base, `${path}.base`);
     validateQuerySpec(cte.step, `${path}.step`);
-    return;
+    const base = asRecord(cte.base, `${path}.base`);
+    const step = asRecord(cte.step, `${path}.step`);
+    if (!sameNames(columnNames, base.columnNames)) {
+      invalid(`${path}.base.columnNames`, "must match the recursive CTE columns");
+    }
+    if (!sameNames(columnNames, step.columnNames)) {
+      invalid(`${path}.step.columnNames`, "must match the recursive CTE columns");
+    }
+    return cte.name as string;
   }
   invalid(`${path}.kind`, "must be query or recursive");
 }

@@ -257,7 +257,8 @@ pipe(users, sort((u) => [desc(u.age), asc(u.id)]));
 
 ### `take(count)`
 
-Limits the number of rows.
+Limits the number of rows. Rendering is dialect-aware: most targets use
+`LIMIT`, DB2 uses `FETCH FIRST`, and Transact-SQL uses `TOP`.
 
 ```ts
 function take<T extends QueryColumns>(count: number): QueryStep<T, T>

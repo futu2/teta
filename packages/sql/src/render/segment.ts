@@ -2,13 +2,14 @@ import type { QueryDialect } from "../types.ts";
 import { createDictionary } from "../dictionary.ts";
 import { isInternalScopeName, type ExprNode, type ScopeId, type SqlIdentifier, type Stage } from "../ir/types.ts";
 import { projectionItemsToIdentifierMap } from "../ir/utils.ts";
-import type { FromAst, GroupByAst, LimitAst, OrderByAst, ScopeBindings, SelectAst, SelectColumnAst } from "./types.ts";
+import type { FromAst, GroupByAst, OrderByAst, ScopeBindings, SelectAst, SelectColumnAst } from "./types.ts";
 import { ensureAlias } from "./ast.ts";
 import { bindExprScopes, exprToAst, getSqlRenderContext } from "./render.ts";
 import { sourceToFrom, type CompileSourceRef, buildSqlSelectAst } from "./source.ts";
 import { registerColumnIdentifierBindings, renderIdentifier } from "./identifiers.ts";
 import { bindFusedExpr, expandProjectedColumns, type ScopeExprLookup } from "./fused.ts";
 import type { StagePlanningState } from "./planner.ts";
+import { applyTake } from "./take.ts";
 
 export type CompiledSegment = {
   ast: SelectAst;
@@ -140,25 +141,20 @@ export function buildCompiledSegment(
         type: item.direction,
       }))
     : null;
-  const limit: LimitAst | null = limitStage
-    ? {
-        seperator: "",
-        value: [{ type: "number", value: limitStage.count }],
-      }
-    : null;
+  const ast = buildSqlSelectAst({
+    from,
+    columns,
+    where: whereExpr ? exprToAst(whereExpr) : null,
+    groupby,
+    having: havingExpr ? exprToAst(havingExpr) : null,
+    qualify: qualifyExpr ? exprToAst(qualifyExpr) : null,
+    orderby,
+    limit: null,
+    distinct,
+  });
 
   return {
-    ast: buildSqlSelectAst({
-      from,
-      columns,
-      where: whereExpr ? exprToAst(whereExpr) : null,
-      groupby,
-      having: havingExpr ? exprToAst(havingExpr) : null,
-      qualify: qualifyExpr ? exprToAst(qualifyExpr) : null,
-      orderby,
-      limit,
-      distinct,
-    }),
+    ast: limitStage ? applyTake(ast, limitStage.count, dialect) : ast,
     consumed,
     output: {
       scopeId: projection?.outputScopeId ?? currentScopeId,

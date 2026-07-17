@@ -889,6 +889,14 @@ values([
 t.array({});
 // @ts-expect-error map projections reject arbitrary objects
 pipe(users, map(() => ({ payload: {} })));
+// @ts-expect-error arbitrary host objects are not SQL expression inputs
+publicApi.isNull({ payload: 1 });
+// @ts-expect-error equality operands must be expressions or SQL literals
+eq({ payload: 1 }, { payload: 1 });
+// @ts-expect-error aggregate operands must be expressions or SQL literals
+count({ payload: 1 });
+// @ts-expect-error custom function arguments must be expressions or SQL literals
+publicApi.fn("custom_fn", { payload: 1 });
 // @ts-expect-error fold requires grouped or aggregate expressions
 pipe(orders, fold((order) => ({ user_id: order.user_id, total_spend: sum(order.total) })));
 // @ts-expect-error comparisons reject incompatible SQL domains

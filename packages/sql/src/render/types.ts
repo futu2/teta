@@ -166,9 +166,34 @@ export type GroupByAst = {
   modifiers: AstValueExpr<string>[];
 };
 
-export type LimitAst = {
+export type StandardLimitAst = {
   seperator: string;
   value: Array<{ type: string; value: number }>;
+};
+
+type Db2LimitKeywordAst = {
+  type: "origin";
+  value: string;
+};
+
+type Db2LimitValueAst = {
+  prefix: Db2LimitKeywordAst[];
+  value: { type: "number"; value: number };
+  suffix: Db2LimitKeywordAst[];
+};
+
+/** DB2's FETCH FIRST/NEXT representation used by node-sql-parser. */
+export type Db2LimitAst = {
+  offset?: Db2LimitValueAst;
+  fetch: Db2LimitValueAst;
+};
+
+export type LimitAst = StandardLimitAst | Db2LimitAst;
+
+export type TopAst = {
+  value: number;
+  percent: null;
+  parentheses?: boolean;
 };
 
 export type SubqueryFromAst = {
@@ -217,6 +242,7 @@ export type SelectAst = Omit<
   qualify?: ParserExprAst | null;
   orderby: OrderByAst[] | null;
   limit: LimitAst | null;
+  top?: TopAst | null;
   options: unknown[] | null;
   window?: unknown;
   into?: { position: null };

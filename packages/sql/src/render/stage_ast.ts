@@ -17,6 +17,7 @@ import {
   sourceToFrom,
   type CompileSourceRef,
 } from "./source.ts";
+import { applyTake } from "./take.ts";
 
 export type StageRenderContext = {
   baseFrom: FromAst;
@@ -114,7 +115,7 @@ export function buildTakeStageAst(
   stage: Extract<Stage, { kind: "take" }>,
   context: StageRenderContext
 ): SelectAst {
-  return buildSqlSelectAst({
+  const ast = buildSqlSelectAst({
     from: [context.baseFrom],
     columns: renderBoundProjectionItems(
       stage.projectAll,
@@ -126,11 +127,9 @@ export function buildTakeStageAst(
     having: null,
     qualify: null,
     orderby: null,
-    limit: {
-      seperator: "",
-      value: [{ type: "number", value: stage.count }],
-    },
+    limit: null,
   });
+  return applyTake(ast, stage.count, context.dialect);
 }
 
 export function buildDistinctStageAst(

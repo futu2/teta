@@ -38,6 +38,28 @@ describe("render strategy", () => {
         expect(sql).toContain("cte_1(id) AS");
         expect(sql).toContain("LIMIT 1");
     });
+    test("both render strategies preserve dialect-specific take syntax", () => {
+        const users = table("users", {
+            id: t.int(),
+            active: t.boolean(),
+        });
+        const query = pipe(
+            users,
+            filter((user) => eq(user.active, true)),
+            map((user) => ({ id: user.id })),
+            take(1)
+        );
+
+        for (const renderStrategy of ["optimized", "readable"] as const) {
+            const db2 = toSql(query, { dialect: "db2", renderStrategy });
+            expect(db2).toContain("FETCH FIRST 1 ROWS ONLY");
+            expect(db2).not.toContain("LIMIT 1");
+
+            const transactSql = toSql(query, { dialect: "transactsql", renderStrategy });
+            expect(transactSql).toContain("SELECT TOP 1 ");
+            expect(transactSql).not.toContain("LIMIT 1");
+        }
+    });
     test("readable strategy still dedupes identical hoisted join subqueries", () => {
         const users = table("users", {
             id: t.int(),

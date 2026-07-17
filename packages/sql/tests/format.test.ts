@@ -23,6 +23,17 @@ describe("format helpers", () => {
     ].join("\n"));
   });
 
+  test("pretty formats DB2 pagination clauses", () => {
+    expect(formatSqlPretty(
+      "SELECT users.id FROM users ORDER BY users.id FETCH FIRST 10 ROWS ONLY"
+    )).toBe([
+      "SELECT users.id",
+      "FROM users",
+      "ORDER BY users.id",
+      "FETCH FIRST 10 ROWS ONLY",
+    ].join("\n"));
+  });
+
   test("strips only redundant identifier quotes", () => {
     expect(
       stripRedundantQuotes('SELECT "users"."name", "select" FROM `orders` JOIN [group] ON "users"."id" = `orders`."user_id"')

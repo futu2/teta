@@ -95,6 +95,10 @@ Stages use these discriminators:
 | `join`, `unnest` | Introduce a temporary right scope, then create a fresh output scope. |
 | `union` | Requires matching output column names on both sides and creates a fresh output scope. |
 
+The `take` stage remains dialect-neutral in portable IR. The renderer lowers
+it to the target's native row-limit form (`LIMIT`, DB2 `FETCH FIRST`, or
+Transact-SQL `TOP`) only after dialect resolution.
+
 For a table join, `source.columnNames` is required. It declares the logical
 columns visible through `rightScopeId`; the renderer derives its own physical
 SQL identifier map from those names. For a subquery join, the nested query's
@@ -114,6 +118,8 @@ generated. In particular, it enforces all of the following:
   stale pre-projection columns.
 - Join, unnest, union, CTE, and recursive-query shapes agree with their
   declared columns and scopes.
+- Names in one `withs` list are unique. A recursive CTE's declared columns,
+  base output, and recursive-step output match exactly and in order.
 
 Validation is structural and semantic, but it is not a database schema check.
 For example, the backend can verify that a join references a declared

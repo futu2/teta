@@ -7,7 +7,9 @@ export function toParserSelect(ast: SelectAst): Select {
   if (!isParserSelect(ast)) {
     internalError("INTERNAL_PARSER_SELECT_EXPECTED", "Internal error: generated AST is not a parser-compatible SELECT");
   }
-  return ast;
+  // node-sql-parser's public Select type omits dialect-specific TOP and DB2
+  // FETCH shapes even though its parsers and SQL generators support both.
+  return ast as unknown as Select;
 }
 
 export function toParserAst(ast: SelectAst): AST {

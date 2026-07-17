@@ -14,7 +14,10 @@ const PRETTY_KEYWORDS = [
   "UNION ALL",
   "UNION",
   "ORDER BY",
+  "FETCH FIRST",
+  "FETCH NEXT",
   "LIMIT",
+  "OFFSET",
   "ON",
 ];
 

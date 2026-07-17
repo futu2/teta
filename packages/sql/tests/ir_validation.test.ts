@@ -14,6 +14,7 @@ import {
   validateQueryIR,
   type ExprNode,
   type PortableQueryIR,
+  type PortableQuerySpec,
 } from "../mod.ts";
 
 function assertReadonlyIrTypes(target: PortableQueryIR, expr: ExprNode<unknown>): void {
@@ -85,6 +86,23 @@ function validTableJoinTarget(): PortableQueryIR {
     }],
     scopeId: usersScope,
     columnNames: ["id", "user_id"],
+  };
+}
+
+function validQuerySpec(
+  scopeId: string,
+  columnNames: readonly string[] = ["id"]
+): PortableQuerySpec {
+  return {
+    source: {
+      db: null,
+      schema: null,
+      table: { name: "rows", quoted: false },
+      as: null,
+    },
+    stages: [],
+    scopeId,
+    columnNames,
   };
 }
 
@@ -365,6 +383,53 @@ describe("public query IR v1", () => {
         }],
       }),
       "query.columnNames"
+    );
+  });
+
+  test("enforces WITH-list and recursive CTE column invariants", () => {
+    const first = {
+      kind: "query" as const,
+      name: "shared_rows",
+      query: validQuerySpec("__teta_scope_first"),
+    };
+    const second = {
+      kind: "query" as const,
+      name: "shared_rows",
+      query: validQuerySpec("__teta_scope_second"),
+    };
+    expectInvalid(
+      () => validateQueryIR({ ...validTarget(), withs: [first, second] }),
+      "query.withs[1].name"
+    );
+
+    const recursive = {
+      kind: "recursive" as const,
+      name: "recursive_rows",
+      columnNames: ["id"],
+      base: validQuerySpec("__teta_scope_base"),
+      step: validQuerySpec("__teta_scope_step"),
+    };
+    validateQueryIR({ ...validTarget(), withs: [recursive] });
+
+    expectInvalid(
+      () => validateQueryIR({
+        ...validTarget(),
+        withs: [{
+          ...recursive,
+          base: validQuerySpec("__teta_scope_base", ["other_id"]),
+        }],
+      }),
+      "query.withs[0].base.columnNames"
+    );
+    expectInvalid(
+      () => validateQueryIR({
+        ...validTarget(),
+        withs: [{
+          ...recursive,
+          step: validQuerySpec("__teta_scope_step", ["other_id"]),
+        }],
+      }),
+      "query.withs[0].step.columnNames"
     );
   });
 
