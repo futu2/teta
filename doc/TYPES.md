@@ -89,6 +89,7 @@ These keep the same `TColumns`:
 - `filter(...)`
 - `sort(...)`
 - `take(...)`
+- `distinct()`
 
 ```ts
 import { eq, filter, pipe } from "@teta/teta";
@@ -293,11 +294,12 @@ const top10ActiveUsers = pipe(
 );
 ```
 
-Inside that pipeline, `filter((user) => eq(user.active, true))` and `take(10)` are callable `QueryStep<TIn, TOut>` values.
+Inside that pipeline, `filter((user) => eq(user.active, true))`, `distinct()`, and `take(10)` are callable `QueryStep<TIn, TOut>` values.
 
 - `filter(...)` returns `QueryStep<T, T>`
 - `map(...)` returns `QueryStep<TIn, TOut>` with a new output shape
 - `take(...)` returns `QueryStep<T, T>`
+- `distinct()` returns `QueryStep<T, T>`
 - `flow(...)` composes query steps and preserves each intermediate type for ordinary pipeline lengths.
 - `filterEq(...)` and related helpers return `QueryStep<T, T>` and use row callbacks when operands come from query columns.
 

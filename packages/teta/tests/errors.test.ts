@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { TetaUserError, asc, count, eq, filter, fold, fullJoin, group, innerJoin, innerJoinMerge, join, leftJoin, loop, map, onEq, prefixOverlapLeft, rightJoin, sort, t, table, take, takeWithin, toSql, unlessStep, unnest, usingCols, values, whenStep, pipe } from "../mod.ts";
+import { TetaUserError, asc, count, distinct, eq, filter, fold, fullJoin, group, innerJoin, innerJoinMerge, join, leftJoin, loop, map, onEq, prefixOverlapLeft, rightJoin, sort, t, table, take, takeWithin, toSql, unlessStep, unnest, usingCols, values, whenStep, pipe } from "../mod.ts";
 import type { TetaErrorCode } from "../mod.ts";
 import { GROUP_INSIDE_AGGREGATE_FUNCTION_ERROR, GROUP_OUTSIDE_AGGREGATE_ERROR, JOIN_MERGE_CONFLICT_ERROR, JOIN_OVERLAPPING_COLUMNS_ERROR, LEGACY_SELECTION_ARRAY_ERROR, LOOP_COLUMN_MISMATCH_ERROR, NON_CANONICAL_POSTGRES_DIALECT_ERROR, TABLE_SCHEMA_EMPTY_ERROR, TABLE_SCHEMA_INVALID_ERROR, VALUES_COLUMN_MISMATCH_ERROR, VALUES_EMPTY_ERROR, VALUES_NO_COLUMNS_ERROR, VALUES_ROW_INVALID_ERROR, VALUES_UNDEFINED_ERROR } from "./helpers/expected-errors.ts";
 import { createOrdersTable, createUsersTable } from "./helpers/fixtures.ts";
@@ -297,6 +297,13 @@ describe("error paths", () => {
             () => pipe(orders, fold({} as never)),
             "DEFERRED_INPUT_INVALID",
             "fold() expects a row callback"
+        );
+    });
+    test("distinct rejects arguments", () => {
+        expectUserError(
+            () => (distinct as any)("name"),
+            "QUERY_HELPER_INVALID_ARGUMENTS",
+            "distinct() expects distinct()"
         );
     });
     test("rejects erased invalid map and fold callback returns with user errors", () => {

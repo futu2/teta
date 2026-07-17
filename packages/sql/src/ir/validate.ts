@@ -168,6 +168,7 @@ function validateQueryScopeSemantics(
         validateOrderScopeExpressions(stage.items, `${stagePath}.items`, environment);
         validateProjectionScopeExpressions(stage.projectAll, `${stagePath}.projectAll`, environment);
         return;
+      case "distinct":
       case "take":
         validateProjectionScopeExpressions(stage.projectAll, `${stagePath}.projectAll`, environment);
         return;
@@ -468,6 +469,9 @@ function validateStage(value: unknown, path: string): readonly string[] {
     case "sort":
       assertKnownKeys(stage, path, ["kind", "items", "projectAll"]);
       validateOrderItems(stage.items, `${path}.items`);
+      return validateProjectionItems(stage.projectAll, `${path}.projectAll`);
+    case "distinct":
+      assertKnownKeys(stage, path, ["kind", "projectAll"]);
       return validateProjectionItems(stage.projectAll, `${path}.projectAll`);
     case "take":
       assertKnownKeys(stage, path, ["kind", "count", "projectAll"]);

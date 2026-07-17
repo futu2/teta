@@ -141,6 +141,9 @@ export const loop: typeof import("./src/edsl/query.ts").loop = query.loop;
 /** Adds an `ORDER BY` clause using sort expressions. */
 export const sort: typeof import("./src/edsl/query.ts").sort = query.sort;
 
+/** Removes duplicate rows from the current query result. */
+export const distinct: typeof import("./src/edsl/query.ts").distinct = query.distinct;
+
 /** Projects each row into a new selected shape. */
 export const map: typeof import("./src/edsl/query.ts").map = query.map;
 

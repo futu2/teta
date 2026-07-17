@@ -14,6 +14,7 @@ import { internalError } from "../errors.ts";
 import type { CompiledSegment } from "./segment.ts";
 import {
   applyFusedJoinStage,
+  applyFusedDistinctStage,
   applyFusedLimitStage,
   applyFusedOrderStage,
   applyFusedProjectionStage,
@@ -108,6 +109,9 @@ export function tryBuildFusedSegmentAst(
           case "sort":
             applyFusedOrderStage(state, stage);
             continue;
+          case "distinct":
+            applyFusedDistinctStage(state, stage);
+            continue;
           case "take":
             applyFusedLimitStage(state, stage);
             continue;
@@ -170,12 +174,34 @@ export function tryBuildFusedSegmentAst(
           applyFusedOrderStage(state, stage);
           continue;
         }
+        if (stage.kind === "distinct" && !state.distinctStage) {
+          applyFusedDistinctStage(state, stage);
+          continue;
+        }
         if (stage.kind === "take" && !state.limitStage) {
           applyFusedLimitStage(state, stage);
           continue;
         }
         break;
       case "postorder":
+        if (stage.kind === "distinct" && !state.distinctStage) {
+          applyFusedDistinctStage(state, stage);
+          continue;
+        }
+        if (stage.kind === "take" && !state.limitStage) {
+          applyFusedLimitStage(state, stage);
+          continue;
+        }
+        break;
+      case "postdistinct":
+        if (stage.kind === "distinct") {
+          consumeFusedStage(state, stage);
+          continue;
+        }
+        if (stage.kind === "sort" && !state.orderStage) {
+          applyFusedOrderStage(state, stage);
+          continue;
+        }
         if (stage.kind === "take" && !state.limitStage) {
           applyFusedLimitStage(state, stage);
           continue;

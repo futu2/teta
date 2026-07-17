@@ -15,6 +15,7 @@ import {
 } from "./invocation.ts";
 import {
   resolveFilterQuery,
+  resolveDistinctQuery,
   resolveSortQuery,
   resolveTakeQuery,
   resolveUnionQuery,
@@ -57,6 +58,12 @@ function buildTake<TColumns extends QueryColumns>(
   count: number
 ): Query<TColumns> {
   return deriveQuery(query, resolveTakeQuery(getQueryState(query), count));
+}
+
+function buildDistinct<TColumns extends QueryColumns>(
+  query: Query<TColumns>
+): Query<TColumns> {
+  return deriveQuery(query, resolveDistinctQuery(getQueryState(query)));
 }
 
 function buildUnion<TColumns extends QueryColumns>(
@@ -105,6 +112,14 @@ export function sort(...args: unknown[]): unknown {
   assertRowCallback("sort", selector);
   return createQueryStep("sort", (query: Query<QueryColumns>) =>
     _sort(query, selector as SortInput<QueryColumns>));
+}
+
+/** Returns a query step that removes duplicate rows. */
+export function distinct<TColumns extends QueryColumns>(): QueryStep<TColumns, TColumns>;
+
+export function distinct(...args: unknown[]): unknown {
+  assertCurriedInvocation("distinct", "distinct()", args, 0, 0);
+  return createQueryStep("distinct", (query: Query<QueryColumns>) => buildDistinct(query));
 }
 
 function _sort<TColumns extends QueryColumns>(

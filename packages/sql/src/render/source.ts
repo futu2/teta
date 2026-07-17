@@ -20,12 +20,13 @@ export function buildSqlSelectAst(params: {
   qualify: SelectAst["qualify"];
   orderby: OrderByAst[] | null;
   limit: LimitAst | null;
+  distinct?: boolean;
 }): SelectAst {
   return {
     with: null,
     type: "select",
     options: null,
-    distinct: null,
+    distinct: params.distinct ? "DISTINCT" : null,
     columns: params.columns,
     into: { position: null },
     from: params.from,

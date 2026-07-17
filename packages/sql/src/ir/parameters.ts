@@ -56,6 +56,7 @@ function collectStageParameterNames(stage: Stage, names: Set<string>): void {
       for (const item of stage.items) collectExprNames(item.expr, names);
       collectProjectionParameterNames(stage.projectAll, names);
       return;
+    case "distinct":
     case "take":
       collectProjectionParameterNames(stage.projectAll, names);
       return;

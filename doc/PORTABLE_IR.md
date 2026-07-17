@@ -90,7 +90,7 @@ Stages use these discriminators:
 
 | Kind | Effect on row shape |
 |---|---|
-| `filter`, `sort`, `take` | Preserve the current scope and project the current columns. |
+| `filter`, `sort`, `distinct`, `take` | Preserve the current scope and project the current columns. |
 | `map`, `fold` | Create an explicit output projection and a fresh `outputScopeId`. |
 | `join`, `unnest` | Introduce a temporary right scope, then create a fresh output scope. |
 | `union` | Requires matching output column names on both sides and creates a fresh output scope. |

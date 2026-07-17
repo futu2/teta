@@ -4,6 +4,8 @@ import * as advancedApi from "../advanced.ts";
 import * as queryApi from "../query.ts";
 
 test("exports drop, pick, and rename but not the remaining removed projection helper", () => {
+  expect(typeof publicApi.distinct).toBe("function");
+  expect(typeof queryApi.distinct).toBe("function");
   expect(typeof publicApi.drop).toBe("function");
   expect(typeof queryApi.drop).toBe("function");
   expect(typeof publicApi.pick).toBe("function");

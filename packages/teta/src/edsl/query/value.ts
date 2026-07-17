@@ -102,6 +102,8 @@ function isStage(value: unknown): boolean {
       return isExprNode(stage.predicate) && isProjectionItems(stage.projectAll);
     case "sort":
       return isOrderItems(stage.items) && isProjectionItems(stage.projectAll);
+    case "distinct":
+      return isProjectionItems(stage.projectAll);
     case "take":
       return typeof stage.count === "number" && isProjectionItems(stage.projectAll);
     case "join":

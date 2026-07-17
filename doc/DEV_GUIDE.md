@@ -311,6 +311,8 @@ Examples:
   - merges adjacent filters with `AND`
 - `sort(...)`
   - stores order items
+- `distinct()`
+  - stores a schema-preserving row-deduplication stage
 - `take(...)`
   - stores the limit count
 - fixed join helpers
@@ -402,6 +404,8 @@ Per stage kind:
   - writes `WHERE`
 - `sort`
   - writes `ORDER BY`
+- `distinct`
+  - writes `SELECT DISTINCT`
 - `take`
   - writes `LIMIT`
 - `join`

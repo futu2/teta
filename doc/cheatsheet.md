@@ -237,6 +237,7 @@ const uniqueUsers = pipe(activeUsers, union(inactiveUsers));
 - `fold(selector)`
 - `filter(predicate)`
 - `sort(selector)`
+- `distinct()`
 - `take(count)`
 - `takeWithin({ partitionBy, orderBy, count })`
 - `join(rightOrBuilder, { type?, on, select?, lateral? })`
@@ -262,7 +263,7 @@ const uniqueUsers = pipe(activeUsers, union(inactiveUsers));
 - `whenStep(condition, step)`
 - `unlessStep(condition, step)`
 
-`map(...)`, `fold(...)`, `filter(...)`, `sort(...)`, `take(...)`, fixed join helpers, `union(...)`, `unionAll(...)`, and `loop(...)`
+`map(...)`, `fold(...)`, `filter(...)`, `sort(...)`, `distinct()`, `take(...)`, fixed join helpers, `union(...)`, `unionAll(...)`, and `loop(...)`
 all return `QueryStep` functions when called without the left query.
 
 ## 3) Rendering and introspection

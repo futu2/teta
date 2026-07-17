@@ -98,6 +98,7 @@ function rewriteStage(stage: Stage, context: CanonicalizeContext): Stage {
         })),
         projectAll: stage.projectAll.map((item) => rewriteProjectionItem(item, context)),
       };
+    case "distinct":
     case "take":
       return {
         ...stage,

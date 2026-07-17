@@ -123,6 +123,12 @@ export type SortStage = Readonly<{
   projectAll: readonly ProjectionItem[];
 }>;
 
+/** Stage that removes duplicate rows from the current result. */
+export type DistinctStage = Readonly<{
+  kind: "distinct";
+  projectAll: readonly ProjectionItem[];
+}>;
+
 /** Stage that expands an array expression into rows. */
 export type UnnestStage = Readonly<{
   kind: "unnest";
@@ -149,6 +155,7 @@ export type Stage =
   | ProjectionStage
   | Readonly<{ kind: "filter"; predicate: ExprNode<boolean | null>; projectAll: readonly ProjectionItem[] }>
   | SortStage
+  | DistinctStage
   | TakeStage
   | UnnestStage
   | Readonly<{

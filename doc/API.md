@@ -263,6 +263,18 @@ Limits the number of rows.
 function take<T extends QueryColumns>(count: number): QueryStep<T, T>
 ```
 
+### `distinct()`
+
+Removes duplicate rows while preserving the current row type.
+
+```ts
+function distinct<T extends QueryColumns>(): QueryStep<T, T>
+```
+
+```ts
+pipe(users, map((u) => ({ country: u.country })), distinct());
+```
+
 ### `takeWithin({ partitionBy, orderBy, count })`
 
 Keeps the first N rows within each partition.

@@ -31,7 +31,7 @@ export type QueryStep<
   TOutputColumns extends QueryColumns,
 > = ((query: Query<TInputColumns>) => Query<TOutputColumns>) & QueryStepMetadata;
 
-export type QueryStageKind = "map" | "fold" | "filter" | "sort" | "take" | "join" | "unnest" | "union";
+export type QueryStageKind = "map" | "fold" | "filter" | "sort" | "distinct" | "take" | "join" | "unnest" | "union";
 
 /** Opaque query view for consumers that do not inspect the row schema. */
 export type AnyQuery = Readonly<{

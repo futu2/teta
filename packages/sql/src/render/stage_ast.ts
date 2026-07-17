@@ -133,6 +133,27 @@ export function buildTakeStageAst(
   });
 }
 
+export function buildDistinctStageAst(
+  stage: Extract<Stage, { kind: "distinct" }>,
+  context: StageRenderContext
+): SelectAst {
+  return buildSqlSelectAst({
+    from: [context.baseFrom],
+    columns: renderBoundProjectionItems(
+      stage.projectAll,
+      context.baseBindings,
+      context.dialect
+    ),
+    where: null,
+    groupby: null,
+    having: null,
+    qualify: null,
+    orderby: null,
+    limit: null,
+    distinct: true,
+  });
+}
+
 export function renderBoundProjectionItems(
   items: readonly ProjectionItem[],
   bindings: ScopeBindings,

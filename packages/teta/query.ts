@@ -24,6 +24,7 @@ export type {
 
 export {
   composeSteps,
+  distinct,
   drop,
   dropOverlapLeft,
   dropOverlapRight,

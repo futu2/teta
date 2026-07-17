@@ -54,7 +54,7 @@ table("users", schema)  →  pipe(filter, map, sort, take)  →  toSql(options) 
     (dialect-neutral)          (dialect-neutral)               (dialect-aware)
 ```
 
-Every query step (`filter`, `map`, `sort`, `take`) is a **curried function** that returns a `QueryStep`. You compose them with `pipe()`. The result is a `Query` — an opaque value that doesn't contain SQL yet. Call `toSql()` to render it.
+Every query step (`filter`, `map`, `sort`, `distinct`, `take`) is a **curried function** that returns a `QueryStep`. You compose them with `pipe()`. The result is a `Query` — an opaque value that doesn't contain SQL yet. Call `toSql()` to render it.
 
 ## Navigating the docs
 

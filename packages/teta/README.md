@@ -102,6 +102,8 @@ disable it explicitly.
 Row shapes are constrained to SQL value types, and table schemas must be non-empty objects built from `t.*` column helpers. Aggregate projections are checked separately from row projections. In `fold(...)`, use `group(...)` / `groupShape(...)` for grouping keys and aggregate helpers such as `count(...)`, `sum(...)`, or `arrayAgg(...)` for aggregate outputs.
 
 Comparison filter helpers require at least one row callback; direct values are allowed only as the other operand.
+`distinct()` removes duplicate rows without changing the query's row type.
+
 `whenStep(...)` and `unlessStep(...)` use host-language booleans to include or skip schema-preserving steps while building a query; use `filter(...)` and predicate expressions for conditions evaluated by SQL.
 
 Use `map(...)` for explicit object-shaped projections:

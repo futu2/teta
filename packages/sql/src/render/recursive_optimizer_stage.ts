@@ -81,6 +81,7 @@ export function optimizeLoopStage(
       };
     }
     case "sort":
+    case "distinct":
     case "take":
     case "unnest":
     case "union":
@@ -100,6 +101,7 @@ export function compactLoopStages(
 function validateLoopStage(stage: Stage, label: LoopPartLabel): void {
   switch (stage.kind) {
     case "sort":
+    case "distinct":
     case "take":
     case "unnest":
     case "union":

@@ -108,6 +108,24 @@ describe("public query IR v1", () => {
     );
   });
 
+  test("validates and renders a distinct stage", () => {
+    const target: PortableQueryIR = {
+      ...validTarget(),
+      stages: [{
+        kind: "distinct",
+        projectAll: [{
+          expr: { kind: "column", table: "__teta_scope_users", name: "id" },
+          as: null,
+        }],
+      }],
+    };
+
+    validateQueryIR(target);
+    expect(irToSql(target, { dialect: "postgresql", format: "compact" })).toBe(
+      "SELECT DISTINCT users_0.id AS id FROM users AS users_0"
+    );
+  });
+
   test("preserves prototype-named columns through portable lowering and rendering", () => {
     const columnNames = ["__proto__", "constructor", "toString"];
     const target = {

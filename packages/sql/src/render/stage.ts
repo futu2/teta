@@ -5,6 +5,7 @@ import { getDefaultDialect } from "../dialect.ts";
 import type { CompileSourceRef } from "./source.ts";
 import {
   buildFilterStageAst,
+  buildDistinctStageAst,
   buildProjectionStageAst,
   buildSortStageAst,
   buildTakeStageAst,
@@ -39,6 +40,8 @@ export function compileStageAst(
       return buildFilterStageAst(stage, context);
     case "sort":
       return buildSortStageAst(stage, context);
+    case "distinct":
+      return buildDistinctStageAst(stage, context);
     case "take":
       return buildTakeStageAst(stage, context);
     case "join":

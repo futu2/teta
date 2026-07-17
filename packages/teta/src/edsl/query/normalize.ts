@@ -20,10 +20,10 @@ export function normalizeDerivedQueryInit<TColumns extends Record<string, unknow
 }
 
 function normalizeStages(stages: readonly Stage[]): readonly Stage[] {
-  return mergeAdjacentFilters(stages);
+  return normalizeAdjacentStages(stages);
 }
 
-function mergeAdjacentFilters(stages: readonly Stage[]): readonly Stage[] {
+function normalizeAdjacentStages(stages: readonly Stage[]): readonly Stage[] {
   const normalized: Stage[] = [];
 
   for (const stage of stages) {
@@ -39,6 +39,9 @@ function mergeAdjacentFilters(stages: readonly Stage[]): readonly Stage[] {
         },
         projectAll: previous.projectAll,
       };
+      continue;
+    }
+    if (previous?.kind === "distinct" && stage.kind === "distinct") {
       continue;
     }
 

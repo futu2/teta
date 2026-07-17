@@ -28,6 +28,7 @@ import {
 export type FusedBuildPhase =
   | "preprojection"
   | "postprojection"
+  | "postdistinct"
   | "postorder"
   | "postlimit";
 
@@ -41,6 +42,7 @@ export type FusedBuildState = {
   currentColumnIdentifiers: Readonly<Record<string, SqlIdentifier>>;
   projection: Extract<Stage, { kind: "map" | "fold" }> | null;
   orderStage: Extract<Stage, { kind: "sort" }> | null;
+  distinctStage: Extract<Stage, { kind: "distinct" }> | null;
   limitStage: Extract<Stage, { kind: "take" }> | null;
   whereExpr: ExprNode<unknown> | null;
   havingExpr: ExprNode<unknown> | null;
@@ -78,6 +80,7 @@ export function createFusedBuildState(
     currentColumnIdentifiers: source.columnIdentifiers,
     projection: null,
     orderStage: null,
+    distinctStage: null,
     limitStage: null,
     whereExpr: null,
     havingExpr: null,
@@ -142,6 +145,15 @@ export function applyFusedOrderStage(
   consumeFusedStage(state, stage);
 }
 
+export function applyFusedDistinctStage(
+  state: FusedBuildState,
+  stage: Extract<Stage, { kind: "distinct" }>
+): void {
+  state.distinctStage = stage;
+  state.phase = "postdistinct";
+  consumeFusedStage(state, stage);
+}
+
 export function applyFusedLimitStage(
   state: FusedBuildState,
   stage: Extract<Stage, { kind: "take" }>
@@ -163,6 +175,7 @@ export function finishFusedSegmentWithPredicates(
     state.from,
     state.projection,
     state.orderStage,
+    state.distinctStage !== null,
     state.limitStage,
     whereExpr,
     havingExpr,

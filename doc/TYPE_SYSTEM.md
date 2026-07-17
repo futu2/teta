@@ -126,6 +126,7 @@ sort(Γ => o) : QueryStep<R, R>
 n ∈ Nat
 -------------------------
 take(n) : QueryStep<R, R>
+distinct() : QueryStep<R, R>
 ```
 
 `filter` accepts nullable booleans because SQL predicates are evaluated with

@@ -29,6 +29,7 @@ export function nextStageScopeId(stage: Stage, currentScopeId: ScopeId): ScopeId
       return stage.outputScopeId;
     case "filter":
     case "sort":
+    case "distinct":
     case "take":
       return currentScopeId;
     default:
@@ -55,6 +56,7 @@ export function nextStageColumnIdentifiers(
     case "join":
     case "unnest":
     case "sort":
+    case "distinct":
     case "take":
     case "union":
       return projectionItemsToIdentifierMap(stage.projectAll);
@@ -72,6 +74,7 @@ export function stageOutputNames(stage: Stage): readonly string[] {
     case "join":
     case "unnest":
     case "sort":
+    case "distinct":
     case "take":
     case "union":
       return projectionItemNames(stage.projectAll);

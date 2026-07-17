@@ -19,7 +19,7 @@ const q = pipe(
 // const q = users.where("active", true).select("id", "name").limit(10);
 ```
 
-**Why:** Function composition is more composable than method chains. Every query step (`filter`, `map`, `sort`, `take`) is a standalone, callable value — you can assign it to a variable, pass it to a higher-order function, test it in isolation, and compose it with `flow()`.
+**Why:** Function composition is more composable than method chains. Every query step (`filter`, `map`, `sort`, `distinct`, `take`) is a standalone, callable value — you can assign it to a variable, pass it to a higher-order function, test it in isolation, and compose it with `flow()`.
 
 ```ts
 // Reusable, testable, composable

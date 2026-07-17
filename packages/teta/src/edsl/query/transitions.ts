@@ -131,6 +131,15 @@ export function resolveSortQuery<TColumns extends Record<string, unknown>>(
   });
 }
 
+export function resolveDistinctQuery<TColumns extends Record<string, unknown>>(
+  query: QueryState<TColumns>
+): QueryDeriveInit<TColumns> {
+  return appendPassthroughStage(query, {
+    kind: "distinct",
+    projectAll: projectAllItems(query.columns, query.columnNames, query.columnIdentifiers),
+  });
+}
+
 export function resolveTakeQuery<TColumns extends Record<string, unknown>>(
   query: QueryState<TColumns>,
   count: number
@@ -375,7 +384,7 @@ function resolveProjectedQuery<TSelectedColumns extends Record<string, unknown>>
 
 function appendPassthroughStage<TColumns extends Record<string, unknown>>(
   query: QueryState<TColumns>,
-  stage: Extract<Stage, { kind: "filter" | "sort" | "take" }>
+  stage: Extract<Stage, { kind: "filter" | "sort" | "distinct" | "take" }>
 ): QueryDeriveInit<TColumns> {
   return {
     stages: [...query.stages, stage],
@@ -433,6 +442,7 @@ function rewriteStageScope(stage: Stage, from: ScopeId, to: ScopeId): Stage {
           expr: rewriteExprScope(item.expr, from, to),
         })),
       };
+    case "distinct":
     case "take":
       return {
         ...stage,

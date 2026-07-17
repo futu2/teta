@@ -62,6 +62,7 @@ export function buildCompiledSegment(
   from: FromAst[],
   projection: Extract<Stage, { kind: "map" | "fold" }> | null,
   orderStage: Extract<Stage, { kind: "sort" }> | null,
+  distinct: boolean,
   limitStage: Extract<Stage, { kind: "take" }> | null,
   whereExpr: ExprNode<unknown> | null,
   havingExpr: ExprNode<unknown> | null,
@@ -156,6 +157,7 @@ export function buildCompiledSegment(
       qualify: qualifyExpr ? exprToAst(qualifyExpr) : null,
       orderby,
       limit,
+      distinct,
     }),
     consumed,
     output: {
