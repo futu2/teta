@@ -1,14 +1,14 @@
 import { describe, expect, test } from "bun:test";
-import { drop, pipe, t, table, toIR, toSql } from "../mod.ts";
+import { drop, map, pipe, t, table, toIR, toSql } from "../mod.ts";
 
-describe("drop", () => {
-  test("removes selected columns and preserves remaining order", () => {
+describe("drop(record)", () => {
+  test("removes selected fields inside a map projection and preserves order", () => {
     const users = table("users", {
       id: t.int(),
       name: t.string(),
       active: t.boolean(),
     });
-    const query = pipe(users, drop("name"));
+    const query = pipe(users, map(drop("name")));
 
     expect(Object.keys(query.columns)).toEqual(["id", "active"]);
     expect(toIR(query).columnNames).toEqual(["id", "active"]);
@@ -17,13 +17,17 @@ describe("drop", () => {
     );
   });
 
-  test("rejects unknown columns and an empty result shape", () => {
+  test("ignores fields that are not present", () => {
     const users = table("users", { id: t.int(), name: t.string() });
 
-    expect(() => pipe(users, (drop as any)("missing"))).toThrow(
-      "Unknown current row column 'missing'. Available columns: id, name"
-    );
-    expect(() => pipe(users, drop("id", "name"))).toThrow(
+    const query = pipe(users, map((drop as any)("missing")));
+    expect(toIR(query).columnNames).toEqual(["id", "name"]);
+  });
+
+  test("rejects an empty mapped shape", () => {
+    const users = table("users", { id: t.int(), name: t.string() });
+
+    expect(() => pipe(users, map(drop("id", "name")))).toThrow(
       "map() and fold() now expect an object shape"
     );
   });

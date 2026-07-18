@@ -2,19 +2,23 @@ import { expect, test } from "bun:test";
 import * as publicApi from "../mod.ts";
 import * as advancedApi from "../advanced.ts";
 import * as queryApi from "../query.ts";
+import * as exprApi from "../expr.ts";
 
-test("exports drop, pick, and rename but not the remaining removed projection helper", () => {
+test("exports record projection helpers from the root and expression entrypoints", () => {
   expect(typeof publicApi.distinct).toBe("function");
   expect(typeof queryApi.distinct).toBe("function");
   expect(typeof publicApi.drop).toBe("function");
-  expect(typeof queryApi.drop).toBe("function");
+  expect(typeof exprApi.drop).toBe("function");
   expect(typeof publicApi.pick).toBe("function");
-  expect(typeof queryApi.pick).toBe("function");
+  expect(typeof exprApi.pick).toBe("function");
   expect(typeof publicApi.rename).toBe("function");
-  expect(typeof queryApi.rename).toBe("function");
+  expect(typeof exprApi.rename).toBe("function");
 
   for (const name of ["extend"]) {
     expect(name in publicApi).toBe(false);
+    expect(name in queryApi).toBe(false);
+  }
+  for (const name of ["drop", "pick", "rename"]) {
     expect(name in queryApi).toBe(false);
   }
 });

@@ -195,30 +195,32 @@ function map<T extends QueryColumns, TOut extends QueryColumns>(
 pipe(users, map((u) => ({ id: u.id, name: upper(u.name) })));
 ```
 
-### `pick(...names)`
+### `pick(...keys)` / `pick(keys)`
 
-Keeps only the named columns, in the order provided. Inside `pipe(...)`, editors
-suggest columns from the query produced by the preceding step.
+Pure record helper that keeps only the named fields, in the order provided. It
+is intended for use inside `map(...)` rather than as a query step.
 
 ```ts
-pipe(users, pick("name", "id"));
+pipe(users, map(pick("name", "id")));
+pipe(users, map(pick(["name", "id"])));
 ```
 
-### `drop(...names)`
+### `drop(...keys)` / `drop(keys)`
 
-Drops the named columns and retains the remaining columns in query order. Inside
-`pipe(...)`, editors suggest columns from the query produced by the preceding step.
+Pure record helper that removes named fields while preserving the remaining
+field order.
 
 ```ts
-pipe(users, drop("internal_note", "legacy_status"));
+pipe(users, map(drop("internal_note", "legacy_status")));
 ```
 
 ### `rename(mapper)`
 
-Renames every projected column while preserving its value type and column order.
+Pure record helper that renames every field with a mapping function while
+preserving field values and order.
 
 ```ts
-pipe(users, rename((key) => `user_${key}`));
+pipe(users, map(rename((key) => `user_${key}`)));
 ```
 
 ### `fold(selector)`

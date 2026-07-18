@@ -205,10 +205,9 @@ pipe(users, takeWithin({
 const extendedUsers = pipe(users, map((user) => ({ id: user.id, name: user.name, name_upper: upper(user.name) })));
 const singleReplacedExtendedUsers = pipe(users, map((user) => ({ id: add(user.id, 100), name: user.name })));
 const replacedExtendedUsers = pipe(users, map((user) => ({ id: asString(user.id), name: user.name })));
-const pickedUsers = pipe(users, pick("id", "name"));
-const storedPickId = pick("id");
-const storedPickedUsers = storedPickId(users);
-const storedPickedUserId: Expr<SqlInt> = storedPickedUsers.columns.id;
+const pickedUsers = pipe(users, map(pick("id", "name")));
+const storedPickedRecord = pick("id")(users.columns);
+const storedPickedUserId: Expr<SqlInt> = storedPickedRecord.id;
 const callbackFilteredUsers = pipe(users, filter((user) => eq(user.id, 1)));
 const filterEqCallbackNameUsers = pipe(users, filterEq((user) => user.name, "Ada"));
 const filterEqCallbackIdUsers = pipe(users, filterEq((user) => user.id, 1));
@@ -244,10 +243,10 @@ const callbackAggregatedOrders = pipe(orders, fold((order) => ({
     total_spend: sum(order.total),
 })));
 const callbackExplodedSessions = pipe(sessions, unnest((session) => session.tags, { value: "tag" }));
-// @ts-expect-error pick rejects unknown columns when applied to a typed query
-const invalidPickedUsers = pipe(users, pick("missing"));
-// @ts-expect-error drop rejects unknown columns when applied to a typed query
-const invalidDroppedUsers = pipe(users, drop("missing"));
+// @ts-expect-error pick rejects unknown record keys
+const invalidPickedRecord = pick("missing")(users.columns);
+// @ts-expect-error drop rejects unknown record keys
+const invalidDroppedRecord = drop("missing")(users.columns);
 const curriedPipeline = pipe(users, filter((user: typeof users.columns) => gt(user.id, 0)), map((user) => ({
     id: user.id,
     name: upper(user.name),
@@ -258,7 +257,7 @@ const flowNumberToString = flow(
 );
 const flowPipeline = flow(
     filter((user: typeof users.columns) => gt(user.id, 0)),
-    pick("id"),
+    map(pick("id")),
 );
 const flowPipelineResult = flowPipeline(users);
 const storedIdentityPipeline = composeSteps();
@@ -268,7 +267,7 @@ const storedIdentityName: Expr<SqlString> = storedIdentityResult.columns.name;
 const pipedStoredIdentityResult = pipe(users, storedIdentityPipeline);
 const pipedStoredIdentityName: Expr<SqlString> = pipedStoredIdentityResult.columns.name;
 const schemaBoundPickPipeline = composeSteps(
-    (query: typeof users) => pipe(query, pick("id")),
+    (query: typeof users) => pipe(query, map(pick("id"))),
     take(1),
 );
 const schemaBoundPickResult = pipe(users, schemaBoundPickPipeline);
@@ -356,26 +355,25 @@ const curriedJoin = pipe(users, leftJoin(
     orders,
     (user: typeof users.columns, order: typeof orders.columns) => eq(user.id, order.user_id)
 ));
-const directPickedSelection = pipe(users, pick("id"));
-const directKeyMappedSelection = pipe(users, rename((key) => `prefix1_${key}`));
-const multiPrefixRenamedSelection = pipe(users, rename((key) => `pre_fix_${key}`));
+const directPickedSelection = pipe(users, map(pick("id")));
+const directKeyMappedSelection = pipe(users, map(rename((key) => `prefix1_${key}`)));
+const multiPrefixRenamedSelection = pipe(users, map(rename((key) => `pre_fix_${key}`)));
 const multiPrefixRenamedId: Expr<SqlInt> = multiPrefixRenamedSelection.columns.pre_fix_id;
 // @ts-expect-error a multi-segment prefix must retain the finite source keys
 multiPrefixRenamedSelection.columns.pre_fix_missing;
 const fixedRenamedSelection = pipe(
     table("rename_source", { id: t.int() }),
-    rename(() => "fixed_name" as const),
+    map(rename(() => "fixed_name" as const)),
 );
 const fixedRenamedName: Expr<SqlInt> = fixedRenamedSelection.columns.fixed_name;
 // @ts-expect-error a fixed rename result must not invent a key-derived column name
 fixedRenamedSelection.columns.fixed_id;
-const droppedUsers = pipe(users, drop("name"));
-const storedDropName = drop("name");
-const storedDroppedUsers = storedDropName(users);
-const storedDroppedUserId: Expr<SqlInt> = storedDroppedUsers.columns.id;
-// @ts-expect-error a stored drop step removes the selected column
-storedDroppedUsers.columns.name;
-const directDroppedProfiles = pipe(profiles, drop("avatar", "metadata"));
+const droppedUsers = pipe(users, map(drop("name")));
+const storedDroppedRecord = drop("name")(users.columns);
+const storedDroppedUserId: Expr<SqlInt> = storedDroppedRecord.id;
+// @ts-expect-error a stored drop record removes the selected field
+storedDroppedRecord.name;
+const directDroppedProfiles = pipe(profiles, map(drop("avatar", "metadata")));
 const directKeyMappedUsage = pipe(directKeyMappedSelection, map((user) => ({
     id: user.prefix1_id,
     name: user.prefix1_name,
@@ -651,8 +649,8 @@ void curriedJoin;
 void inlineRows;
 void profileRows;
 void directPickedSelection;
-void invalidPickedUsers;
-void invalidDroppedUsers;
+void invalidPickedRecord;
+void invalidDroppedRecord;
 void storedPickedUserId;
 void storedDroppedUserId;
 void directKeyMappedSelection;

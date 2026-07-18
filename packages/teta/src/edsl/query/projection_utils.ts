@@ -31,26 +31,3 @@ export function selectColumnsByName(
   }
   return result;
 }
-
-export function mapColumnNames(
-  cols: ColumnRefs<QueryColumns>,
-  names: readonly string[],
-  renameKey: (key: string) => string
-): Record<string, Column<any, string>> {
-  const result = createStringRecord<Column<any, string>>();
-  for (const name of names) {
-    const renamed = renameKey(name);
-    if (typeof renamed !== "string" || renamed.trim().length === 0) {
-      userError("DEFERRED_INPUT_INVALID", "rename() must return a non-empty column name");
-    }
-    if (hasOwnStringKey(result, renamed)) {
-      userError("DEFERRED_INPUT_INVALID", `rename() produced duplicate column name '${renamed}'`);
-    }
-    setStringRecordValue(
-      result,
-      renamed,
-      Reflect.get(cols, name) as Column<any, string>
-    );
-  }
-  return result;
-}

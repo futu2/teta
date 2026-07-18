@@ -10,7 +10,7 @@ Teta is function-first. Row-transforming query helpers are curried query steps u
 Queries are opaque runtime values. Use `query.columns` for reusable column expressions and `toIR(query)` / `explain(query, ...)` for inspection. Query steps are callable values with `kind: "query_step"` and `stepName` metadata. `flow(...)` composes general unary functions; `composeSteps(...)` preserves the query-step brand and metadata. These composition helpers preserve exact intermediate types through 12 explicit steps and a checked variadic tail.
 
 ```ts
-import { add, and, arrayAppend, arrayContains, arrayJoin, arrayLength, arrayPosition, arraySlice, asBigInt, asBoolean, asBytes, asDate, asDecimal, asFloat, asInt, asJson, asString, asTimestamp, asUuid, asc, avg, bitLength, cast, charLength, characterLength, coalesce, composeSteps, concat, count, currentDate, currentTimestamp, dateAdd, dateDiff, dateFormat, dateLiteral, dateParse, dateTrunc, day, desc, dropOverlapLeft, dropOverlapRight, eq, explain, Expr, f, filter, filterEq, flow, fold, fromUnixTime, fullJoin, group, gt, gte, hour, identityStep, innerJoin, isIn, isNotNull, isNull, JoinKind, JoinOptions, join, lag, lead, left, leftJoin, like, loop, lower, lt, lte, map, max, min, minute, mod, month, mul, ne, not, ntile, nullIf, octetLength, onEq, over, overlay, param, percentRank, pipe, position, pow, prefixAllLeft, prefixAllRight, prefixOverlapLeft, prefixOverlapRight, Query, rank, regexExtract, regexLike, regexReplace, replace, reverse, right, rightJoin, round, rowNumber, rpad, sort, sqrt, sub, substring, suffixAllLeft, suffixAllRight, sum, sumOver, t, table, take, takeWithin, timestampLiteral, toAst, toIR, toSql, toSqlResult, toUnixTime, trim, union, unionAll, unlessStep, unnest, upper, usingCols, values, when, whenStep, year } from "@teta/teta";
+import { add, and, arrayAppend, arrayContains, arrayJoin, arrayLength, arrayPosition, arraySlice, asBigInt, asBoolean, asBytes, asDate, asDecimal, asFloat, asInt, asJson, asString, asTimestamp, asUuid, asc, avg, bitLength, cast, charLength, characterLength, coalesce, composeSteps, concat, count, currentDate, currentTimestamp, dateAdd, dateDiff, dateFormat, dateLiteral, dateParse, dateTrunc, day, desc, drop, dropOverlapLeft, dropOverlapRight, eq, explain, Expr, f, filter, filterEq, flow, fold, fromUnixTime, fullJoin, group, gt, gte, hour, identityStep, innerJoin, isIn, isNotNull, isNull, JoinKind, JoinOptions, join, lag, lead, left, leftJoin, like, loop, lower, lt, lte, map, max, min, minute, mod, month, mul, ne, not, ntile, nullIf, octetLength, onEq, over, overlay, param, percentRank, pick, pipe, position, pow, prefixAllLeft, prefixAllRight, prefixOverlapLeft, prefixOverlapRight, Query, rank, regexExtract, regexLike, regexReplace, rename, replace, reverse, right, rightJoin, round, rowNumber, rpad, sort, sqrt, sub, substring, suffixAllLeft, suffixAllRight, sum, sumOver, t, table, take, takeWithin, timestampLiteral, toAst, toIR, toSql, toSqlResult, toUnixTime, trim, union, unionAll, unlessStep, unnest, upper, usingCols, values, when, whenStep, year } from "@teta/teta";
 import { fn, windowFn } from "@teta/teta/advanced";
 ```
 
@@ -231,9 +231,6 @@ const uniqueUsers = pipe(activeUsers, union(inactiveUsers));
 ## 2) Query helpers
 
 - `map(selector)`
-- `pick(...names)`
-- `drop(...names)`
-- `rename(mapper)`
 - `fold(selector)`
 - `filter(predicate)`
 - `sort(selector)`
@@ -262,6 +259,14 @@ const uniqueUsers = pipe(activeUsers, union(inactiveUsers));
 - `identityStep()`
 - `whenStep(condition, step)`
 - `unlessStep(condition, step)`
+
+Record projection helpers compose inside `map(...)`:
+
+```ts
+map(pick("id", "name"))
+map(drop("internal_note"))
+map(rename((key) => `user_${key}`))
+```
 
 `map(...)`, `fold(...)`, `filter(...)`, `sort(...)`, `distinct()`, `take(...)`, fixed join helpers, `union(...)`, `unionAll(...)`, and `loop(...)`
 all return `QueryStep` functions when called without the left query.

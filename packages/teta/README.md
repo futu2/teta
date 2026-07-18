@@ -106,7 +106,8 @@ Comparison filter helpers require at least one row callback; direct values are a
 
 `whenStep(...)` and `unlessStep(...)` use host-language booleans to include or skip schema-preserving steps while building a query; use `filter(...)` and predicate expressions for conditions evaluated by SQL.
 
-Use `map(...)` for explicit object-shaped projections:
+Use `map(...)` for explicit object-shaped projections. `pick(...)`, `drop(...)`,
+and `rename(...)` are pure record helpers that compose inside `map(...)`:
 
 ```ts
 import { drop, map, pick, rename, upper } from "@teta/teta";
@@ -120,23 +121,30 @@ const publicUsers = pipe(
 );
 ```
 
-Use `pick(...)` to retain existing columns in a specific order. Editors suggest
-the available column names when `pick(...)` is used inside `pipe(...)`:
+Use `pick(...)` to retain existing fields in a specific order. Pass names either
+as variadic arguments or as a key array:
 
 ```ts
-const publicUsers = pipe(users, pick("id", "email"));
+const publicUsers = pipe(users, map(pick("id", "email")));
+const sameUsers = pipe(users, map(pick(["id", "email"])));
 ```
 
-Use `drop(...)` to remove columns while preserving the order of everything else:
+Use `drop(...)` to remove fields while preserving the order of everything else:
 
 ```ts
-const safeUsers = pipe(users, drop("password_hash", "recovery_token"));
+const safeUsers = pipe(
+  users,
+  map(drop("password_hash", "recovery_token"))
+);
 ```
 
-Use `rename(...)` when every column name follows the same mapping rule:
+Use `rename(...)` when every field name follows the same mapping rule:
 
 ```ts
-const prefixedUsers = pipe(users, rename((key) => `user_${key}`));
+const prefixedUsers = pipe(
+  users,
+  map(rename((key) => `user_${key}`))
+);
 ```
 
 Use `join(...)` for joins; the older join-kind helpers are convenience wrappers over the same primitive:

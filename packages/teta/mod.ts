@@ -147,14 +147,14 @@ export const distinct: typeof import("./src/edsl/query.ts").distinct = query.dis
 /** Projects each row into a new selected shape. */
 export const map: typeof import("./src/edsl/query.ts").map = query.map;
 
-/** Drops the named columns and keeps the remaining columns in query order. */
-export const drop: typeof import("./src/edsl/query.ts").drop = query.drop;
+/** Drops named fields from a record without mutating the input. */
+export const drop: typeof import("./src/edsl/expr.ts").drop = expr.drop;
 
-/** Keeps only the named columns in their provided order. */
-export const pick: typeof import("./src/edsl/query.ts").pick = query.pick;
+/** Picks named fields from a record without mutating the input. */
+export const pick: typeof import("./src/edsl/expr.ts").pick = expr.pick;
 
-/** Renames every projected column with the provided key mapper. */
-export const rename: typeof import("./src/edsl/query.ts").rename = query.rename;
+/** Renames every field in a record with a key-mapping function. */
+export const rename: typeof import("./src/edsl/expr.ts").rename = expr.rename;
 
 /** Schema type helpers used when declaring tables. */
 export const t: typeof import("./src/edsl/query.ts").t = query.t;
@@ -290,6 +290,24 @@ export type AggregateProjectionResult<S extends import("./src/edsl/expr.ts").Agg
 
 /** Alias for a projection object accepted by query projection helpers. */
 export type ProjectionSelection = import("./src/edsl/expr.ts").ProjectionSelection;
+
+/** Result shape produced by `pick(...)` on a record. */
+export type PickRecord<T, TKeys extends readonly string[]> = import("./src/edsl/expr.ts").PickRecord<T, TKeys>;
+
+/** Curried transform returned by `pick(...)`. */
+export type PickTransform<TKeys extends readonly string[]> = import("./src/edsl/expr.ts").PickTransform<TKeys>;
+
+/** Result shape produced by `drop(...)` on a record. */
+export type DropRecord<T, TKeys extends readonly string[]> = import("./src/edsl/expr.ts").DropRecord<T, TKeys>;
+
+/** Curried transform returned by `drop(...)`. */
+export type DropTransform<TKeys extends readonly string[]> = import("./src/edsl/expr.ts").DropTransform<TKeys>;
+
+/** Result shape produced by `rename(...)` on a record. */
+export type RenameRecord<T, TPattern extends string> = import("./src/edsl/expr.ts").RenameRecord<T, TPattern>;
+
+/** Curried transform returned by `rename(...)`. */
+export type RenameTransform<TPattern extends string> = import("./src/edsl/expr.ts").RenameTransform<TPattern>;
 
 /** Right-hand query input accepted by join helpers. */
 export type JoinRightInput<

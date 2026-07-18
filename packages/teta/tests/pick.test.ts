@@ -1,14 +1,14 @@
 import { describe, expect, test } from "bun:test";
-import { pick, pipe, t, table, toIR, toSql } from "../mod.ts";
+import { map, pick, pipe, t, table, toIR, toSql } from "../mod.ts";
 
-describe("pick", () => {
-  test("keeps selected columns in the requested order", () => {
+describe("pick(record)", () => {
+  test("keeps selected fields in the requested order inside map", () => {
     const users = table("users", {
       id: t.int(),
       name: t.string(),
       active: t.boolean(),
     });
-    const query = pipe(users, pick("name", "id"));
+    const query = pipe(users, map(pick("name", "id")));
 
     expect(Object.keys(query.columns)).toEqual(["name", "id"]);
     expect(toIR(query).columnNames).toEqual(["name", "id"]);
@@ -17,11 +17,18 @@ describe("pick", () => {
     );
   });
 
-  test("rejects unknown columns", () => {
+  test("accepts a key array", () => {
+    const users = table("users", { id: t.int(), name: t.string() });
+    const query = pipe(users, map(pick(["name", "id"])));
+
+    expect(toIR(query).columnNames).toEqual(["name", "id"]);
+  });
+
+  test("rejects unknown fields", () => {
     const users = table("users", { id: t.int(), name: t.string() });
 
-    expect(() => pipe(users, (pick as any)("missing"))).toThrow(
-      "Unknown current row column 'missing'. Available columns: id, name"
+    expect(() => pipe(users, map((pick as any)("missing")))).toThrow(
+      "pick() key 'missing' does not exist on the record"
     );
   });
 });

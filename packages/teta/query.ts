@@ -1,5 +1,5 @@
 /**
- * Query builders, relational operators, join helpers, projection helpers, and query rendering APIs.
+ * Query builders, relational operators, join helpers, and query rendering APIs.
  *
  * Import from this entrypoint when you need query composition without the full root API.
  *
@@ -25,7 +25,6 @@ export type {
 export {
   composeSteps,
   distinct,
-  drop,
   dropOverlapLeft,
   dropOverlapRight,
   explain,
@@ -52,7 +51,6 @@ export {
   loop,
   map,
   onEq,
-  pick,
   prefixAllLeft,
   prefixAllRight,
   prefixOverlapLeft,
@@ -60,7 +58,6 @@ export {
   rightJoin,
   rightJoinMap,
   rightJoinMerge,
-  rename,
   sort,
   suffixAllLeft,
   suffixAllRight,

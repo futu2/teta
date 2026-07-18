@@ -82,16 +82,12 @@ describe("public entrypoint typings", () => {
     expect(missingTypes).toEqual([]);
   });
 
-  test("projection key helpers suggest columns from the preceding pipe query", () => {
-    const virtualPath = fileURLToPath(new URL("./__projection_completion__.ts", import.meta.url));
+  test("map row callbacks suggest fields for record transforms", () => {
+    const virtualPath = fileURLToPath(new URL("./__map_row_completion__.ts", import.meta.url));
     const source = [
-      'import { drop, pipe, pick, table, t } from "../mod.ts";',
+      'import { map, pipe, table, t } from "../mod.ts";',
       'const users = table("users", { id: t.int(), name: t.string(), active: t.boolean() });',
-      'const firstPick = pipe(users, pick(""));',
-      'const nextPick = pipe(users, pick("id", ""));',
-      'const firstDrop = pipe(users, drop(""));',
-      'const nextDrop = pipe(users, drop("id", ""));',
-      'const chainedDrop = pipe(users, pick("id", "name"), drop(""));',
+      'const projected = pipe(users, map((row) => ({ value: row. })));',
     ].join("\n");
     const configFile = ts.readConfigFile(TSCONFIG_PATH, ts.sys.readFile);
     if (configFile.error) {
@@ -115,36 +111,15 @@ describe("public entrypoint typings", () => {
       getDirectories: ts.sys.getDirectories,
     };
     const service = ts.createLanguageService(host);
-    const firstCompletionPosition = source.indexOf('pick("")') + 'pick("'.length;
-    const nextCompletionPosition = source.indexOf('pick("id", "")') + 'pick("id", "'.length;
-    const firstDropCompletionPosition = source.indexOf('drop("")') + 'drop("'.length;
-    const nextDropCompletionPosition = source.indexOf('drop("id", "")') + 'drop("id", "'.length;
-    const chainedDropMarker = 'pick("id", "name"), drop("")';
-    const chainedDropCompletionPosition = source.indexOf(chainedDropMarker) + chainedDropMarker.length - 2;
+    const completionPosition = source.indexOf("row. }") + "row.".length;
     const completionOptions = {
       includeCompletionsForModuleExports: false,
     };
-    const firstCompletionNames = service
-      .getCompletionsAtPosition(virtualPath, firstCompletionPosition, completionOptions)
-      ?.entries.map((entry) => entry.name);
-    const nextCompletionNames = service
-      .getCompletionsAtPosition(virtualPath, nextCompletionPosition, completionOptions)
-      ?.entries.map((entry) => entry.name);
-    const firstDropCompletionNames = service
-      .getCompletionsAtPosition(virtualPath, firstDropCompletionPosition, completionOptions)
-      ?.entries.map((entry) => entry.name);
-    const nextDropCompletionNames = service
-      .getCompletionsAtPosition(virtualPath, nextDropCompletionPosition, completionOptions)
-      ?.entries.map((entry) => entry.name);
-    const chainedDropCompletionNames = service
-      .getCompletionsAtPosition(virtualPath, chainedDropCompletionPosition, completionOptions)
+    const completionNames = service
+      .getCompletionsAtPosition(virtualPath, completionPosition, completionOptions)
       ?.entries.map((entry) => entry.name);
     service.dispose();
 
-    expect(firstCompletionNames).toEqual(["id", "name", "active"]);
-    expect(nextCompletionNames).toEqual(["id", "name", "active"]);
-    expect(firstDropCompletionNames).toEqual(["id", "name", "active"]);
-    expect(nextDropCompletionNames).toEqual(["id", "name", "active"]);
-    expect(chainedDropCompletionNames).toEqual(["id", "name"]);
+    expect(completionNames).toEqual(["active", "id", "name"]);
   });
 });
