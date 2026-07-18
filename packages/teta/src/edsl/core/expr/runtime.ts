@@ -39,18 +39,9 @@ import { userError } from "../../errors.ts";
 import { resolveFreezeFlag } from "../../runtime_config.ts";
 
 type SqlLiteralInput = Value | bigint;
-type IsAny<T> = 0 extends (1 & T) ? true : false;
-type IsUnknown<T> = IsAny<T> extends true
-  ? false
-  : unknown extends T
-    ? true
-    : false;
 
-type LiteralInput<T> = IsAny<T> extends true
-  ? SqlLiteralInput
-  : IsUnknown<T> extends true
-    ? SqlLiteralInput
-  : T extends number
+// The intersection constrains unknown fallbacks without blocking generic inference.
+type LiteralInput<T> = T extends number
     ? number
   : T extends bigint
     ? number | bigint
@@ -60,7 +51,7 @@ type LiteralInput<T> = IsAny<T> extends true
     ? boolean
   : T extends null
     ? null
-  : never;
+  : T & SqlLiteralInput;
 export type ExprInput<T> = Expr<T, ExprPhase> | LiteralInput<T>;
 export type ExprInputValue<TInput> =
   TInput extends Expr<infer TValue, ExprPhase> ? TValue
