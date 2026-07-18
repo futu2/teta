@@ -22,10 +22,17 @@ cannot express, such as scope visibility and projection output shapes.
 | `irToSql(value, options)` | Validate, lower, and render SQL. |
 | `irToSqlResult(value, options)` | Render SQL with parameter bindings. |
 | `toPortableQueryIR(value)` | Remove private plan metadata from a lowered target. |
+| `PORTABLE_QUERY_IR_REQUIRED_KEYS` | Required root keys accepted by the v1 contract. |
+| `PORTABLE_QUERY_IR_OPTIONAL_KEYS` | Optional root keys accepted by the v1 contract. |
+| `PORTABLE_QUERY_IR_RENDERER_KEYS` | Renderer-only root keys excluded from portable data. |
 
 Invalid input throws `TetaUserError` with code `INVALID_QUERY_IR`. Applications
 accepting IR from untrusted or separately deployed producers should call
 `validateQueryIR` before storing or rendering it.
+
+The frozen key lists let frontend and tooling authors inspect the root contract
+without duplicating it. They describe only the top-level boundary; use the JSON
+Schema and runtime decoder for complete structural and semantic validation.
 
 ## Minimal query
 

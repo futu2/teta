@@ -75,7 +75,7 @@ test("teta jsr manifest maps workspace dependencies to jsr packages", () => {
   }>("packages/teta/jsr.json");
 
   expect(tetaPackage.dependencies?.["@teta/sql"]).toEqual("workspace:*");
-  expect(tetaJsr.imports?.["@teta/sql"]).toEqual("jsr:@teta/sql@^0.1.11");
+  expect(tetaJsr.imports?.["@teta/sql"]).toEqual("jsr:@teta/sql@^0.1.12");
 });
 
 test("teta package does not re-export the sql backend subpath", () => {

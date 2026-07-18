@@ -86,6 +86,10 @@ const sql = irToSql(query, {
 - `explainIR(...)`
 - `validateQueryIR(...)`
 - `lowerPortableQueryIR(...)`
+- `toPortableQueryIR(...)`
+- `PORTABLE_QUERY_IR_REQUIRED_KEYS`
+- `PORTABLE_QUERY_IR_OPTIONAL_KEYS`
+- `PORTABLE_QUERY_IR_RENDERER_KEYS`
 - `ir` helper namespace
 
 `@teta/sql` has no dependency on any frontend package.
