@@ -27,4 +27,4 @@ export type QueryValue =
   | null
   | readonly QueryValue[];
 
-export type QueryColumns = Record<string, QueryValue>;
+export type QueryColumns = Readonly<Record<string, QueryValue>>;

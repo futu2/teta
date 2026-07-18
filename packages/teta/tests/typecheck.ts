@@ -1,4 +1,4 @@
-import type { Column, Expr, Query, JoinKind, JoinOptions, SqlBigInt, SqlBoolean, SqlBytes, SqlDate, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlNumber, SqlString, SqlTimestamp, SqlUuid, UnnestOptions, UnnestSelection, } from "../mod.ts";
+import type { Column, Expr, Query, QueryColumns, JoinKind, JoinOptions, SqlBigInt, SqlBoolean, SqlBytes, SqlDate, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlNumber, SqlString, SqlTimestamp, SqlUuid, UnnestOptions, UnnestSelection, } from "../mod.ts";
 import * as publicApi from "../mod.ts";
 import { between, composeSteps, currentDate, currentTimestamp, dateAdd, drop, filter, filterEq, filterNe, filterGt, filterGte, filterLt, filterLte, fullJoin, fullJoinMerge, identityStep, innerJoin, innerJoinMap, innerJoinMerge, isDistinctFrom, isIn, isNotIn, join, leftJoin, leftJoinMap, leftJoinMerge, rightJoin, rightJoinMerge, take, takeWithin, sort, param, lit, map, pick, rename, pipe, flow, table, t, fold, asc, desc, eq, gt, upper, add, mul, coalesce, count, group, loop, sum, and, or, isNotNull, sub, when, mapShape, groupShape, lt, unnest, unionAll, union, unlessStep, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, asBigInt, asBoolean, asBytes, asDate, asDecimal, asFloat, asInt, asJson, asString, asTimestamp, asUuid, whenStep } from "../mod.ts";
 type Equal<A, B> = ((<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false);
@@ -13,6 +13,9 @@ const users = table("users", {
     id: t.int(),
     name: t.string(),
 });
+declare const readonlyColumns: QueryColumns;
+// @ts-expect-error query column schemas are immutable maps
+readonlyColumns.id = readonlyColumns.id;
 // @ts-expect-error query column references are immutable
 users.columns.id = users.columns.id;
 // @ts-expect-error query column references are immutable through indexed access too
