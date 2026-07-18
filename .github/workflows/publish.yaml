@@ -103,8 +103,10 @@ jobs:
         run: bunx jsr publish
 
   publish-dev:
-    needs: detect-release-changes
-    if: needs.detect-release-changes.outputs.dev == 'true'
+    needs:
+      - detect-release-changes
+      - publish-teta
+    if: always() && needs.detect-release-changes.outputs.dev == 'true' && (needs.publish-teta.result == 'success' || needs.publish-teta.result == 'skipped')
     runs-on: ubuntu-latest
     permissions:
       contents: read

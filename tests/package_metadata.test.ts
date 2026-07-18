@@ -78,6 +78,18 @@ test("teta jsr manifest maps workspace dependencies to jsr packages", () => {
   expect(tetaJsr.imports?.["@teta/sql"]).toEqual("jsr:@teta/sql@^0.1.12");
 });
 
+test("dev deno manifest maps workspace dependencies to jsr packages", () => {
+  const devPackage = readJson<{
+    dependencies?: Record<string, string>;
+  }>("packages/dev/package.json");
+  const devDeno = readJson<{
+    imports?: Record<string, string>;
+  }>("packages/dev/deno.json");
+
+  expect(devPackage.dependencies?.["@teta/teta"]).toEqual("workspace:*");
+  expect(devDeno.imports?.["@teta/teta"]).toEqual("jsr:@teta/teta@^0.5.1");
+});
+
 test("teta package does not re-export the sql backend subpath", () => {
   const tetaPackage = readJson<{
     exports: Record<string, string>;
@@ -139,7 +151,7 @@ test("ci and publish workflows pin the Bun toolchain", () => {
   expect(publish).toContain("bun-version: 1.3.12");
 });
 
-test("publish workflow detects and publishes the sql package before teta", () => {
+test("publish workflow detects and publishes packages in dependency order", () => {
   const publish = readFileSync(new URL("../.github/workflows/publish.yaml", import.meta.url), "utf8");
 
   expect(publish).toContain("sql: ${{ steps.detect.outputs.sql }}");
@@ -148,6 +160,8 @@ test("publish workflow detects and publishes the sql package before teta", () =>
   expect(publish).toContain("working-directory: packages/sql");
   expect(publish).toContain("Publish @teta/sql");
   expect(publish).toContain("needs.publish-sql.result == 'success' || needs.publish-sql.result == 'skipped'");
+  expect(publish).toContain("needs.publish-teta.result == 'success' || needs.publish-teta.result == 'skipped'");
+  expect(publish).toContain("Publish @teta/dev");
   expect(publish).toContain("@teta/sql changed without a package version/manifest change");
   expect(publish).toContain("@teta/teta changed without a package version/manifest change");
 });
