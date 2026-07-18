@@ -4,6 +4,11 @@ This file is generated from the public language catalog and built-in dialect
 configuration. `packages/sql/tests/capability_matrix.test.ts` verifies it
 matches `formatDialectCapabilityMatrixMarkdown()`.
 
+The operation statuses below describe lowering behavior, not database-version
+verification. PostgreSQL, SQLite, and DuckDB are `live-verified`; the remaining
+built-ins are currently `parser-checked`. Custom dialect specifications are
+`configured` unless they explicitly declare another tier.
+
 | Operation | mysql | mariadb | postgresql | sqlite | trino | transactsql | redshift | snowflake | bigquery | athena | db2 | hive | flinksql | noql | duckdb |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | + | native | native | native | native | native | native | native | native | native | native | native | native | native | native | native |

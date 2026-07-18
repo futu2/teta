@@ -3,6 +3,7 @@ import type { BuiltinDialectDefinition } from "./types.ts";
 export const POSTGRESQL_DIALECT: BuiltinDialectDefinition = {
   name: "postgresql",
   parserDialect: "Postgresql",
+  supportTier: "live-verified",
   language: {
     functions: {
       ARRAY_AGG: "ARRAY_AGG",

@@ -739,9 +739,11 @@ Lowers a query to the backend intermediate representation.
 function toIR<T extends QueryColumns>(query: Query<T>): QueryIR<T>
 ```
 
-### `toAst(query, options)`
+### `toAst(query, options)` (`@teta/teta/inspect`)
 
-Lowers a query to the parser AST.
+Lowers a query to the backend parser AST. This is kept in the explicit
+inspection entrypoint because the AST is backend-specific rather than part of
+the stable frontend API.
 
 ```ts
 function toAst(query: Query<any>, options: SqlOptions): AST
@@ -749,7 +751,8 @@ function toAst(query: Query<any>, options: SqlOptions): AST
 
 ### `explain(query, options)`
 
-Returns structured debug output: stages, CTEs, SQL, AST, params.
+Returns structured debug output: stages, CTEs, SQL, and params. Use
+`toAst(...)` from `@teta/teta/inspect` when parser AST access is required.
 
 ```ts
 function explain<T extends QueryColumns>(
@@ -794,7 +797,7 @@ All available through the `t` namespace:
 | `t.uuid()` | `SqlUuid` | `string` |
 | `t.bytes()` | `SqlBytes` | `Uint8Array` |
 | `t.json<T>()` | `SqlJson<T>` | `T` |
-| `t.array(inner)` | `T[]` | `T[]` |
+| `t.array(inner)` | `readonly T[]` | `readonly T[]` |
 | `t.nullable(inner)` | `T \| null` | `T \| null` |
 
 ---

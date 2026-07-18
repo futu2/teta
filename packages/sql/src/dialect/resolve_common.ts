@@ -18,6 +18,7 @@ export function cloneDialect(dialect: QueryDialect): QueryDialect {
   return {
     name: dialect.name,
     parserDialect: dialect.parserDialect,
+    supportTier: dialect.supportTier,
     features: {
       lateralJoinKeyword: dialect.features.lateralJoinKeyword,
       recursiveCte: dialect.features.recursiveCte,
@@ -54,6 +55,7 @@ export function resolveNamedDialect(rawName: string): QueryDialect {
   return {
     name: builtin.name,
     parserDialect: builtin.parserDialect,
+    supportTier: builtin.supportTier ?? "parser-checked",
     features: resolveFeatureFlags(undefined, builtin, null),
     language: resolveDialectLanguage(builtin.name),
   };

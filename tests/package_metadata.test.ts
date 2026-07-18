@@ -75,7 +75,7 @@ test("teta jsr manifest maps workspace dependencies to jsr packages", () => {
   }>("packages/teta/jsr.json");
 
   expect(tetaPackage.dependencies?.["@teta/sql"]).toEqual("workspace:*");
-  expect(tetaJsr.imports?.["@teta/sql"]).toEqual("jsr:@teta/sql@^0.1.10");
+  expect(tetaJsr.imports?.["@teta/sql"]).toEqual("jsr:@teta/sql@^0.1.11");
 });
 
 test("teta package does not re-export the sql backend subpath", () => {
@@ -88,6 +88,14 @@ test("teta package does not re-export the sql backend subpath", () => {
 
   expect(tetaPackage.exports["./sql"]).toBeUndefined();
   expect(tetaJsr.exports["./sql"]).toBeUndefined();
+});
+
+test("teta package exposes backend AST inspection only through its inspect subpath", () => {
+  const tetaPackage = readJson<{ exports: Record<string, string> }>("packages/teta/package.json");
+  const tetaJsr = readJson<{ exports: Record<string, string> }>("packages/teta/jsr.json");
+
+  expect(tetaPackage.exports["./inspect"]).toBe("./inspect.ts");
+  expect(tetaJsr.exports["./inspect"]).toBe("./inspect.ts");
 });
 
 test("ci workflow runs the canonical check and validates the sql package", () => {
@@ -121,6 +129,16 @@ test("node runtime smoke avoids unstable native TypeScript flags", () => {
   expect(ci).not.toContain("node-version: current");
 });
 
+test("ci and publish workflows pin the Bun toolchain", () => {
+  const ci = readFileSync(new URL("../.github/workflows/ci.yaml", import.meta.url), "utf8");
+  const publish = readFileSync(new URL("../.github/workflows/publish.yaml", import.meta.url), "utf8");
+
+  expect(ci).not.toContain("bun-version: latest");
+  expect(publish).not.toContain("bun-version: latest");
+  expect(ci).toContain("bun-version: 1.3.12");
+  expect(publish).toContain("bun-version: 1.3.12");
+});
+
 test("publish workflow detects and publishes the sql package before teta", () => {
   const publish = readFileSync(new URL("../.github/workflows/publish.yaml", import.meta.url), "utf8");
 
@@ -130,6 +148,8 @@ test("publish workflow detects and publishes the sql package before teta", () =>
   expect(publish).toContain("working-directory: packages/sql");
   expect(publish).toContain("Publish @teta/sql");
   expect(publish).toContain("needs.publish-sql.result == 'success' || needs.publish-sql.result == 'skipped'");
+  expect(publish).toContain("@teta/sql changed without a package version/manifest change");
+  expect(publish).toContain("@teta/teta changed without a package version/manifest change");
 });
 
 test("publish workflow grants OIDC tokens for JSR provenance", () => {

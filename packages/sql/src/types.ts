@@ -93,6 +93,9 @@ export type BuiltinDialect =
   | "noql"
   | "duckdb";
 
+/** Confidence level for the dialect support supplied by this repository. */
+export type DialectSupportTier = "configured" | "parser-checked" | "live-verified";
+
 /** Optional feature flags that affect dialect-specific SQL lowering. */
 export type DialectFeatures = {
   lateralJoinKeyword?: boolean;
@@ -149,6 +152,7 @@ export type DialectLanguageConfig = {
 export type DialectSpec = {
   name: string;
   parserDialect?: string | null;
+  supportTier?: DialectSupportTier;
   features?: DialectFeatures;
   language?: DialectLanguageConfig;
 };
@@ -160,6 +164,8 @@ export type Dialect = BuiltinDialect | DialectSpec;
 export type QueryDialect = {
   name: string;
   parserDialect: string | null;
+  /** Support confidence; omitted on legacy/custom resolved values means configured. */
+  supportTier?: DialectSupportTier;
   features: {
     lateralJoinKeyword: boolean;
     recursiveCte: boolean;

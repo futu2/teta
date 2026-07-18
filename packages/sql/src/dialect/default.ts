@@ -4,6 +4,7 @@ import type { QueryDialect } from "../types.ts";
 export const DEFAULT_DIALECT: QueryDialect = {
   name: "default",
   parserDialect: null,
+  supportTier: "configured",
   features: {
     lateralJoinKeyword: true,
     recursiveCte: true,

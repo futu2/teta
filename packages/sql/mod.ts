@@ -18,6 +18,7 @@
 
 export * from "./src/errors.ts";
 export * from "./src/ir/types.ts";
+export * from "./src/ir/contract.ts";
 export * from "./src/ir/utils.ts";
 export * from "./src/ir/tokens.ts";
 export { validateExprIR } from "./src/ir/validate.ts";

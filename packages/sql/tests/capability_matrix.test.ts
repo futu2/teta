@@ -8,6 +8,7 @@ import {
   formatDialectCapabilityMatrixMarkdown,
   getDialectCapabilities,
   getDialectCapabilityMatrix,
+  getDialectSupportTier,
   getLanguageOperations,
 } from "../mod.ts";
 
@@ -35,6 +36,13 @@ describe("dialect capability matrix", () => {
     expect(getDialectCapabilities("sqlite").LATERAL_JOIN).toBe("rewritten");
     expect(getDialectCapabilities("trino").ARRAY_LENGTH).toBe("rewritten");
     expect(getDialectCapabilities("postgresql").RECURSIVE_CTE).toBe("native");
+  });
+
+  test("exposes verification tiers independently of operation capabilities", () => {
+    expect(getDialectSupportTier("postgresql")).toBe("live-verified");
+    expect(getDialectSupportTier("sqlite")).toBe("live-verified");
+    expect(getDialectSupportTier("mysql")).toBe("parser-checked");
+    expect(getDialectSupportTier({ name: "custom" })).toBe("configured");
   });
 
   test("normalizes partial dialect-shaped values instead of trusting them as resolved", () => {

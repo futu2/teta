@@ -55,7 +55,9 @@ In short:
 - `packages/teta/src/edsl/query/algebra.ts`
   - Re-exports the immutable query-building algebra: roots, query steps, joins, projection helpers, recursive loops, and query type aliases.
 - `packages/teta/src/edsl/query/rendering.ts`
-  - Re-exports query rendering and inspection helpers: `toIR(...)`, `toAst(...)`, `toSql(...)`, `toSqlResult(...)`, and `explain(...)`.
+  - Re-exports stable query rendering helpers: `toIR(...)`, `toSql(...)`, `toSqlResult(...)`, and `explain(...)`.
+- `packages/teta/inspect.ts`
+  - Explicitly exposes backend-specific parser AST inspection through `toAst(...)`.
 - `packages/teta/src/edsl/query.ts`
   - Compatibility barrel that re-exports both algebra and rendering.
 - `packages/teta/src/edsl/expr.ts`
@@ -322,17 +324,17 @@ Examples:
 
 At this point no SQL text exists yet.
 
-### 3) `toIR(query)` and `toAst(query)`
+### 3) `toIR(query)` and explicit AST inspection
 
 Useful checkpoints:
 
 - `toIR(query)` returns the backend-renderable query representation:
   - `{ source, stages, scopeId, columnNames, columnIdentifiers, withs }`
-- `toAst(query)` delegates to `@teta/sql irToAst(...)`
+- `toAst(query)` from `@teta/teta/inspect` delegates to `@teta/sql irToAst(...)`
   - this gives the parser AST before final SQL stringification
-- `explain(query, ...)` bundles IR, AST, SQL, params, stage metadata, and CTE metadata in one snapshot
+- `explain(query, ...)` bundles IR, SQL, params, stage metadata, and CTE metadata in one snapshot
 
-In practice, `explain(query, ...)` is usually the fastest debugging entrypoint, with `toIR(query)` and `toAst(query)` as lower-level follow-ups.
+In practice, `explain(query, ...)` is usually the fastest debugging entrypoint, with `toIR(query)` and `toAst(query)` from the inspection entrypoint as lower-level follow-ups.
 
 Because `Query` is opaque, tests and tooling should inspect lowered output through `toIR(...)` or `explain(...)` rather than reaching for query object internals.
 
@@ -375,7 +377,7 @@ This is why generated SQL may look like a flat `SELECT`, a staged `WITH` pipelin
 
 ### 6a) Common lowering patterns
 
-A few patterns show up repeatedly when you inspect `explain(query, ...)`, `toIR(query)`, or `toAst(query)`:
+A few patterns show up repeatedly when you inspect `explain(query, ...)`, `toIR(query)`, or `toAst(query)` from `@teta/teta/inspect`:
 
 - **optimized render strategy**
   - adjacent stages are fused when they can share one `SELECT`
@@ -486,7 +488,7 @@ When something looks wrong, inspect from top to bottom:
    - is the expression tree what you expect?
 2. `toIR(query)`
    - are the stages right?
-3. `toAst(query)`
+3. `toAst(query)` from `@teta/teta/inspect`
    - did the stage lowering produce the right parser AST?
 4. `irToAst(toIR(query), options)` or `@teta/sql` renderer internals
    - is the CTE pipeline shaped correctly?

@@ -46,7 +46,7 @@ That gives you a query with this inferred shape:
 //   active: SqlBoolean;
 //   created_at: SqlTimestamp;
 //   deleted_at: SqlTimestamp | null;
-//   tags: SqlString[];
+//   tags: readonly SqlString[];
 //   profile: SqlJson<{ theme: string; locale: string }>;
 // }>
 ```
@@ -64,7 +64,7 @@ Common schema helpers:
 - `t.uuid()` -> `SqlUuid`
 - `t.bytes()` -> `SqlBytes`
 - `t.json<T>()` -> `SqlJson<T>`
-- `t.array(inner)` -> `T[]`
+- `t.array(inner)` -> `readonly T[]`
 - `t.nullable(inner)` -> `T | null`
 
 ## 2) `Query<TColumns>` is the row shape

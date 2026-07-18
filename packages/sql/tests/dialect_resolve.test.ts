@@ -31,6 +31,18 @@ describe("dialect resolution", () => {
     );
   });
 
+  test("records support confidence separately from parser resolution", () => {
+    expect(resolveDialect("postgresql").supportTier).toBe("live-verified");
+    expect(resolveDialect("mysql").supportTier).toBe("parser-checked");
+    expect(resolveDialect({ name: "custom", parserDialect: "Postgresql" }).supportTier)
+      .toBe("configured");
+    expect(resolveDialect({
+      name: "custom",
+      parserDialect: "Postgresql",
+      supportTier: "parser-checked",
+    }).supportTier).toBe("parser-checked");
+  });
+
   test("inherits parser dialect features for custom specs", () => {
     expect(
       resolveDialect({

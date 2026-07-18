@@ -16,6 +16,10 @@ import {
   type PortableQueryIR,
   type PortableQuerySpec,
 } from "../mod.ts";
+import {
+  PORTABLE_QUERY_IR_RENDERER_KEYS,
+  PORTABLE_QUERY_IR_REQUIRED_KEYS,
+} from "../mod.ts";
 
 function assertReadonlyIrTypes(target: PortableQueryIR, expr: ExprNode<unknown>): void {
   // @ts-expect-error portable query roots are readonly
@@ -493,10 +497,15 @@ describe("public query IR v1", () => {
     const schemaPath = fileURLToPath(new URL("../ir.v1.schema.json", import.meta.url));
     const schema = JSON.parse(readFileSync(schemaPath, "utf8")) as {
       required: string[];
+      properties: Record<string, unknown>;
       $defs: { builtinOperation: { enum: string[] } };
     };
 
-    expect(schema.required).not.toContain("columnIdentifiers");
+    expect(schema.required).toEqual([...PORTABLE_QUERY_IR_REQUIRED_KEYS]);
+    for (const rendererKey of PORTABLE_QUERY_IR_RENDERER_KEYS) {
+      expect(schema.required).not.toContain(rendererKey);
+      expect(schema.properties ?? {}).not.toHaveProperty(rendererKey);
+    }
     expect(schema.$defs.builtinOperation.enum).toEqual([...BUILTIN_FUNCTION_OPERATIONS]);
   });
 });

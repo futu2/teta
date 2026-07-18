@@ -59,12 +59,15 @@ import { table, t, filter } from "@teta/teta/query";
 import { eq } from "@teta/teta/expr";
 import { pipe } from "@teta/teta/pipe";
 import { fn, windowFn } from "@teta/teta/advanced";
+import { toAst } from "@teta/teta/inspect";
 ```
 
-The default entrypoint intentionally excludes compiler-node constructors and
-database-specific function builders. Use `@teta/teta/advanced` for validated
-custom `fn(...)` and `windowFn(...)` calls; use `@teta/sql` directly when
-building or rendering public IR from another frontend.
+The default entrypoint intentionally excludes compiler-node constructors,
+database-specific function builders, and parser-specific AST inspection. Use
+`@teta/teta/advanced` for validated custom `fn(...)` and `windowFn(...)` calls,
+`@teta/teta/inspect` when you explicitly need the backend parser AST, and
+`@teta/sql` directly when building or rendering public IR from another
+frontend.
 
 Reusable functional pipelines can be saved with `flow(...)`, while `map(...)` selects and computes output columns:
 
@@ -95,9 +98,8 @@ const usersQuery = pipe(users, whenStep(includeActivePage, activePage));
 Query values expose `columns` for typed expression reuse, but internal compiler details such as sources, stages, CTEs, and generated names are intentionally opaque. Use `toIR(query)` or `explain(query, ...)` when you need to inspect lowered query structure. Query steps are callable values with lightweight `kind` and `stepName` metadata for tooling/debugging.
 
 Query construction is immutable and normalization is handled as a pure compiler
-pass. Runtime deep-freezing is enabled by default in all environments. Set
-`TETA_FREEZE_QUERY_VALUES` or `TETA_FREEZE_EXPR_VALUES` to `0` or `false` to
-disable it explicitly.
+pass. Newly allocated query and expression nodes are frozen once, while
+previously frozen plan structure is shared between derived queries.
 
 Row shapes are constrained to SQL value types, and table schemas must be non-empty objects built from `t.*` column helpers. Aggregate projections are checked separately from row projections. In `fold(...)`, use `group(...)` / `groupShape(...)` for grouping keys and aggregate helpers such as `count(...)`, `sum(...)`, or `arrayAgg(...)` for aggregate outputs.
 

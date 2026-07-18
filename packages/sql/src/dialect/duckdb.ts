@@ -3,6 +3,7 @@ import type { BuiltinDialectDefinition } from "./types.ts";
 export const DUCKDB_DIALECT: BuiltinDialectDefinition = {
   name: "duckdb",
   parserDialect: "Postgresql",
+  supportTier: "live-verified",
   language: {
     functions: {
       DATE_FORMAT: "STRFTIME",

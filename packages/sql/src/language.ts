@@ -25,6 +25,8 @@ export {
 export {
   /** Return the generated implementation status for one dialect operation. */
   getDialectCapability,
+  /** Return the verification tier for one dialect configuration. */
+  getDialectSupportTier,
   /** Return all operation statuses for one dialect. */
   getDialectCapabilities,
   /** Return all built-in dialect operation statuses. */

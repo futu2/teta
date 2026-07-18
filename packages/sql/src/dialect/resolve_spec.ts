@@ -30,6 +30,7 @@ export function resolveDialectSpec(spec: DialectSpec): QueryDialect {
   return {
     name: resolvedName,
     parserDialect,
+    supportTier: spec.supportTier ?? builtinByName?.supportTier ?? "configured",
     features: resolveFeatureFlags(spec.features, builtinByName, builtinByParser),
     language: resolveDialectLanguage(resolvedName, spec.language),
   };

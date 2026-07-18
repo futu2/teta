@@ -33,6 +33,7 @@ test("does not export public constructor values", () => {
   expect(typeof publicApi.isQuery).toBe("function");
   expect(typeof publicApi.isExpr).toBe("function");
   expect(typeof publicApi.isColumn).toBe("function");
+  expect("toAst" in publicApi).toBe(false);
 });
 
 test("keeps compiler constructors and custom functions out of the default surface", () => {

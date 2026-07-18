@@ -1,6 +1,6 @@
 import { BUILTIN_DIALECTS } from "../dialect/builtin.ts";
 import { resolveDialect } from "../dialect/resolve.ts";
-import type { BuiltinDialect, Dialect, QueryDialect } from "../types.ts";
+import type { BuiltinDialect, Dialect, DialectSupportTier, QueryDialect } from "../types.ts";
 import { LANGUAGE_SPEC, type LanguageCategory } from "./spec.ts";
 
 /** How a dialect implements one operation in the Teta language catalog. */
@@ -14,6 +14,13 @@ export type DialectCapabilityMap = Readonly<Record<LanguageOperation, DialectCap
 
 /** Capability matrix for every registered built-in dialect. */
 export type DialectCapabilityMatrix = Readonly<Record<BuiltinDialect, DialectCapabilityMap>>;
+
+/** Return the repository's verification tier for a dialect configuration. */
+export function getDialectSupportTier(
+  dialectInput: Dialect | QueryDialect | undefined
+): DialectSupportTier {
+  return resolveCapabilityDialect(dialectInput).supportTier ?? "configured";
+}
 
 const LANGUAGE_OPERATIONS = Object.freeze(
   Object.values(LANGUAGE_SPEC).flatMap((operations) => operations)
@@ -97,8 +104,13 @@ function isResolvedDialect(value: unknown): value is QueryDialect {
   const candidate = value as Partial<QueryDialect>;
   return typeof candidate.name === "string"
     && (candidate.parserDialect === null || typeof candidate.parserDialect === "string")
+    && (candidate.supportTier === undefined || isSupportTier(candidate.supportTier))
     && isResolvedFeatures(candidate.features)
     && isResolvedLanguage(candidate.language);
+}
+
+function isSupportTier(value: unknown): value is DialectSupportTier {
+  return value === "configured" || value === "parser-checked" || value === "live-verified";
 }
 
 function isResolvedFeatures(value: unknown): value is QueryDialect["features"] {

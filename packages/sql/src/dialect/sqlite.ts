@@ -3,6 +3,7 @@ import type { BuiltinDialectDefinition } from "./types.ts";
 export const SQLITE_DIALECT: BuiltinDialectDefinition = {
   name: "sqlite",
   parserDialect: "SQLite",
+  supportTier: "live-verified",
   features: {
     lateralJoinKeyword: false,
     recursiveCte: true,

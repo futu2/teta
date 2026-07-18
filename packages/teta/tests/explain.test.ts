@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { explain, table, t, filter, map, eq, loop, take, isNotNull, toIR, pipe } from "../mod.ts";
 import { irToSql } from "@teta/sql";
 describe("explain api", () => {
-    test("returns IR, AST, SQL, params, and stage metadata", () => {
+    test("returns IR, SQL, params, and stage metadata", () => {
         const users = table("users", {
             id: t.int(),
             name: t.string(),
@@ -33,7 +33,6 @@ describe("explain api", () => {
         expect(result.format).toBe("compact");
         expect(result.parameterMode).toBe("named");
         expect(result.parameterPrefix).toBe(":");
-        expect(result.ast.type).toBe("select");
         expect(result.ir.stages).toHaveLength(3);
     });
     test("captures recursive CTE metadata", () => {

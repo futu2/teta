@@ -297,14 +297,13 @@ Query<R> = {
 Compiler state is stored behind a package-private symbol. This is intentional:
 user code should not depend on source, stage, CTE, or generated-name internals.
 
-Runtime freezing is a development assertion, not the source of truth for
-purity. The source of truth is:
+Runtime freezing is an enforcement layer, not the source of truth for purity.
+The source of truth is:
 
 - readonly IR/state types
 - pure constructors and query steps
 - immutable public values
 - normalization as a pure function
 
-Deep freezing is enabled by default in all environments. Set
-`TETA_FREEZE_QUERY_VALUES` or `TETA_FREEZE_EXPR_VALUES` to `0` or `false` to
-disable it explicitly.
+Newly allocated nodes are frozen once, while previously frozen query structure
+is shared by derived queries.

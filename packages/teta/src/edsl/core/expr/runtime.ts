@@ -36,7 +36,6 @@ import {
   unwrapGroupExpr,
 } from "./node/ops.ts";
 import { userError } from "../../errors.ts";
-import { resolveFreezeFlag } from "../../runtime_config.ts";
 
 type SqlLiteralInput = Value | bigint;
 
@@ -95,7 +94,6 @@ const BINARY_OPS = new Set<string>([
 ]);
 
 const AGG_FUNCS = new Set<string>(["COUNT", "SUM", "AVG", "MIN", "MAX", "ARRAY_AGG"]);
-const SHOULD_FREEZE_EXPR_VALUES = resolveFreezeFlag("TETA_FREEZE_EXPR_VALUES");
 const EXPR_BRAND: unique symbol = Symbol("teta.expr");
 const COLUMN_BRAND: unique symbol = Symbol("teta.column");
 const WINDOW_BUILDER_BRAND: unique symbol = Symbol("teta.window_builder");
@@ -161,7 +159,7 @@ export function columnOf<T, Name extends string>(
   };
   defineHiddenBrandProperty(expr, EXPR_BRAND);
   defineHiddenBrandProperty(expr, COLUMN_BRAND);
-  return freezeIfEnabled(expr) as Column<T, Name>;
+  return freezeValue(expr) as Column<T, Name>;
 }
 
 export function windowBuilderOf<T>(
@@ -172,7 +170,7 @@ export function windowBuilderOf<T>(
   return defineHiddenBrand({
     kind: "window_builder" as const,
     name,
-    args: freezeIfEnabled(args.map((arg) => freezeExprNode(arg))),
+    args: freezeValue(args.map((arg) => freezeExprNode(arg))),
   }, WINDOW_BUILDER_BRAND) as WindowBuilder<T>;
 }
 
@@ -244,13 +242,13 @@ function freezeExprNode<T>(node: ExprNode<T>): ExprNode<T> {
   if (!isExprNode(node)) {
     userError("INVALID_LITERAL_VALUE", `Unsupported literal value: ${String(node)}`);
   }
-  if (!SHOULD_FREEZE_EXPR_VALUES) return node;
   return deepFreeze(node);
 }
 
 function deepFreeze<T>(value: T, seen = new WeakSet<object>()): T {
   if (!value || typeof value !== "object") return value;
   const object = value as object;
+  if (Object.isFrozen(object)) return value;
   if (seen.has(object)) return value;
   seen.add(object);
   for (const key of Reflect.ownKeys(object)) {
@@ -259,8 +257,8 @@ function deepFreeze<T>(value: T, seen = new WeakSet<object>()): T {
   return Object.freeze(value);
 }
 
-function freezeIfEnabled<T extends object>(value: T): T {
-  return SHOULD_FREEZE_EXPR_VALUES ? Object.freeze(value) : value;
+function freezeValue<T extends object>(value: T): T {
+  return Object.freeze(value);
 }
 
 function defineHiddenBrand<T extends object, TBrand extends symbol>(
@@ -268,7 +266,7 @@ function defineHiddenBrand<T extends object, TBrand extends symbol>(
   brand: TBrand
 ): T & { readonly [K in TBrand]: true } {
   defineHiddenBrandProperty(value, brand);
-  return freezeIfEnabled(value) as T & { readonly [K in TBrand]: true };
+  return freezeValue(value) as T & { readonly [K in TBrand]: true };
 }
 
 function defineHiddenBrandProperty<TBrand extends symbol>(
@@ -457,8 +455,8 @@ export function param(name: string): Expr<unknown> {
   return exprOf<unknown>({ kind: "param", name });
 }
 
-export function array<T = unknown>(...values: ExprInput<T>[]): Expr<T[]> {
-  return exprOf<T[]>({
+export function array<T = unknown>(...values: ExprInput<T>[]): Expr<readonly T[]> {
+  return exprOf<readonly T[]>({
     kind: "array",
     items: values.map((value) => toExprNode(value)),
   });

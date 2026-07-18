@@ -56,7 +56,7 @@ type TableColumnHelpers = {
   uuid: () => ColumnType<SqlUuid>;
   json: <T = unknown>() => ColumnType<SqlJson<T>>;
   bytes: () => ColumnType<SqlBytes>;
-  array: <T>(column: ColumnType<T>) => ColumnType<T[]>;
+  array: <T>(column: ColumnType<T>) => ColumnType<readonly T[]>;
   nullable: <T>(column: ColumnType<T>) => ColumnType<T | null>;
 };
 
@@ -72,9 +72,9 @@ export const t: TableColumnHelpers = Object.freeze({
   uuid: () => columnType<SqlUuid>("uuid"),
   json: <T = unknown>() => columnType<SqlJson<T>>("json"),
   bytes: () => columnType<SqlBytes>("bytes"),
-  array: <T>(column: ColumnType<T>): ColumnType<T[]> => {
+  array: <T>(column: ColumnType<T>): ColumnType<readonly T[]> => {
     assertColumnType("t.array", column);
-    return columnType<T[]>("array", { arrayOf: column as ColumnType<unknown> });
+    return columnType<readonly T[]>("array", { arrayOf: column as ColumnType<unknown> });
   },
   nullable: <T>(column: ColumnType<T>): ColumnType<T | null> => {
     assertColumnType("t.nullable", column);

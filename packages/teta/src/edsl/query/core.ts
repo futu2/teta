@@ -6,13 +6,11 @@ import { resolveQueryInitDefaults } from "./state.ts";
 import type { ColumnRefs } from "../expr.ts";
 import type { QueryColumns } from "./types.ts";
 import { normalizeQueryState } from "./normalize.ts";
-import { resolveFreezeFlag } from "../runtime_config.ts";
 
 const QUERY_BRAND: unique symbol = Symbol("teta.query");
 const QUERY_STATE: unique symbol = Symbol("teta.query.state");
 const QUERY_STEP_BRAND: unique symbol = Symbol("teta.query_step");
 declare const QUERY_ROW_TYPE: unique symbol;
-const SHOULD_FREEZE_QUERY_VALUES = resolveFreezeFlag("TETA_FREEZE_QUERY_VALUES");
 
 // Index-signature rows are internal erasure points; finite rows retain exact identity.
 type QueryRowIdentity<TColumns extends QueryColumns> =
@@ -124,7 +122,7 @@ function queryOf<TColumns extends QueryColumns>(
     columnIdentifiers,
     nameSupply,
   };
-  const frozenState = freezeIfEnabled(resolvedState) as Readonly<QueryState<TColumns>>;
+  const frozenState = Object.freeze(resolvedState) as Readonly<QueryState<TColumns>>;
 
   const query = {
     kind: "query" as const,
@@ -145,44 +143,40 @@ function queryOf<TColumns extends QueryColumns>(
     writable: false,
     value: frozenState,
   });
-  return freezeIfEnabled(query) as QueryValue<TColumns>;
+  return Object.freeze(query) as QueryValue<TColumns>;
 }
 
 export function freezeQueryValue<T>(value: T, seen = new WeakMap<object, unknown>()): T {
-  if (!SHOULD_FREEZE_QUERY_VALUES) return value;
   if (!value || typeof value !== "object") return value;
 
   const object = value as object;
+  // Query state is persistent: every previous stage is already frozen, so do
+  // not walk the accumulated history again for each derived query.
+  if (Object.isFrozen(object)) return value;
+
   const existing = seen.get(object);
   if (existing) return existing as T;
 
   if (Array.isArray(value)) {
-    const copy: unknown[] = [];
-    seen.set(object, copy);
+    seen.set(object, value);
     for (const item of value) {
-      copy.push(freezeQueryValue(item, seen));
+      freezeQueryValue(item, seen);
     }
-    return Object.freeze(copy) as T;
+    return Object.freeze(value) as T;
   }
 
   if (!isPlainObject(value)) {
     return value;
   }
 
-  const copy = Object.create(Object.getPrototypeOf(value)) as Record<PropertyKey, unknown>;
-  seen.set(object, copy);
+  seen.set(object, value);
   for (const key of Reflect.ownKeys(value)) {
     const descriptor = Object.getOwnPropertyDescriptor(value, key)!;
     if ("value" in descriptor) {
-      descriptor.value = freezeQueryValue(descriptor.value, seen);
+      freezeQueryValue(descriptor.value, seen);
     }
-    Object.defineProperty(copy, key, descriptor);
   }
-  return Object.freeze(copy) as T;
-}
-
-function freezeIfEnabled<T extends object>(value: T): T {
-  return SHOULD_FREEZE_QUERY_VALUES ? Object.freeze(value) : value;
+  return Object.freeze(value) as T;
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

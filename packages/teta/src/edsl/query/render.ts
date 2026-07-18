@@ -1,7 +1,5 @@
-import type { AST } from "node-sql-parser";
 import type { CteSpec } from "../core/types.ts";
 import type {
-  Dialect,
   QueryDialect,
   SqlFormat,
   SqlOptions,
@@ -12,12 +10,10 @@ import type {
 } from "../sql/types.ts";
 import {
   explainIR,
-  irToAst,
   irToSql,
   irToSqlResult,
   renderSql,
   renderSqlResult,
-  resolveDialect,
 } from "../sql.ts";
 import { TETA_QUERY_IR_VERSION, toPortableQueryIR } from "@teta/sql";
 import type { PortableQueryIR } from "@teta/sql";
@@ -51,7 +47,6 @@ export type QueryExplainCte = {
 
 export type QueryExplainResult<TColumns extends QueryColumns> = {
   ir: QueryIR<TColumns>;
-  ast: AST;
   sql: string;
   params: SqlResult["params"];
   columnNames: readonly string[];
@@ -75,16 +70,6 @@ export function toIR<TColumns extends QueryColumns>(query: Query<TColumns>): Que
     columnIdentifiers: state.columnIdentifiers,
     withs: state.withs,
   }))) as QueryIR<TColumns>;
-}
-
-export function toAst<TColumns extends QueryColumns>(
-  query: Query<TColumns>,
-  options?: { dialect?: Dialect; renderStrategy?: SqlRenderStrategy }
-): AST {
-  return irToAst(toIR(query), {
-    dialect: options?.dialect ? resolveDialect(options.dialect) : undefined,
-    renderStrategy: options?.renderStrategy,
-  });
 }
 
 export function toSql<TTarget extends SqlRenderable>(
@@ -113,7 +98,6 @@ export function explain<TColumns extends QueryColumns>(
 
   return {
     ir: result.ir,
-    ast: result.ast,
     sql: result.sql,
     params: result.params,
     columnNames: result.columnNames,

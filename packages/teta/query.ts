@@ -60,7 +60,6 @@ export {
   table,
   take,
   takeWithin,
-  toAst,
   toIR,
   toSql,
   toSqlResult,

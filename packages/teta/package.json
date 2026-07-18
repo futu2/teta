@@ -1,13 +1,14 @@
 {
   "name": "@teta/teta",
   "module": "./mod.ts",
-  "version": "0.4.32",
+  "version": "0.5.0",
   "exports": {
     ".": "./mod.ts",
     "./query": "./query.ts",
     "./expr": "./expr.ts",
     "./pipe": "./pipe.ts",
-    "./advanced": "./advanced.ts"
+    "./advanced": "./advanced.ts",
+    "./inspect": "./inspect.ts"
   },
   "types": "./mod.ts",
   "type": "module",
@@ -26,11 +27,11 @@
     "@duckdb/node-api": "^1.4.4-r.3",
     "@electric-sql/pglite": "^0.4.6",
     "@types/bun": "latest",
+    "node-sql-parser": "^5.4.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@teta/sql": "workspace:*",
-    "node-sql-parser": "^5.4.0"
+    "@teta/sql": "workspace:*"
   }
 }

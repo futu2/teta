@@ -37,12 +37,12 @@
       "version": "0.4.32",
       "dependencies": {
         "@teta/sql": "workspace:*",
-        "node-sql-parser": "^5.4.0",
       },
       "devDependencies": {
         "@duckdb/node-api": "^1.4.4-r.3",
         "@electric-sql/pglite": "^0.4.6",
         "@types/bun": "latest",
+        "node-sql-parser": "^5.4.0",
         "tsx": "^4.21.0",
         "typescript": "^5.9.3",
       },

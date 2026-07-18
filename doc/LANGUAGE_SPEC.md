@@ -2,6 +2,10 @@
 
 This document defines the current Teta language spec and default support behavior.
 
+The capability status of an operation describes lowering behavior, not database
+version verification. Use `getDialectSupportTier(...)` to distinguish
+`configured`, `parser-checked`, and `live-verified` dialect profiles.
+
 Status legend:
 
 - **Direct**: emitted as-is

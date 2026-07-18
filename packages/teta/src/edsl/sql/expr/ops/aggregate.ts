@@ -68,9 +68,9 @@ export function max<TInput extends ExprInput<unknown>>(
 
 export function arrayAgg<TInput extends ExprInput<unknown>>(
   value: TInput
-): Expr<ExprInputValue<TInput>[], "aggregate"> {
+): Expr<readonly ExprInputValue<TInput>[], "aggregate"> {
   return withExprPhase(
-    aggregateExpr<ExprInputValue<TInput>[], TInput>("ARRAY_AGG", value),
+    aggregateExpr<readonly ExprInputValue<TInput>[], TInput>("ARRAY_AGG", value),
     "aggregate"
   );
 }

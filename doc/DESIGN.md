@@ -110,9 +110,10 @@ q.columns;  // { id: Column<...>, name: Column<...>, ... }
 **Why:** Opaqueness is an API contract. It means the internal compiler state can evolve without breaking user code. When you need to inspect the internals, use the intentional escape hatches:
 
 ```ts
-explain(q, { dialect: "postgresql" });  // stages, ctes, sql, ast — all at once
+explain(q, { dialect: "postgresql" });  // stages, ctes, sql, params
 toIR(q);                                 // lowered intermediate representation
-toAst(q, { dialect: "postgresql" });     // parser AST
+import { toAst } from "@teta/teta/inspect";
+toAst(q, { dialect: "postgresql" });    // explicit parser AST inspection
 ```
 
 ### 6. Three-layer architecture

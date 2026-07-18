@@ -141,9 +141,6 @@ export const table: typeof import("./src/edsl/query.ts").table = query.table;
 /** Creates a typed query root from inline literal rows. */
 export const values: typeof import("./src/edsl/query.ts").values = query.values;
 
-/** Lowers a query into the SQL AST used by the renderer. */
-export const toAst: typeof import("./src/edsl/query.ts").toAst = queryRender.toAst;
-
 /** Lowers a query into Teta's intermediate representation. */
 export const toIR: typeof import("./src/edsl/query.ts").toIR = queryRender.toIR;
 
@@ -673,6 +670,7 @@ export type {
   DialectLanguageConfig,
   DialectLanguageFallback,
   DialectSpec,
+  DialectSupportTier,
   IdentifierInput,
   QueryDialect,
   SqlBigInt,

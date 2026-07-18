@@ -89,3 +89,10 @@ const sql = irToSql(query, {
 - `ir` helper namespace
 
 `@teta/sql` has no dependency on any frontend package.
+
+Dialect operation capabilities and dialect verification confidence are separate
+contracts. `getDialectCapabilities(...)` describes lowering (`native`,
+`rewritten`, `emulated`, or `unsupported`), while `getDialectSupportTier(...)`
+reports whether the repository only configured the dialect, parser-checked it,
+or verified it against a live database. The currently live-verified built-ins
+are PostgreSQL, SQLite, and DuckDB.
