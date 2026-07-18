@@ -59,8 +59,8 @@ Function-first policy:
 | `BIT_LENGTH` | `bitLength(value)` | Direct | Direct | Fallback → `LENGTH(x) * 8` | Direct | Direct |
 | `REPLACE` | `replace(value, search, replacement)` | Direct | Direct | Direct | Direct | Direct |
 | `REVERSE` | `reverse(value)` | Direct | Direct | Direct | Direct | Direct |
-| `LEFT` | `left(value, length)` | Direct | Direct | Direct (engine-dependent) | Direct (engine-dependent) | Direct |
-| `RIGHT` | `right(value, length)` | Direct | Direct | Direct (engine-dependent) | Direct (engine-dependent) | Direct |
+| `LEFT` | `leftSubstring(value, length)` | Direct | Direct | Direct (engine-dependent) | Direct (engine-dependent) | Direct |
+| `RIGHT` | `rightSubstring(value, length)` | Direct | Direct | Direct (engine-dependent) | Direct (engine-dependent) | Direct |
 | `LPAD` | `lpad(value, length, padding?)` | Direct | Direct | Direct (engine-dependent) | Direct (engine-dependent) | Direct |
 | `RPAD` | `rpad(value, length, padding?)` | Direct | Direct | Direct (engine-dependent) | Direct (engine-dependent) | Direct |
 | `REGEXP_LIKE` | `regexLike(value, pattern)` | Fallback → `REGEXP_MATCH(x, p) IS NOT NULL` | Direct (MySQL 8+) | Best-effort fallback → `REGEXP(p, x)` (requires regexp function) | Direct | Direct (dialect-dependent) |
@@ -150,7 +150,7 @@ Convenience date-part helpers over `extract(...)`:
 
 | Spec item | Preferred functional entry | PostgreSQL | MySQL | SQLite | Trino | Other built-ins |
 |---|---|---|---|---|---|---|
-| `LATERAL_JOIN` | `pipe(left, join(right, { on, lateral: true }))` | Direct (`LATERAL` kept) | Direct (MySQL 8+, engine-dependent) | Keyword removed when unsupported | Direct | Direct |
+| `LATERAL_JOIN` | `pipe(leftQuery, join(rightQuery, inner(on, { lateral: true })))` | Direct (`LATERAL` kept) | Direct (MySQL 8+, engine-dependent) | Keyword removed when unsupported | Direct | Direct |
 | `RECURSIVE_CTE` | `pipe(base, loop(step))` | Direct | Direct (MySQL 8+) | Direct | Direct | Direct |
 
 If `dialect.features.recursiveCte = false`, SQL rendering throws an explicit error.

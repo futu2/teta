@@ -12,12 +12,13 @@ import {
   filterLte,
   filterNe,
   fold,
+  inner,
+  join,
   param,
   gt,
   gte,
-  innerJoin,
   isNotNull,
-  leftJoin,
+  left,
   lt,
   lte,
   map,
@@ -154,9 +155,9 @@ describe("callback column api", () => {
     const orders = createOrdersTable();
     const expected = pipe(
       users,
-      leftJoin(
+      join(
         orders,
-        (user, order) => eq(user.id, order.user_id)
+        left((user, order) => eq(user.id, order.user_id))
       ),
       map((row) => ({
         user_id: row.id,
@@ -165,9 +166,9 @@ describe("callback column api", () => {
     );
     const actual = pipe(
       users,
-      leftJoin(
+      join(
         orders,
-        onEq({ id: "user_id" })
+        left(onEq({ id: "user_id" }))
       ),
       map((row) => ({
         user_id: row.id,
@@ -197,9 +198,9 @@ describe("callback column api", () => {
     expectTetaUserError(
       () => pipe(
         users,
-        innerJoin(
+        join(
           orders,
-          undefined as never
+          inner(undefined as never)
         )
       ),
       "DEFERRED_INPUT_INVALID"

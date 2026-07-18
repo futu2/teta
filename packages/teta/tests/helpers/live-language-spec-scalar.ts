@@ -1,6 +1,6 @@
 import { SQLITE_UNSUPPORTED, currentDate, currentTimestamp, scalarTable, } from "./live-language-spec-shared.ts";
 import type { LiveSpecCase } from "./live-language-spec-shared.ts";
-import { isNotNull, map, abs, add, cast, ceil, coalesce, dateAdd, dateDiff, dateFormat, dateParse, dateTrunc, day, div, eq, extract, floor, greatest, gt, gte, hour, isIn, isNull, least, lt, lte, minute, mod, month, mul, ne, nullIf, pow, round, second, sqrt, sub, asDate, asFloat, asInt, asString, trim, year, and, bitLength, charLength, characterLength, concat, fromUnixTime, left, like, lower, lpad, not, octetLength, or, overlay, position, regexExtract, regexLike, regexReplace, replace, reverse, right, rpad, substring, upper, toUnixTime, pipe } from "../../mod.ts";
+import { isNotNull, map, abs, add, cast, ceil, coalesce, dateAdd, dateDiff, dateFormat, dateParse, dateTrunc, day, div, eq, extract, floor, greatest, gt, gte, hour, isIn, isNull, least, lt, lte, minute, mod, month, mul, ne, nullIf, pow, round, second, sqrt, sub, asDate, asFloat, asInt, asString, trim, year, and, bitLength, charLength, characterLength, concat, fromUnixTime, leftSubstring, like, lower, lpad, not, octetLength, or, overlay, position, regexExtract, regexLike, regexReplace, replace, reverse, rightSubstring, rpad, substring, upper, toUnixTime, pipe } from "../../mod.ts";
 export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
     {
         name: "math functions",
@@ -201,7 +201,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
         name: "left",
         build: () => {
             const scalar = scalarTable();
-            return pipe(scalar, map(({ txt }) => ({ value: left(trim(txt), 5) })));
+            return pipe(scalar, map(({ txt }) => ({ value: leftSubstring(trim(txt), 5) })));
         },
         outcomes: {
             sqlite: { error: SQLITE_UNSUPPORTED },
@@ -213,7 +213,7 @@ export const LIVE_LANGUAGE_SCALAR_CASES: LiveSpecCase[] = [
         name: "right",
         build: () => {
             const scalar = scalarTable();
-            return pipe(scalar, map(({ txt }) => ({ value: right(trim(txt), 5) })));
+            return pipe(scalar, map(({ txt }) => ({ value: rightSubstring(trim(txt), 5) })));
         },
         outcomes: {
             sqlite: { error: SQLITE_UNSUPPORTED },

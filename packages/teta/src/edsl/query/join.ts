@@ -43,7 +43,7 @@ export type JoinSelectionResult<TSelection extends JoinSelection> = {
 export type JoinColumnMerger<
   TLeft extends Record<string, unknown>,
   TRight extends Record<string, unknown>,
-  TSelection extends JoinSelection = Exprs<TLeft & TRight>
+  TSelection extends Record<string, unknown> = Exprs<TLeft & TRight>
 > = (
   left: ColumnRefs<TLeft>,
   right: ColumnRefs<TRight>
@@ -110,11 +110,51 @@ export type JoinOptions<
   lateral?: boolean;
 };
 
-export type JoinColumnMergerForType<
+/**
+ * A typed, reusable join specification produced by `inner`, `left`, `right`,
+ * or `full`.
+ *
+ * The left and right row types are inferred when the specification is passed
+ * to `join`, so callers can define the predicate before the current query is
+ * threaded through a pipeline.
+ */
+export type JoinSpecWithoutSelect<
+  TLeft extends Record<string, unknown>,
+  TRight extends Record<string, unknown>,
+  TType extends JoinKind,
+> = {
+  readonly type: TType;
+  readonly on: JoinOnNoMerge<TLeft, TRight>;
+  readonly select?: undefined;
+  readonly lateral?: boolean;
+};
+
+export type JoinSpecWithSelect<
   TLeft extends Record<string, unknown>,
   TRight extends Record<string, unknown>,
   TType extends JoinKind,
   TSelection extends JoinSelection,
+> = {
+  readonly type: TType;
+  readonly on: JoinOn<TLeft, TRight>;
+  readonly select: JoinColumnMergerForType<TLeft, TRight, TType, TSelection>;
+  readonly lateral?: boolean;
+};
+
+export type JoinSpec<
+  TLeft extends Record<string, unknown>,
+  TRight extends Record<string, unknown>,
+  TType extends JoinKind,
+  TSelection extends JoinSelection = JoinSelection,
+> =
+  | JoinSpecWithoutSelect<TLeft, TRight, TType>
+  | JoinSpecWithSelect<TLeft, TRight, TType, TSelection>;
+
+export type JoinColumnMergerForType<
+  TLeft extends Record<string, unknown>,
+  TRight extends Record<string, unknown>,
+  TType extends JoinKind,
+  TSelection extends Record<string, unknown>,
 > = JoinColumnMerger<
   JoinLeftColumnsForType<TLeft, TType>,
   JoinRightColumnsForType<TRight, TType>,

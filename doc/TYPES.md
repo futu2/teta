@@ -148,6 +148,7 @@ The frontend join type is exported as `JoinKind` and is intentionally lowercase-
 import {
   dropOverlapLeft,
   join,
+  left,
   onEq,
   prefixOverlapLeft,
   table,
@@ -163,16 +164,19 @@ const orders = table("orders", {
 
 const usersWithOrders = pipe(
   users,
-  join(orders, {
-    type: "left",
-    on: onEq({ id: "user_id" }),
-    select: dropOverlapLeft(),
-  })
+  join(orders, left(
+    onEq({ id: "user_id" }),
+    dropOverlapLeft()
+  ))
 );
 // order columns are inferred as nullable because this is a left join
 ```
 
-`join(...)` is the primitive join step. Default joins only infer a merged shape when the left and right output names do not overlap. If names overlap, use `select` with an explicit merge helper such as `dropOverlapLeft()` or `prefixOverlapLeft("left_")`. Fixed helpers such as `leftJoinMerge(right, on, dropOverlapLeft())` remain available as wrappers around `join(...)`.
+`join(...)` is the primitive join step. The `inner`, `left`, `right`, and `full`
+constructors preserve the join kind in the type system. Joins only infer a
+merged shape when the left and right output names do not overlap. If names
+overlap, pass an explicit merge helper such as `dropOverlapLeft()` or
+`prefixOverlapLeft("left_")` as the spec's second argument.
 
 ```ts
 const profiles = table("profiles", {
@@ -183,11 +187,10 @@ const profiles = table("profiles", {
 
 const renamed = pipe(
   users,
-  join(profiles, {
-    type: "left",
-    on: onEq({ id: "user_id" }),
-    select: prefixOverlapLeft("left_"),
-  })
+  join(profiles, left(
+    onEq({ id: "user_id" }),
+    prefixOverlapLeft("left_")
+  ))
 );
 ```
 

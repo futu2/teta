@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { fold, filter, leftJoin, count, eq, group, gt, sum, lt, toSql, and, or, arrayAgg, pipe } from "../mod.ts";
+import { fold, filter, join, left, count, eq, group, gt, sum, lt, toSql, and, or, arrayAgg, pipe } from "../mod.ts";
 import { ORDERS_GROUPED_ARRAY_AGG_HIVE_COMPACT, ORDERS_GROUPED_ARRAY_AGG_POSTGRES_COMPACT, ORDERS_GROUPED_ARRAY_AGG_SQLITE_COMPACT, ORDERS_GROUPED_TOTALS_POSTGRES_COMPACT, ORDERS_GROUPED_TOTALS_HAVING_POSTGRES_COMPACT, ORDERS_GROUPED_TOTALS_WHERE_HAVING_POSTGRES_COMPACT, ORDERS_GROUPED_TOTALS_WHERE_HAVING_OR_POSTGRES_COMPACT, ORDERS_GROUPED_USER_RANGE_HAVING_OR_POSTGRES_COMPACT, USERS_ORDERS_LEFT_JOIN_AGG_POSTGRES_COMPACT, QUOTED_TOTAL_SPEND_AGG_LIST_POSTGRES_COMPACT } from "./helpers/expected-sql.ts";
 import { createOrdersTable, createUsersTable } from "./helpers/fixtures.ts";
 describe("joins and aggregates", () => {
@@ -40,9 +40,9 @@ describe("joins and aggregates", () => {
         const orders = createOrdersTable();
         const query = pipe(
             users,
-            leftJoin(
+            join(
                 orders,
-                (user, order) => eq(user.id, order.user_id)
+                left((user, order) => eq(user.id, order.user_id))
             ),
             fold((row) => ({
             user_id: group(row.id),

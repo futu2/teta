@@ -10,7 +10,7 @@ Teta is function-first. Row-transforming query helpers are curried query steps u
 Queries are opaque runtime values. Use `query.columns` for reusable column expressions and `toIR(query)` / `explain(query, ...)` for inspection. Query steps are callable values with `kind: "query_step"` and `stepName` metadata. `flow(...)` composes general unary functions; `composeSteps(...)` preserves the query-step brand and metadata. These composition helpers preserve exact intermediate types through 12 explicit steps and a checked variadic tail.
 
 ```ts
-import { add, and, arrayAppend, arrayContains, arrayJoin, arrayLength, arrayPosition, arraySlice, asBigInt, asBoolean, asBytes, asDate, asDecimal, asFloat, asInt, asJson, asString, asTimestamp, asUuid, asc, avg, bitLength, cast, charLength, characterLength, coalesce, composeSteps, concat, count, currentDate, currentTimestamp, dateAdd, dateDiff, dateFormat, dateLiteral, dateParse, dateTrunc, day, desc, drop, dropOverlapLeft, dropOverlapRight, eq, explain, Expr, f, filter, filterEq, flow, fold, fromUnixTime, fullJoin, group, gt, gte, hour, identityStep, innerJoin, isIn, isNotNull, isNull, JoinKind, JoinOptions, join, lag, lead, left, leftJoin, like, loop, lower, lt, lte, map, max, min, minute, mod, month, mul, ne, not, ntile, nullIf, octetLength, onEq, over, overlay, param, percentRank, pick, pipe, position, pow, prefixAllLeft, prefixAllRight, prefixOverlapLeft, prefixOverlapRight, Query, rank, regexExtract, regexLike, regexReplace, rename, replace, reverse, right, rightJoin, round, rowNumber, rpad, sort, sqrt, sub, substring, suffixAllLeft, suffixAllRight, sum, sumOver, t, table, take, takeWithin, timestampLiteral, toAst, toIR, toSql, toSqlResult, toUnixTime, trim, union, unionAll, unlessStep, unnest, upper, usingCols, values, when, whenStep, year } from "@teta/teta";
+import { add, and, arrayAppend, arrayContains, arrayJoin, arrayLength, arrayPosition, arraySlice, asBigInt, asBoolean, asBytes, asDate, asDecimal, asFloat, asInt, asJson, asString, asTimestamp, asUuid, asc, avg, bitLength, cast, charLength, characterLength, coalesce, composeSteps, concat, count, currentDate, currentTimestamp, dateAdd, dateDiff, dateFormat, dateLiteral, dateParse, dateTrunc, day, desc, drop, dropOverlapLeft, dropOverlapRight, eq, explain, Expr, f, filter, filterEq, flow, fold, fromUnixTime, full, group, gt, gte, hour, identityStep, inner, isIn, isNotNull, isNull, JoinKind, JoinOptions, join, lag, lead, left, leftSubstring, like, loop, lower, lt, lte, map, max, min, minute, mod, month, mul, ne, not, ntile, nullIf, octetLength, onEq, over, overlay, param, percentRank, pick, pipe, position, pow, prefixAllLeft, prefixAllRight, prefixOverlapLeft, prefixOverlapRight, Query, rank, regexExtract, regexLike, regexReplace, rename, replace, reverse, right, rightSubstring, round, rowNumber, rpad, sort, sqrt, sub, substring, suffixAllLeft, suffixAllRight, sum, sumOver, t, table, take, takeWithin, timestampLiteral, toAst, toIR, toSql, toSqlResult, toUnixTime, trim, union, unionAll, unlessStep, unnest, upper, usingCols, values, when, whenStep, year } from "@teta/teta";
 import { fn, windowFn } from "@teta/teta/advanced";
 ```
 
@@ -116,23 +116,22 @@ const q = pipe(
 ```ts
 const joined = pipe(
   users,
-  join(orders, {
-    type: "left",
-    on: (user, order) => eq(user.id, order.user_id),
-  })
+  join(orders, left(
+    (user, order) => eq(user.id, order.user_id)
+  ))
 );
 ```
 
-Use `select` when the join output should be projected at the join boundary. The `*JoinMap(...)` helpers are wrappers for this shape:
+Pass a selector as the join spec's second argument when the output should be
+projected at the join boundary:
 
 ```ts
 const joined = pipe(
   users,
-  join(orders, {
-    type: "left",
-    on: (user, order) => eq(user.id, order.user_id),
-    select: (user, order) => ({ user_id: user.id, order_total: order.total }),
-  })
+  join(orders, left(
+    (user, order) => eq(user.id, order.user_id),
+    (user, order) => ({ user_id: user.id, order_total: order.total })
+  ))
 );
 ```
 
@@ -161,38 +160,38 @@ const q = pipe(base, loop((self) => pipe(self, map((s) => ({ n: add(s.n, 1) })))
 ```
 
 ### Join helpers
-Join queries with `join(rightOrBuilder, { type?, on, select?, lateral? })`. `type` defaults to `inner`; use `"left"`, `"right"`, or `"full"` for outer joins.
+Join queries with `join(rightOrBuilder, spec)`, where the spec is built with
+`inner(...)`, `left(...)`, `right(...)`, or `full(...)`.
 
 ```ts
 const usersWithOrders = pipe(
   users,
-  join(orders, {
-    type: "left",
-    on: onEq({ id: "user_id" }),
-    select: (user, order) => ({
+  join(orders, left(
+    onEq({ id: "user_id" }),
+    (user, order) => ({
       user_id: user.id,
       user_name: user.name,
       order_total: order.total,
-    }),
-  })
+    })
+  ))
 );
 ```
 
-Use merge helpers in `select` when overlapping output columns need an explicit strategy. The `*JoinMerge(...)` helpers are wrappers for this shape:
+The optional second argument is either a selector or a merge helper when
+overlapping output columns need an explicit strategy:
 
 ```ts
 const q = pipe(
-  left,
-  join(right, {
-    type: "left",
-    on,
-    select: dropOverlapLeft(),
-  })
+  leftQuery,
+  join(rightQuery, left(on, dropOverlapLeft()))
 );
 ```
 
 ### Join-kind helpers
-Use `innerJoin(...)`, `leftJoin(...)`, `rightJoin(...)`, or `fullJoin(...)` as fixed-type wrappers around `join(...)`. Use `innerJoinMap(...)` or `innerJoinMerge(...)` style helpers when you prefer wrapper names for `select` projections or merge helpers.
+Each join-kind helper is a data-last spec constructor:
+`left(on)`, `left(on, selector)`, or `left(on, mergeHelper)`. The other join
+kinds have the same shape. Pass `{ lateral: true }` after the selector, or in
+the selector position when no selector is needed.
 
 ### `fold(selector)`
 Use `group(expr)` inside the selector for grouping keys. `fold(...)` selectors are aggregate-phase projections: every returned expression should be grouped with `group(...)` / `groupShape(...)` or produced by an aggregate helper such as `count(...)`, `sum(...)`, `avg(...)`, `min(...)`, `max(...)`, or `arrayAgg(...)`.
@@ -237,10 +236,10 @@ const uniqueUsers = pipe(activeUsers, union(inactiveUsers));
 - `distinct()`
 - `take(count)`
 - `takeWithin({ partitionBy, orderBy, count })`
-- `join(rightOrBuilder, { type?, on, select?, lateral? })`
-- `innerJoin(...)`, `leftJoin(...)`, `rightJoin(...)`, `fullJoin(...)` as fixed-type wrappers
-- `innerJoinMap(...)`, `leftJoinMap(...)`, `rightJoinMap(...)`, `fullJoinMap(...)` as projection wrappers
-- `innerJoinMerge(...)`, `leftJoinMerge(...)`, `rightJoinMerge(...)`, `fullJoinMerge(...)` as merge-helper wrappers
+- `join(rightOrBuilder, inner(on, select?, options?))`
+- `left(on, select?, options?)`
+- `right(on, select?, options?)`
+- `full(on, select?, options?)`
 - `usingCols(name | names)`
 - `onEq({ leftName: rightName })`
 - `dropOverlapLeft()`
@@ -430,8 +429,8 @@ const explicitSql = irToSql(ir, { dialect: "postgresql" });
 - `characterLength(value)`
 - `octetLength(value)`
 - `bitLength(value)`
-- `left(value, length)`
-- `right(value, length)`
+- `leftSubstring(value, length)`
+- `rightSubstring(value, length)`
 - `lpad(value, length, padding?)`
 - `rpad(value, length, padding?)`
 - `concat(value, ...parts)`

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { add, charLength, eq, filter, gt, innerJoinMap, isNotNull, isNull, loop, map, not, t, table, toSql, union, pipe } from "../mod.ts";
+import { add, charLength, eq, filter, gt, inner, join, isNotNull, isNull, loop, map, not, t, table, toSql, union, pipe } from "../mod.ts";
 import { buildOrgTreeQuery, createEmployeesTable } from "./helpers/fixtures.ts";
 
 describe("recursive loop queries", () => {
@@ -79,10 +79,12 @@ describe("recursive loop queries", () => {
     const joinedSql = toSql(
       pipe(
         left,
-        innerJoinMap(
+        join(
           right,
-          (leftRow, rightRow) => eq(leftRow.id, rightRow.id),
-          (leftRow) => ({ id: leftRow.id })
+          inner(
+            (leftRow, rightRow) => eq(leftRow.id, rightRow.id),
+            (leftRow) => ({ id: leftRow.id })
+          )
         )
       ),
       { dialect: "postgresql", format: "compact" }
@@ -110,14 +112,16 @@ describe("recursive loop queries", () => {
         base,
         loop((self) => pipe(
             employees,
-            innerJoinMap(
+            join(
               self,
-              (employee, current) => eq(employee.manager_id, current.id),
-              (employee) => ({
+              inner(
+                (employee, current) => eq(employee.manager_id, current.id),
+                (employee) => ({
                 id: employee.id,
                 name: employee.name,
                 manager_id: employee.manager_id,
-              })
+                })
+              )
             )
           )),
         map((employee) => ({ id: employee.id, name: employee.name }))
@@ -150,14 +154,16 @@ describe("recursive loop queries", () => {
         directSup,
         loop((self) => pipe(
           self,
-          innerJoinMap(
+          join(
             directSup,
-            (current, parent) => eq(current.sup_orgId, parent.orgId),
-            (current, parent) => ({
+            inner(
+              (current, parent) => eq(current.sup_orgId, parent.orgId),
+              (current, parent) => ({
               orgId: current.orgId,
               sup_orgId: parent.sup_orgId,
               distance: add(current.distance, 1),
-            })
+              })
+            )
           )
         ))
       ),
@@ -193,14 +199,16 @@ describe("recursive loop queries", () => {
         orgInfo,
         loop((self) => pipe(
           self,
-          innerJoinMap(
+          join(
             orgInfo,
-            (u, o) => eq(u.sup_stru, o.stru_id),
-            (u, o) => ({
+            inner(
+              (u, o) => eq(u.sup_stru, o.stru_id),
+              (u, o) => ({
               stru_id: u.stru_id,
               sup_stru: o.sup_stru,
               distance: add(o.distance, 1),
-            })
+              })
+            )
           )
         ))
       ),

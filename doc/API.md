@@ -299,41 +299,41 @@ pipe(
 );
 ```
 
-### `join(right, options)`
+### `join(right, spec)`
 
 Joins two query inputs.
 
 ```ts
 function join<TLeft extends QueryColumns, TRight extends QueryColumns, TKind extends JoinKind>(
   right: Query<TRight> | ((left: ColumnRefs<TLeft>) => Query<TRight>),
-  options: JoinOptions<TLeft, TRight, TKind>,
+  spec: JoinSpec<TLeft, TRight, TKind>,
 ): QueryStep<TLeft, JoinResult<TLeft, TRight, TKind>>
 ```
 
 ```ts
 pipe(
   users,
-  join(orders, {
-    type: "left",
-    on: (user, order) => eq(user.id, order.user_id),
-    select: (user, order) => ({ user_id: user.id, order_total: order.total }),
-  }),
+  join(orders, left(
+    (user, order) => eq(user.id, order.user_id),
+    (user, order) => ({ user_id: user.id, order_total: order.total }),
+  )),
 );
 ```
 
-`type` can be `"inner"`, `"left"`, `"right"`, or `"full"`. Defaults to `"inner"`.
+Use `inner`, `left`, `right`, or `full` to construct the join specification.
+The optional second argument selects the result shape or accepts a merge helper.
 
-Use `lateral: true` for lateral/correlated joins.
+Pass `{ lateral: true }` as the final spec-builder argument for lateral or
+correlated joins.
 
-### `innerJoin(right, on)`, `leftJoin(right, on)`, etc.
+### `inner(on, select?)`, `left(on, select?)`, etc.
 
-Convenience wrappers around `join()` with fixed join types.
+Typed join-spec constructors consumed by `join()`.
 
 ```ts
-function innerJoin<TLeft extends QueryColumns, TRight extends QueryColumns>(
-  right: Query<TRight>,
+function inner<TLeft extends QueryColumns, TRight extends QueryColumns>(
   on: JoinOn<TLeft, TRight>,
-): QueryStep<TLeft, TLeft & TRight>
+): JoinSpec<TLeft, TRight, "inner">
 ```
 
 ### `union(right)`, `unionAll(right)`
@@ -371,7 +371,7 @@ const tree = pipe(
   loop((self) =>
     pipe(
       employees,
-      join(self, { on: (e, s) => eq(e.manager_id, s.id), select: (e) => e }),
+      join(self, inner((e, s) => eq(e.manager_id, s.id), (e) => e)),
     ),
   ),
 );
@@ -427,7 +427,7 @@ function onEq<TLeft extends QueryColumns, TRight extends QueryColumns>(
 ```
 
 ```ts
-join(orders, { type: "left", on: onEq({ id: "user_id" }) });
+join(orders, left(onEq({ id: "user_id" })));
 ```
 
 ### `usingCols(...names)`
@@ -440,7 +440,8 @@ function usingCols(...names: string[]): JoinOn<any, any>
 
 ### Overlap merge helpers
 
-When both sides of a join have overlapping column names, use these in the `select` option:
+When both sides of a join have overlapping column names, pass one of these as
+the join spec's second argument:
 
 | Helper | Behavior |
 |---|---|
@@ -541,8 +542,8 @@ When both sides of a join have overlapping column names, use these in the `selec
 | `bitLength(value)` | `(value: Expr<SqlString>) => Expr<SqlInt>` | `BIT_LENGTH` |
 | `replace(value, search, replacement)` | `(value: Expr<SqlString>, search: string, replacement: string) => Expr<SqlString>` | `REPLACE` |
 | `reverse(value)` | `(value: Expr<SqlString>) => Expr<SqlString>` | `REVERSE` |
-| `left(value, length)` | `(value: Expr<SqlString>, length: number) => Expr<SqlString>` | `LEFT` |
-| `right(value, length)` | `(value: Expr<SqlString>, length: number) => Expr<SqlString>` | `RIGHT` |
+| `leftSubstring(value, length)` | `(value: Expr<SqlString>, length: number) => Expr<SqlString>` | `LEFT` |
+| `rightSubstring(value, length)` | `(value: Expr<SqlString>, length: number) => Expr<SqlString>` | `RIGHT` |
 | `lpad(value, length, padding?)` | `(value: Expr<SqlString>, length: number, padding?: string) => Expr<SqlString>` | `LPAD` |
 | `rpad(value, length, padding?)` | `(value: Expr<SqlString>, length: number, padding?: string) => Expr<SqlString>` | `RPAD` |
 | `regexLike(value, pattern)` | `(value: Expr<SqlString>, pattern: string) => Expr<SqlBoolean \| null>` | `REGEXP_LIKE` |

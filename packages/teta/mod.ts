@@ -60,41 +60,17 @@ export const unlessStep: typeof import("./src/edsl/query.ts").unlessStep = query
 /** Joins two query inputs with configurable join type, predicate, projection, and lateral mode. */
 export const join: typeof import("./src/edsl/query.ts").join = query.join;
 
-/** Joins two query inputs as an inner join. */
-export const innerJoin: typeof import("./src/edsl/query.ts").innerJoin = query.innerJoin;
+/** Builds an inner-join specification consumed by `join`. */
+export const inner: typeof import("./src/edsl/query.ts").inner = query.inner;
 
-/** Joins two query inputs as an inner join with an explicit mapped projection. */
-export const innerJoinMap: typeof import("./src/edsl/query.ts").innerJoinMap = query.innerJoinMap;
+/** Builds a left-join specification consumed by `join`. */
+export const left: typeof import("./src/edsl/query.ts").left = query.left;
 
-/** Joins two query inputs as an inner join with an explicit merge helper. */
-export const innerJoinMerge: typeof import("./src/edsl/query.ts").innerJoinMerge = query.innerJoinMerge;
+/** Builds a right-join specification consumed by `join`. */
+export const right: typeof import("./src/edsl/query.ts").right = query.right;
 
-/** Joins two query inputs as a left join. */
-export const leftJoin: typeof import("./src/edsl/query.ts").leftJoin = query.leftJoin;
-
-/** Joins two query inputs as a left join with an explicit mapped projection. */
-export const leftJoinMap: typeof import("./src/edsl/query.ts").leftJoinMap = query.leftJoinMap;
-
-/** Joins two query inputs as a left join with an explicit merge helper. */
-export const leftJoinMerge: typeof import("./src/edsl/query.ts").leftJoinMerge = query.leftJoinMerge;
-
-/** Joins two query inputs as a right join. */
-export const rightJoin: typeof import("./src/edsl/query.ts").rightJoin = query.rightJoin;
-
-/** Joins two query inputs as a right join with an explicit mapped projection. */
-export const rightJoinMap: typeof import("./src/edsl/query.ts").rightJoinMap = query.rightJoinMap;
-
-/** Joins two query inputs as a right join with an explicit merge helper. */
-export const rightJoinMerge: typeof import("./src/edsl/query.ts").rightJoinMerge = query.rightJoinMerge;
-
-/** Joins two query inputs as a full join. */
-export const fullJoin: typeof import("./src/edsl/query.ts").fullJoin = query.fullJoin;
-
-/** Joins two query inputs as a full join with an explicit mapped projection. */
-export const fullJoinMap: typeof import("./src/edsl/query.ts").fullJoinMap = query.fullJoinMap;
-
-/** Joins two query inputs as a full join with an explicit merge helper. */
-export const fullJoinMerge: typeof import("./src/edsl/query.ts").fullJoinMerge = query.fullJoinMerge;
+/** Builds a full-join specification consumed by `join`. */
+export const full: typeof import("./src/edsl/query.ts").full = query.full;
 
 /** Builds a join predicate by equating same-named columns. */
 export const usingCols: typeof import("./src/edsl/query.ts").usingCols = query.usingCols;
@@ -206,6 +182,19 @@ export type JoinKind = import("./src/edsl/query.ts").JoinKind;
 
 /** Options accepted by the primitive `join(...)` helper. */
 export type JoinOptions<TType extends import("./src/edsl/query.ts").JoinKind | undefined = undefined> = import("./src/edsl/query.ts").JoinOptions<TType>;
+
+/** Options accepted by the `inner`, `left`, `right`, and `full` join-spec builders. */
+export type JoinSpecOptions = import("./src/edsl/query.ts").JoinSpecOptions;
+
+/** Builder signature shared by the fixed join-spec constructors. */
+export type JoinSpecBuilder<TType extends import("./src/edsl/query.ts").JoinKind> = import("./src/edsl/query.ts").JoinSpecBuilder<TType>;
+
+/** Typed join specification consumed by `join(...)`. */
+export type JoinSpec<
+  TLeft extends import("./src/edsl/query.ts").QueryColumns,
+  TRight extends import("./src/edsl/query.ts").QueryColumns,
+  TType extends import("./src/edsl/query.ts").JoinKind,
+> = import("./src/edsl/query.ts").JoinSpec<TLeft, TRight, TType>;
 
 /** Options accepted by `takeWithin(...)`. */
 export type TakeWithinSpec<TColumns extends import("./src/edsl/query.ts").QueryColumns> = import("./src/edsl/query.ts").TakeWithinSpec<TColumns>;
@@ -535,10 +524,10 @@ export const octetLength: typeof import("./src/edsl/expr.ts").octetLength = expr
 export const bitLength: typeof import("./src/edsl/expr.ts").bitLength = expr.bitLength;
 
 /** Builds a left-substring expression. */
-export const left: typeof import("./src/edsl/expr.ts").left = expr.left;
+export const leftSubstring: typeof import("./src/edsl/expr.ts").leftSubstring = expr.leftSubstring;
 
 /** Builds a right-substring expression. */
-export const right: typeof import("./src/edsl/expr.ts").right = expr.right;
+export const rightSubstring: typeof import("./src/edsl/expr.ts").rightSubstring = expr.rightSubstring;
 
 /** Builds a left-padding expression. */
 export const lpad: typeof import("./src/edsl/expr.ts").lpad = expr.lpad;

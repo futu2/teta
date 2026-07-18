@@ -3,6 +3,8 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
 import * as teta from "../mod.ts";
+import * as exprApi from "../expr.ts";
+import * as queryApi from "../query.ts";
 
 const modPath = fileURLToPath(new URL("../mod.ts", import.meta.url));
 const coreExprPath = fileURLToPath(new URL("../src/edsl/core/expr.ts", import.meta.url));
@@ -22,6 +24,35 @@ describe("core entrypoint boundary", () => {
     expect("col" in teta).toBe(false);
     expect(["left", "Col"].join("") in teta).toBe(false);
     expect(["right", "Col"].join("") in teta).toBe(false);
+  });
+
+  test("reserves left and right for join specs at query boundaries", () => {
+    expect(teta.left).toBe(queryApi.left);
+    expect(teta.right).toBe(queryApi.right);
+    expect("left" in exprApi).toBe(false);
+    expect("right" in exprApi).toBe(false);
+    expect(typeof exprApi.leftSubstring).toBe("function");
+    expect(typeof exprApi.rightSubstring).toBe("function");
+  });
+
+  test("does not export duplicate fixed join wrappers", () => {
+    for (const name of [
+      "innerJoin",
+      "innerJoinMap",
+      "innerJoinMerge",
+      "leftJoin",
+      "leftJoinMap",
+      "leftJoinMerge",
+      "rightJoin",
+      "rightJoinMap",
+      "rightJoinMerge",
+      "fullJoin",
+      "fullJoinMap",
+      "fullJoinMerge",
+    ]) {
+      expect(name in teta).toBe(false);
+      expect(name in queryApi).toBe(false);
+    }
   });
 
   test("mod.ts source does not export dev helpers or dev-only types", async () => {

@@ -1,26 +1,20 @@
-export { join } from "./join_builder.ts";
+export { full, inner, join, left, right } from "./join_builder.ts";
 export { fold, map } from "./projection_builder.ts";
 export { distinct, filter, sort, take, union, unionAll } from "./stage_builder.ts";
 export { unnest, type UnnestOptions, type UnnestSelection } from "./unnest.ts";
 export { isQuery } from "./value.ts";
 export type { Query, QueryStageKind, QueryStep } from "./core.ts";
 export type { QueryColumns } from "./types.ts";
-export type { JoinRightInput } from "./join_builder.ts";
-export type { JoinKind, JoinOptions } from "./join.ts";
-export {
-  fullJoin,
-  fullJoinMap,
-  fullJoinMerge,
-  innerJoin,
-  innerJoinMap,
-  innerJoinMerge,
-  leftJoin,
-  leftJoinMap,
-  leftJoinMerge,
-  rightJoin,
-  rightJoinMap,
-  rightJoinMerge,
-} from "../helpers/join.ts";
+export type {
+  JoinRightInput,
+  JoinSpecBuilder,
+  JoinSpecOptions,
+} from "./join_builder.ts";
+export type {
+  JoinKind,
+  JoinOptions,
+  JoinSpec,
+} from "./join.ts";
 export { takeWithin, type TakeWithinSpec } from "./take_within.ts";
 export {
   filterEq,

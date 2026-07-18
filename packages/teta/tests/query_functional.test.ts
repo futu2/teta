@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { between, composeSteps, filter, filterEq, identityStep, isDistinctFrom, isNotIn, take, takeWithin, sort, map, toSql, asc, desc, eq, gte, replace, and, coalesce, join, leftJoin, leftJoinMerge, onEq, prefixOverlapLeft, table, t, pipe, flow, unlessStep, unionAll, union, unnest, whenStep } from "../mod.ts";
+import { between, composeSteps, filter, filterEq, identityStep, isDistinctFrom, isNotIn, take, takeWithin, sort, map, toSql, asc, desc, eq, gte, replace, and, coalesce, join, left, onEq, prefixOverlapLeft, table, t, pipe, flow, unlessStep, unionAll, union, unnest, whenStep } from "../mod.ts";
 import { USER_PIPELINE_POSTGRES_COMPACT, USERS_ORDERS_LEFT_JOIN_SELECT_POSTGRES_COMPACT } from "./helpers/expected-sql.ts";
 import { createOrdersTable, createUsersPipelineTable, createUsersTable } from "./helpers/fixtures.ts";
 describe("function-first query api", () => {
@@ -196,9 +196,9 @@ describe("function-first query api", () => {
         const orders = createOrdersTable();
         const query = pipe(
             users,
-            leftJoin(
+            join(
                 orders,
-                (user, order) => eq(user.id, order.user_id)
+                left((user, order) => eq(user.id, order.user_id))
             ),
             map((row) => ({
                 user_id: row.id,
@@ -207,24 +207,23 @@ describe("function-first query api", () => {
         );
         expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe(USERS_ORDERS_LEFT_JOIN_SELECT_POSTGRES_COMPACT);
     });
-    test("supports join primitive with explicit type and select", () => {
+    test("supports a left join spec with an explicit selection", () => {
         const users = createUsersTable();
         const orders = createOrdersTable();
         const query = pipe(
             users,
-            join(orders, {
-                type: "left",
-                on: (user, order) => eq(user.id, order.user_id),
-                select: (user, order) => ({
+            join(orders, left(
+                (user, order) => eq(user.id, order.user_id),
+                (user, order) => ({
                     user_id: user.id,
                     total: order.total,
-                }),
-            })
+                })
+            ))
         );
 
         expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe("SELECT users_0.id AS user_id, orders_1.total AS total FROM users AS users_0 LEFT JOIN orders AS orders_1 ON users_0.id = orders_1.user_id");
     });
-    test("supports leftJoin with onEq mapping in function-first pipeline", () => {
+    test("supports a left join spec with predicate and merge helpers", () => {
         const users = table("users", {
             id: t.int(),
         });
@@ -235,10 +234,12 @@ describe("function-first query api", () => {
         });
         const query = pipe(
             users,
-            leftJoinMerge(
+            join(
                 profiles,
-                onEq({ id: "user_id" }),
-                prefixOverlapLeft("left_")
+                left(
+                    onEq({ id: "user_id" }),
+                    prefixOverlapLeft("left_")
+                )
             ),
             map((row) => ({
                 left_id: row.left_id,
@@ -256,10 +257,12 @@ describe("function-first query api", () => {
             user_id: t.int(),
             bio: t.string(),
         });
-        const query = leftJoinMerge(
+        const query = join(
             profiles,
-            (u: typeof users.columns, p: typeof profiles.columns = profiles.columns) => eq(u.id, p.user_id),
-            prefixOverlapLeft("left_")
+            left(
+                (u: typeof users.columns, p: typeof profiles.columns = profiles.columns) => eq(u.id, p.user_id),
+                prefixOverlapLeft("left_")
+            )
         )(users);
         expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe("SELECT users_0.id AS left_id, profiles_1.id AS id, profiles_1.user_id AS user_id, profiles_1.bio AS bio FROM users AS users_0 LEFT JOIN profiles AS profiles_1 ON users_0.id = profiles_1.user_id");
     });

@@ -1,4 +1,4 @@
-import { table, t, filter, innerJoinMap, map, bitLength, characterLength, dateFormat, dateTrunc, eq, gte, isNull, and, loop, sort, replace, asc, coalesce, desc, take, pipe } from "../../mod.ts";
+import { table, t, filter, inner, join, map, bitLength, characterLength, dateFormat, dateTrunc, eq, gte, isNull, and, loop, sort, replace, asc, coalesce, desc, take, pipe } from "../../mod.ts";
 export function createUsersTable() {
     return table("users", {
         id: t.int(),
@@ -59,14 +59,16 @@ export function buildOrgTreeQuery() {
         })),
         loop((self) => pipe(
             employees,
-            innerJoinMap(
+            join(
                 self,
-                (employee, current) => eq(employee.manager_id, current.id),
-                (employee) => ({
+                inner(
+                    (employee, current) => eq(employee.manager_id, current.id),
+                    (employee) => ({
                     id: employee.id,
                     name: employee.name,
                     manager_id: employee.manager_id,
-                })
+                    })
+                )
             )
         ))
     );

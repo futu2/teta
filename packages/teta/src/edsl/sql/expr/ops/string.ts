@@ -211,7 +211,7 @@ export function bitLength<TInput extends ExprInput<NullableString>>(
   return fn<PropagateNull<ExprInputValue<TInput>, SqlInt>, [TInput]>("BIT_LENGTH", value);
 }
 
-export function left<
+export function leftSubstring<
   TInput extends ExprInput<NullableString>,
   TLength extends ExprInput<SqlInt>,
 >(
@@ -221,7 +221,7 @@ export function left<
   return fn<SqlStringResult<TInput>, [TInput, TLength]>("LEFT", value, length);
 }
 
-export function right<
+export function rightSubstring<
   TInput extends ExprInput<NullableString>,
   TLength extends ExprInput<SqlInt>,
 >(

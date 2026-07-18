@@ -68,7 +68,7 @@ LIMIT 5
 ### 2) Join + fold with group()
 
 ```ts
-import { count, fold, group, join, onEq, sum, table, t, toSql, pipe } from "@teta/teta";
+import { count, fold, group, join, left, onEq, sum, table, t, toSql, pipe } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -83,10 +83,7 @@ const orders = table("orders", {
 
 const q = pipe(
   users,
-  join(orders, {
-    type: "left",
-    on: onEq({ id: "user_id" }),
-  }),
+  join(orders, left(onEq({ id: "user_id" }))),
   fold((row) => ({
     user_id: group(row.id),
     order_count: count(row.order_id),
@@ -216,7 +213,7 @@ If you only need a type marker and do not want a rendered `CAST(...)`, you can p
 ### Join helpers and `unnest(...)` refine types
 
 ```ts
-import { join, onEq, prefixOverlapLeft, table, t, pipe } from "@teta/teta";
+import { join, left, onEq, prefixOverlapLeft, table, t, pipe } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -231,21 +228,21 @@ const profiles = table("profiles", {
 
 const usersWithProfiles = pipe(
   users,
-  join(profiles, {
-    type: "left",
-    on: onEq({ id: "user_id" }),
-    select: prefixOverlapLeft("left_"),
-  })
+  join(profiles, left(
+    onEq({ id: "user_id" }),
+    prefixOverlapLeft("left_")
+  ))
 );
 ```
 
 `fold(...)` is intentionally stricter than `map(...)`: every selected expression must be a grouped key or an aggregate result. Use `group(row.id)` or `groupShape({ id: row.id })` for dimensions, and helpers like `count(...)`, `sum(...)`, and `arrayAgg(...)` for aggregate outputs.
 
 If both sides expose the same output column name, Teta now requires an explicit merge helper such as `dropOverlapLeft()` or `prefixOverlapLeft("left_")`.
-Use `join(right, { type, on, select })` with a merge helper such as `dropOverlapLeft()`. Fixed helpers such as `leftJoinMerge(right, on, dropOverlapLeft())` remain wrappers around `join(...)`.
+Use `join(right, left(on, merge))` with a merge helper such as
+`dropOverlapLeft()`. The same shape works with `inner`, `right`, and `full`.
 
 ```ts
-import { join, onEq, prefixOverlapLeft, table, t, unnest, pipe } from "@teta/teta";
+import { inner, join, left, onEq, prefixOverlapLeft, table, t, unnest, pipe } from "@teta/teta";
 
 const orders = table("orders", {
   order_id: t.int(),
@@ -261,27 +258,20 @@ const profiles = table("profiles", {
 
 const leftJoined = pipe(
   users,
-  join(orders, {
-    type: "left",
-    on: onEq({ id: "user_id" }),
-  })
+  join(orders, left(onEq({ id: "user_id" })))
 );
 
 const usersWithProfiles = pipe(
   users,
-  join(profiles, {
-    type: "left",
-    on: onEq({ id: "user_id" }),
-    select: prefixOverlapLeft("left_"),
-  })
+  join(profiles, left(
+    onEq({ id: "user_id" }),
+    prefixOverlapLeft("left_")
+  ))
 );
 
 const renamedJoin = pipe(
   users,
-  join(orders, {
-    type: "inner",
-    on: onEq({ id: "user_id" }),
-  })
+  join(orders, inner(onEq({ id: "user_id" })))
 );
 
 // right-side columns become nullable on a left join
@@ -465,7 +455,7 @@ Comparison filter helpers require at least one row callback. Use callbacks for c
 ### Join (auto alias)
 
 ```ts
-import { join, map, onEq, table, t, toSql, pipe } from "@teta/teta";
+import { join, left, map, onEq, table, t, toSql, pipe } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -480,10 +470,7 @@ const orders = table("orders", {
 
 const q = pipe(
   users,
-  join(orders, {
-    type: "left",
-    on: onEq({ id: "user_id" }),
-  }),
+  join(orders, left(onEq({ id: "user_id" }))),
   map((row) => ({
     user_id: row.id,
     user_name: row.name,
@@ -495,14 +482,17 @@ const q = pipe(
 console.log(toSql(q, {}));
 ```
 
-`join(...)` is the primitive join step. Set `type` to `"inner"`, `"left"`, `"right"`, or `"full"`. The fixed helpers such as `leftJoin(...)` and `innerJoinMap(...)` are convenience wrappers over this shape.
+`join(...)` is the primitive join step. Its second argument is built with
+`inner`, `left`, `right`, or `full`; an optional second callback selects or
+merges the output shape.
 
 ### Lateral join
 
-Use `join(...)` with `{ lateral: true }` when the right-hand query needs to reference columns from the left side.
+Pass `{ lateral: true }` to the join-kind builder when the right-hand query
+needs to reference columns from the left side.
 
 ```ts
-import { eq, filter, join, lit, map, table, t, toSql, pipe } from "@teta/teta";
+import { eq, filter, inner, join, lit, map, table, t, toSql, pipe } from "@teta/teta";
 
 const users = table("users", {
   id: t.int(),
@@ -526,11 +516,7 @@ const q = pipe(
         total: o.total,
       }))
     ),
-    {
-      type: "inner",
-      on: () => lit(true),
-      lateral: true,
-    }
+    inner(() => lit(true), { lateral: true })
   )
 );
 
@@ -985,7 +971,7 @@ const allUsers = pipe(activeUsers, unionAll(inactiveUsers));
 ### Recursive loop (WITH RECURSIVE)
 
 ```ts
-import { eq, filter, isNull, join, loop, map, pipe, table, t } from "@teta/teta";
+import { eq, filter, inner, isNull, join, loop, map, pipe, table, t } from "@teta/teta";
 
 const employees = table("employees", {
   id: t.int(),
@@ -1003,14 +989,14 @@ const orgTree = pipe(
   base,
   loop((self) => pipe(
     employees,
-    join(self, {
-      on: (e, s) => eq(e.manager_id, s.id),
-      select: (e) => ({
+    join(self, inner(
+      (e, s) => eq(e.manager_id, s.id),
+      (e) => ({
         id: e.id,
         name: e.name,
         manager_id: e.manager_id,
-      }),
-    })
+      })
+    ))
   ))
 );
 

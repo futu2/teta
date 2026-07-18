@@ -147,10 +147,11 @@ const prefixedUsers = pipe(
 );
 ```
 
-Use `join(...)` for joins; the older join-kind helpers are convenience wrappers over the same primitive:
+Use `join(...)` with a join-kind specification. The optional second argument to
+the specification selects or merges the output columns:
 
 ```ts
-import { eq, join } from "@teta/teta";
+import { eq, join, left } from "@teta/teta";
 
 const orders = table("orders", {
   order_id: t.int(),
@@ -160,18 +161,19 @@ const orders = table("orders", {
 
 const usersWithOrders = pipe(
   users,
-  join(orders, {
-    type: "left",
-    on: (user, order) => eq(user.id, order.user_id),
-    select: (user, order) => ({
+  join(orders, left(
+    (user, order) => eq(user.id, order.user_id),
+    (user, order) => ({
       user_id: user.id,
       order_total: order.total,
-    }),
-  })
+    })
+  ))
 );
 ```
 
-`join(...)` accepts lowercase join types only (`"inner"`, `"left"`, `"right"`, `"full"`). The `JoinKind` and `JoinOptions` types are exported for reusable helper wrappers.
+The available specifications are `inner(on, select?)`, `left(on, select?)`,
+`right(on, select?)`, and `full(on, select?)`. Merge helpers such as
+`dropOverlapRight()` can be passed in the same position as a selector.
 
 Predicates involving nullable expressions are typed as `Expr<SqlBoolean | null>` and are accepted by `filter(...)`, matching SQL's three-valued boolean behavior.
 

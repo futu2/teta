@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { Parser } from "node-sql-parser";
-import { lit, table, t, filter, innerJoin, innerJoinMap, innerJoinMerge, leftJoin, map, toAst, toSql, asc, bitLength, characterLength, dateAdd, eq, gt, replace, rowNumber, upper, sort, over, and, take, not, or, group, unnest, dropOverlapLeft, usingCols, asBigInt, asBoolean, asBytes, asDate, asDecimal, asFloat, asInt, asJson, asString, asTimestamp, asUuid, pipe, loop, union, unionAll } from "../mod.ts";
+import { lit, table, t, filter, inner, join, left, map, toAst, toSql, asc, bitLength, characterLength, dateAdd, eq, gt, replace, rowNumber, upper, sort, over, and, take, not, or, group, unnest, dropOverlapLeft, usingCols, asBigInt, asBoolean, asBytes, asDate, asDecimal, asFloat, asInt, asJson, asString, asTimestamp, asUuid, pipe, loop, union, unionAll } from "../mod.ts";
 import { USER_PIPELINE_POSTGRES_COMPACT, USER_PIPELINE_POSTGRES_PRETTY, USERS_NAME_LENGTH_SQLITE_COMPACT, EMPLOYEES_SELF_JOIN_POSTGRES_COMPACT, USERS_ORDERS_LEFT_JOIN_SELECT_POSTGRES_COMPACT, USERS_SELECT_FILTER_POSTGRES_COMPACT, ANALYTICS_EVENTS_SELECT_POSTGRES_COMPACT, QUOTED_ANALYTICS_EVENTS_SELECT_POSTGRES_COMPACT, QUOTED_ANALYTICS_EVENTS_SELECT_BIGQUERY_COMPACT, QUOTED_USERS_ALIAS_SELECT_POSTGRES_COMPACT, QUOTED_USERS_PROJECTED_ALIAS_BIGQUERY_COMPACT, QUOTED_ROW_NUMBER_ALIAS_FILTER_POSTGRES_COMPACT, ORDERS_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT, ORDERS_ROW_NUMBER_FILTER_POSTGRES_COMPACT, ORDERS_ROW_NUMBER_FILTER_ORDER_LIMIT_POSTGRES_COMPACT, ORDERS_TOTAL_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT, ORDERS_TOTAL_ROW_NUMBER_FILTER_POSTGRES_COMPACT, ORDERS_TOTAL_SHARED_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT, ORDERS_TOTAL_SHARED_ROW_NUMBER_FILTER_POSTGRES_COMPACT, ORDERS_TOTAL_NOT_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT, ORDERS_TOTAL_NOT_ROW_NUMBER_FILTER_POSTGRES_COMPACT, ORDERS_SHARED_DISJUNCTION_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT } from "./helpers/expected-sql.ts";
 import { buildUserPipelineQuery, createOrdersTable, createUsersTable } from "./helpers/fixtures.ts";
 describe("toSql(query, options)", () => {
@@ -9,9 +9,9 @@ describe("toSql(query, options)", () => {
         const orders = createOrdersTable();
         const query = pipe(
             users,
-            leftJoin(
+            join(
                 orders,
-                (user, order) => eq(user.id, order.user_id)
+                left((user, order) => eq(user.id, order.user_id))
             ),
             map((row) => ({
                 user_id: row.id,
@@ -55,7 +55,7 @@ describe("toSql(query, options)", () => {
         });
         const query = pipe(
             users,
-            innerJoin(
+            join(
                 (user) => pipe(
                     orders,
                     filter((order) => eq(order.user_id, user.id)),
@@ -64,8 +64,10 @@ describe("toSql(query, options)", () => {
                         total: order.total,
                     }))
                 ),
-                () => lit(true),
-                { lateral: true }
+                inner(
+                    () => lit(true),
+                    { lateral: true }
+                )
             )
         );
         const sql = toSql(query, { dialect: "postgresql", format: "compact" });
@@ -80,10 +82,10 @@ describe("toSql(query, options)", () => {
             user_id: t.int(),
         });
         let predicateCalls = 0;
-        const step = innerJoin(orders, () => {
+        const step = join(orders, inner(() => {
             predicateCalls += 1;
             return lit(true);
-        });
+        }));
         expect(predicateCalls).toBe(0);
         const query = pipe(users, step);
         expect(predicateCalls).toBe(1);
@@ -101,12 +103,12 @@ describe("toSql(query, options)", () => {
         });
         const query = pipe(
             users,
-            innerJoin(
+            join(
                 (_user) => pipe(orders, map((order) => ({
                     user_id: order.user_id,
                     total: order.total,
                 }))),
-                () => lit(true)
+                inner(() => lit(true))
             )
         );
         const sql = toSql(query, { dialect: "postgresql", format: "compact" });
@@ -126,11 +128,11 @@ describe("toSql(query, options)", () => {
         let n = 0;
         const query = pipe(
             users,
-            innerJoin(
+            join(
                 () => pipe(orders, map((_order) => ({
                     seq: ++n,
                 }))),
-                () => lit(true)
+                inner(() => lit(true))
             )
         );
         expect(n).toBe(1);
@@ -166,7 +168,7 @@ describe("toSql(query, options)", () => {
         const orders = createOrdersTable();
         const query = pipe(
             users,
-            innerJoin(
+            join(
                 pipe(
                     orders,
                     filter((order) => gt(order.total, 0)),
@@ -175,7 +177,7 @@ describe("toSql(query, options)", () => {
                         total: order.total,
                     }))
                 ),
-                (user, order) => eq(user.id, order.user_id)
+                inner((user, order) => eq(user.id, order.user_id))
             )
         );
         const sql = toSql(query, { dialect: "postgresql", format: "compact" });
@@ -196,25 +198,29 @@ describe("toSql(query, options)", () => {
         );
         const joinedOnce = pipe(
             users,
-            innerJoinMap(
+            join(
                 positiveOrders,
-                (user, order) => eq(user.id, order.user_id),
-                (user, order) => ({
+                inner(
+                    (user, order) => eq(user.id, order.user_id),
+                    (user, order) => ({
                     id: user.id,
                     first_total: order.total,
-                })
+                    })
+                )
             )
         );
         const query = pipe(
             joinedOnce,
-            innerJoinMap(
+            join(
                 positiveOrders,
-                (row, order) => eq(row.id, order.user_id),
-                (row, order) => ({
+                inner(
+                    (row, order) => eq(row.id, order.user_id),
+                    (row, order) => ({
                     id: row.id,
                     first_total: row.first_total,
                     second_total: order.total,
-                })
+                    })
+                )
             )
         );
         const sql = toSql(query, { dialect: "postgresql", format: "compact" });
@@ -235,14 +241,16 @@ describe("toSql(query, options)", () => {
         });
         const query = pipe(
             employees,
-            innerJoinMap(
+            join(
                 managers,
-                (employee, manager) => eq(employee.manager_id, manager.id),
-                (employee, manager) => ({
+                inner(
+                    (employee, manager) => eq(employee.manager_id, manager.id),
+                    (employee, manager) => ({
                     employee_id: employee.id,
                     employee_name: employee.name,
                     manager_name: manager.name,
-                })
+                    })
+                )
             )
         );
         expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe(EMPLOYEES_SELF_JOIN_POSTGRES_COMPACT);
@@ -257,10 +265,9 @@ describe("toSql(query, options)", () => {
         });
         const query = pipe(
             users,
-            innerJoinMerge(
+            join(
                 profiles,
-                usingCols("id"),
-                dropOverlapLeft()
+                inner(usingCols("id"), dropOverlapLeft())
             )
         );
         expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe("SELECT profiles_1.id AS id, profiles_1.bio AS bio FROM users AS users_0 INNER JOIN profiles AS profiles_1 ON users_0.id = profiles_1.id");

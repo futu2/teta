@@ -6,7 +6,8 @@ import {
   desc,
   eq,
   filter,
-  leftJoinMap,
+  join,
+  left,
   lower,
   map,
   sort,
@@ -57,10 +58,11 @@ const orders = table("orders", {
 
 export const renderBenchmarkQuery = pipe(
   users,
-  leftJoinMap(
+  join(
     orders,
-    (user, order) => eq(user.id, order.user_id),
-    (user, order) => ({
+    left(
+      (user, order) => eq(user.id, order.user_id),
+      (user, order) => ({
       id: user.id,
       name: user.name,
       active: user.active,
@@ -69,7 +71,8 @@ export const renderBenchmarkQuery = pipe(
       status: order.status,
       total_cents: order.total_cents,
       created_at: order.created_at,
-    })
+      })
+    )
   ),
   filter((row) => and(eq(row.active, true), eq(row.status, "paid"))),
   map((row) => ({

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { TetaUserError, asc, count, distinct, eq, filter, fold, fullJoin, group, innerJoin, innerJoinMerge, join, leftJoin, loop, map, onEq, prefixOverlapLeft, rightJoin, sort, t, table, take, takeWithin, toSql, unlessStep, unnest, usingCols, values, whenStep, pipe } from "../mod.ts";
+import { TetaUserError, asc, count, distinct, eq, filter, fold, group, inner, join, left, loop, map, onEq, prefixOverlapLeft, sort, t, table, take, takeWithin, toSql, unlessStep, unnest, usingCols, values, whenStep, pipe } from "../mod.ts";
 import type { TetaErrorCode } from "../mod.ts";
 import { GROUP_INSIDE_AGGREGATE_FUNCTION_ERROR, GROUP_OUTSIDE_AGGREGATE_ERROR, JOIN_MERGE_CONFLICT_ERROR, JOIN_OVERLAPPING_COLUMNS_ERROR, LEGACY_SELECTION_ARRAY_ERROR, LOOP_COLUMN_MISMATCH_ERROR, NON_CANONICAL_POSTGRES_DIALECT_ERROR, TABLE_SCHEMA_EMPTY_ERROR, TABLE_SCHEMA_INVALID_ERROR, VALUES_COLUMN_MISMATCH_ERROR, VALUES_EMPTY_ERROR, VALUES_NO_COLUMNS_ERROR, VALUES_ROW_INVALID_ERROR, VALUES_UNDEFINED_ERROR } from "./helpers/expected-errors.ts";
 import { createOrdersTable, createUsersTable } from "./helpers/fixtures.ts";
@@ -95,26 +95,37 @@ describe("error paths", () => {
             "takeWithin.orderBy() callback must return order item(s)"
         );
     });
-    test("fixed join helpers reject invalid options without probing callbacks", () => {
+    test("join-spec builders reject invalid options without probing callbacks", () => {
         const users = table("users", { id: t.int() });
         const orders = table("orders", { user_id: t.int() });
         const on = (_user: typeof users.columns, _order: typeof orders.columns) => {
             throw new Error("callback should not be executed during argument validation");
         };
-        expect(() => (leftJoin as any)(users, on, { type: "left" })).toThrow(
-            "leftJoin() options must be { lateral?: boolean }"
+        expect(() => (left as any)(on, { type: "left" })).toThrow(
+            "left() options must be { lateral?: boolean }"
         );
     });
-    test("fixed join helpers reject invalid right operands", () => {
+    test("join-spec builders validate erased calls and return frozen values", () => {
+        const users = table("users", { id: t.int() });
+        const orders = table("orders", { user_id: t.int() });
+        const on = (user: typeof users.columns, order: typeof orders.columns) => eq(user.id, order.user_id);
+
+        expect(() => (left as any)()).toThrow("left() expects left(on, select?, options?)");
+        expect(() => (left as any)(on, { lateral: "yes" })).toThrow(
+            "left() options must be { lateral?: boolean }"
+        );
+        expect(Object.isFrozen(left(on))).toBe(true);
+    });
+    test("join rejects invalid right operands", () => {
         const users = table("users", { id: t.int() });
         const on = (_user: typeof users.columns, _right: typeof users.columns) => eq(_user.id, _right.id);
         const selector = (_user: typeof users.columns, _right: typeof users.columns) => ({ id: _user.id });
 
-        expect(() => (leftJoin as any)("not a query", on)).toThrow(
-            "leftJoin() expects leftJoin(right, on, options?)"
+        expect(() => (join as any)("not a query", left(on as any))).toThrow(
+            "join() expects join(right, spec)"
         );
-        expect(() => (innerJoinMerge as any)("not a query", on, selector)).toThrow(
-            "innerJoinMerge() expects innerJoinMerge(right, on, selector)"
+        expect(() => (join as any)("not a query", inner(on, selector))).toThrow(
+            "join() expects join(right, spec)"
         );
     });
     test("join rejects uppercase type options at the EDSL boundary", () => {
@@ -127,7 +138,7 @@ describe("error paths", () => {
                 },
             }),
             "DEFERRED_INPUT_INVALID",
-            "join() options.type must be inner, left, right, or full"
+            "join() spec.type must be inner, left, right, or full"
         );
     });
     test("rejects default joins with overlapping output columns", () => {
@@ -138,10 +149,10 @@ describe("error paths", () => {
         ]);
         expect(() => pipe(
             users,
-            (innerJoin as any)(
-            profiles,
-            (user: typeof users.columns, profile: typeof profiles.columns) => eq(user.id, profile.id)
-            )
+            (join as any)(profiles, {
+                type: "inner",
+                on: ((user: typeof users.columns, profile: typeof profiles.columns) => eq(user.id, profile.id)) as any,
+            })
         )).toThrow(JOIN_OVERLAPPING_COLUMNS_ERROR);
     });
     test("rejects merge helpers that produce duplicate output columns", () => {
@@ -152,11 +163,11 @@ describe("error paths", () => {
         ]);
         expect(() => pipe(
             users,
-            (innerJoinMerge as any)(
-            profiles,
-            (user: typeof users.columns, profile: typeof profiles.columns) => eq(user.id, profile.user_id),
-            prefixOverlapLeft("user_")
-            )
+            (join as any)(profiles, {
+                type: "inner",
+                on: ((user: typeof users.columns, profile: typeof profiles.columns) => eq(user.id, profile.user_id)) as any,
+                select: prefixOverlapLeft("user_"),
+            })
         )).toThrow(JOIN_MERGE_CONFLICT_ERROR);
     });
     test("query helpers reject malformed current API calls at runtime", () => {
@@ -189,26 +200,6 @@ describe("error paths", () => {
             () => (take as any)(users, 10),
             "QUERY_HELPER_INVALID_ARGUMENTS",
             "take() expects take(count)"
-        );
-        expectUserError(
-            () => (innerJoin as any)(users, orders, (user: typeof users.columns, order: typeof orders.columns) => eq(user.id, order.user_id)),
-            "DEFERRED_INPUT_INVALID",
-            "innerJoin() expects a row callback"
-        );
-        expectUserError(
-            () => (leftJoin as any)(users, orders, (user: typeof users.columns, order: typeof orders.columns) => eq(user.id, order.user_id)),
-            "DEFERRED_INPUT_INVALID",
-            "leftJoin() expects a row callback"
-        );
-        expectUserError(
-            () => (rightJoin as any)(users, orders, (user: typeof users.columns, order: typeof orders.columns) => eq(user.id, order.user_id)),
-            "DEFERRED_INPUT_INVALID",
-            "rightJoin() expects a row callback"
-        );
-        expectUserError(
-            () => (fullJoin as any)(users, orders, (user: typeof users.columns, order: typeof orders.columns) => eq(user.id, order.user_id)),
-            "DEFERRED_INPUT_INVALID",
-            "fullJoin() expects a row callback"
         );
     });
 
@@ -256,18 +247,18 @@ describe("error paths", () => {
         const orders = createOrdersTable();
 
         expectUserError(
-            () => pipe(users, innerJoinMerge(orders, usingCols("missing" as never), (user, order) => ({
-                id: user.id,
-                order_id: order.order_id,
-            }))),
+            () => pipe(users, join(orders, inner(
+                usingCols("missing" as never),
+                (user, order) => ({ id: user.id, order_id: order.order_id })
+            ))),
             "JOIN_MERGE_UNKNOWN_COLUMN",
             "Unknown join column 'missing'. Available columns: id, name"
         );
         expectUserError(
-            () => pipe(users, innerJoinMerge(orders, onEq({ id: "missing" } as never), (user, order) => ({
-                id: user.id,
-                order_id: order.order_id,
-            }))),
+            () => pipe(users, join(orders, inner(
+                onEq({ id: "missing" } as never),
+                (user, order) => ({ id: user.id, order_id: order.order_id })
+            ))),
             "JOIN_MERGE_UNKNOWN_COLUMN",
             "Unknown join column 'missing'. Available columns: order_id, user_id, total"
         );

@@ -1,6 +1,6 @@
 import type { Column, Expr, Query, QueryColumns, JoinKind, JoinOptions, SqlBigInt, SqlBoolean, SqlBytes, SqlDate, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlNumber, SqlString, SqlTimestamp, SqlUuid, UnnestOptions, UnnestSelection, } from "../mod.ts";
 import * as publicApi from "../mod.ts";
-import { between, composeSteps, currentDate, currentTimestamp, dateAdd, drop, filter, filterEq, filterNe, filterGt, filterGte, filterLt, filterLte, fullJoin, fullJoinMerge, identityStep, innerJoin, innerJoinMap, innerJoinMerge, isDistinctFrom, isIn, isNotIn, join, leftJoin, leftJoinMap, leftJoinMerge, rightJoin, rightJoinMerge, take, takeWithin, sort, param, lit, map, pick, rename, pipe, flow, table, t, fold, asc, desc, eq, gt, upper, add, mul, coalesce, count, group, loop, sum, and, or, isNotNull, sub, when, mapShape, groupShape, lt, unnest, unionAll, union, unlessStep, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, asBigInt, asBoolean, asBytes, asDate, asDecimal, asFloat, asInt, asJson, asString, asTimestamp, asUuid, whenStep } from "../mod.ts";
+import { between, composeSteps, currentDate, currentTimestamp, dateAdd, drop, filter, filterEq, filterNe, filterGt, filterGte, filterLt, filterLte, full, identityStep, inner, isDistinctFrom, isIn, isNotIn, join, left, right, take, takeWithin, sort, param, lit, map, pick, rename, pipe, flow, table, t, fold, asc, desc, eq, gt, upper, add, mul, coalesce, count, group, loop, sum, and, or, isNotNull, sub, when, mapShape, groupShape, lt, unnest, unionAll, union, unlessStep, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, asBigInt, asBoolean, asBytes, asDate, asDecimal, asFloat, asInt, asJson, asString, asTimestamp, asUuid, whenStep } from "../mod.ts";
 type Equal<A, B> = ((<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false);
 type Expect<T extends true> = T;
 type ExprType<TExpr> = TExpr extends Expr<infer TValue> ? TValue : TExpr extends Column<infer TValue, string> ? TValue : never;
@@ -77,22 +77,18 @@ const profiles = table("profiles", {
     avatar: t.nullable(t.bytes()),
     nickname: t.nullable(t.string()),
 });
-const leftJoined = pipe(users, leftJoin(
-    orders,
+const leftJoined = pipe(users, join(orders, left(
     (user, order) => eq(user.id, order.user_id)
-));
-const rightJoined = pipe(users, rightJoin(
-    orders,
+)));
+const rightJoined = pipe(users, join(orders, right(
     (user, order) => eq(user.id, order.user_id)
-));
-const fullJoined = pipe(users, fullJoin(
-    orders,
+)));
+const fullJoined = pipe(users, join(orders, full(
     (user, order) => eq(user.id, order.user_id)
-));
-const leftViaJoin = pipe(users, leftJoin(
-    orders,
+)));
+const leftViaJoin = pipe(users, join(orders, left(
     (user, order) => eq(user.id, order.user_id)
-));
+)));
 const leftViaPrimitiveJoin = pipe(users, join(
     orders,
     {
@@ -100,78 +96,96 @@ const leftViaPrimitiveJoin = pipe(users, join(
         on: (user, order) => eq(user.id, order.user_id),
     }
 ));
-const renamedJoin = pipe(users, innerJoinMap(
+const leftViaJoinSpec = pipe(users, join(
     orders,
+    left((user, order) => eq(user.id, order.user_id))
+));
+const reusableLeftSpec = left(
+    (user: typeof users.columns, order: typeof orders.columns) => eq(user.id, order.user_id)
+);
+// @ts-expect-error join specifications are immutable values
+reusableLeftSpec.type = "left";
+const rightViaJoinSpec = pipe(users, join(
+    orders,
+    right((user, order) => eq(user.id, order.user_id))
+));
+const fullViaJoinSpec = pipe(users, join(
+    orders,
+    full((user, order) => eq(user.id, order.user_id))
+));
+const selectedViaJoinSpec = pipe(users, join(
+    orders,
+    left(
+        (user, order) => eq(user.id, order.user_id),
+        (user, order) => ({
+            user_id: user.id,
+            total: order.total,
+        })
+    )
+));
+pipe(users, join(
+    orders,
+    // @ts-expect-error join selectors must return SQL expressions
+    left(
+        (user, order) => eq(user.id, order.user_id),
+        () => ({ invalid: "not an expression" })
+    )
+));
+const renamedJoin = pipe(users, join(orders, inner(
     (user, order) => eq(user.id, order.user_id),
     (user, order) => ({
         user_id: user.id,
         order_total: order.total,
     })
-));
-const overlapPrefixedLeft = pipe(users, innerJoinMerge(
+)));
+const overlapPrefixedLeft = pipe(users, join(profileRows, inner(
+    (user, profile) => eq(user.id, profile.id), prefixOverlapLeft("user_")
+)));
+const overlapPrefixedRight = pipe(users, join(profileRows, inner(
+    (user, profile) => eq(user.id, profile.id), prefixOverlapRight("profile_")
+)));
+const allPrefixedLeft = pipe(users, join(profileRows, inner(
+    (user, profile) => eq(user.id, profile.id), prefixAllLeft("left_")
+)));
+const allPrefixedRight = pipe(users, join(orders, left(
+    (user, order) => eq(user.id, order.user_id), prefixAllRight("order_")
+)));
+const allSuffixedLeft = pipe(users, join(orders, right(
+    (user, order) => eq(user.id, order.user_id), suffixAllLeft("_user")
+)));
+const allSuffixedRight = pipe(users, join(orders, full(
+    (user, order) => eq(user.id, order.user_id), suffixAllRight("_order")
+)));
+const droppedOverlapLeft = pipe(users, join(profileRows, inner(
+    (user, profile) => eq(user.id, profile.id), dropOverlapLeft()
+)));
+const droppedOverlapRight = pipe(users, join(profileRows, inner(
+    (user, profile) => eq(user.id, profile.id), dropOverlapRight()
+)));
+const mergedViaJoinSpec = pipe(users, join(
     profileRows,
-    (user, profile) => eq(user.id, profile.id),
-    prefixOverlapLeft("user_")
+    left(
+        usingCols("id"),
+        dropOverlapRight()
+    )
 ));
-const overlapPrefixedRight = pipe(users, innerJoinMerge(
-    profileRows,
-    (user, profile) => eq(user.id, profile.id),
-    prefixOverlapRight("profile_")
-));
-const allPrefixedLeft = pipe(users, innerJoinMerge(
-    profileRows,
-    (user, profile) => eq(user.id, profile.id),
-    prefixAllLeft("left_")
-));
-const allPrefixedRight = pipe(users, leftJoinMerge(
-    orders,
-    (user, order) => eq(user.id, order.user_id),
-    prefixAllRight("order_")
-));
-const allSuffixedLeft = pipe(users, rightJoinMerge(
-    orders,
-    (user, order) => eq(user.id, order.user_id),
-    suffixAllLeft("_user")
-));
-const allSuffixedRight = pipe(users, fullJoinMerge(
-    orders,
-    (user, order) => eq(user.id, order.user_id),
-    suffixAllRight("_order")
-));
-const droppedOverlapLeft = pipe(users, innerJoinMerge(
-    profileRows,
-    (user, profile) => eq(user.id, profile.id),
-    dropOverlapLeft()
-));
-const droppedOverlapRight = pipe(users, innerJoinMerge(
-    profileRows,
-    (user, profile) => eq(user.id, profile.id),
-    dropOverlapRight()
-));
-const usingJoin = pipe(users, innerJoinMerge(
-    profileRows,
-    usingCols("id"),
-    dropOverlapLeft()
-));
+const usingJoin = pipe(users, join(profileRows, inner(usingCols("id"), dropOverlapLeft())));
 const mappedProfileRows = table("profiles_mapped", {
     id: t.int(),
     user_id: t.int(),
     bio: t.string(),
 });
 const mappedProfileOnEq: (user: typeof users.columns, profile: typeof mappedProfileRows.columns) => Expr<SqlBoolean | null> = onEq({ id: "user_id" });
-const mappedJoin = pipe(users, leftJoinMerge(
-    mappedProfileRows,
-    mappedProfileOnEq,
-    prefixOverlapLeft("left_")
-));
-const callbackMergedJoin = pipe(users, leftJoinMap(
-    orders,
+const mappedJoin = pipe(users, join(mappedProfileRows, left(
+    mappedProfileOnEq, prefixOverlapLeft("left_")
+)));
+const callbackMergedJoin = pipe(users, join(orders, left(
     (user, order) => eq(user.id, order.user_id),
     (user, order) => ({
         user_id: user.id,
         total: order.total,
     })
-));
+)));
 const filteredUsers = pipe(users, filter((user: typeof users.columns) => gt(user.id, 0)));
 const projectedUsers = pipe(filteredUsers, map((user: typeof filteredUsers.columns) => ({
     id: user.id,
@@ -351,10 +365,9 @@ const elevenStepFlowResult: number = flow(
     (value) => value + 1,
     (value) => value + 1,
 )(0);
-const curriedJoin = pipe(users, leftJoin(
-    orders,
+const curriedJoin = pipe(users, join(orders, left(
     (user: typeof users.columns, order: typeof orders.columns) => eq(user.id, order.user_id)
-));
+)));
 const directPickedSelection = pipe(users, map(pick("id")));
 const directKeyMappedSelection = pipe(users, map(rename((key) => `prefix1_${key}`)));
 const multiPrefixRenamedSelection = pipe(users, map(rename((key) => `pre_fix_${key}`)));
@@ -488,6 +501,12 @@ type _RightJoinId = Expect<Equal<ExprType<typeof rightJoined.columns.id>, SqlInt
 type _FullJoinTotal = Expect<Equal<ExprType<typeof fullJoined.columns.total>, SqlFloat | null>>;
 type _LeftViaJoinTotal = Expect<Equal<ExprType<typeof leftViaJoin.columns.total>, SqlFloat | null>>;
 type _LeftViaPrimitiveJoinTotal = Expect<Equal<ExprType<typeof leftViaPrimitiveJoin.columns.total>, SqlFloat | null>>;
+type _JoinSpecLeftTotal = Expect<Equal<ExprType<typeof leftViaJoinSpec.columns.total>, SqlFloat | null>>;
+type _JoinSpecRightName = Expect<Equal<ExprType<typeof rightViaJoinSpec.columns.name>, SqlString | null>>;
+type _JoinSpecFullName = Expect<Equal<ExprType<typeof fullViaJoinSpec.columns.name>, SqlString | null>>;
+type _JoinSpecSelectedTotal = Expect<Equal<ExprType<typeof selectedViaJoinSpec.columns.total>, SqlFloat | null>>;
+type _JoinSpecMergedId = Expect<Equal<ExprType<typeof mergedViaJoinSpec.columns.id>, SqlInt>>;
+type _JoinSpecMergedBio = Expect<Equal<ExprType<typeof mergedViaJoinSpec.columns.bio>, SqlString | null>>;
 type _ProjectedUsersId = Expect<Equal<ExprType<typeof projectedUsers.columns.id>, SqlInt>>;
 type _ProjectedUsersName = Expect<Equal<ExprType<typeof projectedUsers.columns.name>, SqlString>>;
 type _MappedSelectedUsersKeys = Expect<Equal<keyof typeof mappedSelectedUsers.columns, "id" | "name">>;
@@ -719,31 +738,26 @@ composeSteps(
 and();
 // @ts-expect-error or requires at least one expression
 or();
-pipe(users, innerJoin(
-    orders,
-    // @ts-expect-error innerJoin predicates must return boolean expressions
+pipe(users, join(orders, inner(
+    // @ts-expect-error inner predicates must return boolean expressions
     (user, order) => order.total
-));
-pipe(users, innerJoin(
-    profileRows,
-    // @ts-expect-error innerJoin without merge must reject overlapping output names
+)));
+pipe(users, join(profileRows, inner(
+    // @ts-expect-error inner joins without merge must reject overlapping output names
     (user, profile) => eq(user.id, profile.id)
-));
-pipe(users, leftJoin(
-    profileRows,
-    // @ts-expect-error leftJoin without merge must reject overlapping output names
+)));
+pipe(users, join(profileRows, left(
+    // @ts-expect-error left joins without merge must reject overlapping output names
     (user, profile) => eq(user.id, profile.id)
-));
-pipe(users, rightJoin(
-    profileRows,
-    // @ts-expect-error rightJoin without merge must reject overlapping output names
+)));
+pipe(users, join(profileRows, right(
+    // @ts-expect-error right joins without merge must reject overlapping output names
     (user, profile) => eq(user.id, profile.id)
-));
-pipe(users, fullJoin(
-    profileRows,
-    // @ts-expect-error fullJoin without merge must reject overlapping output names
+)));
+pipe(users, join(profileRows, full(
+    // @ts-expect-error full joins without merge must reject overlapping output names
     (user, profile) => eq(user.id, profile.id)
-));
+)));
 pipe(users, join(
     orders,
     {
@@ -751,6 +765,13 @@ pipe(users, join(
         type: "LEFT",
         on: (user, order) => eq(user.id, order.user_id),
     }
+));
+pipe(users, join(
+    profileRows,
+    left(
+        // @ts-expect-error join specs without a selector reject overlapping output names
+        (user, profile) => eq(user.id, profile.id)
+    )
 ));
 pipe(sessions, unnest(
     (session) => session.tags,
@@ -763,11 +784,10 @@ pipe(sessions, unnest(
     // @ts-expect-error unnest options.outer must be boolean
     { outer: "yes" }
 ));
-pipe(users, leftJoin(
-    profileRows,
+pipe(users, join(profileRows, left(
     // @ts-expect-error no-merge joins with overlapping output names require an explicit merge strategy
     (user, profile) => eq(user.id, profile.id)
-));
+)));
 pipe(users, filter(
     (user) => eq(
         // @ts-expect-error callbacks reject unknown current-row columns in filter context
@@ -805,35 +825,31 @@ pipe(users, sort(
 ));
 // @ts-expect-error callbacks reject unknown current-row columns in unnest context
 pipe(sessions, unnest((session) => session.missing, { value: "tag" }));
-pipe(users, leftJoin(
-    orders,
+pipe(users, join(orders, left(
     // @ts-expect-error callbacks reject unknown join-left columns
     (user, order) => eq(user.missing, order.user_id)
-));
-pipe(users, leftJoin(
-    orders,
+)));
+pipe(users, join(orders, left(
     // @ts-expect-error callbacks reject unknown join-right columns
     (user, order) => eq(user.id, order.missing)
-));
+)));
 pipe(users,
-    leftJoinMap(
-        orders,
+    join(orders, left(
         (user, order) => eq(user.id, order.user_id),
         (user, _order) => ({
             // @ts-expect-error callbacks reject unknown join-left columns in merge shapes
             user_id: user.missing,
         })
-    )
+    ))
 );
 pipe(users,
-    leftJoinMap(
-        orders,
+    join(orders, left(
         (user, order) => eq(user.id, order.user_id),
         (_user, order) => ({
             // @ts-expect-error callbacks reject unknown join-right columns in merge shapes
             total: order.missing,
         })
-    )
+    ))
 );
 // @ts-expect-error callbacks reject unknown current-row columns when applying filter step directly
 filter((user) => eq(user.missing, 1))(users);
@@ -843,12 +859,11 @@ const profileRowsWithUserId = values([
     { id: 1 as number, user_id: 1 as number, bio: "A" as string },
     { id: 2 as number, user_id: 2 as number, bio: "B" as string },
 ]);
-pipe(users, innerJoinMerge(
-    profileRowsWithUserId,
+pipe(users, join(profileRowsWithUserId, // @ts-expect-error prefixOverlapLeft can still collide with right-side keys after prefixing
+    inner(
     (user, profile) => eq(user.id, profile.user_id),
-    // @ts-expect-error prefixOverlapLeft can still collide with right-side keys after prefixing
     prefixOverlapLeft("user_")
-));
+)));
 const leftRowsWithUserId = values([
     { id: 1 as number, user_id: 11 as number, name: "Ada" as string },
     { id: 2 as number, user_id: 22 as number, name: "Grace" as string },
@@ -857,22 +872,20 @@ const rightRowsOverlappingId = values([
     { id: 1 as number, bio: "A" as string },
     { id: 2 as number, bio: "B" as string },
 ]);
-pipe(leftRowsWithUserId, innerJoinMerge(
-    rightRowsOverlappingId,
+pipe(leftRowsWithUserId, join(rightRowsOverlappingId, // @ts-expect-error prefixOverlapLeft must reject self-collision when renamed overlap key hits unchanged left key
+    inner(
     (left, right) => eq(left.id, right.id),
-    // @ts-expect-error prefixOverlapLeft must reject self-collision when renamed overlap key hits unchanged left key
     prefixOverlapLeft("user_")
-));
+)));
 const rightRowsWithUserId = values([
     { id: 1 as number, user_id: 11 as number, bio: "A" as string },
     { id: 2 as number, user_id: 22 as number, bio: "B" as string },
 ]);
-pipe(users, innerJoinMerge(
-    rightRowsWithUserId,
+pipe(users, join(rightRowsWithUserId, // @ts-expect-error prefixOverlapRight must reject self-collision when renamed overlap key hits unchanged right key
+    inner(
     (user, right) => eq(user.id, right.id),
-    // @ts-expect-error prefixOverlapRight must reject self-collision when renamed overlap key hits unchanged right key
     prefixOverlapRight("user_")
-));
+)));
 // @ts-expect-error legacy array selection syntax is removed
 pipe(users, map((user) => [user.id]));
 // @ts-expect-error legacy array fold syntax is removed
@@ -952,14 +965,14 @@ loop(loopBase, (self) => pipe(self, filter((row) => gt(row.id, 0))));
 // @ts-expect-error unnest is curried-only
 unnest(sessions, (session: typeof sessions.columns) => session.tags, { value: "tag" });
 publicApi.join;
-// @ts-expect-error innerJoin is curried-only
-innerJoin(users, orders, (user, order) => eq(user.id, order.user_id));
-// @ts-expect-error leftJoin is curried-only
-leftJoin(users, orders, (user, order) => eq(user.id, order.user_id));
-// @ts-expect-error rightJoin is curried-only
-rightJoin(users, orders, (user, order) => eq(user.id, order.user_id));
-// @ts-expect-error fullJoin is curried-only
-fullJoin(users, orders, (user, order) => eq(user.id, order.user_id));
+// @ts-expect-error join-kind specs are curried-only
+inner(users, orders, (user, order) => eq(user.id, order.user_id));
+// @ts-expect-error join-kind specs are curried-only
+left(users, orders, (user, order) => eq(user.id, order.user_id));
+// @ts-expect-error join-kind specs are curried-only
+right(users, orders, (user, order) => eq(user.id, order.user_id));
+// @ts-expect-error join-kind specs are curried-only
+full(users, orders, (user, order) => eq(user.id, order.user_id));
 const removedColumnRef = "co" + "l";
 const removedLeftColumnRef = "left" + "Col";
 const removedRightColumnRef = "right" + "Col";
