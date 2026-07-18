@@ -69,12 +69,19 @@ export function unnest<
 export function unnest(...args: unknown[]): unknown {
   assertUnnestInvocation(args);
   const [selector, selection, options] = args;
+  const selectionSnapshot = {
+    value: (selection as UnnestSelection<string, string | undefined>).value,
+    ordinality: (selection as UnnestSelection<string, string | undefined>).ordinality,
+  };
+  const optionsSnapshot = options === undefined
+    ? undefined
+    : { outer: (options as UnnestOptions<boolean | undefined>).outer };
   return createQueryStep("unnest", (left: Query<QueryColumns>) =>
     buildUnnest(
       left,
       selector as UnnestSelectorInput<QueryColumns, readonly unknown[] | unknown[] | null>,
-      selection as UnnestSelection<string, string | undefined>,
-      options as UnnestOptions<boolean | undefined> | undefined
+      selectionSnapshot,
+      optionsSnapshot
     ));
 }
 

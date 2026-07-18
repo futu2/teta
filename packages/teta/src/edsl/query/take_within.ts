@@ -42,6 +42,11 @@ export function takeWithin<TColumns extends QueryColumns>(
       "takeWithin() expects a finite non-negative integer count"
     );
   }
+  const specSnapshot = {
+    partitionBy: spec.partitionBy,
+    orderBy: spec.orderBy,
+    count: spec.count,
+  };
 
   return createQueryStep("takeWithin", (query) => {
     if (getQueryState(query).columnNames.includes(TAKE_WITHIN_ROW_NUMBER)) {
@@ -60,8 +65,8 @@ export function takeWithin<TColumns extends QueryColumns>(
     const numbered = extendInternal<TColumns, typeof TAKE_WITHIN_ROW_NUMBER, Expr<SqlInt>>(
       TAKE_WITHIN_ROW_NUMBER,
       (cols: ColumnRefs<TColumns>) => {
-        const partitionBy = resolvePartitionBy(cols, spec.partitionBy);
-        const orderBy = resolveOrderBy(cols, spec.orderBy);
+        const partitionBy = resolvePartitionBy(cols, specSnapshot.partitionBy);
+        const orderBy = resolveOrderBy(cols, specSnapshot.orderBy);
         return over(rowNumber(), { partitionBy, orderBy });
       }
     )(query);
@@ -72,7 +77,7 @@ export function takeWithin<TColumns extends QueryColumns>(
     >>;
     const limited = filterInternal<NumberedColumns>(
       numbered,
-      lte(numberedColumns[TAKE_WITHIN_ROW_NUMBER], spec.count)
+      lte(numberedColumns[TAKE_WITHIN_ROW_NUMBER], specSnapshot.count)
     );
 
     return dropTakeWithinRowNumber(limited);

@@ -138,6 +138,30 @@ describe("function-first query api", () => {
 
         expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe("SELECT t_0.id, t_0.name, t_0.role, t_0.join_date FROM (SELECT employees_0.id, employees_0.name, employees_0.role, employees_0.join_date, row_number() OVER (PARTITION BY employees_0.role ORDER BY employees_0.join_date ASC) AS __teta_take_within_row_number FROM employees AS employees_0) AS t_0 WHERE t_0.__teta_take_within_row_number <= 1");
     });
+    test("snapshots deferred helper configuration", () => {
+        const users = table("users", {
+            id: t.int(),
+            tags: t.array(t.string()),
+        });
+        const selection = { value: "tag" };
+        const unnestStep = unnest((user: typeof users.columns) => user.tags, selection);
+        selection.value = "mutated";
+
+        const withinSpec = {
+            partitionBy: (user: typeof users.columns) => user.id,
+            orderBy: (user: typeof users.columns) => asc(user.id),
+            count: 1,
+        };
+        const withinStep = takeWithin(withinSpec);
+        withinSpec.count = 99;
+
+        const unnestSql = toSql(pipe(users, unnestStep), { dialect: "postgresql", format: "compact" });
+        const withinSql = toSql(pipe(users, withinStep), { dialect: "postgresql", format: "compact" });
+        expect(unnestSql).toContain("unnest_1.tag AS tag");
+        expect(unnestSql).not.toContain("mutated");
+        expect(withinSql).toContain("<= 1");
+        expect(withinSql).not.toContain("<= 99");
+    });
     test("uses curried aliases for union and unnest helpers", () => {
         const users = table("users", {
             id: t.int(),

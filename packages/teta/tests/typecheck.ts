@@ -13,6 +13,10 @@ const users = table("users", {
     id: t.int(),
     name: t.string(),
 });
+// @ts-expect-error query column references are immutable
+users.columns.id = users.columns.id;
+// @ts-expect-error query column references are immutable through indexed access too
+users.columns["name"] = users.columns.name;
 const readonlyUsersIr = publicApi.toIR(users);
 // @ts-expect-error frontend query IR roots are readonly
 readonlyUsersIr.scopeId = "__teta_scope_mutated";

@@ -421,10 +421,10 @@ type KnownStringKeyOf<T extends Record<string, unknown>> = Extract<{
 }[keyof T], string>;
 
 export type ColumnRefs<T extends Record<string, unknown>> = {
-  [K in KnownStringKeyOf<T>]: Column<T[K], K>;
+  readonly [K in KnownStringKeyOf<T>]: Column<T[K], K>;
 };
 export type Exprs<T extends Record<string, unknown>> = {
-  [K in KnownStringKeyOf<T>]: Expr<T[K]>;
+  readonly [K in KnownStringKeyOf<T>]: Expr<T[K]>;
 };
 
 export function lit<T extends SqlNumber | SqlString | SqlBoolean | SqlDate | SqlTimestamp | SqlUuid>(
