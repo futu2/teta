@@ -102,7 +102,7 @@ Teta tracks SQL types through branded types (`SqlInt`, `SqlString`, `SqlBoolean`
 </td>
 <td width="33%">
 
-**3. Build once, target anywhere**
+**3. One query, supported SQL targets**
 
 ```ts
 const q = pipe(
@@ -120,7 +120,7 @@ toSql(q, { dialect: "duckdb" });
 // → CHAR_LENGTH("name")
 ```
 
-Dialect resolution happens at render time. Function names, fallback expressions, and feature flags are handled by the backend — your query code never mentions a dialect.
+Dialect resolution happens at render time. Function names, fallback expressions, and feature flags are handled by the backend — your query code never mentions a dialect. PostgreSQL, SQLite, and DuckDB are exercised against live databases; the remaining built-in targets are checked by parser and renderer tests.
 
 </td>
 </tr>
@@ -155,22 +155,14 @@ const byAge = pipe(activeUsers, sort((u) => asc(u.age)));
 
 <br>
 
-## Comparison
+## Design boundaries
 
-|  | Teta | Knex | Kysely | Drizzle | Raw SQL |
-|---|---|---|---|---|---|
-| **Style** | Functional (`pipe`) | Builder chain | Builder chain | Builder chain | Strings |
-| **Column access** | Typed callbacks | Strings | Strings | Proxy objects | N/A |
-| **Autocomplete** | ✅ Full | ❌ | ❌ | ✅ Limited | ❌ |
-| **Type-safe expressions** | ✅ `SqlInt` ≠ `SqlString` | ❌ | ❌ | ⚠️ Partial | ❌ |
-| **Multi-dialect** | ✅ Build once, render anywhere | ⚠️ Manual | ⚠️ Manual | ⚠️ Manual | ❌ Per-dialect |
-| **Immutable** | ✅ Every step returns new `Query` | ⚠️ Clone-based | ⚠️ Clone-based | ⚠️ Clone-based | N/A |
-| **Reusable fragments** | ✅ `pipe()` composition | ❌ | ❌ | ❌ | ❌ |
-| **Opaque internals** | ✅ Stable public API | ❌ Mutable state | ❌ Mutable state | ❌ Mutable state | N/A |
-| **ORM** | ❌ SQL output only | ❌ | ❌ | ✅ | ❌ |
-| **Injection-safe** | ✅ By construction | ⚠️ Manual | ⚠️ Manual | ✅ | ❌ |
-
-**Teta is not an ORM.** It doesn't manage connections, execute queries, or map results. It's a type-safe query builder that gives you a SQL string at the end — you use your existing database driver to run it.
+- Teta builds and renders SQL; it does not manage connections, migrations, transactions, or model persistence.
+- Queries are immutable values composed from functions. Invalid public inputs still fail immediately with descriptive exceptions.
+- The frontend owns a dialect-neutral logical plan. `toIR(...)` explicitly lowers that plan to the portable `@teta/sql` IR before rendering.
+- Schema descriptors carry expression, binding-input, and decoded-output types. `prepare(...)` validates declared parameter use and requires exact typed bindings.
+- SQL support is capability-driven rather than identical across targets. PostgreSQL, SQLite, and DuckDB have live integration coverage; other built-in dialects are parser-checked.
+- Generated SQL is deterministic, but it is not intended to preserve the shape or formatting of handwritten SQL.
 
 <br>
 
@@ -238,6 +230,10 @@ console.log(toSql(pending, { dialect: "postgresql" }));
 ## Supported dialects
 
 Built-in: `postgresql`, `sqlite`, `mysql`, `mariadb`, `duckdb`, `trino`, `hive`, `flinksql`, `bigquery`, `athena`, `db2`, `noql`, `redshift`, `snowflake`, `transactsql`.
+
+PostgreSQL, SQLite, and DuckDB are verified by live database tests. The other
+built-in dialects are covered by parser, renderer, and capability tests; treat
+their database-level behavior as provisional while the project is WIP.
 
 Use `getDialectCapabilityMatrix()` from `@teta/sql` to inspect whether each
 catalog operation is native, rewritten, emulated, or unsupported for a target.

@@ -5,11 +5,12 @@ import type { QueryDialect } from "../types.ts";
 import { buildNamedCte } from "./cte.ts";
 import { buildPipelineAst } from "./build.ts";
 import { getDefaultDialect } from "../dialect.ts";
-import { getSqlRenderContext } from "./render.ts";
 import { resolveIdentifierName } from "./identifiers.ts";
 import { attachUnion } from "./union.ts";
 import { compileLoopPart } from "./recursive_compile.ts";
 import type { RecursivePart } from "./recursive_deferred.ts";
+import type { SqlRenderContext } from "./types.ts";
+import { createAstRenderContext } from "./render_context.ts";
 
 /** Build a parser AST CTE for a recursive base/step query pair. */
 export function buildRecursiveCte(
@@ -17,31 +18,44 @@ export function buildRecursiveCte(
   columnNames: readonly string[],
   base: RecursivePart,
   step: RecursivePart,
-  dialect: QueryDialect = getDefaultDialect()
+  dialect: QueryDialect = getDefaultDialect(),
+  renderContext: SqlRenderContext = createAstRenderContext(dialect)
 ): With {
   if (!dialect.features.recursiveCte) {
     userError("UNSUPPORTED_RECURSIVE_CTE", `Dialect ${dialect.name} does not support recursive CTE`);
   }
 
-  const renderedName = resolveIdentifierName(name, getSqlRenderContext());
-  const baseAst = compileLoopPart(base, "base", dialect);
-  const stepAst = compileLoopPart(step, "step", dialect);
+  const renderedName = resolveIdentifierName(name, renderContext);
+  const baseAst = compileLoopPart(base, "base", dialect, renderContext);
+  const stepAst = compileLoopPart(step, "step", dialect, renderContext);
   const unionAst = attachUnion(baseAst, stepAst, "union all");
   return {
     ...buildNamedCte(renderedName, unionAst, columnNames, {
       columnIdentifiers: base.columnIdentifiers,
       dialect,
+      renderContext,
     }),
     recursive: true,
   } as With & { recursive: boolean };
 }
 
 /** Convert a Teta CTE spec into a parser AST `WITH` item. */
-export function materializeCte(cte: CteSpec, dialect: QueryDialect): With {
-  const renderedName = resolveIdentifierName(cte.name, getSqlRenderContext());
+export function materializeCte(
+  cte: CteSpec,
+  dialect: QueryDialect,
+  renderContext: SqlRenderContext
+): With {
+  const renderedName = resolveIdentifierName(cte.name, renderContext);
   switch (cte.kind) {
     case "recursive":
-      return buildRecursiveCte(cte.name, cte.columnNames, cte.base, cte.step, dialect);
+      return buildRecursiveCte(
+        cte.name,
+        cte.columnNames,
+        cte.base,
+        cte.step,
+        dialect,
+        renderContext
+      );
     case "query": {
       const compiled = buildPipelineAst(
         cte.query.source,
@@ -52,6 +66,7 @@ export function materializeCte(cte: CteSpec, dialect: QueryDialect): With {
           ctePrefix: `${renderedName}_`,
           columnIdentifiers: cte.query.columnIdentifiers,
           dialect,
+          renderContext,
         }
       );
       const ast = compiled.ast;
@@ -59,6 +74,7 @@ export function materializeCte(cte: CteSpec, dialect: QueryDialect): With {
       return buildNamedCte(renderedName, ast, cte.query.columnNames, {
         columnIdentifiers: cte.query.columnIdentifiers,
         dialect,
+        renderContext,
       });
     }
     default:

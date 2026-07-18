@@ -1,7 +1,7 @@
 import type { With } from "node-sql-parser";
 import type { QuerySpec } from "../ir/types.ts";
 import type { QueryDialect } from "../types.ts";
-import type { SelectAst } from "./types.ts";
+import type { SelectAst, SqlRenderContext } from "./types.ts";
 import { compileStageAst } from "./stage.ts";
 import { compileSourceRef, type CompileSourceRef } from "./source.ts";
 import { buildBaseSelectAst } from "./segment.ts";
@@ -13,18 +13,19 @@ import { tryBuildFusedSegmentAst } from "./build_fused.ts";
 export function compileLoopPart(
   input: QuerySpec,
   label: LoopPartLabel,
-  dialect: QueryDialect
+  dialect: QueryDialect,
+  renderContext: SqlRenderContext
 ): SelectAst {
   const { source, stages, columnNames, columnIdentifiers, scopeId } = input;
-  const baseSource = compileSourceRef(source, columnIdentifiers, dialect);
+  const baseSource = compileSourceRef(source, columnIdentifiers, dialect, renderContext);
   const fusedCtes: With[] = [];
   if (stages.length === 0) {
-    return buildBaseSelectAst(baseSource, columnNames, scopeId, undefined, dialect);
+    return buildBaseSelectAst(baseSource, columnNames, scopeId, undefined, dialect, renderContext);
   }
 
   const optimizedStages = optimizeLoopStages(stages, columnNames, label);
   if (optimizedStages.length === 0) {
-    return buildBaseSelectAst(baseSource, columnNames, scopeId, undefined, dialect);
+    return buildBaseSelectAst(baseSource, columnNames, scopeId, undefined, dialect, renderContext);
   }
 
   const fused = tryBuildFusedSegmentAst(
@@ -39,6 +40,7 @@ export function compileLoopPart(
       dialect,
       allowJoinSubqueryHoist: false,
       allowIntermediateCtes: false,
+      renderContext,
     }
   );
   if (fused && fused.consumed === optimizedStages.length && fusedCtes.length === 0) {
@@ -63,7 +65,8 @@ export function compileLoopPart(
       dialect,
       `loop_${label}_${index}_`,
       false,
-      false
+      false,
+      renderContext
     );
     if (index < optimizedStages.length - 1) {
       const nextPlan = advanceStagePlanningState(stage, currentPlan);

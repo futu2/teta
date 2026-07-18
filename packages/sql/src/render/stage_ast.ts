@@ -1,10 +1,9 @@
 import type { ScopeId, ProjectionItem, Stage } from "../ir/types.ts";
 import type { QueryDialect } from "../types.ts";
 import { createDictionary } from "../dictionary.ts";
-import type { FromAst, GroupByAst, ScopeBindings, SelectAst, SelectColumnAst } from "./types.ts";
+import type { FromAst, GroupByAst, ScopeBindings, SelectAst, SelectColumnAst, SqlRenderContext } from "./types.ts";
 import { ensureAlias } from "./ast.ts";
 import {
-  getSqlRenderContext,
   bindExprScopes,
   exprToAst,
 } from "./render.ts";
@@ -24,17 +23,19 @@ export type StageRenderContext = {
   baseAlias: string;
   baseBindings: ScopeBindings;
   dialect: QueryDialect;
+  renderContext: SqlRenderContext;
 };
 
 export function createStageRenderContext(
   source: CompileSourceRef,
   sourceScopeId: ScopeId,
   inheritedBindings: ScopeBindings | undefined,
-  dialect: QueryDialect
+  dialect: QueryDialect,
+  renderContext: SqlRenderContext
 ): StageRenderContext {
-  const baseFrom = sourceToFrom(source, dialect);
+  const baseFrom = sourceToFrom(source, dialect, renderContext);
   const baseAlias = ensureAlias(baseFrom);
-  registerSourceColumnBindings(source, baseAlias, dialect);
+  registerSourceColumnBindings(source, baseAlias, dialect, renderContext);
   const baseBindings = createDictionary<string | null>(inheritedBindings);
   baseBindings[sourceScopeId] = baseAlias;
   return {
@@ -42,6 +43,7 @@ export function createStageRenderContext(
     baseAlias,
     baseBindings,
     dialect,
+    renderContext,
   };
 }
 
@@ -51,12 +53,20 @@ export function buildProjectionStageAst(
 ): SelectAst {
   return buildSqlSelectAst({
     from: [context.baseFrom],
-    columns: renderBoundProjectionItems(stage.items, context.baseBindings, context.dialect),
+    columns: renderBoundProjectionItems(
+      stage.items,
+      context.baseBindings,
+      context.dialect,
+      context.renderContext
+    ),
     where: null,
     groupby: stage.kind === "fold" && stage.groupBy
       ? ({
           columns: stage.groupBy.map((expr) =>
-            exprToAst(bindExprScopes(expr, context.baseBindings, context.dialect))
+            exprToAst(
+              bindExprScopes(expr, context.baseBindings, context.dialect),
+              context.renderContext
+            )
           ),
           modifiers: [],
         } satisfies GroupByAst)
@@ -77,9 +87,13 @@ export function buildFilterStageAst(
     columns: renderBoundProjectionItems(
       stage.projectAll,
       context.baseBindings,
-      context.dialect
+      context.dialect,
+      context.renderContext
     ),
-    where: exprToAst(bindExprScopes(stage.predicate, context.baseBindings, context.dialect)),
+    where: exprToAst(
+      bindExprScopes(stage.predicate, context.baseBindings, context.dialect),
+      context.renderContext
+    ),
     groupby: null,
     having: null,
     qualify: null,
@@ -97,14 +111,18 @@ export function buildSortStageAst(
     columns: renderBoundProjectionItems(
       stage.projectAll,
       context.baseBindings,
-      context.dialect
+      context.dialect,
+      context.renderContext
     ),
     where: null,
     groupby: null,
     having: null,
     qualify: null,
     orderby: stage.items.map((item) => ({
-      expr: exprToAst(bindExprScopes(item.expr, context.baseBindings, context.dialect)),
+      expr: exprToAst(
+        bindExprScopes(item.expr, context.baseBindings, context.dialect),
+        context.renderContext
+      ),
       type: item.direction,
     })),
     limit: null,
@@ -120,7 +138,8 @@ export function buildTakeStageAst(
     columns: renderBoundProjectionItems(
       stage.projectAll,
       context.baseBindings,
-      context.dialect
+      context.dialect,
+      context.renderContext
     ),
     where: null,
     groupby: null,
@@ -141,7 +160,8 @@ export function buildDistinctStageAst(
     columns: renderBoundProjectionItems(
       stage.projectAll,
       context.baseBindings,
-      context.dialect
+      context.dialect,
+      context.renderContext
     ),
     where: null,
     groupby: null,
@@ -156,11 +176,11 @@ export function buildDistinctStageAst(
 export function renderBoundProjectionItems(
   items: readonly ProjectionItem[],
   bindings: ScopeBindings,
-  dialect: QueryDialect
+  dialect: QueryDialect,
+  renderContext: SqlRenderContext
 ): SelectColumnAst[] {
-  const renderContext = getSqlRenderContext();
   return items.map((item) => ({
-    expr: exprToAst(bindExprScopes(item.expr, bindings, dialect)),
+    expr: exprToAst(bindExprScopes(item.expr, bindings, dialect), renderContext),
     as: renderIdentifier(item.as, dialect, renderContext),
   }));
 }
@@ -168,12 +188,13 @@ export function renderBoundProjectionItems(
 function registerSourceColumnBindings(
   source: CompileSourceRef,
   tableAlias: string,
-  dialect: QueryDialect
+  dialect: QueryDialect,
+  renderContext: SqlRenderContext
 ): void {
   registerColumnIdentifierBindings(
     tableAlias,
     source.columnIdentifiers,
     dialect,
-    getSqlRenderContext()
+    renderContext
   );
 }

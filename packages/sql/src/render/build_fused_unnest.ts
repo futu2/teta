@@ -1,8 +1,8 @@
 import type { QueryDialect } from "../types.ts";
 import { createDictionary } from "../dictionary.ts";
 import type { Stage } from "../ir/types.ts";
-import type { FromAst, ScopeBindings } from "./types.ts";
-import { exprToAst, getSqlRenderContext } from "./render.ts";
+import type { FromAst, ScopeBindings, SqlRenderContext } from "./types.ts";
+import { exprToAst } from "./render.ts";
 import { registerColumnIdentifierBindings } from "./identifiers.ts";
 import { bindFusedExpr, type ScopeExprLookup } from "./fused.ts";
 import { buildUnnestFrom } from "./source_unnest.ts";
@@ -17,7 +17,8 @@ export function buildFusedUnnestFrom(
   stage: Extract<Stage, { kind: "unnest" }>,
   scopeExprs: ScopeExprLookup,
   currentBindings: ScopeBindings,
-  dialect: QueryDialect
+  dialect: QueryDialect,
+  renderContext: SqlRenderContext
 ): FusedUnnestFrom {
   const alias = stage.as ?? fail("Unnest stage requires an alias");
   const bindings = createDictionary<string | null>(currentBindings);
@@ -27,15 +28,16 @@ export function buildFusedUnnestFrom(
     alias,
     stage.columnIdentifiers,
     dialect,
-    getSqlRenderContext()
+    renderContext
   );
 
   return {
     bindings,
     from: buildUnnestFrom(
       stage,
-      exprToAst(bindFusedExpr(stage.expr, scopeExprs, currentBindings, dialect)),
-      dialect
+      exprToAst(bindFusedExpr(stage.expr, scopeExprs, currentBindings, dialect), renderContext),
+      dialect,
+      renderContext
     ),
   };
 }

@@ -65,7 +65,7 @@ describe("SQL render options API", () => {
     });
     const query = pipe(
       users,
-      filter((user) => eq(user.name, param<string>("name"))),
+      filter((user) => eq(user.name, param("name", t.string()))),
       map((user) => ({ id: user.id }))
     );
 
@@ -114,7 +114,7 @@ describe("SQL render options API", () => {
   });
 
   test("toSqlResult(expr, options) captures explicit params by default", () => {
-    expect(toSqlResult(eq(param<number>("left"), param<number>("right")), {
+    expect(toSqlResult(eq(param("left", t.int()), param("right", t.int())), {
       dialect: "postgresql",
       format: "compact",
       params: { left: 1, right: 2 },
@@ -128,7 +128,7 @@ describe("SQL render options API", () => {
   });
 
   test("toSqlResult(expr, options) captures positional explicit params from array bindings", () => {
-    expect(toSqlResult(eq(param<number>("1"), param<number>("2")), {
+    expect(toSqlResult(eq(param("1", t.int()), param("2", t.int())), {
       dialect: "postgresql",
       format: "compact",
       parameterMode: "positional",
@@ -144,7 +144,7 @@ describe("SQL render options API", () => {
   });
 
   test("toSqlResult(expr, options) rejects missing explicit param bindings", () => {
-    expect(() => toSqlResult(eq(param<number>("left"), 1), {
+    expect(() => toSqlResult(eq(param("left", t.int()), 1), {
       dialect: "postgresql",
       format: "compact",
       params: {},
@@ -152,7 +152,7 @@ describe("SQL render options API", () => {
   });
 
   test("toSqlResult(expr, options) rejects unbound explicit params", () => {
-    expect(() => toSqlResult(eq(param<number>("left"), 1), {
+    expect(() => toSqlResult(eq(param("left", t.int()), 1), {
       dialect: "postgresql",
       format: "compact",
     })).toThrow("Missing parameter binding for left");

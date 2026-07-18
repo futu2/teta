@@ -1,16 +1,18 @@
 import type { With } from "node-sql-parser";
 import { generatedCteName, type GeneratedCteName, type JoinSource, type Stage } from "../ir/types.ts";
 import type { QueryDialect } from "../types.ts";
-import type { SelectAst } from "./types.ts";
+import type { SelectAst, SqlRenderContext } from "./types.ts";
 import { buildPipelineAst } from "./build.ts";
 import { buildNamedCte } from "./cte.ts";
 import { getDefaultDialect } from "../dialect.ts";
+import { createAstRenderContext } from "./render_context.ts";
 
 export function hoistJoinSubquery(
   stage: Stage,
   ctes: With[],
   ctePrefix: string,
-  dialect: QueryDialect = getDefaultDialect()
+  dialect: QueryDialect = getDefaultDialect(),
+  renderContext: SqlRenderContext = createAstRenderContext(dialect)
 ): Stage {
   if (stage.kind !== "join" || stage.source.kind !== "subquery") return stage;
   if (stage.lateral) return stage;
@@ -18,7 +20,10 @@ export function hoistJoinSubquery(
   const subqueryAst = compileJoinSource(
     stage.source,
     `${ctePrefix}join_${ctes.length}_`,
-    dialect
+    dialect,
+    true,
+    true,
+    renderContext
   );
   if (subqueryAst.with && subqueryAst.with.length) {
     ctes.push(...subqueryAst.with);
@@ -33,6 +38,7 @@ export function hoistJoinSubquery(
     {
       columnIdentifiers: stage.source.query.columnIdentifiers,
       dialect,
+      renderContext,
     }
   ));
 
@@ -54,7 +60,8 @@ export function compileJoinSource(
   ctePrefix: string,
   dialect: QueryDialect,
   allowJoinSubqueryHoist = true,
-  allowIntermediateCtes = true
+  allowIntermediateCtes = true,
+  renderContext: SqlRenderContext = createAstRenderContext(dialect)
 ): SelectAst {
   const compiled = buildPipelineAst(
     source.query.source,
@@ -68,6 +75,7 @@ export function compileJoinSource(
       dialect,
       allowJoinSubqueryHoist,
       allowIntermediateCtes,
+      renderContext,
     }
   );
   const ast = compiled.ast;

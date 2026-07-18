@@ -13,6 +13,7 @@ H ::= JavaScript/TypeScript host values
 S ::= SQL value types accepted in rows and expressions
 R ::= finite records from string keys to SQL value types
 P ::= expression phases
+D ::= runtime SQL type descriptors
 ```
 
 The SQL value universe is:
@@ -41,6 +42,16 @@ R ::= { k1: S1, ..., kn: Sn } where n >= 1
 
 The implementation name for row records is `QueryColumns`.
 
+A descriptor connects expression, input, and output domains:
+
+```text
+SqlType<S, I, O> ∈ D
+encode : I -> unknown
+decode : unknown -> O
+```
+
+`t.int()`, for example, has type `SqlType<SqlInt, number, number>`.
+
 ## 2. Core Judgments
 
 The frontend is organized around these judgments:
@@ -49,6 +60,7 @@ The frontend is organized around these judgments:
 Γ ⊢ e : Expr<S, P>
 Γ ⊢ q : Query<R>
 Γ ⊢ step : QueryStep<R1, R2>
+Δ ⊢ prepared : PreparedQuery<R, Δ>
 ```
 
 `Γ` is the callback environment. In a row callback, `Γ` maps each visible column
@@ -92,11 +104,15 @@ Both forms allocate an initial scope and a typed `columns` object.
 
 ## 4. Query Steps
 
-Every query helper is a pure function that produces a `QueryStep`:
+Every query helper is an immutable constructor that produces a `QueryStep`:
 
 ```text
 QueryStep<R1, R2> = Query<R1> -> Query<R2>
 ```
+
+This purity claim concerns valid inputs and state: steps do not mutate their
+arguments. Public constructors are partial at runtime and throw user errors for
+invalid schemas, selectors, values, or unsupported operations.
 
 `pipe(q, s1, ..., sn)` applies those functions left to right. Type preservation
 is ordinary function composition:
@@ -259,12 +275,44 @@ ExprInput<S> ::= Expr<S, P> | host literal compatible with S
 
 This keeps user code concise while preserving SQL-domain checks.
 
+### Typed Parameters
+
+A standalone parameter requires runtime type evidence:
+
+```text
+d : SqlType<S, I, O>
+-------------------------------
+param(name, d) : Expr<S, row>
+```
+
+A prepared parameter environment `Δ` maps every name to one descriptor:
+
+```text
+Δ = { k1: SqlType<S1, I1, O1>, ..., kn: SqlType<Sn, In, On> }
+refs(Δ) = { k1: Expr<S1>, ..., kn: Expr<Sn> }
+bindings(Δ) = { k1: I1, ..., kn: In }
+```
+
+The preparation judgment is:
+
+```text
+Γ, refs(Δ) ⊢ build(refs(Δ)) : Query<R>
+used(build) = keys(Δ)
+-------------------------------------------------
+prepare(Δ, build) : PreparedQuery<R, Δ>
+```
+
+Rendering a prepared query requires exactly `bindings(Δ)`. The runtime checks
+the same exact key set and applies each descriptor's `encode` function before
+passing values to the SQL backend. Declared-but-unused and used-but-undeclared
+parameters are rejected when the prepared query is built.
+
 ## 6. Normalization and Preservation
 
 Query construction is immutable. A step creates a new query state rather than
 mutating the input state.
 
-Normalization is a separate pure pass over query state. It may rewrite stages
+Normalization is a separate pure pass over frontend logical query state. It may rewrite stages
 when the rewrite preserves type and SQL meaning. Current frontend normalization
 merges adjacent filters:
 
@@ -282,6 +330,16 @@ and render(q) is semantically equivalent to render(q')
 
 Renderer canonicalization, such as stable internal scope names, is separate
 from frontend normalization.
+
+`toIR(...)` is also a separate pure lowering pass:
+
+```text
+LogicalQuerySpec<R> -> QueryIR<R>
+```
+
+It synthesizes backend-only stage fields while preserving row shape and
+expression meaning. The frontend does not store renderer-owned `Stage`
+objects.
 
 ## 7. Runtime Opaqueness
 

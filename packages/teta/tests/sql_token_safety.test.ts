@@ -39,17 +39,17 @@ describe("SQL token safety", () => {
   });
 
   test("rejects SQL syntax in parameter names", () => {
-    expectUserError(() => param("id); SELECT 1 --"), "INVALID_PARAM_NAME");
+    expectUserError(() => param("id); SELECT 1 --", t.int()), "INVALID_PARAM_NAME");
   });
 
   test("uses mode-compatible parameter names", () => {
-    expect(toSql(param<number>("account_id"), {
+    expect(toSql(param("account_id", t.int()), {
       dialect: "postgresql",
       parameterMode: "named",
       params: { account_id: 1 },
     })).toBe(":account_id");
 
-    expect(toSql(param<number>("1"), {
+    expect(toSql(param("1", t.int()), {
       dialect: "postgresql",
       parameterMode: "positional",
       parameterPrefix: "$",
@@ -57,7 +57,7 @@ describe("SQL token safety", () => {
     })).toBe("$1");
 
     expectUserError(
-      () => toSql(param<number>("1"), {
+      () => toSql(param("1", t.int()), {
         dialect: "postgresql",
         parameterMode: "named",
         params: { 1: 1 },

@@ -17,6 +17,7 @@ type PipeTailResult<TInput, TSteps extends readonly AnyUnaryStep[]> =
     : TInput;
 
 /** Applies unary steps to a value from left to right. */
+// <generated:pipe-overloads>
 export function pipe<TValue>(value: TValue): TValue;
 export function pipe<TValue, T1>(
   value: TValue,
@@ -163,6 +164,7 @@ export function pipe<
   step12: UnaryStep<T11, T12>,
   ...steps: TRest & PipeTail<T12, TRest>
 ): PipeTailResult<T12, TRest>;
+// </generated:pipe-overloads>
 export function pipe(value: unknown, ...steps: UnaryStep<unknown, unknown>[]): unknown {
   let current = value;
   for (const step of steps) {
@@ -172,6 +174,7 @@ export function pipe(value: unknown, ...steps: UnaryStep<unknown, unknown>[]): u
 }
 
 /** Composes unary steps from left to right into a reusable function. */
+// <generated:flow-overloads>
 export function flow<TValue>(): UnaryStep<TValue, TValue>;
 export function flow<TValue, T1>(
   step1: UnaryStep<TValue, T1>
@@ -305,6 +308,7 @@ export function flow<
   step12: UnaryStep<T11, T12>,
   ...steps: TRest & PipeTail<T12, TRest>
 ): UnaryStep<TValue, PipeTailResult<T12, TRest>>;
+// </generated:flow-overloads>
 export function flow(...steps: UnaryStep<unknown, unknown>[]): UnaryStep<unknown, unknown> {
   return (value: unknown) => {
     let current = value;

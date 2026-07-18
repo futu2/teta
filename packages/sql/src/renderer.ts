@@ -25,6 +25,7 @@ import type {
   SqlResult,
 } from "./types.ts";
 import type { CteSpec, Stage } from "./ir/types.ts";
+import { createAstRenderContext } from "./render/render_context.ts";
 
 const { Parser } = nodeSqlParser;
 
@@ -116,6 +117,7 @@ export function irToAst(
 ): AST {
   const lowered = lowerPortableQueryIR(target);
   const resolved = buildSqlOptions(options);
+  const renderContext = createAstRenderContext(resolved.dialect);
   return applyDialectFixes(
     renderPipelineAst(
       lowered.source,
@@ -127,6 +129,7 @@ export function irToAst(
         columnIdentifiers: lowered.columnIdentifiers,
         dialect: resolved.dialect,
         renderStrategy: resolved.renderStrategy,
+        renderContext,
       }
     ),
     resolved.dialect

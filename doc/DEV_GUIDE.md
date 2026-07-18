@@ -8,16 +8,19 @@ For a high-level overview of design choices, see `doc/DESIGN.md`.
 
 Teta is split into frontend and backend packages:
 
-1. **Frontend EDSL (`@teta/teta`)**
-   - User code builds `Expr` trees and `Query` pipelines.
+1. **Frontend EDSL and logical plan (`@teta/teta`)**
+   - User code builds `Expr` trees and immutable `Query` pipelines.
+   - The hidden query state stores frontend-owned logical stages and CTEs.
    - This layer is dialect-neutral and owns row-proxy ergonomics.
 
-2. **Backend IR (`@teta/sql`)**
+2. **Explicit lowering boundary**
+   - `toIR(...)` lowers frontend logical stages into the portable `@teta/sql` IR.
+   - Renderer-only projection metadata is synthesized here, not stored by the EDSL.
+
+3. **Backend IR and rendering (`@teta/sql`)**
    - Expressions are stored as `ExprNode` trees.
    - Queries are stored as `source + stages + withs + column metadata`.
-
-3. **Backend rendering (`@teta/sql`)**
-   - `SqlOptions` are resolved into internal render state.
+   - `SqlOptions` and an explicit `SqlRenderContext` are passed through lowering.
    - Expressions are rewritten for dialect language differences.
    - Query stages are lowered into a parser-compatible SQL AST.
 
@@ -29,6 +32,8 @@ In short:
 
 ```text
 @teta/teta frontend
+  -> frontend LogicalQuerySpec
+  -> toIR(...) lowering
   -> @teta/sql IR
   -> @teta/sql SQL backend
   -> SqlResult
@@ -56,6 +61,12 @@ In short:
   - Re-exports the immutable query-building algebra: roots, query steps, joins, projection helpers, recursive loops, and query type aliases.
 - `packages/teta/src/edsl/query/rendering.ts`
   - Re-exports stable query rendering helpers: `toIR(...)`, `toSql(...)`, `toSqlResult(...)`, and `explain(...)`.
+- `packages/teta/src/edsl/query/logical.ts`
+  - Defines frontend logical stages/CTEs and the only lowering functions that
+    produce renderer-owned `Stage` and `CteSpec` values.
+- `packages/teta/src/edsl/query/prepared.ts`
+  - Builds typed prepared queries and validates parameter schemas, usage, keys,
+    and descriptor encoding.
 - `packages/teta/inspect.ts`
   - Explicitly exposes backend-specific parser AST inspection through `toAst(...)`.
 - `packages/teta/src/edsl/query.ts`
@@ -77,6 +88,9 @@ In short:
   - Lowers a single `Stage` into a `SELECT` AST.
 - `packages/sql/src/render/render.ts`
   - Lowers `ExprNode` values into parser expression AST nodes.
+- `packages/sql/src/render/render_context.ts`
+  - Creates per-render identifier and parameter state. The context is passed
+    explicitly through all recursive render paths.
 - `packages/sql/src/render/recursive.ts`
   - Materializes recursive CTEs for `loop(...)`.
 - `packages/sql/src/render/union.ts`
@@ -132,10 +146,10 @@ The full frontend compiler state is stored on a non-enumerable internal symbol a
 That hidden state contains:
 
 - `source`
-- `stages`
+- frontend `LogicalStage` values
 - `columns`
 - `columnNames`
-- `withs`
+- frontend logical CTEs
 - `columnIdentifiers`
 - scope/name-supply metadata
 
@@ -158,19 +172,24 @@ Do not add new public query fields casually. Prefer adding internal state to `Qu
 
 Build new query steps with `createQueryStep(stepName, apply)` so the runtime shape stays consistent. A step should remain pure: it receives a `Query<TIn>` and returns a new `Query<TOut>`.
 
-### `Stage`
+### Logical stages and backend `Stage`
 
-A query pipeline is a list of `Stage` values:
+A frontend query pipeline is a list of `LogicalStage` values:
 
 - `map`
 - `fold`
 - `filter`
 - `sort`
 - `take`
+- `distinct`
 - `join`
+- `unnest`
 - `union`
 
-This stage list is the main query IR that the render pipeline lowers later.
+These stages contain semantic expressions and output shape metadata, but no
+renderer-owned pass-through projections. `toIR(...)` lowers them into backend
+`Stage` values, synthesizing fields such as `projectAll`. Keeping the types
+separate prevents renderer details from leaking into query construction.
 
 ## Flow: from `Expr` to final SQL
 
@@ -259,7 +278,10 @@ The final return value is:
 }
 ```
 
-Built-in renderers populate `params` when the query contains `param<T>(name)` placeholders and render options provide matching `params`.
+Built-in renderers populate `params` when a query contains
+`param(name, type)` placeholders and render options provide matching values.
+For reusable queries, prefer `prepare(schema, build)`: it validates declared
+versus used names and requires exact typed bindings.
 
 Rule of thumb:
 
@@ -303,10 +325,10 @@ Examples:
 - `map(...)`
   - evaluates the selector
   - converts each selected value with `toExprNode(...)`
-  - creates a `map` stage
+  - creates a logical `map` stage
 - `fold(...)`
   - unwraps `group(...)` markers
-  - builds a `fold` stage + `groupBy`
+  - builds a logical `fold` stage + `groupBy`
   - is typed to accept only grouped or aggregate projection expressions
 - `filter(...)`
   - stores a predicate expression
@@ -320,7 +342,7 @@ Examples:
 - fixed join helpers
   - stores join metadata + join predicate + output projection
 - `union(...)`
-  - stores the right-hand query spec as a `union` stage
+  - stores the right-hand logical query spec as a `union` stage
 
 At this point no SQL text exists yet.
 
@@ -328,7 +350,8 @@ At this point no SQL text exists yet.
 
 Useful checkpoints:
 
-- `toIR(query)` returns the backend-renderable query representation:
+- `toIR(query)` lowers logical stages and CTEs, then returns the
+  backend-renderable query representation:
   - `{ source, stages, scopeId, columnNames, columnIdentifiers, withs }`
 - `toAst(query)` from `@teta/teta/inspect` delegates to `@teta/sql irToAst(...)`
   - this gives the parser AST before final SQL stringification
@@ -357,7 +380,13 @@ That function:
 
 - materializes base CTEs from `query.withs`
 - builds the pipeline AST from `source + stages`
+- creates or receives one `SqlRenderContext` and passes it through every
+  source, stage, expression, join, union, and recursive-CTE render call
 - returns a parser-compatible `AST`
+
+There is no module-global active render context. Any helper that emits an
+identifier or parameter must accept the current context directly. This keeps
+concurrent and nested renders isolated.
 
 ### 6) Building the staged CTE pipeline
 
@@ -513,6 +542,20 @@ Interpret the differences like this:
 
 ## If you want to extend the system
 
+### Generated overloads and API manifest
+
+`pipe(...)`, `flow(...)`, and `composeSteps(...)` overloads live inside
+`// <generated:...>` regions. Do not edit those regions by hand. Run:
+
+```bash
+bun run scripts/generate_api.ts
+bun run scripts/generate_api.ts --check
+```
+
+The same generator updates `packages/teta/api-manifest.json`, a deterministic
+inventory of public runtime exports. Package and repository checks run the
+staleness check.
+
 ### Add a new expression helper
 
 Usually touch:
@@ -526,8 +569,9 @@ Usually touch:
 
 Usually touch:
 
-- `packages/sql/src/ir/types_query.ts` to add a new `Stage`
-- `packages/teta/src/edsl/query/algebra.ts` and the relevant `packages/teta/src/edsl/query/*` builder to expose and build that stage
+- `packages/teta/src/edsl/query/logical.ts` to add the frontend logical form and lowering
+- `packages/sql/src/ir/types_query.ts` if the portable backend needs a new `Stage`
+- `packages/teta/src/edsl/query/algebra.ts` and the relevant `packages/teta/src/edsl/query/*` builder to expose and build the logical stage
 - `packages/sql/src/render/stage.ts` and/or `packages/sql/src/render/build.ts` to lower it
 
 ### Add dialect behavior
@@ -548,9 +592,10 @@ The most important idea is:
 So the main flow is:
 
 ```text
-@teta/teta Expr / Query
+@teta/teta Expr / Query / LogicalStage
+  -> toIR(...) lowering
   -> @teta/sql ExprNode / QueryIR
-  -> @teta/sql buildSqlOptions(...) + internal render state
+  -> @teta/sql buildSqlOptions(...) + explicit SqlRenderContext
   -> @teta/sql dialect rewrite + qualification
   -> node-sql-parser AST
   -> sqlify / exprToSQL

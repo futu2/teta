@@ -274,7 +274,7 @@ describe("callback column api", () => {
       );
     }
 
-    const valid = pipe(users, filterEq(() => param<string>("name"), "Ada"));
+    const valid = pipe(users, filterEq(() => param("name", t.string()), "Ada"));
     expect(toSql(valid, {
       dialect: "postgresql",
       format: "compact",

@@ -1,6 +1,6 @@
 import type { ScopeId, Stage } from "../ir/types.ts";
 import type { QueryDialect } from "../types.ts";
-import type { ScopeBindings, SelectAst } from "./types.ts";
+import type { ScopeBindings, SelectAst, SqlRenderContext } from "./types.ts";
 import { getDefaultDialect } from "../dialect.ts";
 import type { CompileSourceRef } from "./source.ts";
 import {
@@ -23,13 +23,15 @@ export function compileStageAst(
   dialect: QueryDialect = getDefaultDialect(),
   ctePrefix = "",
   allowJoinSubqueryHoist = true,
-  allowIntermediateCtes = true
+  allowIntermediateCtes = true,
+  renderContext: SqlRenderContext
 ): SelectAst {
   const context = createStageRenderContext(
     source,
     sourceScopeId,
     inheritedBindings,
-    dialect
+    dialect,
+    renderContext
   );
 
   switch (stage.kind) {

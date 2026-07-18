@@ -636,7 +636,8 @@ interface WindowSpec {
 | Function | Signature | Description |
 |---|---|---|
 | `lit(value)` | `(value: T) => Expr<T>` | Wraps a host-language literal as an expression |
-| `param<T>(name)` | `(name: string) => Expr<T>` | Named parameter placeholder |
+| `param(name, type)` | `(name: string, type: SqlType<TExpr, TInput, TOutput>) => Expr<TExpr>` | Typed named parameter placeholder |
+| `prepare(schema, build)` | `(schema, params => Query) => PreparedQuery` | Declares parameters and builds a query with exact typed bindings |
 | `fn<T>(name, ...args)` | `(name: string, ...args: ExprInput<any>[]) => Expr<T>` | Generic SQL function call |
 | `windowFn<T>(name, ...args)` | `(name: string, ...args: ExprInput<any>[]) => Expr<T>` | Generic window function (before `over()`) |
 | `when(cond, val, ...pairs)` | `(cond: ExprInput<SqlBoolean>, val: ExprInput<S>, ...rest: WhenPair<S>[]) => Expr<S>` | `CASE WHEN ... THEN ... END` |
@@ -672,14 +673,40 @@ const id: Expr<SqlNumber> = lit(1);   // SqlNumber = SqlInt | SqlFloat | SqlBigI
 const bigId: Expr<SqlBigInt> = lit(1n);
 ```
 
-### `param<T>(name)`
+### `param(name, type)`
 
 ```ts
-pipe(users, filter((u) => eq(u.id, param<SqlInt>("id"))));
+const q = pipe(users, filter((u) => eq(u.id, param("id", t.int()))));
 
 // Render with bound values:
 toSqlResult(q, { dialect: "postgresql", params: { id: 42 } });
 ```
+
+The descriptor supplies the expression type and validates the runtime value.
+Use this as a low-level escape hatch; `prepare(...)` is the typed API for a
+reusable parameterized query.
+
+### `prepare(schema, build)`
+
+```ts
+const byUserCriteria = prepare(
+  { userId: t.int(), minimumAge: t.int() },
+  (params) => pipe(
+    users,
+    filter((u) => eq(u.id, params.userId)),
+    filter((u) => gte(u.age, params.minimumAge)),
+  ),
+);
+
+toSqlResult(byUserCriteria, {
+  dialect: "postgresql",
+  params: { userId: 42, minimumAge: 18 },
+});
+```
+
+Every declared parameter must be used, undeclared parameters are rejected, and
+the render-time `params` object must contain exactly the declared keys. Each
+value is encoded and validated by its `SqlType` before it reaches the backend.
 
 ### `fn<T>(name, ...args)` and `windowFn<T>(name, ...args)`
 
@@ -815,6 +842,13 @@ All available through the `t` namespace:
 | `IdentityQueryStep` | Branded schema-polymorphic identity transformation |
 | `Column<T, Name>` | Typed column reference |
 | `JoinKind` | `"inner"` \| `"left"` \| `"right"` \| `"full"` |
+| `SqlType<TExpression, TInput, TOutput>` | Runtime descriptor connecting SQL expression, binding input, and decoded output types |
+| `InputOf<TType>` | Binding input inferred from a `SqlType` descriptor |
+| `OutputOf<TType>` | Decoded output inferred from a `SqlType` descriptor |
+| `ExpressionOf<TType>` | Branded SQL expression type inferred from a descriptor |
+| `RowOf<TQuery>` | Driver-facing row shape inferred from a query or prepared query |
+| `PreparedQuery<TColumns, TSchema>` | Query paired with a validated parameter schema |
+| `PreparedSqlOptions<TSchema>` | Render options requiring exact typed bindings for a prepared query |
 
 ### SQL value brands
 
@@ -837,7 +871,7 @@ All available through the `t` namespace:
 
 | Type | Description |
 |---|---|
-| `SqlOptions` | Dialect, format, render strategy, params |
+| `SqlOptions` | Dialect, format, render strategy, and untyped escape-hatch params |
 | `SqlResult` | `{ sql: string; params: SqlParam[] }` |
 | `SqlRenderable` | Union accepted by `toSql()` |
 | `SqlFormat` | `"compact"` \| `"pretty"` |

@@ -1,11 +1,11 @@
 import type { QueryDialect } from "../types.ts";
 import { OUTER_TABLE_ALIAS, isInternalScopeName, type ExprNode, type ScopeId, type ProjectionItem } from "../ir/types.ts";
 import { projectionItemOutputName } from "../ir/utils.ts";
-import type { ScopeBindings } from "./types.ts";
+import type { ScopeBindings, SqlRenderContext } from "./types.ts";
 import { renderIdentifier } from "./identifiers.ts";
 import { internalError } from "../errors.ts";
 import { createDictionary } from "../dictionary.ts";
-import { bindExprScopes, exprToAst, getSqlRenderContext } from "./render.ts";
+import { bindExprScopes, exprToAst } from "./render.ts";
 
 export type ScopeExprLookup = Partial<Record<ScopeId, Record<string, ExprNode<unknown>>>>;
 
@@ -23,14 +23,20 @@ export function expandProjectedColumns(
   columnNames: readonly string[],
   scopeExprs: ScopeExprLookup,
   bindings: ScopeBindings,
-  dialect: QueryDialect
+  dialect: QueryDialect,
+  renderContext: SqlRenderContext
 ): import("./types.ts").SelectColumnAst[] {
   return columnNames.map((name) => {
-    const expr = bindFusedExpr({ kind: "column", table: scopeId, name }, scopeExprs, bindings, dialect);
+    const expr = bindFusedExpr(
+      { kind: "column", table: scopeId, name },
+      scopeExprs,
+      bindings,
+      dialect
+    );
     return {
-      expr: exprToAst(expr),
+      expr: exprToAst(expr, renderContext),
       as: shouldAliasProjectedColumn(expr, name)
-        ? renderIdentifier({ name, quoted: false }, dialect, getSqlRenderContext())
+        ? renderIdentifier({ name, quoted: false }, dialect, renderContext)
         : null,
     };
   });

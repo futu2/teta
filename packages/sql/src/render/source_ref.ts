@@ -2,10 +2,10 @@ import type { Source, SourceRef, SqlIdentifier, Value, ValuesRow } from "../ir/t
 import { isValuesSource } from "../ir/types.ts";
 import { identifierName } from "../ir/utils.ts";
 import type { QueryDialect } from "../types.ts";
-import type { BaseFromRef, FromAst, SelectAst, SelectColumnAst, SubqueryFromRef } from "./types.ts";
+import type { BaseFromRef, FromAst, SelectAst, SelectColumnAst, SqlRenderContext, SubqueryFromRef } from "./types.ts";
 import { toParserSelect } from "./ast.ts";
 import { getDefaultDialect } from "../dialect.ts";
-import { exprToAst, getSqlRenderContext } from "./render.ts";
+import { exprToAst } from "./render.ts";
 import {
   registerIdentifierBinding,
   renderIdentifier,
@@ -29,12 +29,13 @@ type SelectAstWithNext = SelectAst & {
 export function compileSourceRef(
   source: Source,
   columnIdentifiers: Readonly<Record<string, SqlIdentifier>>,
-  dialect: QueryDialect = getDefaultDialect()
+  dialect: QueryDialect = getDefaultDialect(),
+  renderContext: SqlRenderContext | null = null
 ): CompileSourceRef {
   if (isValuesSource(source)) {
     return {
       kind: "subquery",
-      ast: buildValuesSourceAst(source.rows, columnIdentifiers, dialect),
+      ast: buildValuesSourceAst(source.rows, columnIdentifiers, dialect, renderContext),
       as: "values_0",
       columnIdentifiers,
     };
@@ -52,7 +53,8 @@ export function compileSourceRef(
 
 export function sourceToFrom(
   source: CompileSourceRef,
-  dialect: QueryDialect = getDefaultDialect()
+  dialect: QueryDialect = getDefaultDialect(),
+  renderContext: SqlRenderContext | null = null
 ): FromAst {
   if (source.kind === "subquery") {
     const subquery: SubqueryFromRef = {
@@ -67,7 +69,6 @@ export function sourceToFrom(
     return subquery;
   }
   if (source.kind === "cte") {
-    const renderContext = getSqlRenderContext();
     const renderedName = resolveIdentifierName(source.name, renderContext);
     return { db: null, table: renderedName, rawTable: renderedName, as: null };
   }
@@ -78,7 +79,8 @@ export function sourceToFrom(
       table: source.name,
       alias: source.as,
     },
-    dialect
+    dialect,
+    renderContext
   );
 }
 
@@ -89,9 +91,9 @@ export function buildTableFromRef(
     table: SqlIdentifier;
     alias: SqlIdentifier | string | null;
   },
-  dialect: QueryDialect
+  dialect: QueryDialect,
+  renderContext: SqlRenderContext | null = null
 ): BaseFromRef {
-  const renderContext = getSqlRenderContext();
   const rawAlias =
     typeof params.alias === "string"
       ? params.alias
@@ -141,9 +143,11 @@ export function buildTableFromRef(
 function buildValuesSourceAst(
   rows: readonly ValuesRow[],
   columnIdentifiers: Readonly<Record<string, SqlIdentifier>>,
-  dialect: QueryDialect
+  dialect: QueryDialect,
+  renderContext: SqlRenderContext | null
 ): SelectAst {
-  const rowSelects = rows.map((row) => buildValuesRowAst(row, columnIdentifiers, dialect));
+  const rowSelects = rows.map((row) =>
+    buildValuesRowAst(row, columnIdentifiers, dialect, renderContext));
   const [head, ...tail] = rowSelects;
   let cursor = head! as SelectAstWithNext;
 
@@ -159,11 +163,11 @@ function buildValuesSourceAst(
 function buildValuesRowAst(
   row: ValuesRow,
   columnIdentifiers: Readonly<Record<string, SqlIdentifier>>,
-  dialect: QueryDialect
+  dialect: QueryDialect,
+  renderContext: SqlRenderContext | null
 ): SelectAst {
-  const renderContext = getSqlRenderContext();
   const columns: SelectColumnAst[] = Object.keys(columnIdentifiers).map((columnName) => ({
-    expr: exprToAst({ kind: "literal", value: row[columnName] as Value }),
+    expr: exprToAst({ kind: "literal", value: row[columnName] as Value }, renderContext),
     as: renderIdentifier(columnIdentifiers[columnName]!, dialect, renderContext),
   }));
 

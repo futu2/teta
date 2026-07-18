@@ -21,6 +21,10 @@ export * from "./src/ir/types.ts";
 export * from "./src/ir/contract.ts";
 export * from "./src/ir/utils.ts";
 export * from "./src/ir/tokens.ts";
+export {
+  collectExprParameterNames,
+  collectQueryParameterNames,
+} from "./src/ir/parameters.ts";
 export { validateExprIR } from "./src/ir/validate.ts";
 export {
   lowerPortableQueryIR,

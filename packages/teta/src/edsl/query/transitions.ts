@@ -1,11 +1,8 @@
 import type {
   ExprNode,
-  JoinSource,
   JoinType,
   OrderItem,
-  QuerySpec,
   ScopeId,
-  Stage,
 } from "../core/types.ts";
 import { isValuesSource } from "../core/types.ts";
 import {
@@ -54,6 +51,7 @@ import type {
 import { toQuerySpec } from "./state.ts";
 import { mergeNameSupply } from "./name_supply.ts";
 import { rebaseConflictingCtes } from "./cte_rebase.ts";
+import type { LogicalJoinSource, LogicalQuerySpec, LogicalStage } from "./logical.ts";
 
 type JoinOnInput<
   TLeft extends Record<string, unknown>,
@@ -85,7 +83,6 @@ export function resolveMapQuery<
     kind: "map",
     items,
     keys,
-    groupBy: null,
     outputScopeId: allocated.scopeId,
   }, allocated.nameSupply);
 }
@@ -116,7 +113,6 @@ export function resolveFilterQuery<TColumns extends Record<string, unknown>>(
   return appendPassthroughStage(query, {
     kind: "filter",
     predicate,
-    projectAll: projectAllItems(query.columns, query.columnNames, query.columnIdentifiers),
   });
 }
 
@@ -127,7 +123,6 @@ export function resolveSortQuery<TColumns extends Record<string, unknown>>(
   return appendPassthroughStage(query, {
     kind: "sort",
     items,
-    projectAll: projectAllItems(query.columns, query.columnNames, query.columnIdentifiers),
   });
 }
 
@@ -136,7 +131,6 @@ export function resolveDistinctQuery<TColumns extends Record<string, unknown>>(
 ): QueryDeriveInit<TColumns> {
   return appendPassthroughStage(query, {
     kind: "distinct",
-    projectAll: projectAllItems(query.columns, query.columnNames, query.columnIdentifiers),
   });
 }
 
@@ -147,7 +141,6 @@ export function resolveTakeQuery<TColumns extends Record<string, unknown>>(
   return appendPassthroughStage(query, {
     kind: "take",
     count,
-    projectAll: projectAllItems(query.columns, query.columnNames, query.columnIdentifiers),
   });
 }
 
@@ -189,11 +182,11 @@ export function resolveJoinQuery<
   const allocated = allocateScopeId({ nameSupply: allocatedRight.nameSupply });
   const outputScopeId = allocated.scopeId;
   const nextColumns = createColumnRefs<JoinSelectionResult<TSelection>>(outputScopeId, nextNames);
-  const joinSource: JoinSource =
+  const joinSource: LogicalJoinSource =
     lateral || rightQuery.stages.length > 0 || isValuesSource(rightQuery.source)
       ? {
           kind: "subquery",
-          query: rewriteQuerySpecScope(toQuerySpec(rightQuery), rightQuery.scopeId, rightScopeId),
+          query: rewriteLogicalQuerySpecScope(toQuerySpec(rightQuery), rightQuery.scopeId, rightScopeId),
           inheritedBindings: null,
         }
       : {
@@ -203,14 +196,18 @@ export function resolveJoinQuery<
           schema: rightQuery.source.schema,
           columnIdentifiers: rightQuery.columnIdentifiers,
         };
-  const stage: Stage = {
+  const items = projectAllItems(mergedColumns, nextNames);
+  const outputColumnIdentifiers = projectionItemsToIdentifierMap(items);
+  const stage: Extract<LogicalStage, { kind: "join" }> = {
     kind: "join",
     joinType: normalizedJoinType,
     lateral,
     source: joinSource,
     as: alias,
     on: predicate,
-    projectAll: projectAllItems(mergedColumns, nextNames),
+    items,
+    outputColumnNames: nextNames,
+    outputColumnIdentifiers,
     rightScopeId,
     outputScopeId,
   };
@@ -220,7 +217,7 @@ export function resolveJoinQuery<
     columnNames: nextNames,
     scopeId: outputScopeId,
     withs: mergeWiths(leftQuery.withs, rightQuery.withs),
-    columnIdentifiers: projectionItemsToIdentifierMap(stage.projectAll),
+    columnIdentifiers: outputColumnIdentifiers,
     nameSupply: allocated.nameSupply,
   };
 }
@@ -306,7 +303,12 @@ export function resolveUnnestQuery<
   const mergedColumns = { ...leftQuery.columns, ...generatedRefs };
   const nextNames = [...leftQuery.columnNames, ...generatedKeys];
   const generatedIdentifiers = columnNamesToIdentifierMap(generatedKeys);
-  const stage: Stage = {
+  const items = projectAllItems(
+    mergedColumns,
+    nextNames,
+    { ...leftQuery.columnIdentifiers, ...generatedIdentifiers }
+  );
+  const stage: Extract<LogicalStage, { kind: "unnest" }> = {
     kind: "unnest",
     mode: options.outer ? "outer" : "inner",
     expr: collection.node,
@@ -314,11 +316,7 @@ export function resolveUnnestQuery<
     as: alias,
     columnNames: generatedKeys,
     columnIdentifiers: generatedIdentifiers,
-    projectAll: projectAllItems(
-      mergedColumns,
-      nextNames,
-      { ...leftQuery.columnIdentifiers, ...generatedIdentifiers }
-    ),
+    items,
     rightScopeId,
     outputScopeId,
   };
@@ -329,7 +327,7 @@ export function resolveUnnestQuery<
     columnNames: nextNames,
     scopeId: outputScopeId,
     withs: leftQuery.withs,
-    columnIdentifiers: projectionItemsToIdentifierMap(stage.projectAll),
+    columnIdentifiers: projectionItemsToIdentifierMap(items),
     nameSupply: allocatedOutput.nameSupply,
   };
 }
@@ -349,11 +347,10 @@ export function resolveUnionQuery<TColumns extends Record<string, unknown>>(
     nameSupply: mergeNameSupply(leftQuery.nameSupply, rightQuery.nameSupply),
   });
   const outputScopeId = allocated.scopeId;
-  const stage: Stage = {
+  const stage: Extract<LogicalStage, { kind: "union" }> = {
     kind: "union",
     op,
     right: toQuerySpec(rightQuery),
-    projectAll: projectAllItems(leftQuery.columns, leftQuery.columnNames, leftQuery.columnIdentifiers),
     outputScopeId,
   };
   return {
@@ -362,14 +359,14 @@ export function resolveUnionQuery<TColumns extends Record<string, unknown>>(
     columnNames: leftQuery.columnNames,
     scopeId: outputScopeId,
     withs: mergeWiths(leftQuery.withs, rightQuery.withs),
-    columnIdentifiers: projectionItemsToIdentifierMap(stage.projectAll),
+    columnIdentifiers: leftQuery.columnIdentifiers,
     nameSupply: allocated.nameSupply,
   };
 }
 
 function resolveProjectedQuery<TSelectedColumns extends Record<string, unknown>>(
   query: QueryState<Record<string, unknown>>,
-  stage: Extract<Stage, { kind: "map" | "fold" }>,
+  stage: Extract<LogicalStage, { kind: "map" | "fold" }>,
   nameSupply: QueryNameSupply
 ): QueryDeriveInit<TSelectedColumns> {
   return {
@@ -384,7 +381,7 @@ function resolveProjectedQuery<TSelectedColumns extends Record<string, unknown>>
 
 function appendPassthroughStage<TColumns extends Record<string, unknown>>(
   query: QueryState<TColumns>,
-  stage: Extract<Stage, { kind: "filter" | "sort" | "distinct" | "take" }>
+  stage: Extract<LogicalStage, { kind: "filter" | "sort" | "distinct" | "take" }>
 ): QueryDeriveInit<TColumns> {
   return {
     stages: [...query.stages, stage],
@@ -393,20 +390,24 @@ function appendPassthroughStage<TColumns extends Record<string, unknown>>(
   };
 }
 
-function rewriteQuerySpecScope(
-  spec: QuerySpec,
+function rewriteLogicalQuerySpecScope(
+  spec: LogicalQuerySpec,
   from: ScopeId,
   to: ScopeId
-): QuerySpec {
+): LogicalQuerySpec {
   if (from === to) return spec;
   return {
     ...spec,
     scopeId: rewriteScopeIdValue(spec.scopeId, from, to),
-    stages: spec.stages.map((stage) => rewriteStageScope(stage, from, to)),
+    stages: spec.stages.map((stage) => rewriteLogicalStageScope(stage, from, to)),
   };
 }
 
-function rewriteStageScope(stage: Stage, from: ScopeId, to: ScopeId): Stage {
+function rewriteLogicalStageScope(
+  stage: LogicalStage,
+  from: ScopeId,
+  to: ScopeId
+): LogicalStage {
   switch (stage.kind) {
     case "map":
     case "fold":
@@ -416,19 +417,15 @@ function rewriteStageScope(stage: Stage, from: ScopeId, to: ScopeId): Stage {
           ...item,
           expr: rewriteExprScope(item.expr, from, to),
         })),
-        groupBy: stage.kind === "fold"
-          ? stage.groupBy?.map((expr) => rewriteExprScope(expr, from, to)) ?? null
-          : stage.groupBy,
+        ...(stage.kind === "fold" ? {
+          groupBy: stage.groupBy?.map((expr) => rewriteExprScope(expr, from, to)) ?? null,
+        } : {}),
         outputScopeId: rewriteScopeIdValue(stage.outputScopeId, from, to),
-      } as Stage;
+      } as LogicalStage;
     case "filter":
       return {
         ...stage,
         predicate: rewriteExprScope(stage.predicate, from, to),
-        projectAll: stage.projectAll.map((item) => ({
-          ...item,
-          expr: rewriteExprScope(item.expr, from, to),
-        })),
       };
     case "sort":
       return {
@@ -437,31 +434,21 @@ function rewriteStageScope(stage: Stage, from: ScopeId, to: ScopeId): Stage {
           ...item,
           expr: rewriteExprScope(item.expr, from, to),
         })),
-        projectAll: stage.projectAll.map((item) => ({
-          ...item,
-          expr: rewriteExprScope(item.expr, from, to),
-        })),
       };
     case "distinct":
     case "take":
-      return {
-        ...stage,
-        projectAll: stage.projectAll.map((item) => ({
-          ...item,
-          expr: rewriteExprScope(item.expr, from, to),
-        })),
-      };
+      return stage;
     case "join":
       return {
         ...stage,
         source: stage.source.kind === "subquery"
           ? {
               ...stage.source,
-              query: rewriteQuerySpecScope(stage.source.query, from, to),
+              query: rewriteLogicalQuerySpecScope(stage.source.query, from, to),
             }
           : stage.source,
         on: rewriteExprScope(stage.on, from, to),
-        projectAll: stage.projectAll.map((item) => ({
+        items: stage.items.map((item) => ({
           ...item,
           expr: rewriteExprScope(item.expr, from, to),
         })),
@@ -472,7 +459,7 @@ function rewriteStageScope(stage: Stage, from: ScopeId, to: ScopeId): Stage {
       return {
         ...stage,
         expr: rewriteExprScope(stage.expr, from, to),
-        projectAll: stage.projectAll.map((item) => ({
+        items: stage.items.map((item) => ({
           ...item,
           expr: rewriteExprScope(item.expr, from, to),
         })),
@@ -482,11 +469,7 @@ function rewriteStageScope(stage: Stage, from: ScopeId, to: ScopeId): Stage {
     case "union":
       return {
         ...stage,
-        projectAll: stage.projectAll.map((item) => ({
-          ...item,
-          expr: rewriteExprScope(item.expr, from, to),
-        })),
-        right: rewriteQuerySpecScope(stage.right, from, to),
+        right: rewriteLogicalQuerySpecScope(stage.right, from, to),
         outputScopeId: rewriteScopeIdValue(stage.outputScopeId, from, to),
       };
   }

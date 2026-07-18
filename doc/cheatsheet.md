@@ -467,7 +467,8 @@ const explicitSql = irToSql(ir, { dialect: "postgresql" });
 ### Core expression builders
 
 - `lit(value)`
-- `param<T>(name)` with render-time `params`
+- `param(name, type)` for a standalone typed placeholder
+- `prepare(schema, build)` for exact typed render-time bindings
 - `fn(name, ...args)`
 - `windowFn(name, ...args)`
 - `over(window, spec)`
@@ -530,6 +531,10 @@ For a guided explanation of how these fit together in the EDSL, see [TYPES.md](.
 - `QueryExplainResult`
 - `QueryStep`
 - `Expr`
+- `SqlType<TExpression, TInput, TOutput>`
+- `InputOf<TType>` / `OutputOf<TType>` / `ExpressionOf<TType>`
+- `RowOf<TQuery>`
+- `PreparedQuery<TColumns, TSchema>` / `PreparedSqlOptions<TSchema>`
 - `BuiltinDialect`
 - `DialectSpec`
 - `Dialect`

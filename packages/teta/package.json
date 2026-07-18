@@ -20,13 +20,15 @@
     "test:runtime:deno": "deno run --node-modules-dir=auto tests/runtime_smoke.ts",
     "bench:render": "bun run ../../benchmarks/render.ts",
     "bench:render:check": "bun run ../../benchmarks/render_regression.ts",
+    "check:generated": "bun run ../../scripts/generate_api.ts --check",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "check": "bun run test && bun run typecheck"
+    "check": "bun run check:generated && bun run test && bun run typecheck"
   },
   "devDependencies": {
     "@duckdb/node-api": "^1.4.4-r.3",
     "@electric-sql/pglite": "^0.4.6",
     "@types/bun": "latest",
+    "fast-check": "^4.3.0",
     "node-sql-parser": "^5.4.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"

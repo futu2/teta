@@ -1,8 +1,8 @@
 import type { Stage } from "../ir/types.ts";
 import { createDictionary } from "../dictionary.ts";
-import type { FromAst, ScopeBindings, SelectAst, SubqueryFromRef, TableFromAst } from "./types.ts";
+import type { FromAst, ScopeBindings, SelectAst, SubqueryFromRef } from "./types.ts";
 import { ensureSelectAst, replaceOuterAlias, toParserSelect } from "./ast.ts";
-import { getSqlRenderContext, bindExprScopes, exprToAst, lateralJoinPrefix } from "./render.ts";
+import { bindExprScopes, exprToAst, lateralJoinPrefix } from "./render.ts";
 import { registerColumnIdentifierBindings } from "./identifiers.ts";
 import {
   buildSqlSelectAst,
@@ -33,7 +33,7 @@ export function buildJoinStageAst(
       ? stage.source.columnIdentifiers
       : stage.source.query.columnIdentifiers,
     context.dialect,
-    getSqlRenderContext()
+    context.renderContext
   );
 
   return buildSqlSelectAst({
@@ -49,7 +49,12 @@ export function buildJoinStageAst(
         allowIntermediateCtes
       ),
     ],
-    columns: renderBoundProjectionItems(stage.projectAll, joinBindings, context.dialect),
+    columns: renderBoundProjectionItems(
+      stage.projectAll,
+      joinBindings,
+      context.dialect,
+      context.renderContext
+    ),
     where: null,
     groupby: null,
     having: null,
@@ -68,7 +73,10 @@ function buildJoinFromRef(
   allowJoinSubqueryHoist: boolean,
   allowIntermediateCtes: boolean
 ): FromAst {
-  const on = exprToAst(bindExprScopes(stage.on, joinBindings, context.dialect));
+  const on = exprToAst(
+    bindExprScopes(stage.on, joinBindings, context.dialect),
+    context.renderContext
+  );
   const prefix = lateralJoinPrefix(stage.lateral, context.dialect);
 
   if (stage.source.kind === "table") {
@@ -80,7 +88,8 @@ function buildJoinFromRef(
           table: stage.source.table,
           alias: stage.as,
         },
-        context.dialect
+        context.dialect,
+        context.renderContext
       ),
       join,
       prefix,
@@ -93,7 +102,8 @@ function buildJoinFromRef(
     `${ctePrefix}join_`,
     context.dialect,
     allowJoinSubqueryHoist,
-    allowIntermediateCtes
+    allowIntermediateCtes,
+    context.renderContext
   );
   const subqueryAst = stage.lateral
     ? ensureSelectAst(

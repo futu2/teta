@@ -44,67 +44,135 @@ type MatchingValuesRows<TRows extends readonly [ValuesRow, ...ValuesRow[]]> = {
     : never;
 };
 
-type TableColumnHelpers = {
-  string: () => ColumnType<SqlString>;
-  int: () => ColumnType<SqlInt>;
-  float: () => ColumnType<SqlFloat>;
-  bigint: () => ColumnType<SqlBigInt>;
-  decimal: () => ColumnType<SqlDecimal>;
-  boolean: () => ColumnType<SqlBoolean>;
-  date: () => ColumnType<SqlDate>;
-  timestamp: () => ColumnType<SqlTimestamp>;
-  uuid: () => ColumnType<SqlUuid>;
-  json: <T = unknown>() => ColumnType<SqlJson<T>>;
-  bytes: () => ColumnType<SqlBytes>;
-  array: <T>(column: ColumnType<T>) => ColumnType<readonly T[]>;
-  nullable: <T>(column: ColumnType<T>) => ColumnType<T | null>;
+export type SqlType<TExpression, TInput, TOutput = TInput> = ColumnType<TExpression> & Readonly<{
+  encode: (value: TInput) => unknown;
+  decode: (value: unknown) => TOutput;
+  readonly __input?: TInput;
+  readonly __output?: TOutput;
+}>;
+
+export type ExpressionOf<TType> = TType extends SqlType<infer TExpression, any, any>
+  ? TExpression
+  : never;
+export type InputOf<TType> = TType extends SqlType<any, infer TInput, any> ? TInput : never;
+export type OutputOf<TType> = TType extends SqlType<any, any, infer TOutput> ? TOutput : never;
+
+export type DriverValue<T> =
+  T extends null ? null
+  : T extends SqlInt | SqlFloat | SqlDecimal ? number
+  : T extends SqlBigInt ? bigint
+  : T extends SqlBoolean ? boolean
+  : T extends SqlDate | SqlTimestamp | SqlUuid | SqlString ? string
+  : T extends SqlBytes ? Uint8Array
+  : T extends readonly (infer TItem)[] ? readonly DriverValue<TItem>[]
+  : T extends SqlJson<infer TJson> ? TJson
+  : T;
+
+export type RowOf<TQuery> = TQuery extends Query<infer TColumns>
+  ? { readonly [K in keyof TColumns]: DriverValue<TColumns[K]> }
+  : TQuery extends { readonly query: Query<infer TColumns> }
+    ? { readonly [K in keyof TColumns]: DriverValue<TColumns[K]> }
+    : never;
+
+export type TableColumnHelpers = {
+  string: () => SqlType<SqlString, string>;
+  int: () => SqlType<SqlInt, number>;
+  float: () => SqlType<SqlFloat, number>;
+  bigint: () => SqlType<SqlBigInt, bigint>;
+  decimal: () => SqlType<SqlDecimal, number>;
+  boolean: () => SqlType<SqlBoolean, boolean>;
+  date: () => SqlType<SqlDate, string>;
+  timestamp: () => SqlType<SqlTimestamp, string>;
+  uuid: () => SqlType<SqlUuid, string>;
+  json: <T = unknown>() => SqlType<SqlJson<T>, T>;
+  bytes: () => SqlType<SqlBytes, Uint8Array>;
+  array: <TExpression, TInput, TOutput>(
+    column: SqlType<TExpression, TInput, TOutput>
+  ) => SqlType<readonly TExpression[], readonly TInput[], readonly TOutput[]>;
+  nullable: <TExpression, TInput, TOutput>(
+    column: SqlType<TExpression, TInput, TOutput>
+  ) => SqlType<TExpression | null, TInput | null, TOutput | null>;
 };
 
 export const t: TableColumnHelpers = Object.freeze({
-  string: () => columnType<SqlString>("string"),
-  int: () => columnType<SqlInt>("int"),
-  float: () => columnType<SqlFloat>("float"),
-  bigint: () => columnType<SqlBigInt>("bigint"),
-  decimal: () => columnType<SqlDecimal>("decimal"),
-  boolean: () => columnType<SqlBoolean>("boolean"),
-  date: () => columnType<SqlDate>("date"),
-  timestamp: () => columnType<SqlTimestamp>("timestamp"),
-  uuid: () => columnType<SqlUuid>("uuid"),
-  json: <T = unknown>() => columnType<SqlJson<T>>("json"),
-  bytes: () => columnType<SqlBytes>("bytes"),
-  array: <T>(column: ColumnType<T>): ColumnType<readonly T[]> => {
+  string: () => scalarType<SqlString, string>("string", isString),
+  int: () => scalarType<SqlInt, number>("int", isInteger),
+  float: () => scalarType<SqlFloat, number>("float", isFiniteNumber),
+  bigint: () => scalarType<SqlBigInt, bigint>("bigint", isBigInt),
+  decimal: () => scalarType<SqlDecimal, number>("decimal", isFiniteNumber),
+  boolean: () => scalarType<SqlBoolean, boolean>("boolean", isBoolean),
+  date: () => scalarType<SqlDate, string>("date", isString),
+  timestamp: () => scalarType<SqlTimestamp, string>("timestamp", isString),
+  uuid: () => scalarType<SqlUuid, string>("uuid", isString),
+  json: <T = unknown>() => scalarType<SqlJson<T>, T>(
+    "json",
+    ((value: unknown): value is T => value !== undefined)
+  ),
+  bytes: () => scalarType<SqlBytes, Uint8Array>("bytes", isBytes),
+  array: <TExpression, TInput, TOutput>(
+    column: SqlType<TExpression, TInput, TOutput>
+  ): SqlType<readonly TExpression[], readonly TInput[], readonly TOutput[]> => {
     assertColumnType("t.array", column);
-    return columnType<readonly T[]>("array", { arrayOf: column as ColumnType<unknown> });
+    return sqlType("array", false, column as SqlType<unknown, unknown, unknown>,
+      (value: readonly TInput[]) => {
+        if (!Array.isArray(value)) invalidDescriptorValue("array", value);
+        return value.map((item) => column.encode(item));
+      },
+      (value: unknown) => {
+        if (!Array.isArray(value)) invalidDescriptorValue("array", value);
+        return value.map((item) => column.decode(item));
+      });
   },
-  nullable: <T>(column: ColumnType<T>): ColumnType<T | null> => {
+  nullable: <TExpression, TInput, TOutput>(
+    column: SqlType<TExpression, TInput, TOutput>
+  ): SqlType<TExpression | null, TInput | null, TOutput | null> => {
     assertColumnType("t.nullable", column);
-    return Object.freeze({
-      ...column,
-      nullable: true,
-    }) as ColumnType<T | null>;
+    return sqlType(column.type, true, column.arrayOf as SqlType<unknown, unknown, unknown> | undefined,
+      (value: TInput | null) => value === null ? null : column.encode(value),
+      (value: unknown) => value === null ? null : column.decode(value));
   },
 });
 
-function columnType<T>(
+function scalarType<TExpression, TValue>(
   type: ColumnTypeName,
-  options: { arrayOf?: ColumnType<unknown> } = {}
-): ColumnType<T> {
+  validate: (value: unknown) => value is TValue
+): SqlType<TExpression, TValue> {
+  return sqlType(type, false, undefined,
+    (value: TValue) => {
+      if (!validate(value)) invalidDescriptorValue(type, value);
+      return value;
+    },
+    (value: unknown) => {
+      if (!validate(value)) invalidDescriptorValue(type, value);
+      return value;
+    });
+}
+
+function sqlType<TExpression, TInput, TOutput>(
+  type: ColumnTypeName,
+  nullable: boolean,
+  arrayOf: SqlType<unknown, unknown, unknown> | undefined,
+  encode: (value: TInput) => unknown,
+  decode: (value: unknown) => TOutput
+): SqlType<TExpression, TInput, TOutput> {
   return Object.freeze({
     kind: "column_type" as const,
     type,
-    nullable: false,
-    ...options,
-  }) as ColumnType<T>;
+    nullable,
+    ...(arrayOf === undefined ? {} : { arrayOf }),
+    encode,
+    decode,
+  }) as SqlType<TExpression, TInput, TOutput>;
 }
 
 /** Define a table with a schema and return a typed query builder. */
-type TableSchema = Record<string, ColumnType<QueryValue>>;
+export type TableSchema = Record<string, SqlType<any, any, any>>;
 type RequireNonEmptySchema<S extends TableSchema> =
   keyof S extends never
     ? { __teta_table_schema_requires_columns__: never }
     : unknown;
 type InferQuerySchema<S extends TableSchema> = {
-  [K in keyof S]: S[K] extends ColumnType<infer T extends QueryValue> ? T : never;
+  [K in keyof S]: ExpressionOf<S[K]> extends infer T extends QueryValue ? T : never;
 };
 
 export function table<S extends TableSchema>(
@@ -179,20 +247,58 @@ function assertTableSchema(value: unknown): asserts value is TableSchema {
   }
 }
 
-function assertColumnType(helper: string, value: unknown): asserts value is ColumnType<QueryValue> {
+export function assertColumnType(
+  helper: string,
+  value: unknown
+): asserts value is SqlType<QueryValue, unknown, unknown> {
   if (!isColumnType(value)) {
     userError("TABLE_SCHEMA_INVALID", `${helper}() expects a column type`);
   }
 }
 
-function isColumnType(value: unknown): value is ColumnType<QueryValue> {
+export function isColumnType(value: unknown): value is SqlType<QueryValue, unknown, unknown> {
   if (!isPlainObject(value)) return false;
   if (value.kind !== "column_type") return false;
   if (!isColumnTypeName(value.type)) return false;
   if (typeof value.nullable !== "boolean") return false;
   if (value.arrayOf !== undefined && !isColumnType(value.arrayOf)) return false;
-  return true;
+  return typeof value.encode === "function" && typeof value.decode === "function";
 }
+
+function invalidDescriptorValue(type: ColumnTypeName, value: unknown): never {
+  userError("INVALID_PARAM_VALUE", `Expected ${type} value, received ${describeValue(value)}`);
+}
+
+function describeValue(value: unknown): string {
+  if (value === null) return "null";
+  if (Array.isArray(value)) return "array";
+  return typeof value;
+}
+
+function isString(value: unknown): value is string {
+  return typeof value === "string";
+}
+
+function isInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value);
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function isBigInt(value: unknown): value is bigint {
+  return typeof value === "bigint";
+}
+
+function isBoolean(value: unknown): value is boolean {
+  return typeof value === "boolean";
+}
+
+function isBytes(value: unknown): value is Uint8Array {
+  return value instanceof Uint8Array;
+}
+
 
 function isColumnTypeName(value: unknown): value is ColumnTypeName {
   return value === "string"

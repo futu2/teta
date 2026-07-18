@@ -36,12 +36,15 @@ Method chaining ties operations to a single builder instance. Function compositi
 
 ### 2. Dialect-neutral construction, dialect-aware rendering
 
-Query construction knows nothing about SQL dialects. `filter()`, `map()`, `join()` — none of these mention PostgreSQL or SQLite. They build a dialect-neutral intermediate representation (IR).
+Query construction knows nothing about SQL dialects. `filter()`, `map()`,
+`join()` — none of these mention PostgreSQL or SQLite. They build a
+frontend-owned logical plan. `toIR(...)` then lowers that plan into the
+portable backend IR.
 
 Dialect behavior happens at render time:
 
 ```ts
-// Build once
+// Build a dialect-neutral query
 const q = pipe(users, map((u) => ({ name_len: charLength(u.name) })));
 
 // Render for different targets
@@ -49,7 +52,9 @@ toSql(q, { dialect: "postgresql" }); // CHAR_LENGTH(name)
 toSql(q, { dialect: "sqlite" });     // LENGTH(name)   ← auto-mapped
 ```
 
-**Why:** Separation of concerns. Query logic shouldn't be coupled to a specific database engine. This also makes it trivial to switch databases or target multiple engines from the same codebase.
+**Why:** Separation of concerns. Query logic should not be coupled to a
+specific database engine. A query can target multiple supported engines, while
+the capability matrix still makes dialect differences explicit.
 
 The dialect system handles:
 - Function name mapping (`CHARACTER_LENGTH` → `LENGTH` on SQLite)
@@ -73,7 +78,7 @@ eq(u.id, "hello");  // ✗ TypeScript error: SqlInt vs string
 
 **Why:** If your query makes no sense at the SQL level, Teta wants you to know at compile time, not when the database returns an error. Branded types (`SqlInt`, `SqlString`, `SqlTimestamp`, etc.) let TypeScript distinguish values that JavaScript would treat identically at runtime (e.g., a timestamp column and a plain text column are both `string`).
 
-### 4. Immutable pipelines
+### 4. Immutable pipelines with explicit failure
 
 Every query step returns a new `Query` value. Nothing is mutated.
 
@@ -91,6 +96,12 @@ const byName = pipe(base, sort((u) => asc(u.name)));
 const byAge = pipe(base, sort((u) => asc(u.age)));
 // Both share the same base filter — no accidental mutation.
 ```
+
+"Pure" describes construction and state flow: helpers do not mutate their
+inputs, renderer state is passed explicitly, and the same valid inputs produce
+the same query or SQL. It does not mean every public helper is total. Invalid
+schemas, selectors, parameter values, and unsupported operations throw
+descriptive user errors at the API boundary.
 
 ### 5. Queries are opaque, not transparent
 
@@ -116,12 +127,14 @@ import { toAst } from "@teta/teta/inspect";
 toAst(q, { dialect: "postgresql" });    // explicit parser AST inspection
 ```
 
-### 6. Three-layer architecture
+### 6. Explicitly layered architecture
 
 ```
-@teta/teta (EDSL frontend)
+@teta/teta (EDSL + logical plan)
+    ↓ toIR(...)
+portable @teta/sql IR
     ↓
-@teta/sql (IR + dialect resolution + rendering)
+@teta/sql (dialect resolution + rendering)
     ↓
 node-sql-parser (AST → SQL string)
 ```
@@ -182,6 +195,32 @@ map((u) => ({ id: u.id, name: u.name }));
 
 The row parameter type is inferred from the current query shape, so `u` in `filter((u) => ...)` has the exact type of the columns available at that point in the pipeline.
 
+### 10. Runtime type descriptors and prepared parameters
+
+`t.int()`, `t.uuid()`, and the other schema helpers are runtime descriptors,
+not phantom tags. Each `SqlType<Expression, Input, Output>` connects the SQL
+expression domain to a driver-facing input and decoded output, with
+`encode(...)` and `decode(...)` at runtime.
+
+`prepare(schema, build)` uses the same descriptors to construct typed
+parameter expressions:
+
+```ts
+const byUserCriteria = prepare(
+  { userId: t.int(), minimumAge: t.int() },
+  (params) => pipe(
+    users,
+    filter((u) => eq(u.id, params.userId)),
+    filter((u) => gte(u.age, params.minimumAge)),
+  ),
+);
+```
+
+**Why:** A caller-selected generic placeholder could claim any SQL type without runtime
+evidence and left bindings as an unrelated dictionary. Prepared queries tie
+declaration, expression use, runtime validation, and exact binding keys to one
+schema. `param(name, type)` remains the explicit low-level escape hatch.
+
 ## Trade-offs
 
 ### Verbose schemas vs. quick prototyping
@@ -200,4 +239,6 @@ Branded types add some TypeScript ceremony (especially when extracting reusable 
 
 - **Not an ORM.** Teta doesn't manage connections, execute queries, or map results back to objects. It's a query builder that outputs SQL strings.
 - **Not a migration tool.** Teta doesn't create or modify database schemas.
-- **Not a validator.** `t.json<T>()` affects TypeScript types only — it does not validate JSON payloads at runtime.
+- **Not a general data-validation library.** Descriptors validate their runtime
+  scalar/container shape, but `t.json<T>()` cannot validate an arbitrary
+  TypeScript payload type without an application-supplied schema.

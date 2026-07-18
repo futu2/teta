@@ -1,7 +1,7 @@
 import type { With } from "node-sql-parser";
 import type { QueryDialect } from "../types.ts";
 import type { ExprNode, ScopeId, SqlIdentifier, Stage } from "../ir/types.ts";
-import type { ScopeBindings, SelectAst } from "./types.ts";
+import type { ScopeBindings, SelectAst, SqlRenderContext } from "./types.ts";
 import { hoistJoinSubquery, type CompileSourceRef } from "./source.ts";
 import { compileUnionStage } from "./union.ts";
 import { mergePredicates } from "./predicate.ts";
@@ -32,6 +32,7 @@ export type FusedBuildOptions = {
   dialect: QueryDialect;
   allowJoinSubqueryHoist?: boolean;
   allowIntermediateCtes?: boolean;
+  renderContext: SqlRenderContext;
 };
 
 export function tryBuildFusedSegmentAst(
@@ -42,7 +43,7 @@ export function tryBuildFusedSegmentAst(
   stages: readonly Stage[],
   options: FusedBuildOptions
 ): CompiledSegment | null {
-  const { ctes, ctePrefix, inheritedBindings, dialect } = options;
+  const { ctes, ctePrefix, inheritedBindings, dialect, renderContext } = options;
   const allowJoinSubqueryHoist = options.allowJoinSubqueryHoist ?? true;
   const allowIntermediateCtes = options.allowIntermediateCtes ?? true;
 
@@ -55,14 +56,15 @@ export function tryBuildFusedSegmentAst(
     inputColumnNames,
     inputColumnIdentifiers,
     inheritedBindings,
-    dialect
+    dialect,
+    renderContext
   );
 
   for (let stageIndex = 0; stageIndex < stages.length; stageIndex += 1) {
     const rawStage = stages[stageIndex]!;
     const stage =
       allowJoinSubqueryHoist && rawStage.kind === "join"
-        ? hoistJoinSubquery(rawStage, ctes, ctePrefix, dialect)
+        ? hoistJoinSubquery(rawStage, ctes, ctePrefix, dialect, renderContext)
         : rawStage;
 
     switch (state.phase) {
@@ -87,7 +89,8 @@ export function tryBuildFusedSegmentAst(
               ctePrefix,
               dialect,
               allowJoinSubqueryHoist,
-              allowIntermediateCtes
+              allowIntermediateCtes,
+              renderContext
             );
             applyFusedJoinStage(state, stage, nextJoin);
             continue;
@@ -97,7 +100,8 @@ export function tryBuildFusedSegmentAst(
               stage,
               state.scopeExprs,
               state.currentBindings,
-              dialect
+              dialect,
+              renderContext
             );
             applyFusedUnnestStage(state, stage, nextUnnest);
             continue;
@@ -234,7 +238,8 @@ export function compileSingleStageAst(
       options.ctes,
       `${options.ctePrefix}u0_`,
       options.inheritedBindings,
-      options.dialect
+      options.dialect,
+      options.renderContext
     );
   }
 

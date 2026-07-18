@@ -1,12 +1,6 @@
 import type { SqlRenderContext } from "./types.ts";
 import { createDictionary } from "../dictionary.ts";
 
-let activeRenderContext: SqlRenderContext | null = null;
-
-export function getSqlRenderContext(): SqlRenderContext | null {
-  return activeRenderContext;
-}
-
 export function createAstRenderContext(
   dialect: SqlRenderContext["dialect"] = null
 ): SqlRenderContext {
@@ -24,17 +18,4 @@ export function createAstRenderContext(
     cteNameBindings: createDictionary(),
     nextInternalCteIndex: 0,
   };
-}
-
-export function withSqlRenderContext<T>(
-  context: SqlRenderContext,
-  render: () => T
-): T {
-  const previous = activeRenderContext;
-  activeRenderContext = context;
-  try {
-    return render();
-  } finally {
-    activeRenderContext = previous;
-  }
 }

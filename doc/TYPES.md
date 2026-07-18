@@ -368,14 +368,22 @@ const info = explain(publicUsers, {
 });
 ```
 
-Explicit parameter placeholders are value-free in the query expression. Bind their runtime values through `SqlOptions.params`:
+SQL type descriptors connect three type layers: the branded expression type,
+the input accepted from a database driver caller, and the decoded output. For
+example, `t.int()` is a `SqlType<SqlInt, number, number>`. `InputOf<T>`,
+`OutputOf<T>`, and `ExpressionOf<T>` expose those parts, while `RowOf<Query>`
+maps a query's branded columns to its driver-facing row shape.
+
+Prefer `prepare(...)` when parameters are part of a reusable query:
 
 ```ts
-import { eq, filter, param, pipe, table, t, toSqlResult } from "@teta/teta";
-import type { SqlInt } from "@teta/teta";
+import { eq, filter, param, pipe, prepare, table, t, toSqlResult } from "@teta/teta";
 
 const users = table("users", { id: t.int() });
-const byId = pipe(users, filter((user) => eq(user.id, param<SqlInt>("id"))));
+const byId = prepare(
+  { id: t.int() },
+  (params) => pipe(users, filter((user) => eq(user.id, params.id))),
+);
 
 const rendered = toSqlResult(byId, {
   dialect: "postgresql",
@@ -383,10 +391,15 @@ const rendered = toSqlResult(byId, {
 });
 ```
 
+The schema supplies typed parameter expressions to the callback. It also makes
+`params` exact at compile time and validates keys and encoded values at runtime.
+For isolated placeholders, `param("id", t.int())` remains available as an
+explicit, less strongly coupled escape hatch.
+
 Array bindings are available for positional placeholders. Numeric parameter names are 1-based indexes into the array:
 
 ```ts
-const byPosition = pipe(users, filter((user) => eq(user.id, param<SqlInt>("1"))));
+const byPosition = pipe(users, filter((user) => eq(user.id, param("1", t.int()))));
 
 const positional = toSqlResult(byPosition, {
   dialect: "postgresql",

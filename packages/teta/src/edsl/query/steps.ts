@@ -54,11 +54,15 @@ export function identityStep<TColumns extends QueryColumns>(): QueryStep<TColumn
 }
 
 /** Composes compatible query transforms from left to right into one branded query step. */
+// <generated:compose-overloads>
 export function composeSteps(): IdentityQueryStep;
 export function composeSteps<TInput extends QueryColumns, T1 extends QueryColumns>(
   step1: QueryStep<TInput, T1>
 ): QueryStep<TInput, T1>;
-export function composeSteps<TInput extends QueryColumns, T1 extends QueryColumns>(
+export function composeSteps<
+  TInput extends QueryColumns,
+  T1 extends QueryColumns,
+>(
   step1: QueryTransform<TInput, T1>
 ): QueryStep<TInput, T1>;
 export function composeSteps<
@@ -289,6 +293,7 @@ export function composeSteps<
   step12: QueryTransform<T11, T12>,
   ...steps: TRest & QueryStepTail<T12, TRest>
 ): QueryStep<TInput, QueryStepTailResult<T12, TRest>>;
+// </generated:compose-overloads>
 export function composeSteps(...steps: AnyQueryTransform[]): QueryStep<any, any> {
   for (const step of steps) {
     if (typeof step !== "function") {

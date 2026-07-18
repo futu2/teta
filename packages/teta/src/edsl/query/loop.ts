@@ -1,6 +1,5 @@
 import { createColumnRefs } from "../expr.ts";
 import { userError } from "../errors.ts";
-import { createDeferredRecursiveCte } from "../sql.ts";
 import type { Query, QueryStep } from "./core.ts";
 import { createQuery, createQueryStep, getQueryState } from "./core.ts";
 import { allocateInternalCteName, allocateScopeId } from "./planner.ts";
@@ -52,12 +51,13 @@ function buildLoop<TColumns extends QueryColumns>(
     userError("LOOP_NESTED_CTES", "loop does not allow nested CTEs in base or step queries");
   }
 
-  const recursiveCte = createDeferredRecursiveCte(
+  const recursiveCte = {
+    kind: "recursive" as const,
     name,
-    selfColumnNames,
-    toQuerySpec(baseState),
-    toQuerySpec(stepState)
-  );
+    columnNames: selfColumnNames,
+    base: toQuerySpec(baseState),
+    step: toQuerySpec(stepState),
+  };
   const allocatedResult = allocateScopeId({
     nameSupply: {
       scope: Math.max(allocatedSelf.nameSupply.scope, stepState.nameSupply.scope),

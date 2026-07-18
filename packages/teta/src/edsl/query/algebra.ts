@@ -40,3 +40,20 @@ export {
 } from "../helpers/join_merge.ts";
 export { loop } from "./loop.ts";
 export { t, table, values } from "./schema.ts";
+export { isPreparedQuery, prepare } from "./prepared.ts";
+export type {
+  ParameterBindings,
+  ParameterRefs,
+  ParameterSchema,
+  PreparedQuery,
+  PreparedSqlOptions,
+} from "./prepared.ts";
+export type {
+  DriverValue,
+  ExpressionOf,
+  InputOf,
+  OutputOf,
+  RowOf,
+  SqlType,
+  TableColumnHelpers,
+} from "./schema.ts";

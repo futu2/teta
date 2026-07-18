@@ -1,7 +1,7 @@
 import type { Stage } from "../ir/types.ts";
 import { createDictionary } from "../dictionary.ts";
 import type { ScopeBindings, SelectAst } from "./types.ts";
-import { bindExprScopes, exprToAst, getSqlRenderContext } from "./render.ts";
+import { bindExprScopes, exprToAst } from "./render.ts";
 import { registerColumnIdentifierBindings } from "./identifiers.ts";
 import { buildSqlSelectAst } from "./source.ts";
 import { buildUnnestFrom } from "./source_unnest.ts";
@@ -23,7 +23,7 @@ export function buildUnnestStageAst(
     alias,
     stage.columnIdentifiers,
     context.dialect,
-    getSqlRenderContext()
+    context.renderContext
   );
 
   return buildSqlSelectAst({
@@ -31,11 +31,20 @@ export function buildUnnestStageAst(
       context.baseFrom,
       buildUnnestFrom(
         stage,
-        exprToAst(bindExprScopes(stage.expr, context.baseBindings, context.dialect)),
-        context.dialect
+        exprToAst(
+          bindExprScopes(stage.expr, context.baseBindings, context.dialect),
+          context.renderContext
+        ),
+        context.dialect,
+        context.renderContext
       ),
     ],
-    columns: renderBoundProjectionItems(stage.projectAll, bindings, context.dialect),
+    columns: renderBoundProjectionItems(
+      stage.projectAll,
+      bindings,
+      context.dialect,
+      context.renderContext
+    ),
     where: null,
     groupby: null,
     having: null,

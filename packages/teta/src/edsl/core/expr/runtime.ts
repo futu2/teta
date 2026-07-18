@@ -3,6 +3,7 @@ import {
   type AggFunc,
   type BigIntLiteral,
   type BinaryOp,
+  type ColumnType,
   type DateLiteral,
   type ExprNode,
   type OrderItem,
@@ -449,9 +450,12 @@ export function lit(value: Value | bigint): Expr<NormalizeExpressionLiteral<Valu
   });
 }
 
-export function param<T = unknown>(name: string): Expr<T>;
-export function param(name: string): Expr<unknown> {
+export function param<TExpression>(name: string, type: ColumnType<TExpression>): Expr<TExpression>;
+export function param(name: string, type: ColumnType<unknown>): Expr<unknown> {
   assertSqlParameterName(name);
+  if (!type || typeof type !== "object" || type.kind !== "column_type") {
+    userError("TABLE_SCHEMA_INVALID", "param() expects a SQL type descriptor");
+  }
   return exprOf<unknown>({ kind: "param", name });
 }
 

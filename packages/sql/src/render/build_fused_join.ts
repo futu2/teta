@@ -1,9 +1,9 @@
 import type { QueryDialect } from "../types.ts";
 import { createDictionary } from "../dictionary.ts";
 import type { Stage } from "../ir/types.ts";
-import type { FromAst, ScopeBindings, SubqueryFromRef } from "./types.ts";
+import type { FromAst, ScopeBindings, SqlRenderContext, SubqueryFromRef } from "./types.ts";
 import { ensureSelectAst, replaceOuterAlias, toParserSelect } from "./ast.ts";
-import { exprToAst, getSqlRenderContext, lateralJoinPrefix } from "./render.ts";
+import { exprToAst, lateralJoinPrefix } from "./render.ts";
 import { buildTableFromRef, compileJoinSource } from "./source.ts";
 import { registerColumnIdentifierBindings } from "./identifiers.ts";
 import { bindFusedExpr, type ScopeExprLookup } from "./fused.ts";
@@ -22,7 +22,8 @@ export function buildFusedJoinFrom(
   ctePrefix: string,
   dialect: QueryDialect,
   allowJoinSubqueryHoist = true,
-  allowIntermediateCtes = true
+  allowIntermediateCtes = true,
+  renderContext: SqlRenderContext
 ): FusedJoinFrom {
   const alias = stage.as ?? fail("Join stage requires an alias");
   const joinBindings = createDictionary<string | null>(currentBindings);
@@ -34,7 +35,7 @@ export function buildFusedJoinFrom(
       ? stage.source.columnIdentifiers
       : stage.source.query.columnIdentifiers,
     dialect,
-    getSqlRenderContext()
+    renderContext
   );
 
   if (stage.source.kind === "table") {
@@ -48,11 +49,12 @@ export function buildFusedJoinFrom(
             table: stage.source.table,
             alias: stage.as,
           },
-          dialect
+          dialect,
+          renderContext
         ),
         join,
         prefix: lateralJoinPrefix(stage.lateral, dialect),
-        on: exprToAst(bindFusedExpr(stage.on, scopeExprs, joinBindings, dialect)),
+        on: exprToAst(bindFusedExpr(stage.on, scopeExprs, joinBindings, dialect), renderContext),
       },
     };
   }
@@ -62,7 +64,8 @@ export function buildFusedJoinFrom(
     `${ctePrefix}join_`,
     dialect,
     allowJoinSubqueryHoist,
-    allowIntermediateCtes
+    allowIntermediateCtes,
+    renderContext
   );
   const subqueryAst = stage.lateral
     ? ensureSelectAst(
@@ -81,7 +84,7 @@ export function buildFusedJoinFrom(
     as: stage.as,
     join,
     prefix: lateralJoinPrefix(stage.lateral, dialect),
-    on: exprToAst(bindFusedExpr(stage.on, scopeExprs, joinBindings, dialect)),
+    on: exprToAst(bindFusedExpr(stage.on, scopeExprs, joinBindings, dialect), renderContext),
   };
 
   return {

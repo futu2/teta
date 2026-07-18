@@ -1,9 +1,9 @@
 import type { With } from "node-sql-parser";
 import { createDictionary } from "../dictionary.ts";
 import type { QueryDialect, SqlRenderStrategy } from "../types.ts";
-import { generatedCteName, type GeneratedCteName, type ScopeId, type Source, type SqlIdentifier, type Stage } from "../ir/types.ts";
+import { generatedCteName, isValuesSource, type GeneratedCteName, type ScopeId, type Source, type SqlIdentifier, type Stage } from "../ir/types.ts";
 import { columnNamesToIdentifierMap } from "../ir/utils.ts";
-import type { ScopeBindings, SelectAst } from "./types.ts";
+import type { ScopeBindings, SelectAst, SqlRenderContext } from "./types.ts";
 import { buildNamedCte } from "./cte.ts";
 import { getDefaultDialect } from "../dialect.ts";
 import { compileSourceRef, hoistJoinSubquery, type CompileSourceRef } from "./source.ts";
@@ -18,6 +18,7 @@ import {
   tryBuildFusedSegmentAst,
   type FusedBuildOptions,
 } from "./build_fused.ts";
+import { createAstRenderContext } from "./render_context.ts";
 
 export type BuildPipelineOptions = {
   ctePrefix?: string;
@@ -27,6 +28,7 @@ export type BuildPipelineOptions = {
   allowJoinSubqueryHoist?: boolean;
   allowIntermediateCtes?: boolean;
   columnIdentifiers?: Readonly<Record<string, SqlIdentifier>>;
+  renderContext?: SqlRenderContext;
 };
 
 export function buildPipelineAst(
@@ -42,14 +44,22 @@ export function buildPipelineAst(
   const renderStrategy = options?.renderStrategy ?? "optimized";
   const allowJoinSubqueryHoist = options?.allowJoinSubqueryHoist ?? true;
   const allowIntermediateCtes = options?.allowIntermediateCtes ?? true;
-  const columnIdentifiers = options?.columnIdentifiers
+  const inputColumnNames = isValuesSource(source) && source.rows.length > 0
+    ? Object.keys(source.rows[0]!)
+    : initialStageColumnNames(stages[0], columnNames);
+  const finalColumnIdentifiers = options?.columnIdentifiers
     ? createDictionary(options.columnIdentifiers)
     : columnNamesToIdentifierMap(columnNames);
-  const baseSource = compileSourceRef(source, columnIdentifiers, dialect);
+  const columnIdentifiers = createDictionary({
+    ...columnNamesToIdentifierMap(inputColumnNames),
+    ...finalColumnIdentifiers,
+  });
+  const renderContext = options?.renderContext ?? createAstRenderContext(dialect);
+  const baseSource = compileSourceRef(source, columnIdentifiers, dialect, renderContext);
 
   if (stages.length === 0) {
     return {
-      ast: buildBaseSelectAst(baseSource, columnNames, sourceScopeId, scopeBindings, dialect),
+      ast: buildBaseSelectAst(baseSource, inputColumnNames, sourceScopeId, scopeBindings, dialect, renderContext),
       ctes: [],
     };
   }
@@ -62,11 +72,12 @@ export function buildPipelineAst(
     dialect,
     allowJoinSubqueryHoist,
     allowIntermediateCtes,
+    renderContext,
   };
   let current: CompileSourceRef = baseSource;
   let currentPlan: StagePlanningState = {
     scopeId: sourceScopeId,
-    columnNames,
+    columnNames: inputColumnNames,
     columnIdentifiers,
   };
 
@@ -74,7 +85,7 @@ export function buildPipelineAst(
     if (renderStrategy === "readable") {
       const rawStage = stages[index]!;
       const stage = allowJoinSubqueryHoist
-        ? hoistJoinSubquery(rawStage, ctes, ctePrefix, dialect)
+        ? hoistJoinSubquery(rawStage, ctes, ctePrefix, dialect, renderContext)
         : rawStage;
       const stageAst = compileSingleStageAst(stage, current, currentPlan.scopeId, fusedOptions);
       index += 1;
@@ -90,7 +101,8 @@ export function buildPipelineAst(
         nextPlan.columnNames,
         nextPlan.columnIdentifiers,
         dialect,
-        allowIntermediateCtes
+        allowIntermediateCtes,
+        renderContext
       );
       currentPlan = nextPlan;
       continue;
@@ -118,7 +130,8 @@ export function buildPipelineAst(
         fused.output.columnNames,
         fused.output.columnIdentifiers,
         dialect,
-        allowIntermediateCtes
+        allowIntermediateCtes,
+        renderContext
       );
       currentPlan = fused.output;
       continue;
@@ -126,7 +139,7 @@ export function buildPipelineAst(
 
     const rawStage = stages[index]!;
     const stage = allowJoinSubqueryHoist
-      ? hoistJoinSubquery(rawStage, ctes, ctePrefix, dialect)
+      ? hoistJoinSubquery(rawStage, ctes, ctePrefix, dialect, renderContext)
       : rawStage;
     const stageAst = compileSingleStageAst(stage, current, currentPlan.scopeId, fusedOptions);
     index += 1;
@@ -142,12 +155,23 @@ export function buildPipelineAst(
       nextPlan.columnNames,
       nextPlan.columnIdentifiers,
       dialect,
-      allowIntermediateCtes
+      allowIntermediateCtes,
+      renderContext
     );
     currentPlan = nextPlan;
   }
 
   internalError("INTERNAL_BUILD_PIPELINE_FAILED", "Internal error: buildPipelineAst did not produce a final AST");
+}
+
+function initialStageColumnNames(
+  stage: Stage | undefined,
+  fallback: readonly string[]
+): readonly string[] {
+  if (!stage || stage.kind === "map" || stage.kind === "fold") return fallback;
+  return stage.projectAll.map((item) =>
+    item.as?.name ?? (item.expr.kind === "column" ? item.expr.name : ""))
+    .filter((name) => name.length > 0);
 }
 
 function appendIntermediateCte(
@@ -157,10 +181,11 @@ function appendIntermediateCte(
   ast: SelectAst,
   columnNames: readonly string[],
   columnIdentifiers: Readonly<Record<string, SqlIdentifier>>,
-  dialect: QueryDialect
+  dialect: QueryDialect,
+  renderContext: SqlRenderContext
 ): GeneratedCteName {
   const name = generatedCteName(ctePrefix, "cte", stageIndex);
-  ctes.push(buildNamedCte(name, ast, columnNames, { columnIdentifiers, dialect }));
+  ctes.push(buildNamedCte(name, ast, columnNames, { columnIdentifiers, dialect, renderContext }));
   return name;
 }
 
@@ -172,7 +197,8 @@ function buildIntermediateSourceRef(
   columnNames: readonly string[],
   columnIdentifiers: Readonly<Record<string, SqlIdentifier>>,
   dialect: QueryDialect,
-  allowIntermediateCtes: boolean
+  allowIntermediateCtes: boolean,
+  renderContext: SqlRenderContext
 ): CompileSourceRef {
   if (!allowIntermediateCtes) {
     return {
@@ -192,7 +218,8 @@ function buildIntermediateSourceRef(
       ast,
       columnNames,
       columnIdentifiers,
-      dialect
+      dialect,
+      renderContext
     ),
     columnIdentifiers,
   };

@@ -2,11 +2,11 @@ import type { With } from "node-sql-parser";
 import { createDictionary } from "../dictionary.ts";
 import type { ScopeId, Stage } from "../ir/types.ts";
 import type { QueryDialect } from "../types.ts";
-import type { ScopeBindings, SelectAst } from "./types.ts";
+import type { ScopeBindings, SelectAst, SqlRenderContext } from "./types.ts";
 import { ensureAlias, toParserSelect } from "./ast.ts";
 import { buildPipelineAst } from "./build.ts";
 import { getDefaultDialect } from "../dialect.ts";
-import { bindExprScopes, exprToAst, getSqlRenderContext } from "./render.ts";
+import { bindExprScopes, exprToAst } from "./render.ts";
 import { registerColumnIdentifierBindings, renderIdentifier } from "./identifiers.ts";
 import { buildSqlSelectAst, sourceToFrom, type CompileSourceRef } from "./source.ts";
 
@@ -16,24 +16,25 @@ export function compileUnionStage(
   leftScopeId: ScopeId,
   ctes: With[],
   rightPrefix: string,
-  inheritedBindings?: ScopeBindings,
-  dialect: QueryDialect = getDefaultDialect()
+  inheritedBindings: ScopeBindings | undefined,
+  dialect: QueryDialect,
+  renderContext: SqlRenderContext
 ): SelectAst {
-  const baseFrom = sourceToFrom(source, dialect);
+  const baseFrom = sourceToFrom(source, dialect, renderContext);
   const baseAlias = ensureAlias(baseFrom);
   registerColumnIdentifierBindings(
     baseAlias,
     source.columnIdentifiers,
     dialect,
-    getSqlRenderContext()
+    renderContext
   );
   const leftBindings = createDictionary<string | null>(inheritedBindings);
   leftBindings[leftScopeId] = baseAlias;
   const leftAst = buildSqlSelectAst({
     from: [baseFrom],
     columns: stage.projectAll.map((item) => ({
-      expr: exprToAst(bindExprScopes(item.expr, leftBindings, dialect)),
-      as: renderIdentifier(item.as, dialect, getSqlRenderContext()),
+      expr: exprToAst(bindExprScopes(item.expr, leftBindings, dialect), renderContext),
+      as: renderIdentifier(item.as, dialect, renderContext),
     })),
     where: null,
     groupby: null,
@@ -53,6 +54,7 @@ export function compileUnionStage(
       columnIdentifiers: stage.right.columnIdentifiers,
       scopeBindings: inheritedBindings,
       dialect,
+      renderContext,
     }
   );
   if (rightCompiled.ctes.length) {

@@ -1,4 +1,4 @@
-import type { Stage } from "../core/types.ts";
+import type { LogicalStage } from "./logical.ts";
 import type { QueryDeriveInit, QueryState } from "./state.ts";
 
 export function normalizeQueryState<TColumns extends Record<string, unknown>>(
@@ -19,12 +19,12 @@ export function normalizeDerivedQueryInit<TColumns extends Record<string, unknow
   };
 }
 
-function normalizeStages(stages: readonly Stage[]): readonly Stage[] {
+export function normalizeStages(stages: readonly LogicalStage[]): readonly LogicalStage[] {
   return normalizeAdjacentStages(stages);
 }
 
-function normalizeAdjacentStages(stages: readonly Stage[]): readonly Stage[] {
-  const normalized: Stage[] = [];
+function normalizeAdjacentStages(stages: readonly LogicalStage[]): readonly LogicalStage[] {
+  const normalized: LogicalStage[] = [];
 
   for (const stage of stages) {
     const previous = normalized[normalized.length - 1];
@@ -37,7 +37,6 @@ function normalizeAdjacentStages(stages: readonly Stage[]): readonly Stage[] {
           left: previous.predicate,
           right: stage.predicate,
         },
-        projectAll: previous.projectAll,
       };
       continue;
     }

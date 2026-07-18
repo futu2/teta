@@ -5,12 +5,14 @@ import { toParserAst } from "./ast.ts";
 import { optimizeCtes } from "./cte_optimize.ts";
 import { materializeCte } from "./recursive.ts";
 import type { SelectAst } from "./types.ts";
+import type { SqlRenderContext } from "./types.ts";
 
 export function materializeBaseCtes(
   ctes: readonly CteSpec[],
-  dialect: QueryDialect
+  dialect: QueryDialect,
+  renderContext: SqlRenderContext
 ): With[] {
-  return ctes.map((cte) => materializeCte(cte, dialect));
+  return ctes.map((cte) => materializeCte(cte, dialect, renderContext));
 }
 
 export function buildPipelineParserAst(

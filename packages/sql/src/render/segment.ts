@@ -2,9 +2,9 @@ import type { QueryDialect } from "../types.ts";
 import { createDictionary } from "../dictionary.ts";
 import { isInternalScopeName, type ExprNode, type ScopeId, type SqlIdentifier, type Stage } from "../ir/types.ts";
 import { projectionItemsToIdentifierMap } from "../ir/utils.ts";
-import type { FromAst, GroupByAst, OrderByAst, ScopeBindings, SelectAst, SelectColumnAst } from "./types.ts";
+import type { FromAst, GroupByAst, OrderByAst, ScopeBindings, SelectAst, SelectColumnAst, SqlRenderContext } from "./types.ts";
 import { ensureAlias } from "./ast.ts";
-import { bindExprScopes, exprToAst, getSqlRenderContext } from "./render.ts";
+import { bindExprScopes, exprToAst } from "./render.ts";
 import { sourceToFrom, type CompileSourceRef, buildSqlSelectAst } from "./source.ts";
 import { registerColumnIdentifierBindings, renderIdentifier } from "./identifiers.ts";
 import { bindFusedExpr, expandProjectedColumns, type ScopeExprLookup } from "./fused.ts";
@@ -22,15 +22,16 @@ export function buildBaseSelectAst(
   columnNames: readonly string[],
   sourceScopeId: ScopeId,
   inheritedBindings: ScopeBindings | undefined,
-  dialect: QueryDialect
+  dialect: QueryDialect,
+  renderContext: SqlRenderContext
 ): SelectAst {
-  const from = buildBaseFrom(source, dialect);
+  const from = buildBaseFrom(source, dialect, renderContext);
   const baseAlias = ensureAlias(from);
   registerColumnIdentifierBindings(
     baseAlias,
     source.columnIdentifiers,
     dialect,
-    getSqlRenderContext()
+    renderContext
   );
   const baseBindings = createDictionary<string | null>(inheritedBindings);
   baseBindings[sourceScopeId] = baseAlias;
@@ -44,9 +45,9 @@ export function buildBaseSelectAst(
         dialect
       );
       return {
-        expr: exprToAst(expr),
+        expr: exprToAst(expr, renderContext),
         as: identifier?.quoted
-          ? renderIdentifier(identifier, dialect, getSqlRenderContext())
+          ? renderIdentifier(identifier, dialect, renderContext)
           : null,
       };
     }),
@@ -74,6 +75,7 @@ export function buildCompiledSegment(
   currentColumnNames: readonly string[],
   currentColumnIdentifiers: Readonly<Record<string, SqlIdentifier>>,
   dialect: QueryDialect,
+  renderContext: SqlRenderContext,
   consumed = 0
 ): CompiledSegment {
   const fusedProjectionItems = projection
@@ -112,17 +114,24 @@ export function buildCompiledSegment(
         );
 
         return {
-          expr: exprToAst(boundExpr),
+          expr: exprToAst(boundExpr, renderContext),
           as: needsAlias
-            ? renderIdentifier(alias, dialect, getSqlRenderContext())
+            ? renderIdentifier(alias, dialect, renderContext)
             : null,
         };
       })
-    : expandProjectedColumns(currentScopeId, currentColumnNames, scopeExprs, currentBindings, dialect);
+    : expandProjectedColumns(
+        currentScopeId,
+        currentColumnNames,
+        scopeExprs,
+        currentBindings,
+        dialect,
+        renderContext
+      );
   const groupby: GroupByAst | null = projection?.kind === "fold" && projection.groupBy
     ? {
         columns: projection.groupBy.map((expr) =>
-          exprToAst(bindFusedExpr(expr, scopeExprs, currentBindings, dialect))
+          exprToAst(bindFusedExpr(expr, scopeExprs, currentBindings, dialect), renderContext)
         ),
         modifiers: [],
       }
@@ -136,7 +145,8 @@ export function buildCompiledSegment(
                 createDictionary({ [projection.outputScopeId]: null }),
                 dialect
               )
-            : bindFusedExpr(item.expr, scopeExprs, currentBindings, dialect)
+            : bindFusedExpr(item.expr, scopeExprs, currentBindings, dialect),
+          renderContext
         ),
         type: item.direction,
       }))
@@ -144,10 +154,10 @@ export function buildCompiledSegment(
   const ast = buildSqlSelectAst({
     from,
     columns,
-    where: whereExpr ? exprToAst(whereExpr) : null,
+    where: whereExpr ? exprToAst(whereExpr, renderContext) : null,
     groupby,
-    having: havingExpr ? exprToAst(havingExpr) : null,
-    qualify: qualifyExpr ? exprToAst(qualifyExpr) : null,
+    having: havingExpr ? exprToAst(havingExpr, renderContext) : null,
+    qualify: qualifyExpr ? exprToAst(qualifyExpr, renderContext) : null,
     orderby,
     limit: null,
     distinct,
@@ -166,6 +176,10 @@ export function buildCompiledSegment(
   };
 }
 
-export function buildBaseFrom(source: CompileSourceRef, dialect: QueryDialect) {
-  return sourceToFrom(source, dialect);
+export function buildBaseFrom(
+  source: CompileSourceRef,
+  dialect: QueryDialect,
+  renderContext: SqlRenderContext
+) {
+  return sourceToFrom(source, dialect, renderContext);
 }

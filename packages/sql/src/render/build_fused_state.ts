@@ -7,9 +7,8 @@ import type {
   Stage,
 } from "../ir/types.ts";
 import { projectionItemsToIdentifierMap } from "../ir/utils.ts";
-import type { FromAst, ScopeBindings } from "./types.ts";
+import type { FromAst, ScopeBindings, SqlRenderContext } from "./types.ts";
 import { ensureAlias } from "./ast.ts";
-import { getSqlRenderContext } from "./render.ts";
 import type { CompileSourceRef } from "./source.ts";
 import { registerColumnIdentifierBindings } from "./identifiers.ts";
 import { nextStageColumnIdentifiers, nextStageColumnNames } from "./planner.ts";
@@ -49,6 +48,7 @@ export type FusedBuildState = {
   qualifyExpr: ExprNode<unknown> | null;
   phase: FusedBuildPhase;
   consumed: number;
+  renderContext: SqlRenderContext;
 };
 
 export function createFusedBuildState(
@@ -57,15 +57,16 @@ export function createFusedBuildState(
   inputColumnNames: readonly string[],
   _inputColumnIdentifiers: Readonly<Record<string, SqlIdentifier>>,
   inheritedBindings: ScopeBindings | undefined,
-  dialect: QueryDialect
+  dialect: QueryDialect,
+  renderContext: SqlRenderContext
 ): FusedBuildState {
-  const baseFrom = buildBaseFrom(source, dialect);
+  const baseFrom = buildBaseFrom(source, dialect, renderContext);
   const baseAlias = ensureAlias(baseFrom);
   registerColumnIdentifierBindings(
     baseAlias,
     source.columnIdentifiers,
     dialect,
-    getSqlRenderContext()
+    renderContext
   );
   const currentBindings = createDictionary<string | null>(inheritedBindings);
   currentBindings[sourceScopeId] = baseAlias;
@@ -87,6 +88,7 @@ export function createFusedBuildState(
     qualifyExpr: null,
     phase: "preprojection",
     consumed: 0,
+    renderContext,
   };
 }
 
@@ -186,6 +188,7 @@ export function finishFusedSegmentWithPredicates(
     state.currentColumnNames,
     state.currentColumnIdentifiers,
     dialect,
+    state.renderContext,
     consumedCount
   );
 }

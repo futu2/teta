@@ -35,11 +35,13 @@ function isQueryState(value: unknown): value is Readonly<QueryState<QueryColumns
     && state.stages.every(isStage)
     && isPlainObject(state.columns)
     && isStringArray(state.columnNames)
+    && isStringArray(state.sourceColumnNames)
     && typeof state.sourceScopeId === "string"
     && typeof state.scopeId === "string"
     && Array.isArray(state.withs)
     && state.withs.every(isCteSpec)
     && isColumnIdentifiers(state.columnIdentifiers)
+    && isColumnIdentifiers(state.sourceColumnIdentifiers)
     && isNameSupply(state.nameSupply);
 }
 
@@ -71,7 +73,8 @@ function isStage(value: unknown): boolean {
     groupBy?: unknown;
     outputScopeId?: unknown;
     predicate?: unknown;
-    projectAll?: unknown;
+    outputColumnNames?: unknown;
+    outputColumnIdentifiers?: unknown;
     count?: unknown;
     joinType?: unknown;
     lateral?: unknown;
@@ -91,7 +94,6 @@ function isStage(value: unknown): boolean {
     case "map":
       return isProjectionItems(stage.items)
         && isStringArray(stage.keys)
-        && stage.groupBy === null
         && typeof stage.outputScopeId === "string";
     case "fold":
       return isProjectionItems(stage.items)
@@ -99,20 +101,22 @@ function isStage(value: unknown): boolean {
         && (stage.groupBy === null || isExprNodeArray(stage.groupBy))
         && typeof stage.outputScopeId === "string";
     case "filter":
-      return isExprNode(stage.predicate) && isProjectionItems(stage.projectAll);
+      return isExprNode(stage.predicate);
     case "sort":
-      return isOrderItems(stage.items) && isProjectionItems(stage.projectAll);
+      return isOrderItems(stage.items);
     case "distinct":
-      return isProjectionItems(stage.projectAll);
+      return true;
     case "take":
-      return typeof stage.count === "number" && isProjectionItems(stage.projectAll);
+      return typeof stage.count === "number";
     case "join":
       return isJoinType(stage.joinType)
         && (stage.lateral === undefined || typeof stage.lateral === "boolean")
         && isJoinSource(stage.source)
         && (stage.as === null || typeof stage.as === "string")
         && isExprNode(stage.on)
-        && isProjectionItems(stage.projectAll)
+        && isProjectionItems(stage.items)
+        && isStringArray(stage.outputColumnNames)
+        && isColumnIdentifiers(stage.outputColumnIdentifiers)
         && typeof stage.rightScopeId === "string"
         && typeof stage.outputScopeId === "string";
     case "unnest":
@@ -122,12 +126,11 @@ function isStage(value: unknown): boolean {
         && (stage.as === null || typeof stage.as === "string")
         && isStringArray(stage.columnNames)
         && isColumnIdentifiers(stage.columnIdentifiers)
-        && isProjectionItems(stage.projectAll)
+        && isProjectionItems(stage.items)
         && typeof stage.rightScopeId === "string"
         && typeof stage.outputScopeId === "string";
     case "union":
       return (stage.op === "union" || stage.op === "union all")
-        && isProjectionItems(stage.projectAll)
         && isQuerySpec(stage.right)
         && typeof stage.outputScopeId === "string";
     default:
@@ -214,6 +217,8 @@ function isQuerySpec(value: unknown): boolean {
   const spec = value as {
     source?: unknown;
     stages?: unknown;
+    sourceColumnNames?: unknown;
+    sourceColumnIdentifiers?: unknown;
     columnNames?: unknown;
     columnIdentifiers?: unknown;
     scopeId?: unknown;
@@ -221,6 +226,8 @@ function isQuerySpec(value: unknown): boolean {
   return isSource(spec.source)
     && Array.isArray(spec.stages)
     && spec.stages.every(isStage)
+    && isStringArray(spec.sourceColumnNames)
+    && isColumnIdentifiers(spec.sourceColumnIdentifiers)
     && isStringArray(spec.columnNames)
     && isColumnIdentifiers(spec.columnIdentifiers)
     && typeof spec.scopeId === "string";

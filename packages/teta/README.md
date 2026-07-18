@@ -189,14 +189,14 @@ const direct = toSql(activeUsers, { dialect: "postgresql" });
 const explicit = irToSql(toIR(activeUsers), { dialect: "postgresql" });
 ```
 
-Use `param<T>(name)` for reusable placeholders and pass runtime values when rendering:
+For a standalone placeholder, provide a runtime SQL type descriptor and pass its value when rendering:
 
 ```ts
-import { eq, filter, param, pipe, toSqlResult, type SqlInt } from "@teta/teta";
+import { eq, filter, param, pipe, t, toSqlResult } from "@teta/teta";
 
 const byId = pipe(
   users,
-  filter((user) => eq(user.id, param<SqlInt>("id")))
+  filter((user) => eq(user.id, param("id", t.int())))
 );
 
 const result = toSqlResult(byId, {
@@ -210,7 +210,7 @@ For positional driver placeholders, use numeric parameter names with array bindi
 ```ts
 const byPosition = pipe(
   users,
-  filter((user) => eq(user.id, param<SqlInt>("1")))
+  filter((user) => eq(user.id, param("1", t.int())))
 );
 
 const positional = toSqlResult(byPosition, {
@@ -218,6 +218,28 @@ const positional = toSqlResult(byPosition, {
   parameterMode: "positional",
   parameterPrefix: "$",
   params: [42],
+});
+```
+
+Prefer `prepare(...)` for reusable application queries. Its descriptor schema
+creates typed parameter expressions, requires exact binding keys, and validates
+values before rendering:
+
+```ts
+import { eq, filter, gte, pipe, prepare, t, toSqlResult } from "@teta/teta";
+
+const byUserCriteria = prepare(
+  { userId: t.int(), minimumAge: t.int() },
+  (params) => pipe(
+    users,
+    filter((user) => eq(user.id, params.userId)),
+    filter((user) => gte(user.age, params.minimumAge)),
+  ),
+);
+
+const prepared = toSqlResult(byUserCriteria, {
+  dialect: "postgresql",
+  params: { userId: 42, minimumAge: 18 },
 });
 ```
 

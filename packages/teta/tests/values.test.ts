@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { Database } from "bun:sqlite";
 
 import {
   eq,
@@ -40,6 +41,35 @@ describe("values(query root)", () => {
     expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe(
       "SELECT values_0.id AS id, values_0.name AS name FROM (SELECT 1 AS id, 'Ada' AS name UNION ALL SELECT 2 AS id, 'Grace' AS name) AS values_0 WHERE values_0.id > 1"
     );
+  });
+
+  test("keeps values columns referenced before a narrowing projection", () => {
+    const query = pipe(
+      values([
+        { id: 1, name: "Ada" },
+        { id: 2, name: "Grace" },
+      ]),
+      filter((row) => gt(row.id, 1)),
+      map((row) => ({ name: row.name }))
+    );
+    const optimized = toSql(query, {
+      dialect: "sqlite",
+      format: "compact",
+      renderStrategy: "optimized",
+    });
+    const readable = toSql(query, {
+      dialect: "sqlite",
+      format: "compact",
+      renderStrategy: "readable",
+    });
+    const database = new Database(":memory:");
+
+    try {
+      expect(database.query(optimized).all()).toEqual([{ name: "Grace" }]);
+      expect(database.query(readable).all()).toEqual([{ name: "Grace" }]);
+    } finally {
+      database.close();
+    }
   });
 
   test("supports joining against inline rows", () => {

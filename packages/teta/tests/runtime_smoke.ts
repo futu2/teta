@@ -6,7 +6,7 @@ const users = table("users", {
 });
 const result = toSqlResult(pipe(
     users,
-    filter((user) => and(eq(user.id, param<number>("id")), eq(user.active, true))),
+    filter((user) => and(eq(user.id, param("id", t.int())), eq(user.active, true))),
     map((user) => ({
         id: user.id,
         normalized_name: lower(trim(user.name)),

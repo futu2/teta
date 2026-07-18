@@ -9,6 +9,42 @@ export type Query<TColumns extends import("./src/edsl/query.ts").QueryColumns> =
 /** Object-shaped row type carried by a query. */
 export type QueryColumns = import("./src/edsl/query.ts").QueryColumns;
 
+/** Runtime SQL type descriptor with distinct expression, input, and output types. */
+export type SqlType<TExpression, TInput, TOutput = TInput> = import("./src/edsl/query.ts").SqlType<TExpression, TInput, TOutput>;
+
+/** Driver-facing row shape inferred from a query or prepared query. */
+export type RowOf<TQuery> = import("./src/edsl/query.ts").RowOf<TQuery>;
+
+/** Driver-facing value represented by a branded SQL expression type. */
+export type DriverValue<T> = import("./src/edsl/query.ts").DriverValue<T>;
+
+/** Expression type carried by a SQL type descriptor. */
+export type ExpressionOf<TType> = import("./src/edsl/query.ts").ExpressionOf<TType>;
+
+/** Accepted binding input for a SQL type descriptor. */
+export type InputOf<TType> = import("./src/edsl/query.ts").InputOf<TType>;
+
+/** Decoded driver output for a SQL type descriptor. */
+export type OutputOf<TType> = import("./src/edsl/query.ts").OutputOf<TType>;
+
+/** Named parameter descriptor map used by `prepare`. */
+export type ParameterSchema = import("./src/edsl/query.ts").ParameterSchema;
+
+/** Typed parameter expressions supplied to a prepared-query callback. */
+export type ParameterRefs<TSchema extends import("./src/edsl/query.ts").ParameterSchema> = import("./src/edsl/query.ts").ParameterRefs<TSchema>;
+
+/** Exact runtime binding object required by a prepared query. */
+export type ParameterBindings<TSchema extends import("./src/edsl/query.ts").ParameterSchema> = import("./src/edsl/query.ts").ParameterBindings<TSchema>;
+
+/** Query paired with a declared, validated parameter schema. */
+export type PreparedQuery<
+  TColumns extends import("./src/edsl/query.ts").QueryColumns,
+  TSchema extends import("./src/edsl/query.ts").ParameterSchema,
+> = import("./src/edsl/query.ts").PreparedQuery<TColumns, TSchema>;
+
+/** Render options requiring the exact bindings declared by a prepared query. */
+export type PreparedSqlOptions<TSchema extends import("./src/edsl/query.ts").ParameterSchema> = import("./src/edsl/query.ts").PreparedSqlOptions<TSchema>;
+
 /** Branded identity query step that can be reused with any query schema. */
 export type IdentityQueryStep = import("./src/edsl/query.ts").IdentityQueryStep;
 
@@ -140,6 +176,12 @@ export const table: typeof import("./src/edsl/query.ts").table = query.table;
 
 /** Creates a typed query root from inline literal rows. */
 export const values: typeof import("./src/edsl/query.ts").values = query.values;
+
+/** Declares typed parameters and builds a query requiring exact render-time bindings. */
+export const prepare: typeof import("./src/edsl/query.ts").prepare = query.prepare;
+
+/** Returns whether a value is a branded prepared query. */
+export const isPreparedQuery: typeof import("./src/edsl/query.ts").isPreparedQuery = query.isPreparedQuery;
 
 /** Lowers a query into Teta's intermediate representation. */
 export const toIR: typeof import("./src/edsl/query.ts").toIR = queryRender.toIR;

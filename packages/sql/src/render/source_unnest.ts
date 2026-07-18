@@ -3,20 +3,20 @@ import type { Stage } from "../ir/types.ts";
 import { internalError, userError } from "../errors.ts";
 import type { QueryDialect } from "../types.ts";
 import { renderIdentifier } from "./identifiers.ts";
-import { getSqlRenderContext } from "./render.ts";
-import type { FromAst, ParserExprAst } from "./types.ts";
+import type { FromAst, ParserExprAst, SqlRenderContext } from "./types.ts";
 
 const { Parser } = nodeSqlParser;
 
 export function buildUnnestFrom(
   stage: Extract<Stage, { kind: "unnest" }>,
   collectionExpr: ParserExprAst,
-  dialect: QueryDialect
+  dialect: QueryDialect,
+  renderContext: SqlRenderContext
 ): FromAst {
   const alias = stage.as ?? fail("Unnest stage requires an alias");
   const collectionSql = exprAstToSql(collectionExpr, dialect);
   const columnSql = stage.columnNames
-    .map((name) => renderIdentifierSql(stage.columnIdentifiers[name], dialect))
+    .map((name) => renderIdentifierSql(stage.columnIdentifiers[name], dialect, renderContext))
     .join(", ");
 
   switch (dialect.name) {
@@ -34,7 +34,7 @@ export function buildUnnestFrom(
         `UNNEST(${collectionSql})${stage.withOrdinality ? " WITH ORDINALITY" : ""} AS ${alias}(${columnSql})`
       );
     case "hive":
-      return buildLateralViewFrom(stage, alias, collectionSql, columnSql, dialect);
+      return buildLateralViewFrom(stage, alias, collectionSql, columnSql, dialect, renderContext);
     default:
       userError(
         "UNSUPPORTED_UNNEST",
@@ -70,11 +70,12 @@ function buildLateralViewFrom(
   alias: string,
   collectionSql: string,
   columnSql: string,
-  dialect: QueryDialect
+  dialect: QueryDialect,
+  renderContext: SqlRenderContext
 ): FromAst {
   const generator = stage.withOrdinality ? "POSEXPLODE" : "EXPLODE";
   const orderedColumns = stage.withOrdinality
-    ? `${renderIdentifierSql(stage.columnIdentifiers[stage.columnNames[1]!], dialect)}, ${renderIdentifierSql(stage.columnIdentifiers[stage.columnNames[0]!], dialect)}`
+    ? `${renderIdentifierSql(stage.columnIdentifiers[stage.columnNames[1]!], dialect, renderContext)}, ${renderIdentifierSql(stage.columnIdentifiers[stage.columnNames[0]!], dialect, renderContext)}`
     : columnSql;
   return {
     expr: {
@@ -96,12 +97,13 @@ function exprAstToSql(expr: ParserExprAst, dialect: QueryDialect): string {
 
 function renderIdentifierSql(
   identifier: Extract<Stage, { kind: "unnest" }>['columnIdentifiers'][string] | undefined,
-  dialect: QueryDialect
+  dialect: QueryDialect,
+  renderContext: SqlRenderContext
 ): string {
   if (!identifier) {
     internalError("INTERNAL_UNNEST_IDENTIFIER_MISSING", "Unnest column identifier is missing");
   }
-  const rendered = renderIdentifier(identifier, dialect, getSqlRenderContext());
+  const rendered = renderIdentifier(identifier, dialect, renderContext);
   if (!rendered) {
     internalError("INTERNAL_UNNEST_IDENTIFIER_MISSING", "Unnest column identifier is missing");
   }

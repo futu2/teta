@@ -3,18 +3,20 @@ import {
   internalCteLabel,
   isInternalCteName,
   isValuesSource,
-  type CteSpec,
   type InternalCteName,
-  type JoinSource,
-  type QuerySpec,
   type Source,
-  type Stage,
 } from "../core/types.ts";
 import type { QueryState } from "./state.ts";
+import type {
+  LogicalCteSpec,
+  LogicalJoinSource,
+  LogicalQuerySpec,
+  LogicalStage,
+} from "./logical.ts";
 
 export function rebaseConflictingCtes<TColumns extends Record<string, unknown>>(
   query: QueryState<TColumns>,
-  reservedCtes: readonly CteSpec[],
+  reservedCtes: readonly LogicalCteSpec[],
   firstAvailableIndex: number
 ): QueryState<TColumns> {
   if (query.withs.length === 0 || reservedCtes.length === 0) return query;
@@ -55,9 +57,9 @@ export function rebaseConflictingCtes<TColumns extends Record<string, unknown>>(
 }
 
 function rewriteCte(
-  cte: CteSpec,
+  cte: LogicalCteSpec,
   renames: ReadonlyMap<string, InternalCteName>
-): CteSpec {
+): LogicalCteSpec {
   switch (cte.kind) {
     case "query":
       return {
@@ -76,9 +78,9 @@ function rewriteCte(
 }
 
 function rewriteQuerySpec(
-  spec: QuerySpec,
+  spec: LogicalQuerySpec,
   renames: ReadonlyMap<string, InternalCteName>
-): QuerySpec {
+): LogicalQuerySpec {
   return {
     ...spec,
     source: rewriteSource(spec.source, renames),
@@ -87,9 +89,9 @@ function rewriteQuerySpec(
 }
 
 function rewriteStage(
-  stage: Stage,
+  stage: LogicalStage,
   renames: ReadonlyMap<string, InternalCteName>
-): Stage {
+): LogicalStage {
   switch (stage.kind) {
     case "join":
       return {
@@ -107,9 +109,9 @@ function rewriteStage(
 }
 
 function rewriteJoinSource(
-  source: JoinSource,
+  source: LogicalJoinSource,
   renames: ReadonlyMap<string, InternalCteName>
-): JoinSource {
+): LogicalJoinSource {
   if (source.kind === "subquery") {
     return {
       ...source,

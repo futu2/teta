@@ -40,10 +40,11 @@ export function renderAst(
 
 export function renderExprNode(
   expr: ExprNode<unknown>,
-  state: Pick<RendererState, "parser" | "options" | "sqlFormat" | "dialect">
+  state: Pick<RendererState, "parser" | "options" | "sqlFormat" | "dialect">,
+  renderContext: SqlRenderContext
 ): string {
   return finalizeSql(
-    state.parser.exprToSQL(exprToAst(expr), state.options),
+    state.parser.exprToSQL(exprToAst(expr, renderContext), state.options),
     state.sqlFormat,
     state.dialect
   );

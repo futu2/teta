@@ -109,8 +109,10 @@ function queryOf<TColumns extends QueryColumns>(
   const source = freezeQueryValue(state.source);
   const stages = freezeQueryValue(state.stages) as QueryState<TColumns>["stages"];
   const columnNames = freezeQueryValue(state.columnNames);
+  const sourceColumnNames = freezeQueryValue(state.sourceColumnNames);
   const withs = freezeQueryValue(state.withs) as QueryState<TColumns>["withs"];
   const columnIdentifiers = freezeQueryValue(state.columnIdentifiers);
+  const sourceColumnIdentifiers = freezeQueryValue(state.sourceColumnIdentifiers);
   const nameSupply = freezeQueryValue(state.nameSupply);
   const resolvedState = {
     ...state,
@@ -118,8 +120,10 @@ function queryOf<TColumns extends QueryColumns>(
     stages,
     columns: freezeQueryValue(state.columns),
     columnNames,
+    sourceColumnNames,
     withs,
     columnIdentifiers,
+    sourceColumnIdentifiers,
     nameSupply,
   };
   const frozenState = Object.freeze(resolvedState) as Readonly<QueryState<TColumns>>;

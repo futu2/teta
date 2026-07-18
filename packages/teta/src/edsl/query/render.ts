@@ -28,6 +28,14 @@ import {
 import { isQuery } from "./value.ts";
 import { canonicalizeIR } from "./canonicalize.ts";
 import type { QueryColumns } from "./types.ts";
+import { lowerLogicalCtes, lowerLogicalStages } from "./logical.ts";
+import {
+  encodePreparedOptions,
+  isPreparedQuery,
+  type ParameterSchema,
+  type PreparedQuery,
+  type PreparedSqlOptions,
+} from "./prepared.ts";
 
 export type QueryIR<TColumns extends QueryColumns> = Readonly<PortableQueryIR & {
   columnNames: readonly (keyof TColumns & string)[];
@@ -59,42 +67,100 @@ export type QueryExplainResult<TColumns extends QueryColumns> = {
   parameterPrefix: SqlParameterPrefix;
 };
 
-export function toIR<TColumns extends QueryColumns>(query: Query<TColumns>): QueryIR<TColumns> {
+export function toIR<TColumns extends QueryColumns, TSchema extends ParameterSchema>(
+  query: PreparedQuery<TColumns, TSchema>
+): QueryIR<TColumns>;
+export function toIR<TColumns extends QueryColumns>(query: Query<TColumns>): QueryIR<TColumns>;
+export function toIR<TColumns extends QueryColumns>(
+  target: Query<TColumns> | PreparedQuery<TColumns, ParameterSchema>
+): QueryIR<TColumns> {
+  const query = isPreparedQuery(target) ? target.query as Query<TColumns> : target;
   const state = getQueryState(query);
   return freezeQueryValue(toPortableQueryIR(canonicalizeIR({
     version: TETA_QUERY_IR_VERSION,
     source: state.source,
-    stages: state.stages,
+    stages: lowerLogicalStages(state.stages, {
+      scopeId: state.sourceScopeId,
+      columnNames: state.sourceColumnNames,
+      columnIdentifiers: state.sourceColumnIdentifiers,
+    }),
     scopeId: state.sourceScopeId,
     columnNames: state.columnNames,
     columnIdentifiers: state.columnIdentifiers,
-    withs: state.withs,
+    withs: lowerLogicalCtes(state.withs),
   }))) as QueryIR<TColumns>;
 }
 
-export function toSql<TTarget extends SqlRenderable>(
+export function toSql<TColumns extends QueryColumns, TSchema extends ParameterSchema>(
+  query: PreparedQuery<TColumns, TSchema>,
+  options: PreparedSqlOptions<TSchema>
+): string;
+export function toSql<TTarget extends AnyQuery | SqlCompilable>(
   query: TTarget,
+  options?: SqlOptions
+): string;
+export function toSql(
+  target: SqlRenderable | PreparedQuery<QueryColumns, ParameterSchema>,
   options: SqlOptions = {}
 ): string {
-  return isQuery(query)
-    ? irToSql(toIR(query as Query<QueryColumns>), options ?? {})
-    : renderSql(query, options ?? {});
+  if (isPreparedQuery(target)) {
+    const prepared = target as PreparedQuery<QueryColumns, ParameterSchema>;
+    return irToSql(
+      toIR(prepared),
+      encodePreparedOptions(prepared, options as PreparedSqlOptions<ParameterSchema>)
+    );
+  }
+  return isQuery(target)
+    ? irToSql(toIR(target as Query<QueryColumns>), options)
+    : renderSql(target, options);
 }
 
-export function toSqlResult<TTarget extends SqlRenderable>(
+export function toSqlResult<TColumns extends QueryColumns, TSchema extends ParameterSchema>(
+  query: PreparedQuery<TColumns, TSchema>,
+  options: PreparedSqlOptions<TSchema>
+): SqlResult;
+export function toSqlResult<TTarget extends AnyQuery | SqlCompilable>(
   query: TTarget,
+  options?: SqlOptions
+): SqlResult;
+export function toSqlResult(
+  target: SqlRenderable | PreparedQuery<QueryColumns, ParameterSchema>,
   options: SqlOptions = {}
 ): SqlResult {
-  return isQuery(query)
-    ? irToSqlResult(toIR(query as Query<QueryColumns>), options ?? {})
-    : renderSqlResult(query, options ?? {});
+  if (isPreparedQuery(target)) {
+    const prepared = target as PreparedQuery<QueryColumns, ParameterSchema>;
+    return irToSqlResult(
+      toIR(prepared),
+      encodePreparedOptions(prepared, options as PreparedSqlOptions<ParameterSchema>)
+    );
+  }
+  return isQuery(target)
+    ? irToSqlResult(toIR(target as Query<QueryColumns>), options)
+    : renderSqlResult(target, options);
 }
 
+export function explain<TColumns extends QueryColumns, TSchema extends ParameterSchema>(
+  query: PreparedQuery<TColumns, TSchema>,
+  options: PreparedSqlOptions<TSchema>
+): QueryExplainResult<TColumns>;
 export function explain<TColumns extends QueryColumns>(
   query: Query<TColumns>,
+  options?: SqlOptions
+): QueryExplainResult<TColumns>;
+export function explain<TColumns extends QueryColumns>(
+  target: Query<TColumns> | PreparedQuery<TColumns, ParameterSchema>,
   options: SqlOptions = {}
 ): QueryExplainResult<TColumns> {
-  const result = explainIR(toIR(query), options);
+  const prepared = isPreparedQuery(target)
+    ? target as PreparedQuery<TColumns, ParameterSchema>
+    : null;
+  const ir = prepared ? toIR(prepared) : toIR(target as Query<TColumns>);
+  const result = explainIR(
+    ir,
+    prepared
+      ? encodePreparedOptions(prepared, options as PreparedSqlOptions<ParameterSchema>)
+      : options
+  );
 
   return {
     ir: result.ir,

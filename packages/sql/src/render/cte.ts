@@ -3,21 +3,23 @@ import type { SqlIdentifier } from "../ir/types.ts";
 import { normalizeIdentifier } from "../ir/utils.ts";
 import { getDefaultDialect } from "../dialect.ts";
 import type { QueryDialect } from "../types.ts";
-import type { ColumnRefAst, SelectAst } from "./types.ts";
+import type { ColumnRefAst, SelectAst, SqlRenderContext } from "./types.ts";
 import { toParserSelect } from "./ast.ts";
 import { renderIdentifier } from "./identifiers.ts";
 
 type BuildNamedCteOptions = {
   columnIdentifiers?: Readonly<Record<string, SqlIdentifier>>;
   dialect?: QueryDialect;
+  renderContext?: SqlRenderContext;
 };
 
 export function toCteColumnRef(
   name: string,
   identifier: SqlIdentifier,
-  dialect: QueryDialect
+  dialect: QueryDialect,
+  renderContext: SqlRenderContext | null = null
 ): ColumnRefAst {
-  const rendered = renderIdentifier(identifier, dialect, null);
+  const rendered = renderIdentifier(identifier, dialect, renderContext);
   const expr = typeof rendered === "string"
     ? { type: "default" as const, value: rendered }
     : rendered;
@@ -48,7 +50,8 @@ export function buildNamedCte(
         columnName,
         options.columnIdentifiers?.[columnName]
           ?? normalizeIdentifier(columnName, "CTE column"),
-        dialect
+        dialect,
+        options.renderContext ?? null
       )),
   };
 }
