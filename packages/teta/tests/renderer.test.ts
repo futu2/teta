@@ -158,6 +158,34 @@ describe("SQL render options API", () => {
     })).toThrow("Missing parameter binding for left");
   });
 
+  test("toSqlResult(expr, options) validates low-level parameter descriptors", () => {
+    expect(() => toSqlResult(param("id", t.int()), {
+      dialect: "postgresql",
+      format: "compact",
+      params: { id: "not-an-int" },
+    })).toThrow("Expected int value");
+  });
+
+  test("validates every descriptor for a repeated low-level parameter name", () => {
+    expect(() => toSqlResult((eq as any)(
+      param("id", t.int()),
+      param("id", t.string())
+    ), {
+      dialect: "postgresql",
+      format: "compact",
+      params: { id: 1 },
+    })).toThrow("Expected string value");
+  });
+
+  test("does not mistake a user table with the internal CTE prefix for a CTE", () => {
+    const source = table("__teta_cte_user", { id: t.int() });
+
+    expect(toSql(source, {
+      dialect: "postgresql",
+      format: "compact",
+    })).toBe("SELECT teta_cte_user_0.id FROM __teta_cte_user AS teta_cte_user_0");
+  });
+
   test("toSql(query, options) supports bigint literals on bigint columns", () => {
     const sessions = table("sessions", {
       session_id: t.bigint(),

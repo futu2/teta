@@ -783,7 +783,7 @@ export {
   getLanguageSpec,
 } from "./src/edsl/sql/language.ts";
 
-export type { LanguageCategory } from "./src/edsl/sql/language.ts";
+export type { BuiltinFunctionInputDomain, LanguageCategory } from "./src/edsl/sql/language.ts";
 
 export type {
   BuiltinDialect,

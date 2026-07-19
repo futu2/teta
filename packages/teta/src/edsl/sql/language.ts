@@ -8,6 +8,7 @@ export {
   resolveDialectLanguage,
 } from "@teta/sql";
 export type {
+  BuiltinFunctionInputDomain,
   BuiltinFunctionNullability,
   BuiltinFunctionOperation,
   BuiltinFunctionResultKind,

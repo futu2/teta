@@ -19,7 +19,7 @@ export function hoistJoinSubquery(
 
   const subqueryAst = compileJoinSource(
     stage.source,
-    `${ctePrefix}join_${ctes.length}_`,
+    `${ctePrefix}derived_${ctes.length}_`,
     dialect,
     true,
     true,
@@ -30,7 +30,7 @@ export function hoistJoinSubquery(
     subqueryAst.with = null;
   }
 
-  const cteName: GeneratedCteName = generatedCteName(ctePrefix, "join", ctes.length);
+  const cteName: GeneratedCteName = generatedCteName(ctePrefix, "derived", ctes.length);
   ctes.push(buildNamedCte(
     cteName,
     subqueryAst,
@@ -45,10 +45,8 @@ export function hoistJoinSubquery(
   return {
     ...stage,
     source: {
-      kind: "table",
-      db: null,
-      table: { name: cteName, quoted: false },
-      schema: null,
+      kind: "cte",
+      name: cteName,
       columnIdentifiers: stage.source.query.columnIdentifiers,
     },
     as: stage.as,

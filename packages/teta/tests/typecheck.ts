@@ -1,7 +1,7 @@
 import type { Column, Expr, Query, QueryColumns, JoinKind, JoinOptions, RowOf, SqlBigInt, SqlBoolean, SqlBytes, SqlDate, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlNumber, SqlString, SqlTimestamp, SqlUuid, UnnestOptions, UnnestSelection, SqlExpressionValue, SqlType } from "../mod.ts";
 import * as publicApi from "../mod.ts";
 import { checkedFn, unsafeFn } from "../advanced.ts";
-import { between, composeSteps, currentDate, currentTimestamp, dateAdd, drop, filter, filterEq, filterNe, filterGt, filterGte, filterLt, filterLte, full, identityStep, inner, isDistinctFrom, isIn, isNotIn, join, left, right, take, takeWithin, sort, param, prepare, toSqlResult, lit, map, pick, rename, pipe, flow, table, t, fold, asc, desc, eq, gt, upper, add, mul, coalesce, count, group, loop, sum, and, or, isNotNull, sub, when, mapShape, groupShape, lt, unnest, unionAll, union, unlessStep, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, asBigInt, asBoolean, asBytes, asDate, asDecimal, asFloat, asInt, asJson, asString, asTimestamp, asUuid, whenStep } from "../mod.ts";
+import { arrayAppend, arrayConcat, arrayLength, arrayPosition, between, composeSteps, currentDate, currentTimestamp, dateAdd, drop, filter, filterEq, filterNe, filterGt, filterGte, filterLt, filterLte, full, identityStep, inner, isDistinctFrom, isIn, isNotIn, join, left, right, take, takeWithin, sort, param, prepare, toSqlResult, lit, map, pick, rename, pipe, flow, table, t, fold, asc, desc, eq, gt, upper, add, mul, coalesce, count, group, loop, sum, and, or, isNotNull, sub, when, mapShape, groupShape, lt, unnest, unionAll, union, unlessStep, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, asBigInt, asBoolean, asBytes, asDate, asDecimal, asFloat, asInt, asJson, asString, asTimestamp, asUuid, whenStep } from "../mod.ts";
 type Equal<A, B> = ((<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false);
 type Expect<T extends true> = T;
 type ExprType<TExpr> = TExpr extends Expr<infer TValue> ? SqlExpressionValue<TValue> : TExpr extends Column<infer TValue, string> ? SqlExpressionValue<TValue> : never;
@@ -14,6 +14,27 @@ const users = table("users", {
     id: t.int(),
     name: t.string(),
 });
+const nullableText = table("nullable_text", {
+    value: t.nullable(t.string()),
+});
+const typedArrays = table("typed_arrays", {
+    values: t.array(t.int()),
+    nullable_values: t.nullable(t.array(t.int())),
+});
+const nullableCoalesce = coalesce(null, null);
+const nonNullableCoalesce = coalesce(nullableText.columns.value, "fallback");
+const typedArrayLength = arrayLength(typedArrays.columns.values);
+const nullableArrayLength = arrayLength(typedArrays.columns.nullable_values);
+const typedArrayPosition = arrayPosition(typedArrays.columns.values, 1);
+const typedArrayAppend = arrayAppend(typedArrays.columns.values, 1);
+const typedArrayConcatIdentity = arrayConcat(typedArrays.columns.values);
+type _NullableCoalesce = Expect<Equal<ExprType<typeof nullableCoalesce>, null>>;
+type _NonNullableCoalesce = Expect<Equal<ExprType<typeof nonNullableCoalesce>, SqlString>>;
+type _TypedArrayLength = Expect<Equal<ExprType<typeof typedArrayLength>, SqlInt>>;
+type _NullableArrayLength = Expect<Equal<ExprType<typeof nullableArrayLength>, SqlInt | null>>;
+type _TypedArrayPosition = Expect<Equal<ExprType<typeof typedArrayPosition>, SqlInt | null>>;
+type _TypedArrayAppend = Expect<Equal<ExprType<typeof typedArrayAppend>, readonly SqlInt[]>>;
+type _TypedArrayConcatIdentity = Expect<Equal<ExprType<typeof typedArrayConcatIdentity>, readonly SqlInt[]>>;
 const preparedUsers = prepare({ id: t.int(), minimumId: t.int() }, (params) =>
     pipe(users, filter((user) => eq(user.id, params.id)), filter((user) => gt(user.id, params.minimumId)), map((user) => ({ name: user.name }))));
 type _PreparedUserRow = Expect<Equal<RowOf<typeof preparedUsers>, { readonly name: string }>>;

@@ -25,7 +25,7 @@ export type LogicalQuerySpec = Readonly<{
 }>;
 
 export type LogicalJoinSource =
-  | Extract<JoinSource, { kind: "table" }>
+  | Extract<JoinSource, { kind: "table" | "cte" }>
   | Readonly<{
       kind: "subquery";
       query: LogicalQuerySpec;
@@ -191,7 +191,7 @@ export function lowerLogicalCtes(ctes: readonly LogicalCteSpec[]): readonly CteS
 }
 
 function lowerLogicalJoinSource(source: LogicalJoinSource): JoinSource {
-  return source.kind === "table"
+  return source.kind === "table" || source.kind === "cte"
     ? source
     : { ...source, query: lowerLogicalQuerySpec(source.query) };
 }

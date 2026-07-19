@@ -9,7 +9,7 @@ import type {
   Stage,
   TableSourceInput,
 } from "./types.ts";
-import { internalCteLabel, isInternalCteName, isValuesSource } from "./types.ts";
+import { internalCteLabel, isValuesSource } from "./types.ts";
 import { internalError, userError } from "../errors.ts";
 import { createDictionary } from "../dictionary.ts";
 import { isSqlIdentifierSegment } from "./tokens.ts";
@@ -131,14 +131,11 @@ function fromStringPath(input: string): Source {
 /** Generate a stable table alias for a source at the current stage depth. */
 export function autoAlias(table: string | SqlIdentifier, stages: readonly Stage[]): string {
   const tableName = typeof table === "string" ? table : identifierName(table);
-  const aliasBase = isInternalCteName(tableName)
-    ? (internalCteLabel(tableName) ?? "cte")
-    : tableName;
   const joinCount = stages.reduce((count, stage) => {
     if (stage.kind === "join" || stage.kind === "unnest") return count + 1;
     return count;
   }, 0);
-  const base = aliasBase.replace(/[^A-Za-z0-9_]+/g, "_").replace(/^_+|_+$/g, "");
+  const base = tableName.replace(/[^A-Za-z0-9_]+/g, "_").replace(/^_+|_+$/g, "");
   const name = base.length ? base : "t";
   return `${name}_${joinCount + 1}`;
 }
@@ -147,6 +144,9 @@ export function autoAlias(table: string | SqlIdentifier, stages: readonly Stage[
 export function sourceAliasBase(source: Source): string | SqlIdentifier {
   if (isValuesSource(source)) {
     return "values";
+  }
+  if ("kind" in source && source.kind === "cte") {
+    return internalCteLabel(source.name) ?? "derived";
   }
   return source.table;
 }

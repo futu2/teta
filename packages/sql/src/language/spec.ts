@@ -141,14 +141,29 @@ export type BuiltinFunctionResultKind =
   | "array"
   | "unknown";
 
+/** Broad SQL argument domains understood by typed EDSL frontends. */
+export type BuiltinFunctionInputDomain =
+  | "unknown"
+  | "numeric"
+  | "integer"
+  | "string"
+  | "boolean"
+  | "dateLike"
+  | "array"
+  | "integer?"
+  | "string?";
+
 export type BuiltinFunctionNullability =
   | "propagate"
+  | "coalesce"
   | "never"
   | "always"
   | "unknown";
 
 export type BuiltinFunctionSpec = Readonly<{
   arity: BuiltinFunctionArity;
+  inputs: readonly BuiltinFunctionInputDomain[];
+  variadic: BuiltinFunctionInputDomain | null;
   result: BuiltinFunctionResultKind;
   nullability: BuiltinFunctionNullability;
 }>;
@@ -158,150 +173,107 @@ export type BuiltinFunctionSpecCatalog = Readonly<
 >;
 
 /**
- * Portable scalar operations and their canonical EDSL arities.
- *
- * `max: null` permits additional arguments. Operations with optional SQL
- * arguments record the forms emitted by Teta's portable helpers.
+ * Canonical scalar-operation catalog shared by validation, rendering, and
+ * typed frontends. Arity is derived from the argument domains, so adding an
+ * operation requires one semantic declaration instead of synchronized maps.
  */
-export const BUILTIN_FUNCTION_ARITIES: BuiltinFunctionArityCatalog = {
-  MOD: { min: 2, max: 2 },
-  ABS: { min: 1, max: 1 },
-  CEIL: { min: 1, max: 1 },
-  FLOOR: { min: 1, max: 1 },
-  SQRT: { min: 1, max: 1 },
-  ROUND: { min: 1, max: 2 },
-  POWER: { min: 2, max: 2 },
-  GREATEST: { min: 2, max: null },
-  LEAST: { min: 2, max: null },
-  CONCAT: { min: 2, max: null },
-  UPPER: { min: 1, max: 1 },
-  LOWER: { min: 1, max: 1 },
-  TRIM: { min: 1, max: 1 },
-  SUBSTRING: { min: 2, max: 3 },
-  POSITION: { min: 2, max: 2 },
-  OVERLAY: { min: 3, max: 4 },
-  CHAR_LENGTH: { min: 1, max: 1 },
-  CHARACTER_LENGTH: { min: 1, max: 1 },
-  OCTET_LENGTH: { min: 1, max: 1 },
-  BIT_LENGTH: { min: 1, max: 1 },
-  REPLACE: { min: 3, max: 3 },
-  REVERSE: { min: 1, max: 1 },
-  LEFT: { min: 2, max: 2 },
-  RIGHT: { min: 2, max: 2 },
-  LPAD: { min: 3, max: 3 },
-  RPAD: { min: 3, max: 3 },
-  REGEXP_LIKE: { min: 2, max: 2 },
-  REGEXP_REPLACE: { min: 3, max: 4 },
-  REGEXP_EXTRACT: { min: 2, max: 3 },
-  CURRENT_DATE: { min: 0, max: 0 },
-  CURRENT_TIMESTAMP: { min: 0, max: 0 },
-  DATE_TRUNC: { min: 2, max: 2 },
-  DATE_ADD: { min: 3, max: 3 },
-  DATE_DIFF: { min: 3, max: 3 },
-  DATE_PARSE: { min: 2, max: 2 },
-  DATE_FORMAT: { min: 2, max: 2 },
-  TO_UNIXTIME: { min: 1, max: 1 },
-  FROM_UNIXTIME: { min: 1, max: 1 },
-  COALESCE: { min: 2, max: null },
-  NULLIF: { min: 2, max: 2 },
-  ARRAY_LENGTH: { min: 1, max: 1 },
-  ARRAY_CONTAINS: { min: 2, max: 2 },
-  ARRAY_POSITION: { min: 2, max: 2 },
-  ARRAY_SLICE: { min: 2, max: 3 },
-  ARRAY_JOIN: { min: 2, max: 2 },
-  ARRAY_APPEND: { min: 2, max: 2 },
-  ARRAY_PREPEND: { min: 2, max: 2 },
-  ARRAY_CONCAT: { min: 2, max: null },
-  ARRAY_DISTINCT: { min: 1, max: 1 },
-} as const;
+export const BUILTIN_FUNCTION_SPECS = Object.freeze({
+  MOD: builtin(["numeric", "numeric"], null, "same", "propagate"),
+  ABS: builtin(["numeric"], null, "same", "propagate"),
+  CEIL: builtin(["numeric"], null, "integer", "propagate"),
+  FLOOR: builtin(["numeric"], null, "integer", "propagate"),
+  SQRT: builtin(["numeric"], null, "float", "propagate"),
+  ROUND: builtin(["numeric", "integer?"], null, "same", "propagate"),
+  POWER: builtin(["numeric", "numeric"], null, "float", "propagate"),
+  GREATEST: builtin(["numeric", "numeric"], "numeric", "same", "propagate"),
+  LEAST: builtin(["numeric", "numeric"], "numeric", "same", "propagate"),
+  CONCAT: builtin(["unknown", "unknown"], "unknown", "string", "propagate"),
+  UPPER: builtin(["string"], null, "string", "propagate"),
+  LOWER: builtin(["string"], null, "string", "propagate"),
+  TRIM: builtin(["string"], null, "string", "propagate"),
+  SUBSTRING: builtin(["string", "integer", "integer?"], null, "string", "propagate"),
+  POSITION: builtin(["string", "string"], null, "integer", "propagate"),
+  OVERLAY: builtin(["string", "string", "integer", "integer?"], null, "string", "propagate"),
+  CHAR_LENGTH: builtin(["string"], null, "integer", "propagate"),
+  CHARACTER_LENGTH: builtin(["string"], null, "integer", "propagate"),
+  OCTET_LENGTH: builtin(["string"], null, "integer", "propagate"),
+  BIT_LENGTH: builtin(["string"], null, "integer", "propagate"),
+  REPLACE: builtin(["string", "string", "string"], null, "string", "propagate"),
+  REVERSE: builtin(["string"], null, "string", "propagate"),
+  LEFT: builtin(["string", "integer"], null, "string", "propagate"),
+  RIGHT: builtin(["string", "integer"], null, "string", "propagate"),
+  LPAD: builtin(["string", "integer", "string"], null, "string", "propagate"),
+  RPAD: builtin(["string", "integer", "string"], null, "string", "propagate"),
+  REGEXP_LIKE: builtin(["string", "string"], null, "boolean", "propagate"),
+  REGEXP_REPLACE: builtin(["string", "string", "string", "string?"], null, "string", "propagate"),
+  REGEXP_EXTRACT: builtin(["string", "string", "integer?"], null, "string", "propagate"),
+  CURRENT_DATE: builtin([], null, "date", "never"),
+  CURRENT_TIMESTAMP: builtin([], null, "timestamp", "never"),
+  DATE_TRUNC: builtin(["string", "dateLike"], null, "timestamp", "propagate"),
+  DATE_ADD: builtin(["string", "integer", "dateLike"], null, "timestamp", "propagate"),
+  DATE_DIFF: builtin(["string", "dateLike", "dateLike"], null, "integer", "propagate"),
+  DATE_PARSE: builtin(["string", "string"], null, "timestamp", "propagate"),
+  DATE_FORMAT: builtin(["dateLike", "string"], null, "string", "propagate"),
+  TO_UNIXTIME: builtin(["dateLike"], null, "float", "propagate"),
+  FROM_UNIXTIME: builtin(["numeric"], null, "timestamp", "propagate"),
+  COALESCE: builtin(["unknown", "unknown"], "unknown", "same", "coalesce"),
+  NULLIF: builtin(["unknown", "unknown"], null, "same", "always"),
+  ARRAY_LENGTH: builtin(["array"], null, "integer", "propagate"),
+  ARRAY_CONTAINS: builtin(["array", "unknown"], null, "boolean", "propagate"),
+  ARRAY_POSITION: builtin(["array", "unknown"], null, "integer", "propagate"),
+  ARRAY_SLICE: builtin(["array", "integer", "integer?"], null, "array", "propagate"),
+  ARRAY_JOIN: builtin(["array", "string"], null, "string", "propagate"),
+  ARRAY_APPEND: builtin(["array", "unknown"], null, "array", "propagate"),
+  ARRAY_PREPEND: builtin(["array", "unknown"], null, "array", "propagate"),
+  ARRAY_CONCAT: builtin(["array", "array"], "array", "array", "propagate"),
+  ARRAY_DISTINCT: builtin(["array"], null, "array", "propagate"),
+} satisfies BuiltinFunctionSpecCatalog);
 
 /** Scalar operations emitted by the portable EDSL as typed `builtin` nodes. */
 export const BUILTIN_FUNCTION_OPERATIONS = Object.freeze(
-  Object.keys(BUILTIN_FUNCTION_ARITIES)
+  Object.keys(BUILTIN_FUNCTION_SPECS)
 ) as readonly BuiltinFunctionOperation[];
 
-const BUILTIN_FUNCTION_RESULT_KINDS: Partial<
-  Record<BuiltinFunctionOperation, BuiltinFunctionResultKind>
-> = {
-  MOD: "same",
-  ABS: "same",
-  CEIL: "integer",
-  FLOOR: "integer",
-  SQRT: "float",
-  ROUND: "same",
-  POWER: "float",
-  GREATEST: "same",
-  LEAST: "same",
-  CONCAT: "string",
-  UPPER: "string",
-  LOWER: "string",
-  TRIM: "string",
-  SUBSTRING: "string",
-  POSITION: "integer",
-  OVERLAY: "string",
-  CHAR_LENGTH: "integer",
-  CHARACTER_LENGTH: "integer",
-  OCTET_LENGTH: "integer",
-  BIT_LENGTH: "integer",
-  REPLACE: "string",
-  REVERSE: "string",
-  LEFT: "string",
-  RIGHT: "string",
-  LPAD: "string",
-  RPAD: "string",
-  REGEXP_LIKE: "boolean",
-  REGEXP_REPLACE: "string",
-  REGEXP_EXTRACT: "string",
-  CURRENT_DATE: "date",
-  CURRENT_TIMESTAMP: "timestamp",
-  DATE_TRUNC: "timestamp",
-  DATE_ADD: "same",
-  DATE_DIFF: "integer",
-  DATE_PARSE: "timestamp",
-  DATE_FORMAT: "string",
-  TO_UNIXTIME: "float",
-  FROM_UNIXTIME: "timestamp",
-  COALESCE: "same",
-  NULLIF: "same",
-  ARRAY_LENGTH: "integer",
-  ARRAY_CONTAINS: "boolean",
-  ARRAY_POSITION: "integer",
-  ARRAY_SLICE: "array",
-  ARRAY_JOIN: "string",
-  ARRAY_APPEND: "array",
-  ARRAY_PREPEND: "array",
-  ARRAY_CONCAT: "array",
-  ARRAY_DISTINCT: "array",
-};
-
-const BUILTIN_FUNCTION_NULLABILITY_OVERRIDES: Partial<
-  Record<BuiltinFunctionOperation, BuiltinFunctionNullability>
-> = {
-  CURRENT_DATE: "never",
-  CURRENT_TIMESTAMP: "never",
-  COALESCE: "never",
-  NULLIF: "always",
-  REGEXP_LIKE: "propagate",
-  ARRAY_CONTAINS: "propagate",
-};
-
-const BUILTIN_FUNCTION_NULLABILITY = Object.fromEntries(
-  BUILTIN_FUNCTION_OPERATIONS.map((operation) => [
+/** Arity view derived from the canonical scalar-operation catalog. */
+export const BUILTIN_FUNCTION_ARITIES: BuiltinFunctionArityCatalog = Object.freeze(
+  Object.fromEntries(BUILTIN_FUNCTION_OPERATIONS.map((operation) => [
     operation,
-    BUILTIN_FUNCTION_NULLABILITY_OVERRIDES[operation] ?? "propagate",
-  ])
-) as Record<BuiltinFunctionOperation, BuiltinFunctionNullability>;
-
-/** Canonical scalar operation metadata shared by renderers and frontends. */
-export const BUILTIN_FUNCTION_SPECS: BuiltinFunctionSpecCatalog = Object.freeze(
-  Object.fromEntries(
-    BUILTIN_FUNCTION_OPERATIONS.map((operation) => [operation, {
-      arity: BUILTIN_FUNCTION_ARITIES[operation],
-      result: BUILTIN_FUNCTION_RESULT_KINDS[operation] ?? "unknown",
-      nullability: BUILTIN_FUNCTION_NULLABILITY[operation] ?? "unknown",
-    }])
-  ) as BuiltinFunctionSpecCatalog
+    BUILTIN_FUNCTION_SPECS[operation].arity,
+  ])) as Record<BuiltinFunctionOperation, BuiltinFunctionArity>
 );
+
+function builtin<
+  const TInputs extends readonly BuiltinFunctionInputDomain[],
+  const TVariadic extends BuiltinFunctionInputDomain | null,
+  const TResult extends BuiltinFunctionResultKind,
+  const TNullability extends BuiltinFunctionNullability,
+>(
+  inputs: TInputs,
+  variadic: TVariadic,
+  result: TResult,
+  nullability: TNullability
+): Readonly<{
+  arity: BuiltinFunctionArity;
+  inputs: TInputs;
+  variadic: TVariadic;
+  result: TResult;
+  nullability: TNullability;
+}> {
+  const firstOptional = inputs.findIndex((input) => input.endsWith("?"));
+  if (firstOptional >= 0 && inputs.slice(firstOptional).some((input) => !input.endsWith("?"))) {
+    throw new Error("Optional builtin argument domains must follow required domains");
+  }
+  return Object.freeze({
+    arity: Object.freeze({
+      min: firstOptional < 0 ? inputs.length : firstOptional,
+      max: variadic === null ? inputs.length : null,
+    }),
+    inputs: Object.freeze([...inputs]) as unknown as TInputs,
+    variadic,
+    result,
+    nullability,
+  });
+}
 
 const BUILTIN_FUNCTION_OPERATION_SET = new Set<string>(BUILTIN_FUNCTION_OPERATIONS);
 

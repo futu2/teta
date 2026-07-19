@@ -21,6 +21,9 @@ export type PortableJoinSource =
   | Readonly<Omit<Extract<JoinSource, { kind: "table" }>, "columnIdentifiers"> & {
       columnNames: readonly string[];
     }>
+  | Readonly<Omit<Extract<JoinSource, { kind: "cte" }>, "columnIdentifiers"> & {
+      columnNames: readonly string[];
+    }>
   | Readonly<{
       kind: "subquery";
       query: PortableQuerySpec;
@@ -163,7 +166,7 @@ function lowerStage(value: unknown): unknown {
 function lowerJoinSource(value: unknown, _stage: Record<string, unknown>): unknown {
   if (!isRecord(value)) return value;
   if (value.kind === "subquery") return { ...value, query: lowerQuerySpec(value.query) };
-  if (value.kind === "table") {
+  if (value.kind === "table" || value.kind === "cte") {
     const { columnNames, ...source } = value;
     return {
       ...source,
@@ -222,6 +225,11 @@ function toPortableStage(stage: Stage): PortableStage {
             ...withoutKey(stage.source, "columnIdentifiers"),
             columnNames: Object.keys(stage.source.columnIdentifiers),
           }
+        : stage.source.kind === "cte"
+          ? {
+              ...withoutKey(stage.source, "columnIdentifiers"),
+              columnNames: Object.keys(stage.source.columnIdentifiers),
+            }
         : { ...stage.source, query: toPortableQuerySpec(stage.source.query) },
     } as PortableStage;
   }
@@ -285,7 +293,7 @@ function validatePortableJoinColumnNames(value: unknown, path: string): void {
       if (!isRecord(stage)) return;
       const stagePath = `${path}.stages[${index}]`;
       if (stage.kind === "join" && isRecord(stage.source)) {
-        if (stage.source.kind === "table") {
+        if (stage.source.kind === "table" || stage.source.kind === "cte") {
           validatePortableColumnNames(stage.source.columnNames, `${stagePath}.source.columnNames`);
         } else if (stage.source.kind === "subquery") {
           validatePortableJoinColumnNames(stage.source.query, `${stagePath}.source.query`);

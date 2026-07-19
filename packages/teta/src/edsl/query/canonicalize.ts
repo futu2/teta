@@ -113,17 +113,13 @@ function rewriteStage(stage: Stage, context: CanonicalizeContext): Stage {
               query: rewriteQuerySpec(stage.source.query, context),
               inheritedBindings: rewriteInheritedBindings(stage.source.inheritedBindings, context),
             }
+          : stage.source.kind === "cte"
+            ? {
+                ...stage.source,
+                name: rewriteInternalCteName(stage.source.name, context),
+              }
           : {
               ...stage.source,
-              table: isInternalCteNameValue(stage.source.table.name)
-                ? {
-                    ...stage.source.table,
-                    name: rewriteInternalCteName(
-                      stage.source.table.name as InternalCteName,
-                      context
-                    ),
-                  }
-                : stage.source.table,
             },
         on: rewriteExprNode(stage.on, context),
         projectAll: stage.projectAll.map((item) => rewriteProjectionItem(item, context)),
@@ -149,14 +145,8 @@ function rewriteStage(stage: Stage, context: CanonicalizeContext): Stage {
 }
 
 function rewriteSource(source: Source, context: CanonicalizeContext): Source {
-  if ("kind" in source || !isInternalCteNameValue(source.table.name)) return source;
-  return {
-    ...source,
-    table: {
-      ...source.table,
-      name: rewriteInternalCteName(source.table.name as InternalCteName, context),
-    },
-  };
+  if (!("kind" in source) || source.kind !== "cte") return source;
+  return { ...source, name: rewriteInternalCteName(source.name, context) };
 }
 
 function rewriteProjectionItem(
@@ -275,15 +265,11 @@ function rewriteInternalCteName(
 ): InternalCteName {
   const existing = context.ctes.get(name);
   if (existing) return existing;
-  const next = `__teta_cte_loop_${context.nextCteIndex++}` as InternalCteName;
+  const next = `__teta_cte_recursive_${context.nextCteIndex++}` as InternalCteName;
   context.ctes.set(name, next);
   return next;
 }
 
 function isInternalScopeNameValue(value: string): boolean {
   return value.startsWith("__teta_scope_");
-}
-
-function isInternalCteNameValue(value: string): boolean {
-  return value.startsWith("__teta_cte_");
 }

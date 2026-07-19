@@ -26,6 +26,7 @@ import {
   type QueryStageKind,
 } from "./core.ts";
 import { isQuery } from "./value.ts";
+import { isExpr, parameterDescriptor } from "../core/expr/runtime.ts";
 import { canonicalizeIR } from "./canonicalize.ts";
 import type { QueryColumns } from "./types.ts";
 import { lowerLogicalCtes, lowerLogicalStages } from "./logical.ts";
@@ -111,8 +112,8 @@ export function toSql(
     );
   }
   return isQuery(target)
-    ? irToSql(toIR(target as Query<QueryColumns>), options)
-    : renderSql(target, options);
+    ? irToSql(toIR(target as Query<QueryColumns>), encodeParameterOptions(target, options))
+    : renderSql(target, encodeParameterOptions(target, options));
 }
 
 export function toSqlResult<TColumns extends QueryColumns, TSchema extends ParameterSchema>(
@@ -135,8 +136,8 @@ export function toSqlResult(
     );
   }
   return isQuery(target)
-    ? irToSqlResult(toIR(target as Query<QueryColumns>), options)
-    : renderSqlResult(target, options);
+    ? irToSqlResult(toIR(target as Query<QueryColumns>), encodeParameterOptions(target, options))
+    : renderSqlResult(target, encodeParameterOptions(target, options));
 }
 
 export function explain<TColumns extends QueryColumns, TSchema extends ParameterSchema>(
@@ -159,7 +160,7 @@ export function explain<TColumns extends QueryColumns>(
     ir,
     prepared
       ? encodePreparedOptions(prepared, options as PreparedSqlOptions<ParameterSchema>)
-      : options
+      : encodeParameterOptions(target, options)
   );
 
   return {
@@ -175,4 +176,75 @@ export function explain<TColumns extends QueryColumns>(
     parameterMode: result.parameterMode,
     parameterPrefix: result.parameterPrefix,
   };
+}
+
+/** Encode descriptors attached to low-level param() expressions before rendering. */
+function encodeParameterOptions(target: unknown, options: SqlOptions): SqlOptions {
+  if (!options.params) return options;
+
+  type Descriptor = NonNullable<ReturnType<typeof parameterDescriptor>>;
+  const descriptors = new Map<string, Descriptor[]>();
+  const root = isQuery(target)
+    ? getQueryState(target as Query<QueryColumns>)
+    : isExpr(target)
+      ? target.node
+      : target;
+  collectParameterDescriptors(root, descriptors, new WeakSet<object>());
+  if (descriptors.size === 0) return options;
+
+  if (Array.isArray(options.params)) {
+    const bindings = options.params as readonly unknown[];
+    const encoded = [...bindings];
+    for (const [name, descriptorList] of descriptors) {
+      const index = Number(name);
+      if (!Number.isInteger(index) || index < 1 || index > encoded.length) continue;
+      for (const descriptor of descriptorList) {
+        encoded[index - 1] = descriptor.encode(encoded[index - 1]);
+      }
+    }
+    return { ...options, params: encoded };
+  }
+
+  const bindings = options.params as Readonly<Record<string, unknown>>;
+  const encoded = { ...bindings };
+  for (const [name, descriptorList] of descriptors) {
+    if (Object.hasOwn(bindings, name)) {
+      for (const descriptor of descriptorList) {
+        encoded[name] = descriptor.encode(encoded[name]);
+      }
+    }
+  }
+  return { ...options, params: encoded };
+}
+
+function collectParameterDescriptors(
+  value: unknown,
+  descriptors: Map<string, NonNullable<ReturnType<typeof parameterDescriptor>>[]>,
+  seen: WeakSet<object>,
+): void {
+  if (!value || typeof value !== "object") return;
+  const object = value as object;
+  if (seen.has(object)) return;
+  seen.add(object);
+
+  const candidate = value as { kind?: unknown; name?: unknown };
+  if (candidate.kind === "param" && typeof candidate.name === "string") {
+    const descriptor = parameterDescriptor(object);
+    if (descriptor) {
+      const existing = descriptors.get(candidate.name);
+      if (existing) {
+        if (!existing.includes(descriptor)) existing.push(descriptor);
+      } else {
+        descriptors.set(candidate.name, [descriptor]);
+      }
+    }
+  }
+
+  if (Array.isArray(value)) {
+    value.forEach((item) => collectParameterDescriptors(item, descriptors, seen));
+    return;
+  }
+  for (const child of Object.values(value as Record<string, unknown>)) {
+    collectParameterDescriptors(child, descriptors, seen);
+  }
 }

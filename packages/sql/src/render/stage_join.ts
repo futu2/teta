@@ -29,9 +29,9 @@ export function buildJoinStageAst(
 
   registerColumnIdentifierBindings(
     rightAlias,
-    stage.source.kind === "table"
-      ? stage.source.columnIdentifiers
-      : stage.source.query.columnIdentifiers,
+    stage.source.kind === "subquery"
+      ? stage.source.query.columnIdentifiers
+      : stage.source.columnIdentifiers,
     context.dialect,
     context.renderContext
   );
@@ -79,13 +79,15 @@ function buildJoinFromRef(
   );
   const prefix = lateralJoinPrefix(stage.lateral, context.dialect);
 
-  if (stage.source.kind === "table") {
+  if (stage.source.kind === "table" || stage.source.kind === "cte") {
     return {
       ...buildTableFromRef(
         {
-          db: stage.source.db,
-          schema: stage.source.schema,
-          table: stage.source.table,
+          db: stage.source.kind === "table" ? stage.source.db : null,
+          schema: stage.source.kind === "table" ? stage.source.schema : null,
+          table: stage.source.kind === "table"
+            ? stage.source.table
+            : { name: stage.source.name, quoted: false },
           alias: stage.as,
         },
         context.dialect,
@@ -99,7 +101,7 @@ function buildJoinFromRef(
 
   const compiledSubquery = compileJoinSource(
     stage.source,
-    `${ctePrefix}join_`,
+    `${ctePrefix}derived_`,
     context.dialect,
     allowJoinSubqueryHoist,
     allowIntermediateCtes,

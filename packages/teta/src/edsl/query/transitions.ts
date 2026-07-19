@@ -183,7 +183,13 @@ export function resolveJoinQuery<
   const outputScopeId = allocated.scopeId;
   const nextColumns = createColumnRefs<JoinSelectionResult<TSelection>>(outputScopeId, nextNames);
   const joinSource: LogicalJoinSource =
-    lateral || rightQuery.stages.length > 0 || isValuesSource(rightQuery.source)
+    "kind" in rightQuery.source && rightQuery.source.kind === "cte"
+      ? {
+          kind: "cte",
+          name: rightQuery.source.name,
+          columnIdentifiers: rightQuery.columnIdentifiers,
+        }
+      : lateral || rightQuery.stages.length > 0 || isValuesSource(rightQuery.source)
       ? {
           kind: "subquery",
           query: rewriteLogicalQuerySpecScope(toQuerySpec(rightQuery), rightQuery.scopeId, rightScopeId),

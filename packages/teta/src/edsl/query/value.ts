@@ -51,6 +51,9 @@ function isSource(value: unknown): boolean {
     const rows = (value as { rows?: unknown }).rows;
     return Array.isArray(rows) && rows.every(isPlainObject);
   }
+  if ((value as { kind?: unknown }).kind === "cte") {
+    return typeof (value as { name?: unknown }).name === "string";
+  }
 
   const source = value as {
     db?: unknown;
@@ -87,6 +90,7 @@ function isStage(value: unknown): boolean {
     withOrdinality?: unknown;
     columnNames?: unknown;
     columnIdentifiers?: unknown;
+    name?: unknown;
     op?: unknown;
     right?: unknown;
   };
@@ -152,11 +156,16 @@ function isJoinSource(value: unknown): boolean {
     columnIdentifiers?: unknown;
     query?: unknown;
     inheritedBindings?: unknown;
+    name?: unknown;
   };
   if (source.kind === "table") {
     return (source.db === null || isSqlIdentifier(source.db))
       && isSqlIdentifier(source.table)
       && (source.schema === null || isSqlIdentifier(source.schema))
+      && isColumnIdentifiers(source.columnIdentifiers);
+  }
+  if (source.kind === "cte") {
+    return typeof source.name === "string"
       && isColumnIdentifiers(source.columnIdentifiers);
   }
   if (source.kind === "subquery") {

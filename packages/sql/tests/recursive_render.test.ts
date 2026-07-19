@@ -11,7 +11,7 @@ import {
   createDeferredRecursiveCte,
 } from "../src/render/recursive.ts";
 
-const loopName = "__teta_cte_loop_test" as InternalCteName;
+const loopName = "__teta_cte_recursive_test" as InternalCteName;
 
 const querySpec = (): QuerySpec => ({
   source: {

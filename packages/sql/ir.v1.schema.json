@@ -168,7 +168,8 @@
     "source": {
       "oneOf": [
         { "type": "object", "required": ["db", "schema", "table", "as"], "additionalProperties": false, "properties": { "db": { "$ref": "#/$defs/nullableIdentifier" }, "schema": { "$ref": "#/$defs/nullableIdentifier" }, "table": { "$ref": "#/$defs/identifier" }, "as": { "$ref": "#/$defs/nullableIdentifier" } } },
-        { "type": "object", "required": ["kind", "rows"], "additionalProperties": false, "properties": { "kind": { "const": "values" }, "rows": { "type": "array", "minItems": 1, "items": { "type": "object", "minProperties": 1, "propertyNames": { "$ref": "#/$defs/logicalName" }, "additionalProperties": { "$ref": "#/$defs/value" } } } } }
+        { "type": "object", "required": ["kind", "rows"], "additionalProperties": false, "properties": { "kind": { "const": "values" }, "rows": { "type": "array", "minItems": 1, "items": { "type": "object", "minProperties": 1, "propertyNames": { "$ref": "#/$defs/logicalName" }, "additionalProperties": { "$ref": "#/$defs/value" } } } } },
+        { "type": "object", "required": ["kind", "name"], "additionalProperties": false, "properties": { "kind": { "const": "cte" }, "name": { "$ref": "#/$defs/identifierSegment" } } }
       ]
     },
     "querySpec": {
@@ -178,7 +179,8 @@
     "joinSource": {
       "oneOf": [
         { "type": "object", "required": ["kind", "db", "schema", "table", "columnNames"], "additionalProperties": false, "properties": { "kind": { "const": "table" }, "db": { "$ref": "#/$defs/nullableIdentifier" }, "schema": { "$ref": "#/$defs/nullableIdentifier" }, "table": { "$ref": "#/$defs/identifier" }, "columnNames": { "$ref": "#/$defs/columnNames" } } },
-        { "type": "object", "required": ["kind", "query", "inheritedBindings"], "additionalProperties": false, "properties": { "kind": { "const": "subquery" }, "query": { "$ref": "#/$defs/querySpec" }, "inheritedBindings": { "oneOf": [{ "type": "null" }, { "type": "object", "propertyNames": { "$ref": "#/$defs/identifierSegment" }, "additionalProperties": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/identifierSegment" }] } }] } } }
+        { "type": "object", "required": ["kind", "query", "inheritedBindings"], "additionalProperties": false, "properties": { "kind": { "const": "subquery" }, "query": { "$ref": "#/$defs/querySpec" }, "inheritedBindings": { "oneOf": [{ "type": "null" }, { "type": "object", "propertyNames": { "$ref": "#/$defs/identifierSegment" }, "additionalProperties": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/identifierSegment" }] } }] } } },
+        { "type": "object", "required": ["kind", "name", "columnNames"], "additionalProperties": false, "properties": { "kind": { "const": "cte" }, "name": { "$ref": "#/$defs/identifierSegment" }, "columnNames": { "$ref": "#/$defs/columnNames" } } }
       ]
     },
     "stage": {

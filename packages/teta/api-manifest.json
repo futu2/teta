@@ -5,6 +5,7 @@
     "BUILTIN_FUNCTION_OPERATIONS",
     "BUILTIN_FUNCTION_SPECS",
     "BuiltinDialect",
+    "BuiltinFunctionInputDomain",
     "Dialect",
     "DialectFeatures",
     "DialectLanguageConfig",

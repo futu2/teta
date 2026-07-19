@@ -12,9 +12,18 @@ describe("language spec exports", () => {
   test("exposes shared scalar operation metadata", () => {
     expect(BUILTIN_FUNCTION_SPECS.UPPER).toEqual({
       arity: { min: 1, max: 1 },
+      inputs: ["string"],
+      variadic: null,
       result: "string",
       nullability: "propagate",
     });
-    expect(BUILTIN_FUNCTION_SPECS.COALESCE.nullability).toBe("never");
+    expect(BUILTIN_FUNCTION_SPECS.COALESCE.nullability).toBe("coalesce");
+    expect(BUILTIN_FUNCTION_SPECS.GREATEST).toMatchObject({
+      arity: { min: 2, max: null },
+      inputs: ["numeric", "numeric"],
+      variadic: "numeric",
+    });
+    expect(Object.isFrozen(BUILTIN_FUNCTION_SPECS.GREATEST)).toBe(true);
+    expect(Object.isFrozen(BUILTIN_FUNCTION_SPECS.GREATEST.inputs)).toBe(true);
   });
 });

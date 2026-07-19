@@ -50,7 +50,7 @@ describe("explain api", () => {
         });
         expect(result.ctes).toHaveLength(1);
         expect(result.ctes[0]?.kind).toBe("recursive");
-        expect(result.ctes[0]?.name).toContain("__teta_cte_loop_");
+        expect(result.ctes[0]?.name).toContain("__teta_cte_recursive_");
     });
     test("toIR returns backend-renderable query IR", () => {
         const users = table("users", {

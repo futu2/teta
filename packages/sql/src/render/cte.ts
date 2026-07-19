@@ -5,7 +5,7 @@ import { getDefaultDialect } from "../dialect.ts";
 import type { QueryDialect } from "../types.ts";
 import type { ColumnRefAst, SelectAst, SqlRenderContext } from "./types.ts";
 import { toParserSelect } from "./ast.ts";
-import { renderIdentifier } from "./identifiers.ts";
+import { registerCteNameBinding, renderIdentifier } from "./identifiers.ts";
 
 type BuildNamedCteOptions = {
   columnIdentifiers?: Readonly<Record<string, SqlIdentifier>>;
@@ -38,8 +38,10 @@ export function buildNamedCte(
   options: BuildNamedCteOptions = {}
 ): With {
   const dialect = options.dialect ?? getDefaultDialect();
+  const renderContext = options.renderContext ?? null;
+  const renderedName = registerCteNameBinding(name, renderContext);
   return {
-    name: { value: name },
+    name: { value: renderedName },
     stmt: {
       ast: toParserSelect(ast),
       tableList: [],
@@ -51,7 +53,7 @@ export function buildNamedCte(
         options.columnIdentifiers?.[columnName]
           ?? normalizeIdentifier(columnName, "CTE column"),
         dialect,
-        options.renderContext ?? null
+        renderContext
       )),
   };
 }

@@ -5,7 +5,7 @@ import type { QueryDialect } from "../types.ts";
 import { buildNamedCte } from "./cte.ts";
 import { buildPipelineAst } from "./build.ts";
 import { getDefaultDialect } from "../dialect.ts";
-import { resolveIdentifierName } from "./identifiers.ts";
+import { registerCteNameBinding, resolveIdentifierName } from "./identifiers.ts";
 import { attachUnion } from "./union.ts";
 import { compileLoopPart } from "./recursive_compile.ts";
 import type { RecursivePart } from "./recursive_deferred.ts";
@@ -25,6 +25,7 @@ export function buildRecursiveCte(
     userError("UNSUPPORTED_RECURSIVE_CTE", `Dialect ${dialect.name} does not support recursive CTE`);
   }
 
+  registerCteNameBinding(name, renderContext);
   const renderedName = resolveIdentifierName(name, renderContext);
   const baseAst = compileLoopPart(base, "base", dialect, renderContext);
   const stepAst = compileLoopPart(step, "step", dialect, renderContext);
@@ -45,6 +46,7 @@ export function materializeCte(
   dialect: QueryDialect,
   renderContext: SqlRenderContext
 ): With {
+  registerCteNameBinding(cte.name, renderContext);
   const renderedName = resolveIdentifierName(cte.name, renderContext);
   switch (cte.kind) {
     case "recursive":

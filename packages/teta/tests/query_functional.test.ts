@@ -191,7 +191,7 @@ describe("function-first query api", () => {
         const unioned = pipe(users, union(archivedUsers), unionAll(archivedUsers));
         const exploded = pipe(users, unnest((user) => user.tags, { value: "tag" }));
 
-        expect(toSql(unioned, { dialect: "postgresql", format: "compact" })).toBe("WITH cte_0(id, tags) AS (SELECT users_0.id, users_0.tags FROM users AS users_0 UNION SELECT archived_users_0.id, archived_users_0.tags FROM archived_users AS archived_users_0) SELECT cte_0_0.id, cte_0_0.tags FROM cte_0 AS cte_0_0 UNION ALL SELECT archived_users_0.id, archived_users_0.tags FROM archived_users AS archived_users_0");
+        expect(toSql(unioned, { dialect: "postgresql", format: "compact" })).toBe("WITH stage_0(id, tags) AS (SELECT users_0.id, users_0.tags FROM users AS users_0 UNION SELECT archived_users_0.id, archived_users_0.tags FROM archived_users AS archived_users_0) SELECT stage_0_0.id, stage_0_0.tags FROM stage_0 AS stage_0_0 UNION ALL SELECT archived_users_0.id, archived_users_0.tags FROM archived_users AS archived_users_0");
         expect(toSql(exploded, { dialect: "postgresql", format: "compact" })).toBe("SELECT users_0.id AS id, users_0.tags AS tags, unnest_1.tag AS tag FROM users AS users_0 CROSS JOIN LATERAL UNNEST(users_0.tags) AS unnest_1(tag)");
     });
     test("renders additional predicate conveniences", () => {

@@ -31,6 +31,12 @@ export type ValuesSource = Readonly<{
   rows: readonly ValuesRow[];
 }>;
 
+/** Reference to a CTE that has already been declared in the surrounding query. */
+export type CteSource = Readonly<{
+  kind: "cte";
+  name: InternalCteName;
+}>;
+
 /** Return true when a source is an inline `VALUES` source. */
 export function isValuesSource(source: Source): source is ValuesSource {
   return "kind" in source && source.kind === "values";
@@ -54,7 +60,7 @@ export type TableSourceInput =
     }>;
 
 /** Physical query source. */
-export type Source = StructuredTableSource | ValuesSource;
+export type Source = StructuredTableSource | ValuesSource | CteSource;
 /** Source reference after a table or CTE has been bound in the renderer. */
 export type SourceRef =
   | Readonly<{
@@ -87,6 +93,11 @@ export type JoinSource =
       db: SqlIdentifier | null;
       table: SqlIdentifier;
       schema: SqlIdentifier | null;
+      columnIdentifiers: Readonly<Record<string, SqlIdentifier>>;
+    }>
+  | Readonly<{
+      kind: "cte";
+      name: InternalCteName;
       columnIdentifiers: Readonly<Record<string, SqlIdentifier>>;
     }>
   | Readonly<{

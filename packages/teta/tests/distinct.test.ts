@@ -71,7 +71,7 @@ describe("distinct", () => {
     );
 
     expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe(
-      "WITH cte_0(id, name) AS (SELECT DISTINCT users_0.id AS id, users_0.name AS name FROM users AS users_0) SELECT cte_0_0.name FROM cte_0 AS cte_0_0"
+      "WITH stage_0(id, name) AS (SELECT DISTINCT users_0.id AS id, users_0.name AS name FROM users AS users_0) SELECT stage_0_0.name FROM stage_0 AS stage_0_0"
     );
   });
 

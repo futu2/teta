@@ -2,7 +2,7 @@ import { OUTER_TABLE_ALIAS } from "../core/types.ts";
 import { columnOf, type Column, type ColumnRefs } from "../core/expr.ts";
 import { createStringRecord, setStringRecordValue } from "../record.ts";
 import { internalError } from "../errors.ts";
-import { identifierName, internalCteLabel, isInternalCteName, type SqlIdentifier } from "../core/types.ts";
+import { identifierName, type SqlIdentifier } from "../core/types.ts";
 import type { LogicalCteSpec, LogicalStage } from "./logical.ts";
 
 export {
@@ -22,14 +22,11 @@ export {
 
 export function autoAlias(table: string | SqlIdentifier, stages: readonly LogicalStage[]): string {
   const tableName = typeof table === "string" ? table : identifierName(table);
-  const aliasBase = isInternalCteName(tableName)
-    ? (internalCteLabel(tableName) ?? "cte")
-    : tableName;
   const joinCount = stages.reduce(
     (count, stage) => stage.kind === "join" || stage.kind === "unnest" ? count + 1 : count,
     0
   );
-  const base = aliasBase.replace(/[^A-Za-z0-9_]+/g, "_").replace(/^_+|_+$/g, "");
+  const base = tableName.replace(/[^A-Za-z0-9_]+/g, "_").replace(/^_+|_+$/g, "");
   return `${base.length ? base : "t"}_${joinCount + 1}`;
 }
 

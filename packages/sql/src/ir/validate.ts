@@ -57,7 +57,12 @@ export function validateQueryIRSqlTarget(value: unknown): asserts value is Query
   }
   validateQueryTarget(target, "query");
   validateCteScopeSemantics(target.withs, "query.withs");
-  validateQueryScopeSemantics(target, "query", new Map());
+  validateQueryScopeSemantics(
+    target,
+    "query",
+    new Map(),
+    visibleCteNames(target.withs)
+  );
 }
 
 /** Decode and validate a standalone public expression IR target. */
@@ -110,27 +115,35 @@ function validateQuerySpec(value: unknown, path: string): void {
 
 function validateCteScopeSemantics(value: unknown, path: string): void {
   if (value === undefined) return;
+  const visible = new Set<string>();
   asArray(value, path).forEach((cte, index) => {
     const record = asRecord(cte, `${path}[${index}]`);
     if (record.kind === "query") {
       validateQueryScopeSemantics(
         asRecord(record.query, `${path}[${index}].query`),
         `${path}[${index}].query`,
-        new Map()
+        new Map(),
+        visible
       );
+      visible.add(record.name as string);
       return;
     }
     if (record.kind === "recursive") {
       validateQueryScopeSemantics(
         asRecord(record.base, `${path}[${index}].base`),
         `${path}[${index}].base`,
-        new Map()
+        new Map(),
+        visible
       );
+      const recursiveVisible = new Set(visible);
+      recursiveVisible.add(record.name as string);
       validateQueryScopeSemantics(
         asRecord(record.step, `${path}[${index}].step`),
         `${path}[${index}].step`,
-        new Map()
+        new Map(),
+        recursiveVisible
       );
+      visible.add(record.name as string);
     }
   });
 }
@@ -139,7 +152,8 @@ function validateCteScopeSemantics(value: unknown, path: string): void {
 function validateQueryScopeSemantics(
   query: Record<string, unknown>,
   path: string,
-  outerScopes: ScopeEnvironment
+  outerScopes: ScopeEnvironment,
+  visibleCtes: ReadonlySet<string>
 ): void {
   const scopeId = query.scopeId as string;
   if (outerScopes.has(scopeId)) {
@@ -148,7 +162,7 @@ function validateQueryScopeSemantics(
   const stages = asArray(query.stages, `${path}.stages`);
   const environment = new Map(outerScopes);
   let currentScopeId = scopeId;
-  environment.set(currentScopeId, sourceColumnNames(query, stages));
+  environment.set(currentScopeId, sourceColumnNames(query, stages, path, visibleCtes));
 
   stages.forEach((value, index) => {
     const stage = asRecord(value, `${path}.stages[${index}]`);
@@ -189,7 +203,8 @@ function validateQueryScopeSemantics(
           stage,
           stagePath,
           environment,
-          environment.get(currentScopeId) ?? null
+          environment.get(currentScopeId) ?? null,
+          visibleCtes
         );
         const rightScopeId = stage.rightScopeId as string;
         assertFreshScope(environment, rightScopeId, `${stagePath}.rightScopeId`);
@@ -226,7 +241,7 @@ function validateQueryScopeSemantics(
       }
       case "union": {
         const right = asRecord(stage.right, `${stagePath}.right`);
-        validateQueryScopeSemantics(right, `${stagePath}.right`, new Map());
+        validateQueryScopeSemantics(right, `${stagePath}.right`, new Map(), visibleCtes);
         validateProjectionScopeExpressions(stage.projectAll, `${stagePath}.projectAll`, environment);
         const outputNames = projectionOutputNames(stage.projectAll, `${stagePath}.projectAll`);
         if (!sameNames(outputNames, right.columnNames)) {
@@ -247,12 +262,18 @@ function validateQueryScopeSemantics(
 
 function sourceColumnNames(
   query: Record<string, unknown>,
-  stages: readonly unknown[]
+  stages: readonly unknown[],
+  path: string,
+  visibleCtes: ReadonlySet<string>
 ): ScopeColumns {
   const source = asRecord(query.source, "query source");
   if (source.kind === "values") {
     const firstRow = asRecord(asArray(source.rows, "query source rows")[0], "query source row");
     return new Set(Object.keys(firstRow));
+  }
+  if (source.kind === "cte") {
+    assertVisibleCte(source.name, `${path}.source.name`, visibleCtes);
+    return new Set(query.columnNames as string[]);
   }
   return stages.length === 0 ? new Set(query.columnNames as string[]) : null;
 }
@@ -262,9 +283,14 @@ function joinSourceColumnNames(
   stage: Record<string, unknown>,
   stagePath: string,
   environment: ScopeEnvironment,
-  outerColumns: ScopeColumns
+  outerColumns: ScopeColumns,
+  visibleCtes: ReadonlySet<string>
 ): ScopeColumns {
   if (source.kind === "table") {
+    return new Set(Object.keys(asRecord(source.columnIdentifiers, `${stagePath}.source.columnIdentifiers`)));
+  }
+  if (source.kind === "cte") {
+    assertVisibleCte(source.name, `${stagePath}.source.name`, visibleCtes);
     return new Set(Object.keys(asRecord(source.columnIdentifiers, `${stagePath}.source.columnIdentifiers`)));
   }
   if (source.kind === "subquery") {
@@ -275,10 +301,10 @@ function joinSourceColumnNames(
     );
     if (stage.lateral === true) inherited.set(OUTER_TABLE_ALIAS, outerColumns);
     const query = asRecord(source.query, `${stagePath}.source.query`);
-    validateQueryScopeSemantics(query, `${stagePath}.source.query`, inherited);
+    validateQueryScopeSemantics(query, `${stagePath}.source.query`, inherited, visibleCtes);
     return new Set(query.columnNames as string[]);
   }
-  invalid(`${stagePath}.source.kind`, "must be table or subquery");
+  invalid(`${stagePath}.source.kind`, "must be table, cte, or subquery");
 }
 
 function inheritedScopeEnvironment(
@@ -456,6 +482,12 @@ function validateSource(value: unknown, path: string): void {
     return;
   }
 
+  if (source.kind === "cte") {
+    assertKnownKeys(source, path, ["kind", "name"]);
+    validateAlias(source.name, `${path}.name`);
+    return;
+  }
+
   assertKnownKeys(source, path, ["db", "schema", "table", "as"]);
   validateNullableIdentifier(source.db, `${path}.db`);
   validateNullableIdentifier(source.schema, `${path}.schema`);
@@ -581,6 +613,12 @@ function validateJoinSource(value: unknown, path: string): void {
     validateColumnIdentifiers(source.columnIdentifiers, `${path}.columnIdentifiers`);
     return;
   }
+  if (source.kind === "cte") {
+    assertKnownKeys(source, path, ["kind", "name", "columnIdentifiers"]);
+    validateAlias(source.name, `${path}.name`);
+    validateColumnIdentifiers(source.columnIdentifiers, `${path}.columnIdentifiers`);
+    return;
+  }
   if (source.kind === "subquery") {
     assertKnownKeys(source, path, ["kind", "query", "inheritedBindings"]);
     validateQuerySpec(source.query, `${path}.query`);
@@ -593,7 +631,7 @@ function validateJoinSource(value: unknown, path: string): void {
     }
     return;
   }
-  invalid(`${path}.kind`, "must be table or subquery");
+  invalid(`${path}.kind`, "must be table, cte, or subquery");
 }
 
 function validateCte(value: unknown, path: string): string {
@@ -894,6 +932,23 @@ function assertKnownKeys(
 
 function isNonNegativeInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value) && Number.isInteger(value) && value >= 0;
+}
+
+function visibleCteNames(value: unknown): ReadonlySet<string> {
+  if (value === undefined) return new Set();
+  return new Set(asArray(value, "query.withs").map((cte) =>
+    asRecord(cte, "query.withs item").name as string
+  ));
+}
+
+function assertVisibleCte(
+  name: unknown,
+  path: string,
+  visibleCtes: ReadonlySet<string>
+): void {
+  if (typeof name !== "string" || !visibleCtes.has(name)) {
+    invalid(path, "must reference a visible CTE");
+  }
 }
 
 function invalid(path: string, requirement: string): never {

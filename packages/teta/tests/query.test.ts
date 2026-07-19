@@ -114,7 +114,7 @@ describe("toSql(query, options)", () => {
         );
         const sql = toSql(query, { dialect: "postgresql", format: "compact" });
         expect(sql).toContain("JOIN LATERAL (");
-        expect(sql).not.toContain("WITH join_0(");
+        expect(sql).not.toContain("WITH derived_0(");
     });
     test("invokes ambiguous function-right callback only once", () => {
         const users = table("users", {
@@ -182,8 +182,8 @@ describe("toSql(query, options)", () => {
             )
         );
         const sql = toSql(query, { dialect: "postgresql", format: "compact" });
-        expect(sql).toContain("WITH join_0(user_id, total) AS (SELECT");
-        expect(sql).toContain("JOIN join_0 AS");
+        expect(sql).toContain("WITH derived_0(user_id, total) AS (SELECT");
+        expect(sql).toContain("JOIN derived_0 AS");
         expect(sql).not.toContain("JOIN (SELECT");
     });
     test("dedupes identical hoisted join subqueries", () => {
@@ -225,9 +225,9 @@ describe("toSql(query, options)", () => {
             )
         );
         const sql = toSql(query, { dialect: "postgresql", format: "compact" });
-        expect(sql).toContain("WITH join_0(user_id, total) AS (SELECT");
-        expect(sql).not.toContain("join_1(");
-        expect(sql.match(/JOIN join_0 AS /g)?.length).toBe(2);
+        expect(sql).toContain("WITH derived_0(user_id, total) AS (SELECT");
+        expect(sql).not.toContain("derived_1(");
+        expect(sql.match(/JOIN derived_0 AS /g)?.length).toBe(2);
     });
     test("renders a self-join with distinct aliases", () => {
         const employees = table("employees", {

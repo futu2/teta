@@ -41,6 +41,14 @@ export function compileSourceRef(
     };
   }
 
+  if ("kind" in source && source.kind === "cte") {
+    return {
+      kind: "cte",
+      name: source.name,
+      columnIdentifiers,
+    };
+  }
+
   return {
     kind: "table",
     db: source.db,

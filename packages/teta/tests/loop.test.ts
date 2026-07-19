@@ -24,12 +24,12 @@ describe("recursive loop queries", () => {
       { dialect: "postgresql", format: "compact" }
     );
 
-    const match = sql.match(/^WITH RECURSIVE (loop_\d+)\(id, name, manager_id\) AS \(/);
+    const match = sql.match(/^WITH RECURSIVE (recursive_\d+)\(id, name, manager_id\) AS \(/);
     expect(match).not.toBeNull();
     const loopName = match?.[1];
     expect(loopName).toBeDefined();
     expect(sql).toContain("SELECT employees_0.id, employees_0.name, employees_0.manager_id FROM employees AS employees_0 WHERE employees_0.manager_id IS NULL");
-    expect(sql).toContain(`INNER JOIN ${loopName} AS loop_1 ON employees_0.manager_id = loop_1.id`);
+    expect(sql).toContain(`INNER JOIN ${loopName} AS recursive_1 ON employees_0.manager_id = recursive_1.id`);
     expect(sql).toContain(`SELECT ${loopName}_0.id, ${loopName}_0.name FROM ${loopName} AS ${loopName}_0`);
   });
 
@@ -52,9 +52,9 @@ describe("recursive loop queries", () => {
     );
 
     expect(sql).toStartWith(
-      'WITH RECURSIVE loop_0("User Id", "display-name", "MixedCase") AS ('
+      'WITH RECURSIVE recursive_0("User Id", "display-name", "MixedCase") AS ('
     );
-    expect(sql).toContain('loop_0_0."User Id"');
+    expect(sql).toContain('recursive_0_0."User Id"');
   });
 
   test("composes independently-created loops with distinct CTE names", () => {
@@ -72,9 +72,9 @@ describe("recursive loop queries", () => {
       format: "compact",
     });
 
-    expect(sql).toContain("loop_0(id) AS");
-    expect(sql).toContain("loop_1(id) AS");
-    expect(sql).toContain("FROM loop_0 AS loop_0_0 UNION SELECT loop_1_0.id FROM loop_1 AS loop_1_0");
+    expect(sql).toContain("recursive_0(id) AS");
+    expect(sql).toContain("recursive_1(id) AS");
+    expect(sql).toContain("FROM recursive_0 AS recursive_0_0 UNION SELECT recursive_1_0.id FROM recursive_1 AS recursive_1_0");
 
     const joinedSql = toSql(
       pipe(
@@ -90,9 +90,9 @@ describe("recursive loop queries", () => {
       { dialect: "postgresql", format: "compact" }
     );
 
-    expect(joinedSql).toContain("loop_0(id) AS");
-    expect(joinedSql).toContain("loop_1(id) AS");
-    expect(joinedSql).toContain("INNER JOIN loop_1 AS loop_1 ON");
+    expect(joinedSql).toContain("recursive_0(id) AS");
+    expect(joinedSql).toContain("recursive_1(id) AS");
+    expect(joinedSql).toContain("INNER JOIN recursive_1 AS recursive_1 ON");
   });
 
   test("supports loop(step) as the recursive builder", () => {
@@ -171,7 +171,7 @@ describe("recursive loop queries", () => {
     );
 
     expect(sql.match(/\bWITH\b/g) ?? []).toHaveLength(1);
-    expect(sql).not.toContain("loop_base_");
+    expect(sql).not.toContain("recursive_base_");
     expect(sql).toContain('SELECT "orgTree_0"."orgId", "orgTree_0"."sup_orgId", 1 AS distance FROM "orgTree" AS "orgTree_0" WHERE "orgTree_0"."sup_orgId" IS NOT NULL');
   });
 
@@ -216,7 +216,7 @@ describe("recursive loop queries", () => {
     );
 
     expect(sql.match(/\bWITH\b/g) ?? []).toHaveLength(1);
-    expect(sql).not.toContain("loop_step_join_cte_");
+    expect(sql).not.toContain("WITH recursive_step_");
     expect(sql).not.toContain("INNER JOIN (WITH ");
   });
 });

@@ -36,7 +36,7 @@ export function compileLoopPart(
     optimizedStages,
     {
       ctes: fusedCtes,
-      ctePrefix: `loop_${label}_`,
+      ctePrefix: `recursive_${label}_`,
       dialect,
       allowJoinSubqueryHoist: false,
       allowIntermediateCtes: false,
@@ -63,7 +63,7 @@ export function compileLoopPart(
       currentPlan.scopeId,
       undefined,
       dialect,
-      `loop_${label}_${index}_`,
+      `recursive_${label}_${index}_`,
       false,
       false,
       renderContext
@@ -73,7 +73,7 @@ export function compileLoopPart(
       current = {
         kind: "subquery",
         ast: compiled,
-        as: `loop_${label}_${index}`,
+        as: `recursive_${label}_${index}`,
         columnIdentifiers: nextPlan.columnIdentifiers,
       };
       currentPlan = nextPlan;

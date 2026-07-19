@@ -1,4 +1,4 @@
-import { internalCteLabel, isInternalCteName, type SqlIdentifier } from "../ir/types.ts";
+import { internalCteLabel, isInternalCteName, type InternalCteName, type SqlIdentifier } from "../ir/types.ts";
 import type { QueryDialect } from "../types.ts";
 import type { AstIdentifierExpr, SqlRenderContext } from "./types.ts";
 
@@ -68,17 +68,28 @@ export function renderSourceSql(
     .join(".");
 }
 
+/** Register a declared CTE name for this render without treating table names as CTEs. */
+export function registerCteNameBinding(
+  name: InternalCteName | string,
+  renderContext: SqlRenderContext | null
+): string {
+  if (!renderContext) return name;
+  const existing = renderContext.cteNameBindings[name];
+  if (existing) return existing;
+  const label = isInternalCteName(name) ? (internalCteLabel(name) ?? "derived") : name;
+  const rendered = isInternalCteName(name)
+    ? `${label}_${renderContext.nextInternalCteIndex++}`
+    : name;
+  renderContext.cteNameBindings[name] = rendered;
+  return rendered;
+}
+
 export function resolveIdentifierName(
   name: string,
   renderContext: SqlRenderContext | null
 ): string {
-  if (!renderContext || !isInternalCteName(name)) return name;
-  const existing = renderContext.cteNameBindings[name];
-  if (existing) return existing;
-  const label = internalCteLabel(name) ?? "cte";
-  const rendered = `${label}_${renderContext.nextInternalCteIndex++}`;
-  renderContext.cteNameBindings[name] = rendered;
-  return rendered;
+  if (!renderContext) return name;
+  return renderContext.cteNameBindings[name] ?? name;
 }
 
 function quotedIdentifierExpr(name: string, dialect: QueryDialect): AstIdentifierExpr {

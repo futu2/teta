@@ -18,11 +18,19 @@ describe("error paths", () => {
     }
     test("rejects group() outside fold", () => {
         const users = createUsersTable();
-        expect(() => pipe(users, map((user) => ({
-            bad: group(user.id),
-        })))).toThrow(GROUP_OUTSIDE_AGGREGATE_ERROR);
-    });
-    test("rejects group() inside fold functions", () => {
+    expect(() => pipe(users, map((user) => ({
+        bad: group(user.id),
+    })))).toThrow(GROUP_OUTSIDE_AGGREGATE_ERROR);
+  });
+  test("rejects erased row columns outside aggregates in fold", () => {
+    const users = createUsersTable();
+    expectUserError(
+      () => pipe(users, fold(() => ({ bad: users.columns.id } as never))),
+      "GROUP_OUTSIDE_AGGREGATE",
+      "fold() expressions must be wrapped in group() or used inside an aggregate"
+    );
+  });
+  test("rejects group() inside fold functions", () => {
         const users = createUsersTable();
         expect(() => pipe(users, fold((user) => ({
             bad: count(group(user.id)),

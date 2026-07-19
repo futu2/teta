@@ -5,7 +5,7 @@ import { createQuery, createQueryStep, getQueryState } from "./core.ts";
 import { allocateInternalCteName, allocateScopeId } from "./planner.ts";
 import { toQuerySpec } from "./state.ts";
 import type { QueryColumns } from "./types.ts";
-import { assertLoopColumns, normalizeIdentifier } from "./utils.ts";
+import { assertLoopColumns } from "./utils.ts";
 
 export function loop<TColumns extends QueryColumns>(
   step: (self: Query<TColumns>) => Query<TColumns>
@@ -23,15 +23,13 @@ function buildLoop<TColumns extends QueryColumns>(
   step: (self: Query<TColumns>) => Query<TColumns>
 ): Query<TColumns> {
   const baseState = getQueryState(base);
-  const allocatedName = allocateInternalCteName(baseState, "loop");
+  const allocatedName = allocateInternalCteName(baseState, "recursive");
   const allocatedSelf = allocateScopeId({ nameSupply: allocatedName.nameSupply });
   const name = allocatedName.name;
   const selfColumnNames = [...baseState.columnNames];
   const loopSource = {
-    db: null,
-    table: normalizeIdentifier(name, "table"),
-    schema: null,
-    as: null,
+    kind: "cte" as const,
+    name,
   };
   const selfScopeId = allocatedSelf.scopeId;
   const self = createQuery<TColumns>({

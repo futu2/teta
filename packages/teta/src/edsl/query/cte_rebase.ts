@@ -32,7 +32,7 @@ export function rebaseConflictingCtes<TColumns extends Record<string, unknown>>(
   for (const cte of query.withs) {
     if (!reservedNames.has(cte.name) || !isInternalCteName(cte.name)) continue;
 
-    const label = internalCteLabel(cte.name) ?? "cte";
+    const label = internalCteLabel(cte.name) ?? "derived";
     let candidate: InternalCteName;
     do {
       candidate = `${INTERNAL_CTE_PREFIX}${label}_${nextIndex++}`;
@@ -119,6 +119,11 @@ function rewriteJoinSource(
     };
   }
 
+  if ("kind" in source && source.kind === "cte") {
+    const name = rewriteName(source.name, renames) as InternalCteName;
+    return name === source.name ? source : { ...source, name };
+  }
+
   const name = rewriteName(source.table.name, renames);
   if (name === source.table.name) return source;
   return {
@@ -132,6 +137,10 @@ function rewriteSource(
   renames: ReadonlyMap<string, InternalCteName>
 ): Source {
   if (isValuesSource(source)) return source;
+  if ("kind" in source && source.kind === "cte") {
+    const name = rewriteName(source.name, renames) as InternalCteName;
+    return name === source.name ? source : { ...source, name };
+  }
   const name = rewriteName(source.table.name, renames);
   if (name === source.table.name) return source;
   return {

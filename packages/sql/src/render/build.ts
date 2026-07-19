@@ -184,7 +184,7 @@ function appendIntermediateCte(
   dialect: QueryDialect,
   renderContext: SqlRenderContext
 ): GeneratedCteName {
-  const name = generatedCteName(ctePrefix, "cte", stageIndex);
+  const name = generatedCteName(ctePrefix, "stage", stageIndex);
   ctes.push(buildNamedCte(name, ast, columnNames, { columnIdentifiers, dialect, renderContext }));
   return name;
 }
@@ -204,7 +204,7 @@ function buildIntermediateSourceRef(
     return {
       kind: "subquery",
       ast,
-      as: generatedCteName(ctePrefix, "sq", stageIndex),
+      as: generatedCteName(ctePrefix, "derived", stageIndex),
       columnIdentifiers,
     };
   }

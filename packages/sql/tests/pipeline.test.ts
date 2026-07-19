@@ -112,7 +112,7 @@ describe("pipeline render pipeline", () => {
     }) as any;
 
     expect(ast.with).toHaveLength(1);
-    expect(ast.with[0].name.value).toBe("test_cte_0");
+    expect(ast.with[0].name.value).toBe("test_stage_0");
     expect(ast.with.map((cte: any) => cte.name.value)).not.toContain("seed");
   });
 });

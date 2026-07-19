@@ -437,6 +437,51 @@ describe("public query IR v1", () => {
     );
   });
 
+  test("requires explicit CTE sources to resolve in lexical WITH scope", () => {
+    const cteSource = { kind: "cte" as const, name: "shared_rows" };
+    const cte = {
+      kind: "query" as const,
+      name: "shared_rows",
+      query: validQuerySpec("__teta_scope_cte"),
+    };
+
+    expectInvalid(
+      () => validateQueryIR({ ...validTarget(), source: cteSource }),
+      "query.source.name"
+    );
+    validateQueryIR({ ...validTarget(), source: cteSource, withs: [cte] });
+
+    expectInvalid(
+      () => validateQueryIR({
+        ...validTarget(),
+        withs: [
+          { ...cte, query: { ...cte.query, source: { kind: "cte", name: "later_rows" } } },
+          { kind: "query", name: "later_rows", query: validQuerySpec("__teta_scope_later") },
+        ],
+      }),
+      "query.withs[0].query.source.name"
+    );
+
+    const recursive = {
+      kind: "recursive" as const,
+      name: "recursive_rows",
+      columnNames: ["id"],
+      base: validQuerySpec("__teta_scope_base"),
+      step: {
+        ...validQuerySpec("__teta_scope_step"),
+        source: { kind: "cte" as const, name: "recursive_rows" },
+      },
+    };
+    validateQueryIR({ ...validTarget(), withs: [recursive] });
+    expectInvalid(
+      () => validateQueryIR({
+        ...validTarget(),
+        withs: [{ ...recursive, base: recursive.step }],
+      }),
+      "query.withs[0].base.source.name"
+    );
+  });
+
   test("validates standalone expression IR before stringification", () => {
     expectInvalid(
       () => exprToSql({ kind: "cast", expr: { kind: "literal", value: 1 }, target: "INTEGER); SELECT 1 --" } as never),

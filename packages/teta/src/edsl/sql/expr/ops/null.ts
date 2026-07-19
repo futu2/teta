@@ -7,7 +7,7 @@ import type {
   SqlTimestamp,
   SqlUuid,
 } from "../../types.ts";
-import type { ExprInput, ExprInputTuple, Expr, NonNull } from "../core.ts";
+import type { ExprInput, ExprInputTuple, Expr } from "../core.ts";
 import { unsafeFn } from "../core.ts";
 import { userError } from "../../../errors.ts";
 
@@ -26,14 +26,20 @@ type NormalizeCoalesceTuple<TContext, TValues extends readonly unknown[]> = {
   [K in keyof TValues]: NormalizeCoalesceValue<TContext, TValues[K]>;
 };
 
+type CoalesceResult<TValue, TValues extends readonly unknown[]> =
+  | Exclude<TValue | NormalizeCoalesceValue<TValue, TValues[number]>, null>
+  | ([Exclude<TValue | NormalizeCoalesceValue<TValue, TValues[number]>, null>] extends [never]
+    ? null
+    : never);
+
 export function coalesce<TValue, TValues extends readonly unknown[]>(
   value: ExprInput<TValue>,
   ...values: ExprInputTuple<NormalizeCoalesceTuple<TValue, TValues>>
-): Expr<NonNull<TValue | NormalizeCoalesceValue<TValue, TValues[number]>>> {
+): Expr<CoalesceResult<TValue, TValues>> {
   if (values.length === 0) {
     userError("INVALID_FUNCTION_NAME", "coalesce requires at least one fallback value");
   }
-  return unsafeFn<NonNull<TValue | NormalizeCoalesceValue<TValue, TValues[number]>>>(
+  return unsafeFn<CoalesceResult<TValue, TValues>>(
     "COALESCE",
     value,
     ...values

@@ -34,8 +34,8 @@ describe("render strategy", () => {
             format: "compact",
             renderStrategy: "readable",
         });
-        expect(sql).toContain("WITH cte_0(id, active) AS");
-        expect(sql).toContain("cte_1(id) AS");
+        expect(sql).toContain("WITH stage_0(id, active) AS");
+        expect(sql).toContain("stage_1(id) AS");
         expect(sql).toContain("LIMIT 1");
     });
     test("both render strategies preserve dialect-specific take syntax", () => {
@@ -110,8 +110,8 @@ describe("render strategy", () => {
             format: "compact",
             renderStrategy: "readable",
         });
-        expect(sql).toContain("WITH join_0(user_id, total) AS (SELECT");
-        expect(sql).not.toContain("join_1(");
-        expect(sql.match(/JOIN join_0 AS /g)?.length).toBe(2);
+        expect(sql).toContain("WITH derived_0(user_id, total) AS (SELECT");
+        expect(sql).not.toContain("derived_1(");
+        expect(sql.match(/JOIN derived_0 AS /g)?.length).toBe(2);
     });
 });

@@ -124,6 +124,12 @@ const EXPR_BRAND: unique symbol = Symbol("teta.expr");
 const COLUMN_BRAND: unique symbol = Symbol("teta.column");
 const WINDOW_BUILDER_BRAND: unique symbol = Symbol("teta.window_builder");
 
+type ParameterDescriptor = ColumnType<unknown> & Readonly<{
+  encode: (value: unknown) => unknown;
+}>;
+
+const PARAMETER_DESCRIPTORS = new WeakMap<object, ParameterDescriptor>();
+
 export type ExprPhase = TypeExprPhase;
 
 export type Expr<T, TPhase extends ExprPhase = "row"> = Readonly<{
@@ -481,7 +487,16 @@ export function param(name: string, type: ColumnType<unknown>): Expr<unknown> {
   if (!type || typeof type !== "object" || type.kind !== "column_type") {
     userError("TABLE_SCHEMA_INVALID", "param() expects a SQL type descriptor");
   }
-  return exprOf<unknown>({ kind: "param", name });
+  const node = { kind: "param" as const, name };
+  if (typeof (type as Partial<ParameterDescriptor>).encode === "function") {
+    PARAMETER_DESCRIPTORS.set(node, type as ParameterDescriptor);
+  }
+  return exprOf<unknown>(node);
+}
+
+/** Return runtime binding metadata attached to a frontend parameter node. */
+export function parameterDescriptor(node: object): ParameterDescriptor | undefined {
+  return PARAMETER_DESCRIPTORS.get(node);
 }
 
 export function array<T = unknown>(...values: ExprInput<T>[]): Expr<readonly T[]> {

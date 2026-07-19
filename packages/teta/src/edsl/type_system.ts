@@ -16,11 +16,13 @@ import type {
 } from "./sql/types.ts";
 import type { ExprNode } from "./core/types.ts";
 import type {
+  BuiltinFunctionInputDomain,
   BuiltinFunctionNullability,
   BuiltinFunctionOperation,
   BuiltinFunctionResultKind,
   BuiltinFunctionSpec,
 } from "@teta/sql";
+import { BUILTIN_FUNCTION_SPECS } from "@teta/sql";
 
 declare const CODEC_VALUE: unique symbol;
 
@@ -148,16 +150,7 @@ export type NumericValue = Exclude<SqlNumber, null>;
 export type UnknownValue = SqlUnknown;
 
 /** Domains accepted by a checked scalar operation. */
-export type OperationInputDomain =
-  | "unknown"
-  | "numeric"
-  | "integer"
-  | "string"
-  | "boolean"
-  | "dateLike"
-  | "array"
-  | "integer?"
-  | "string?";
+export type OperationInputDomain = BuiltinFunctionInputDomain;
 
 /** Host literals and SQL values accepted for one operation domain. */
 export type OperationInputValue<TDomain extends OperationInputDomain> =
@@ -186,69 +179,23 @@ export type OperationSpec<
   language: BuiltinFunctionSpec;
 }>;
 
-type KnownOperationCatalog = {
-  MOD: OperationSpec<"MOD", readonly ["numeric", "numeric"], "same", "propagate">;
-  ABS: OperationSpec<"ABS", readonly ["numeric"], "same", "propagate">;
-  CEIL: OperationSpec<"CEIL", readonly ["numeric"], "integer", "propagate">;
-  FLOOR: OperationSpec<"FLOOR", readonly ["numeric"], "integer", "propagate">;
-  SQRT: OperationSpec<"SQRT", readonly ["numeric"], "float", "propagate">;
-  ROUND: OperationSpec<"ROUND", readonly ["numeric", "integer?"], "same", "propagate">;
-  POWER: OperationSpec<"POWER", readonly ["numeric", "numeric"], "float", "propagate">;
-  GREATEST: OperationSpec<"GREATEST", readonly ["numeric", ..."numeric"[]], "same", "propagate">;
-  LEAST: OperationSpec<"LEAST", readonly ["numeric", ..."numeric"[]], "same", "propagate">;
-  CONCAT: OperationSpec<"CONCAT", readonly ["unknown", ..."unknown"[]], "string", "propagate">;
-  UPPER: OperationSpec<"UPPER", readonly ["string"], "string", "propagate">;
-  LOWER: OperationSpec<"LOWER", readonly ["string"], "string", "propagate">;
-  TRIM: OperationSpec<"TRIM", readonly ["string"], "string", "propagate">;
-  SUBSTRING: OperationSpec<"SUBSTRING", readonly ["string", "integer", "integer?"], "string", "propagate">;
-  POSITION: OperationSpec<"POSITION", readonly ["string", "string"], "integer", "propagate">;
-  OVERLAY: OperationSpec<"OVERLAY", readonly ["string", "string", "integer", "integer?"], "string", "propagate">;
-  CHAR_LENGTH: OperationSpec<"CHAR_LENGTH", readonly ["string"], "integer", "propagate">;
-  CHARACTER_LENGTH: OperationSpec<"CHARACTER_LENGTH", readonly ["string"], "integer", "propagate">;
-  OCTET_LENGTH: OperationSpec<"OCTET_LENGTH", readonly ["string"], "integer", "propagate">;
-  BIT_LENGTH: OperationSpec<"BIT_LENGTH", readonly ["string"], "integer", "propagate">;
-  REPLACE: OperationSpec<"REPLACE", readonly ["string", "string", "string"], "string", "propagate">;
-  REVERSE: OperationSpec<"REVERSE", readonly ["string"], "string", "propagate">;
-  LEFT: OperationSpec<"LEFT", readonly ["string", "integer"], "string", "propagate">;
-  RIGHT: OperationSpec<"RIGHT", readonly ["string", "integer"], "string", "propagate">;
-  LPAD: OperationSpec<"LPAD", readonly ["string", "integer", "string"], "string", "propagate">;
-  RPAD: OperationSpec<"RPAD", readonly ["string", "integer", "string"], "string", "propagate">;
-  REGEXP_LIKE: OperationSpec<"REGEXP_LIKE", readonly ["string", "string"], "boolean", "propagate">;
-  REGEXP_REPLACE: OperationSpec<"REGEXP_REPLACE", readonly ["string", "string", "string", "string?"], "string", "propagate">;
-  REGEXP_EXTRACT: OperationSpec<"REGEXP_EXTRACT", readonly ["string", "string", "integer?"], "string", "propagate">;
-  CURRENT_DATE: OperationSpec<"CURRENT_DATE", readonly [], "date", "never">;
-  CURRENT_TIMESTAMP: OperationSpec<"CURRENT_TIMESTAMP", readonly [], "timestamp", "never">;
-  DATE_TRUNC: OperationSpec<"DATE_TRUNC", readonly ["string", "dateLike"], "timestamp", "propagate">;
-  DATE_ADD: OperationSpec<"DATE_ADD", readonly ["string", "integer", "dateLike"], "timestamp", "propagate">;
-  DATE_DIFF: OperationSpec<"DATE_DIFF", readonly ["string", "dateLike", "dateLike"], "integer", "propagate">;
-  DATE_PARSE: OperationSpec<"DATE_PARSE", readonly ["string", "string"], "timestamp", "propagate">;
-  DATE_FORMAT: OperationSpec<"DATE_FORMAT", readonly ["dateLike", "string"], "string", "propagate">;
-  TO_UNIXTIME: OperationSpec<"TO_UNIXTIME", readonly ["dateLike"], "float", "propagate">;
-  FROM_UNIXTIME: OperationSpec<"FROM_UNIXTIME", readonly ["numeric"], "timestamp", "propagate">;
-  COALESCE: OperationSpec<"COALESCE", readonly ["unknown", ..."unknown"[]], "same", "never">;
-  NULLIF: OperationSpec<"NULLIF", readonly ["unknown", "unknown"], "same", "always">;
-  ARRAY_LENGTH: OperationSpec<"ARRAY_LENGTH", readonly ["array"], "integer", "propagate">;
-  ARRAY_CONTAINS: OperationSpec<"ARRAY_CONTAINS", readonly ["array", "unknown"], "boolean", "propagate">;
-  ARRAY_POSITION: OperationSpec<"ARRAY_POSITION", readonly ["array", "unknown"], "integer", "propagate">;
-  ARRAY_SLICE: OperationSpec<"ARRAY_SLICE", readonly ["array", "integer", "integer?"], "array", "propagate">;
-  ARRAY_JOIN: OperationSpec<"ARRAY_JOIN", readonly ["array", "string"], "string", "propagate">;
-  ARRAY_APPEND: OperationSpec<"ARRAY_APPEND", readonly ["array", "unknown"], "array", "propagate">;
-  ARRAY_PREPEND: OperationSpec<"ARRAY_PREPEND", readonly ["array", "unknown"], "array", "propagate">;
-  ARRAY_CONCAT: OperationSpec<"ARRAY_CONCAT", readonly ["array", ..."array"[]], "array", "propagate">;
-  ARRAY_DISTINCT: OperationSpec<"ARRAY_DISTINCT", readonly ["array"], "array", "propagate">;
-};
+type CatalogOperationInputs<TName extends BuiltinFunctionOperation> =
+  (typeof BUILTIN_FUNCTION_SPECS)[TName] extends infer TSpec extends BuiltinFunctionSpec
+    ? readonly [
+        ...TSpec["inputs"],
+        ...(TSpec["variadic"] extends BuiltinFunctionInputDomain ? TSpec["variadic"][] : []),
+      ]
+    : never;
 
-type UnknownOperationCatalog = {
-  [TName in Exclude<BuiltinFunctionOperation, keyof KnownOperationCatalog>]: OperationSpec<
+/** Canonical operation catalog for the public EDSL, derived from @teta/sql. */
+export type SqlOperationCatalog = {
+  [TName in BuiltinFunctionOperation]: OperationSpec<
     TName,
-    readonly ["unknown", ..."unknown"[]],
-    "unknown",
-    "unknown"
+    CatalogOperationInputs<TName>,
+    (typeof BUILTIN_FUNCTION_SPECS)[TName]["result"],
+    (typeof BUILTIN_FUNCTION_SPECS)[TName]["nullability"]
   >;
 };
-
-/** Canonical operation catalog for the public EDSL. */
-export type SqlOperationCatalog = KnownOperationCatalog & UnknownOperationCatalog;
 export type OperationName = keyof SqlOperationCatalog;
 export type OperationSpecOf<TName extends OperationName> = SqlOperationCatalog[TName];
 export type OperationInputs<TName extends OperationName> = OperationSpecOf<TName>["inputs"];
@@ -286,11 +233,17 @@ type OperationOutputValue<
                     ? readonly SqlValue[]
                     : SqlUnknown;
 
+type CoalesceResult<TArgs extends readonly unknown[]> =
+  | Exclude<OperationValue<TArgs[number]>, null>
+  | ([Exclude<OperationValue<TArgs[number]>, null>] extends [never] ? null : never);
+
 /** Result type inferred from one catalog operation and its expression arguments. */
 export type OperationResult<
   TName extends OperationName,
   TArgs extends readonly unknown[],
-> = OperationSpecOf<TName>["nullability"] extends "always"
+> = OperationSpecOf<TName>["nullability"] extends "coalesce"
+  ? CoalesceResult<TArgs>
+  : OperationSpecOf<TName>["nullability"] extends "always"
   ? OperationOutputValue<TName, OperationSpecOf<TName>["output"], TArgs> | null
   : OperationSpecOf<TName>["nullability"] extends "never"
     ? OperationOutputValue<TName, OperationSpecOf<TName>["output"], TArgs>

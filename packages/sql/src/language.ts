@@ -26,6 +26,8 @@ export {
   type BuiltinFunctionOperation,
   /** Result-domain and nullability metadata for one scalar operation. */
   type BuiltinFunctionResultKind,
+  /** Broad SQL argument domain used by typed frontends. */
+  type BuiltinFunctionInputDomain,
   /** Nullability policy for one scalar operation. */
   type BuiltinFunctionNullability,
   /** Static metadata shape for one scalar operation. */
