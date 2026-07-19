@@ -33,6 +33,23 @@ describe("function-first query api", () => {
 
         expect(flow(addOne, toLabel)(41)).toBe("n=42");
     });
+
+    test("rejects non-function composition steps before execution", () => {
+        let executed = false;
+        const first = () => {
+            executed = true;
+            return 1;
+        };
+
+        expect(() => (pipe as any)(0, first, null)).toThrow(
+            "pipe() expects only function steps"
+        );
+        expect(executed).toBe(false);
+        expect(() => (flow as any)(first, undefined)).toThrow(
+            "flow() expects only function steps"
+        );
+        expect(executed).toBe(false);
+    });
     test("preserves flow results beyond twelve functions", () => {
         const addOne = (value: number) => value + 1;
         const toLabel = (value: number) => `n=${value}`;

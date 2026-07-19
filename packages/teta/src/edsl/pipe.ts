@@ -1,3 +1,5 @@
+import { userError } from "./errors.ts";
+
 type UnaryStep<TInput, TOutput> = (input: TInput) => TOutput;
 
 type AnyUnaryStep = UnaryStep<any, any>;
@@ -166,6 +168,7 @@ export function pipe<
 ): PipeTailResult<T12, TRest>;
 // </generated:pipe-overloads>
 export function pipe(value: unknown, ...steps: UnaryStep<unknown, unknown>[]): unknown {
+  assertUnarySteps("pipe", steps);
   let current = value;
   for (const step of steps) {
     current = step(current);
@@ -310,6 +313,7 @@ export function flow<
 ): UnaryStep<TValue, PipeTailResult<T12, TRest>>;
 // </generated:flow-overloads>
 export function flow(...steps: UnaryStep<unknown, unknown>[]): UnaryStep<unknown, unknown> {
+  assertUnarySteps("flow", steps);
   return (value: unknown) => {
     let current = value;
     for (const step of steps) {
@@ -317,4 +321,13 @@ export function flow(...steps: UnaryStep<unknown, unknown>[]): UnaryStep<unknown
     }
     return current;
   };
+}
+
+function assertUnarySteps(
+  helper: "pipe" | "flow",
+  steps: readonly unknown[],
+): asserts steps is readonly UnaryStep<unknown, unknown>[] {
+  if (steps.some((step) => typeof step !== "function")) {
+    userError("QUERY_HELPER_INVALID_ARGUMENTS", `${helper}() expects only function steps`);
+  }
 }
