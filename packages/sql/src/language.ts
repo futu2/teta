@@ -7,7 +7,10 @@ export {
   LANGUAGE_SPEC,
   /** Scalar operations emitted as typed portable IR nodes. */
   BUILTIN_FUNCTION_ARITIES,
+  /** Names emitted as portable builtin expression nodes. */
   BUILTIN_FUNCTION_OPERATIONS,
+  /** Result and nullability metadata for portable builtin operations. */
+  BUILTIN_FUNCTION_SPECS,
   /** Format one operation's accepted argument count. */
   formatBuiltinFunctionArity,
   /** Return the language support catalog. */
@@ -21,6 +24,14 @@ export {
   type LanguageCategory,
   /** Canonical scalar operation represented by a portable `builtin` node. */
   type BuiltinFunctionOperation,
+  /** Result-domain and nullability metadata for one scalar operation. */
+  type BuiltinFunctionResultKind,
+  /** Nullability policy for one scalar operation. */
+  type BuiltinFunctionNullability,
+  /** Static metadata shape for one scalar operation. */
+  type BuiltinFunctionSpec,
+  /** Complete static metadata catalog for scalar operations. */
+  type BuiltinFunctionSpecCatalog,
 } from "./language/spec.ts";
 export {
   /** Return the generated implementation status for one dialect operation. */

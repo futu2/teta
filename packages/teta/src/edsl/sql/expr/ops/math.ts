@@ -14,7 +14,7 @@ import type {
 import {
   binaryExpr,
   exprOf,
-  fn,
+  unsafeFn,
   toExprNode,
   type ExprInput,
   type ExprInputValue,
@@ -96,31 +96,31 @@ export function mod<TValue extends NullableSqlNumber, TLeft extends ExprInput<TV
   left: TLeft,
   right: TRight
 ): Expr<TValue> {
-  return fn<TValue, [TLeft, TRight]>("MOD", left, right);
+  return unsafeFn<TValue, [TLeft, TRight]>("MOD", left, right);
 }
 
 export function ceil<TValue extends NullableSqlNumber, TInput extends ExprInput<TValue>>(
   value: TInput
 ): Expr<PropagateNull<ExprInputValue<TInput>, SqlInt>> {
-  return fn<PropagateNull<ExprInputValue<TInput>, SqlInt>, [TInput]>("CEIL", value);
+  return unsafeFn<PropagateNull<ExprInputValue<TInput>, SqlInt>, [TInput]>("CEIL", value);
 }
 
 export function floor<TValue extends NullableSqlNumber, TInput extends ExprInput<TValue>>(
   value: TInput
 ): Expr<PropagateNull<ExprInputValue<TInput>, SqlInt>> {
-  return fn<PropagateNull<ExprInputValue<TInput>, SqlInt>, [TInput]>("FLOOR", value);
+  return unsafeFn<PropagateNull<ExprInputValue<TInput>, SqlInt>, [TInput]>("FLOOR", value);
 }
 
 export function abs<TValue extends NullableSqlNumber, TInput extends ExprInput<TValue>>(
   value: TInput
 ): Expr<ExprInputValue<TInput>> {
-  return fn<ExprInputValue<TInput>, [TInput]>("ABS", value);
+  return unsafeFn<ExprInputValue<TInput>, [TInput]>("ABS", value);
 }
 
 export function sqrt<TValue extends NullableSqlNumber, TInput extends ExprInput<TValue>>(
   value: TInput
 ): Expr<PropagateNull<ExprInputValue<TInput>, SqlFloat>> {
-  return fn<PropagateNull<ExprInputValue<TInput>, SqlFloat>, [TInput]>("SQRT", value);
+  return unsafeFn<PropagateNull<ExprInputValue<TInput>, SqlFloat>, [TInput]>("SQRT", value);
 }
 
 export function pow<
@@ -132,7 +132,7 @@ export function pow<
   value: TInput,
   exponent: TExponentInput
 ): Expr<PropagateNull<ExprInputValue<TInput> | ExprInputValue<TExponentInput>, SqlFloat>> {
-  return fn<PropagateNull<ExprInputValue<TInput> | ExprInputValue<TExponentInput>, SqlFloat>, [TInput, TExponentInput]>(
+  return unsafeFn<PropagateNull<ExprInputValue<TInput> | ExprInputValue<TExponentInput>, SqlFloat>, [TInput, TExponentInput]>(
     "POWER",
     value,
     exponent
@@ -146,7 +146,7 @@ export function greatest<TValue extends NullableSqlNumber, TInput extends ExprIn
   if (values.length === 0) {
     userError("INVALID_FUNCTION_NAME", "greatest requires at least one value");
   }
-  return fn<TValue, [TInput, ...TValues]>("GREATEST", value, ...values);
+  return unsafeFn<TValue, [TInput, ...TValues]>("GREATEST", value, ...values);
 }
 
 export function least<TValue extends NullableSqlNumber, TInput extends ExprInput<TValue>, const TValues extends readonly ExprInput<TValue>[]>(
@@ -156,7 +156,7 @@ export function least<TValue extends NullableSqlNumber, TInput extends ExprInput
   if (values.length === 0) {
     userError("INVALID_FUNCTION_NAME", "least requires at least one value");
   }
-  return fn<TValue, [TInput, ...TValues]>("LEAST", value, ...values);
+  return unsafeFn<TValue, [TInput, ...TValues]>("LEAST", value, ...values);
 }
 
 export function cast<TTarget = unknown, TInput extends ExprInput<unknown> = ExprInput<unknown>>(
@@ -234,9 +234,9 @@ export function round<
   scale?: TScale
 ): Expr<ExprInputValue<TInput>> {
   if (scale === undefined) {
-    return fn<ExprInputValue<TInput>, [TInput]>("ROUND", value);
+    return unsafeFn<ExprInputValue<TInput>, [TInput]>("ROUND", value);
   }
-  return fn<ExprInputValue<TInput>, [TInput, NonNullable<TScale>]>(
+  return unsafeFn<ExprInputValue<TInput>, [TInput, NonNullable<TScale>]>(
     "ROUND",
     value,
     scale as NonNullable<TScale>

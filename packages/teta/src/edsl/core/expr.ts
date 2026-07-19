@@ -3,6 +3,8 @@ export {
   param,
   array,
   fn,
+  checkedFn,
+  unsafeFn,
   windowFn,
   wrapExpr,
   aggregateExpr,

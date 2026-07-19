@@ -39,7 +39,7 @@ export {
   usingCols,
 } from "../helpers/join_merge.ts";
 export { loop } from "./loop.ts";
-export { t, table, values } from "./schema.ts";
+export { decodeRow, decodeRows, t, table, values } from "./schema.ts";
 export { isPreparedQuery, prepare } from "./prepared.ts";
 export type {
   ParameterBindings,
@@ -56,4 +56,6 @@ export type {
   RowOf,
   SqlType,
   TableColumnHelpers,
+  DecodedSchema,
+  TableSchema,
 } from "./schema.ts";

@@ -9,6 +9,7 @@ import type {
   SqlJson,
   SqlString,
   SqlTimestamp,
+  SqlUnknown,
   SqlUuid,
 } from "../types.ts";
 
@@ -24,6 +25,7 @@ export type QueryValue =
   | SqlUuid
   | SqlBytes
   | SqlJson
+  | SqlUnknown
   | null
   | readonly QueryValue[];
 

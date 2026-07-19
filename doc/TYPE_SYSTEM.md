@@ -4,6 +4,39 @@ This document formalizes the TypeScript type model used by the frontend EDSL.
 It is not a SQL standard specification. It describes the static guarantees Teta
 tries to provide before lowering a query to the backend SQL IR.
 
+## Type System v2
+
+The frontend uses one descriptor-aware SQL value algebra. A schema descriptor
+contains three distinct domains:
+
+```text
+ColumnDef<SQL, Input, Output>
+```
+
+`SQL` is the value accepted by SQL expressions, `Input` is the host value
+accepted by parameter bindings, and `Output` is the decoded value returned by
+`decodeRow(...)` / `decodeRows(...)`. Table columns carry the descriptor's
+input/output metadata through their static expression type, so `RowOf<Query>`
+and `DecodedSchema<Schema>` expose decoded output rather than guessing from a
+SQL brand.
+
+Unchecked custom functions use the explicit `SqlUnknown` value. This keeps an
+unknown SQL result representable in a query while preventing it from silently
+becoming a host-language `any`. Use `checkedFn(...)` for operations in the
+portable catalog, and use `unsafeFn<T>(...)` only when an external function's
+result type is known by the caller. The shorter `fn(...)` helper is deliberately
+unchecked and always returns `SqlUnknown`.
+
+The operation catalog is shared with the SQL renderer. It carries operation
+names, arity, broad result domain, and nullability policy. `checkedFn` derives
+its argument and result types from that catalog, so an expression such as
+`checkedFn("UPPER", user.id)` is rejected before SQL is rendered.
+
+Nullability is represented by `Nullable<T>` / `NonNullableSql<T>`, and scalar
+helpers use `PropagateSqlNull<...>` for operations whose result follows SQL
+three-valued semantics. Expression phases remain nominal (`row`, `group`, and
+`aggregate`) and are carried only at compile time.
+
 ## 1. Type Universes
 
 Teta separates host values from SQL values.

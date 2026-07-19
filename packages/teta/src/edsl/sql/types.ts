@@ -28,5 +28,6 @@ export type {
   SqlResult,
   SqlString,
   SqlTimestamp,
+  SqlUnknown,
   SqlUuid,
 } from "@teta/sql";

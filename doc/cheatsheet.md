@@ -470,6 +470,8 @@ const explicitSql = irToSql(ir, { dialect: "postgresql" });
 - `param(name, type)` for a standalone typed placeholder
 - `prepare(schema, build)` for exact typed render-time bindings
 - `fn(name, ...args)`
+- `checkedFn(name, ...args)` for catalog-checked portable operations
+- `unsafeFn<T>(name, ...args)` for explicitly typed custom functions
 - `windowFn(name, ...args)`
 - `over(window, spec)`
 - `when(condition, value, ...pairs)` -> build `CASE WHEN ... THEN ... END`; use `true, value` as the fallback pair

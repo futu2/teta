@@ -122,6 +122,42 @@ export type BuiltinFunctionArityCatalog = Readonly<
 >;
 
 /**
+ * Type-level classification used by expression builders.
+ *
+ * The renderer only needs arity, but a frontend also needs to know whether an
+ * operation is null-propagating and what broad SQL domain it produces. Keeping
+ * that information in the language catalog prevents each frontend from
+ * inventing a second, subtly different list of operation names.
+ */
+export type BuiltinFunctionResultKind =
+  | "same"
+  | "number"
+  | "integer"
+  | "float"
+  | "string"
+  | "boolean"
+  | "date"
+  | "timestamp"
+  | "array"
+  | "unknown";
+
+export type BuiltinFunctionNullability =
+  | "propagate"
+  | "never"
+  | "always"
+  | "unknown";
+
+export type BuiltinFunctionSpec = Readonly<{
+  arity: BuiltinFunctionArity;
+  result: BuiltinFunctionResultKind;
+  nullability: BuiltinFunctionNullability;
+}>;
+
+export type BuiltinFunctionSpecCatalog = Readonly<
+  Record<BuiltinFunctionOperation, BuiltinFunctionSpec>
+>;
+
+/**
  * Portable scalar operations and their canonical EDSL arities.
  *
  * `max: null` permits additional arguments. Operations with optional SQL
@@ -184,6 +220,89 @@ export const BUILTIN_FUNCTION_OPERATIONS = Object.freeze(
   Object.keys(BUILTIN_FUNCTION_ARITIES)
 ) as readonly BuiltinFunctionOperation[];
 
+const BUILTIN_FUNCTION_RESULT_KINDS: Partial<
+  Record<BuiltinFunctionOperation, BuiltinFunctionResultKind>
+> = {
+  MOD: "same",
+  ABS: "same",
+  CEIL: "integer",
+  FLOOR: "integer",
+  SQRT: "float",
+  ROUND: "same",
+  POWER: "float",
+  GREATEST: "same",
+  LEAST: "same",
+  CONCAT: "string",
+  UPPER: "string",
+  LOWER: "string",
+  TRIM: "string",
+  SUBSTRING: "string",
+  POSITION: "integer",
+  OVERLAY: "string",
+  CHAR_LENGTH: "integer",
+  CHARACTER_LENGTH: "integer",
+  OCTET_LENGTH: "integer",
+  BIT_LENGTH: "integer",
+  REPLACE: "string",
+  REVERSE: "string",
+  LEFT: "string",
+  RIGHT: "string",
+  LPAD: "string",
+  RPAD: "string",
+  REGEXP_LIKE: "boolean",
+  REGEXP_REPLACE: "string",
+  REGEXP_EXTRACT: "string",
+  CURRENT_DATE: "date",
+  CURRENT_TIMESTAMP: "timestamp",
+  DATE_TRUNC: "timestamp",
+  DATE_ADD: "same",
+  DATE_DIFF: "integer",
+  DATE_PARSE: "timestamp",
+  DATE_FORMAT: "string",
+  TO_UNIXTIME: "float",
+  FROM_UNIXTIME: "timestamp",
+  COALESCE: "same",
+  NULLIF: "same",
+  ARRAY_LENGTH: "integer",
+  ARRAY_CONTAINS: "boolean",
+  ARRAY_POSITION: "integer",
+  ARRAY_SLICE: "array",
+  ARRAY_JOIN: "string",
+  ARRAY_APPEND: "array",
+  ARRAY_PREPEND: "array",
+  ARRAY_CONCAT: "array",
+  ARRAY_DISTINCT: "array",
+};
+
+const BUILTIN_FUNCTION_NULLABILITY_OVERRIDES: Partial<
+  Record<BuiltinFunctionOperation, BuiltinFunctionNullability>
+> = {
+  CURRENT_DATE: "never",
+  CURRENT_TIMESTAMP: "never",
+  COALESCE: "never",
+  NULLIF: "always",
+  REGEXP_LIKE: "propagate",
+  ARRAY_CONTAINS: "propagate",
+};
+
+const BUILTIN_FUNCTION_NULLABILITY = Object.fromEntries(
+  BUILTIN_FUNCTION_OPERATIONS.map((operation) => [
+    operation,
+    BUILTIN_FUNCTION_NULLABILITY_OVERRIDES[operation] ?? "propagate",
+  ])
+) as Record<BuiltinFunctionOperation, BuiltinFunctionNullability>;
+
+/** Canonical scalar operation metadata shared by renderers and frontends. */
+export const BUILTIN_FUNCTION_SPECS: BuiltinFunctionSpecCatalog = Object.freeze(
+  Object.fromEntries(
+    BUILTIN_FUNCTION_OPERATIONS.map((operation) => [operation, {
+      arity: BUILTIN_FUNCTION_ARITIES[operation],
+      result: BUILTIN_FUNCTION_RESULT_KINDS[operation] ?? "unknown",
+      nullability: BUILTIN_FUNCTION_NULLABILITY[operation] ?? "unknown",
+    }])
+  ) as BuiltinFunctionSpecCatalog
+);
+
 const BUILTIN_FUNCTION_OPERATION_SET = new Set<string>(BUILTIN_FUNCTION_OPERATIONS);
 
 /** Return true when a name belongs to Teta's portable scalar-function catalog. */
@@ -196,13 +315,13 @@ export function isBuiltinFunctionArityValid(
   operation: BuiltinFunctionOperation,
   argumentCount: number
 ): boolean {
-  const arity = BUILTIN_FUNCTION_ARITIES[operation];
+  const arity = BUILTIN_FUNCTION_SPECS[operation].arity;
   return argumentCount >= arity.min && (arity.max === null || argumentCount <= arity.max);
 }
 
 /** Format one operation's accepted argument count for diagnostics. */
 export function formatBuiltinFunctionArity(operation: BuiltinFunctionOperation): string {
-  const { min, max } = BUILTIN_FUNCTION_ARITIES[operation];
+  const { min, max } = BUILTIN_FUNCTION_SPECS[operation].arity;
   if (max === null) return `at least ${formatArgumentCount(min)}`;
   if (min === max) return `exactly ${formatArgumentCount(min)}`;
   return `between ${min} and ${max} arguments`;

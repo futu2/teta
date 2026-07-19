@@ -16,7 +16,7 @@ import {
   sort,
   pipe,
 } from "../mod.ts";
-import { fn, windowFn } from "../advanced.ts";
+import { checkedFn, fn, unsafeFn, windowFn } from "../advanced.ts";
 import { toExprNode } from "../src/edsl/expr.ts";
 
 describe("tagged EDSL value model", () => {
@@ -38,6 +38,16 @@ describe("tagged EDSL value model", () => {
       args: [{ kind: "literal", value: "Ada" }],
     });
     expect(toExprNode(fn("vendor_normalize", "Ada"))).toEqual({
+      kind: "func",
+      name: "vendor_normalize",
+      args: [{ kind: "literal", value: "Ada" }],
+    });
+    expect(toExprNode(checkedFn("UPPER", "Ada"))).toEqual({
+      kind: "builtin",
+      op: "UPPER",
+      args: [{ kind: "literal", value: "Ada" }],
+    });
+    expect(toExprNode(unsafeFn("vendor_normalize", "Ada"))).toEqual({
       kind: "func",
       name: "vendor_normalize",
       args: [{ kind: "literal", value: "Ada" }],

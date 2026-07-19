@@ -8,7 +8,7 @@ import type {
   SqlUuid,
 } from "../../types.ts";
 import type { ExprInput, ExprInputTuple, Expr, NonNull } from "../core.ts";
-import { fn } from "../core.ts";
+import { unsafeFn } from "../core.ts";
 import { userError } from "../../../errors.ts";
 
 type NormalizeCoalesceValue<TContext, TValue> =
@@ -33,7 +33,7 @@ export function coalesce<TValue, TValues extends readonly unknown[]>(
   if (values.length === 0) {
     userError("INVALID_FUNCTION_NAME", "coalesce requires at least one fallback value");
   }
-  return fn<NonNull<TValue | NormalizeCoalesceValue<TValue, TValues[number]>>>(
+  return unsafeFn<NonNull<TValue | NormalizeCoalesceValue<TValue, TValues[number]>>>(
     "COALESCE",
     value,
     ...values
@@ -41,5 +41,5 @@ export function coalesce<TValue, TValues extends readonly unknown[]>(
 }
 
 export function nullIf<T>(value: ExprInput<T>, other: ExprInput<T>): Expr<T | null> {
-  return fn<T | null>("NULLIF", value, other);
+  return unsafeFn<T | null>("NULLIF", value, other);
 }

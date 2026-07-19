@@ -86,68 +86,68 @@ export type ParamNode = Readonly<{
 export type BinaryNode = Readonly<{
   kind: "binary";
   op: BinaryOp;
-  left: ExprNode<any>;
-  right: ExprNode<any>;
+  left: ExprNode<unknown>;
+  right: ExprNode<unknown>;
 }>;
 
 /** Unary expression node. */
 export type UnaryNode = Readonly<{
   kind: "unary";
   op: UnaryOp;
-  expr: ExprNode<any>;
+  expr: ExprNode<unknown>;
 }>;
 
 /** Aggregate function expression node. */
 export type AggNode = Readonly<{
   kind: "agg";
   name: AggFuncName;
-  arg: ExprNode<any>;
+  arg: ExprNode<unknown>;
   distinct: boolean;
 }>;
 
 /** Grouping marker used while lowering fold projections. */
 export type GroupNode = Readonly<{
   kind: "group";
-  expr: ExprNode<any>;
+  expr: ExprNode<unknown>;
 }>;
 
 /** Portable scalar function call from Teta's built-in language catalog. */
 export type BuiltinFuncNode = Readonly<{
   kind: "builtin";
   op: BuiltinFunctionOperation;
-  args: readonly ExprNode<any>[];
+  args: readonly ExprNode<unknown>[];
 }>;
 
 /** Database-specific scalar function call expression node. */
 export type FuncNode = Readonly<{
   kind: "func";
   name: string;
-  args: readonly ExprNode<any>[];
+  args: readonly ExprNode<unknown>[];
 }>;
 
 /** SQL expression-list node. */
 export type ListNode = Readonly<{
   kind: "list";
-  items: readonly ExprNode<any>[];
+  items: readonly ExprNode<unknown>[];
 }>;
 
 /** SQL array expression node. */
 export type ArrayNode = Readonly<{
   kind: "array";
-  items: readonly ExprNode<any>[];
+  items: readonly ExprNode<unknown>[];
 }>;
 
 /** SQL `EXTRACT` expression node. */
 export type ExtractNode = Readonly<{
   kind: "extract";
   field: string;
-  source: ExprNode<any>;
+  source: ExprNode<unknown>;
 }>;
 
 /** SQL `CAST` expression node. */
 export type CastNode = Readonly<{
   kind: "cast";
-  expr: ExprNode<any>;
+  expr: ExprNode<unknown>;
   target: string;
 }>;
 
@@ -155,7 +155,7 @@ export type CastNode = Readonly<{
 export type WindowNode = Readonly<{
   kind: "window";
   name: string;
-  args: readonly ExprNode<any>[];
+  args: readonly ExprNode<unknown>[];
   partitionBy: readonly OrderExpr[] | null;
   orderBy: readonly OrderItem[] | null;
 }>;
@@ -163,23 +163,23 @@ export type WindowNode = Readonly<{
 /** One branch of a SQL `CASE` expression. */
 export type CaseWhenNode = Readonly<{
   when: ExprNode<boolean | null>;
-  then: ExprNode<any>;
+  then: ExprNode<unknown>;
 }>;
 
 /** SQL `CASE WHEN ... THEN ... ELSE ... END` expression node. */
 export type CaseNode = Readonly<{
   kind: "case";
   whens: readonly CaseWhenNode[];
-  elseExpr: ExprNode<any> | null;
+  elseExpr: ExprNode<unknown> | null;
 }>;
 
 /** Expression accepted in an order or partition list. */
-export type OrderExpr = ExprNode<any>;
+export type OrderExpr = ExprNode<unknown>;
 
 /** Projection item with an optional output alias. */
-export type ProjectionItem = Readonly<{ expr: ExprNode<any>; as: SqlIdentifier | null }>;
+export type ProjectionItem = Readonly<{ expr: ExprNode<unknown>; as: SqlIdentifier | null }>;
 /** Sort expression and direction. */
-export type OrderItem = Readonly<{ expr: ExprNode<any>; direction: "ASC" | "DESC" }>;
+export type OrderItem = Readonly<{ expr: ExprNode<unknown>; direction: "ASC" | "DESC" }>;
 
 /** Normalized SQL identifier plus whether it should be quoted. */
 export type SqlIdentifier<Name extends string = string> = Readonly<{

@@ -64,7 +64,8 @@ import { toAst } from "@teta/teta/inspect";
 
 The default entrypoint intentionally excludes compiler-node constructors,
 database-specific function builders, and parser-specific AST inspection. Use
-`@teta/teta/advanced` for validated custom `fn(...)` and `windowFn(...)` calls,
+`@teta/teta/advanced` for catalog-checked `checkedFn(...)`, explicitly typed
+`unsafeFn(...)`, custom `fn(...)`, and `windowFn(...)` calls,
 `@teta/teta/inspect` when you explicitly need the backend parser AST, and
 `@teta/sql` directly when building or rendering public IR from another
 frontend.
@@ -242,6 +243,10 @@ const prepared = toSqlResult(byUserCriteria, {
   params: { userId: 42, minimumAge: 18 },
 });
 ```
+
+Schema descriptors also define decoded result types. Use `decodeRow(...)` or
+`decodeRows(...)` at the driver boundary when a schema needs to turn raw driver
+values into application values.
 
 The callback form gives autocomplete and compile-time column checks while keeping query steps reusable:
 

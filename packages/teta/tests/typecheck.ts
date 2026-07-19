@@ -1,9 +1,10 @@
-import type { Column, Expr, Query, QueryColumns, JoinKind, JoinOptions, RowOf, SqlBigInt, SqlBoolean, SqlBytes, SqlDate, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlNumber, SqlString, SqlTimestamp, SqlUuid, UnnestOptions, UnnestSelection, } from "../mod.ts";
+import type { Column, Expr, Query, QueryColumns, JoinKind, JoinOptions, RowOf, SqlBigInt, SqlBoolean, SqlBytes, SqlDate, SqlDecimal, SqlFloat, SqlInt, SqlJson, SqlNumber, SqlString, SqlTimestamp, SqlUuid, UnnestOptions, UnnestSelection, SqlExpressionValue, SqlType } from "../mod.ts";
 import * as publicApi from "../mod.ts";
+import { checkedFn, unsafeFn } from "../advanced.ts";
 import { between, composeSteps, currentDate, currentTimestamp, dateAdd, drop, filter, filterEq, filterNe, filterGt, filterGte, filterLt, filterLte, full, identityStep, inner, isDistinctFrom, isIn, isNotIn, join, left, right, take, takeWithin, sort, param, prepare, toSqlResult, lit, map, pick, rename, pipe, flow, table, t, fold, asc, desc, eq, gt, upper, add, mul, coalesce, count, group, loop, sum, and, or, isNotNull, sub, when, mapShape, groupShape, lt, unnest, unionAll, union, unlessStep, values, arrayAgg, prefixOverlapLeft, prefixOverlapRight, prefixAllLeft, prefixAllRight, suffixAllLeft, suffixAllRight, dropOverlapLeft, dropOverlapRight, usingCols, onEq, asBigInt, asBoolean, asBytes, asDate, asDecimal, asFloat, asInt, asJson, asString, asTimestamp, asUuid, whenStep } from "../mod.ts";
 type Equal<A, B> = ((<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false);
 type Expect<T extends true> = T;
-type ExprType<TExpr> = TExpr extends Expr<infer TValue> ? TValue : TExpr extends Column<infer TValue, string> ? TValue : never;
+type ExprType<TExpr> = TExpr extends Expr<infer TValue> ? SqlExpressionValue<TValue> : TExpr extends Column<infer TValue, string> ? SqlExpressionValue<TValue> : never;
 type NamedAggregateExpr = Expr<SqlInt, "aggregate">;
 declare const namedAggregateExpr: NamedAggregateExpr;
 void namedAggregateExpr;
@@ -16,6 +17,15 @@ const users = table("users", {
 const preparedUsers = prepare({ id: t.int(), minimumId: t.int() }, (params) =>
     pipe(users, filter((user) => eq(user.id, params.id)), filter((user) => gt(user.id, params.minimumId)), map((user) => ({ name: user.name }))));
 type _PreparedUserRow = Expect<Equal<RowOf<typeof preparedUsers>, { readonly name: string }>>;
+const dateCodec: SqlType<SqlString, string, Date> = {
+    kind: "column_type",
+    type: "string",
+    nullable: false,
+    encode: (value) => value,
+    decode: (value) => new Date(String(value)),
+};
+const decodedUsers = table("decoded_users", { created_at: dateCodec });
+type _DecodedCodecRow = Expect<Equal<RowOf<typeof decodedUsers>, { readonly created_at: Date }>>;
 toSqlResult(preparedUsers, { params: { id: 1, minimumId: 0 } });
 // @ts-expect-error prepared bindings reject missing names
 toSqlResult(preparedUsers, { params: { id: 1 } });
@@ -56,6 +66,22 @@ const numberParamExpr = param("some_number", t.float());
 const bigintParamExpr = param("some_bigint", t.bigint());
 const booleanParamExpr = param("some_boolean", t.boolean());
 const nullableParamExpr = param("some_nullable", t.nullable(t.string()));
+const checkedUpperExpr = checkedFn("UPPER", nullableParamExpr);
+type _CheckedUpperExpr = Expect<Equal<ExprType<typeof checkedUpperExpr>, SqlString | null>>;
+const checkedCoalesceExpr = checkedFn("COALESCE", null, "fallback");
+type _CheckedCoalesceExpr = Expect<Equal<ExprType<typeof checkedCoalesceExpr>, SqlString>>;
+const checkedModExpr = checkedFn("MOD", users.columns.id, 2);
+type _CheckedModExpr = Expect<Equal<ExprType<typeof checkedModExpr>, SqlInt>>;
+const checkedCurrentDateExpr = checkedFn("CURRENT_DATE");
+type _CheckedCurrentDateExpr = Expect<Equal<ExprType<typeof checkedCurrentDateExpr>, SqlDate>>;
+// @ts-expect-error checked operations reject incompatible SQL domains
+checkedFn("UPPER", users.columns.id);
+// @ts-expect-error checked operations reject incompatible literal domains
+checkedFn("UPPER", 1);
+// @ts-expect-error checked operations reject unknown function names
+checkedFn("vendor_normalize", users.columns.name);
+const customTypedExpr = unsafeFn<SqlString>("vendor_normalize", users.columns.name);
+type _CustomTypedExpr = Expect<Equal<ExprType<typeof customTypedExpr>, SqlString>>;
 const dateParamExpr = param("some_date", t.date());
 const timestampParamExpr = param("some_timestamp", t.timestamp());
 const orders = table("orders", {
@@ -64,9 +90,11 @@ const orders = table("orders", {
     total: t.float(),
 });
 const sessions = table("sessions", {
-    id: t.int(),
-    tags: t.array(t.string()),
+  id: t.int(),
+  tags: t.array(t.string()),
 });
+const checkedArrayLengthExpr = checkedFn("ARRAY_LENGTH", sessions.columns.tags);
+type _CheckedArrayLengthExpr = Expect<Equal<ExprType<typeof checkedArrayLengthExpr>, SqlInt>>;
 const inlineRows = values([
     { id: 1 as number, name: "Ada" as string },
     { id: 2 as number, name: "Grace" as string },

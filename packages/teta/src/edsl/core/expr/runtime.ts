@@ -19,6 +19,7 @@ import type {
   SqlNumber,
   SqlString,
   SqlTimestamp,
+  SqlUnknown,
   SqlUuid,
 } from "../../sql/types.ts";
 import {
@@ -37,6 +38,16 @@ import {
   unwrapGroupExpr,
 } from "./node/ops.ts";
 import { userError } from "../../errors.ts";
+import type {
+  ExprPhase as TypeExprPhase,
+  NonNullableSql,
+  OperationInputDomain,
+  OperationInputValue,
+  OperationInputs,
+  OperationName,
+  OperationResult,
+  PropagateSqlNull,
+} from "../../type_system.ts";
 
 type SqlLiteralInput = Value | bigint;
 
@@ -59,12 +70,26 @@ export type ExprInputValue<TInput> =
 export type ExprInputTuple<T extends readonly unknown[]> = {
   [K in keyof T]: ExprInput<T[K]>;
 };
-export type NonNull<T> = Exclude<T, null>;
-export type PropagateNull<TInput, TResult> = null extends TInput ? TResult | null : TResult;
+export type NonNull<T> = NonNullableSql<T>;
+export type PropagateNull<TInput, TResult> = PropagateSqlNull<TInput, TResult>;
 export type WindowSpecInput = {
   partitionBy?: Expr<unknown> | Expr<unknown>[];
   orderBy?: OrderItem | OrderItem[];
 };
+
+type OperationBaseDomain<TDomain extends OperationInputDomain> =
+  TDomain extends `${infer TBase}?` ? Extract<TBase, OperationInputDomain> : TDomain;
+type OperationExprInput<TDomain extends OperationInputDomain> = ExprInput<
+  OperationInputValue<OperationBaseDomain<TDomain>>
+>;
+type OperationExprInputs<TInputs extends readonly OperationInputDomain[]> =
+  TInputs extends readonly [infer THead extends OperationInputDomain, ...infer TTail extends OperationInputDomain[]]
+    ? THead extends `${string}?`
+      ? readonly [OperationExprInput<THead>?, ...OperationExprInputs<TTail>]
+      : readonly [OperationExprInput<THead>, ...OperationExprInputs<TTail>]
+    : TInputs extends readonly (infer TItem extends OperationInputDomain)[]
+      ? readonly OperationExprInput<TItem>[]
+      : readonly [];
 
 type ComparableInput = SqlNumber | SqlDate | SqlTimestamp | null;
 type NullableDateLike = SqlDate | SqlTimestamp | string | null;
@@ -99,7 +124,7 @@ const EXPR_BRAND: unique symbol = Symbol("teta.expr");
 const COLUMN_BRAND: unique symbol = Symbol("teta.column");
 const WINDOW_BUILDER_BRAND: unique symbol = Symbol("teta.window_builder");
 
-export type ExprPhase = "row" | "group" | "aggregate";
+export type ExprPhase = TypeExprPhase;
 
 export type Expr<T, TPhase extends ExprPhase = "row"> = Readonly<{
   kind: "expr";
@@ -466,18 +491,33 @@ export function array<T = unknown>(...values: ExprInput<T>[]): Expr<readonly T[]
   });
 }
 
-export function fn<
-  T = unknown,
-  const TArgs extends readonly ExprInput<unknown>[] = readonly ExprInput<unknown>[],
->(
-  name: string,
-  ...args: TArgs
-): Expr<T> {
+/** Build an unchecked function expression. Builtin names still receive runtime arity validation. */
+export function fn(name: string, ...args: ExprInput<unknown>[]): Expr<SqlUnknown> {
   assertSqlFunctionName(name);
   return funcExpr(name, args.map((arg) => toExprNode(arg)));
 }
 
-export function windowFn<T = unknown>(
+/** Build a portable operation with catalog-derived argument and result types. */
+export function checkedFn<
+  TName extends OperationName,
+  const TArgs extends readonly ExprInput<unknown>[],
+>(
+  name: TName,
+  ...args: TArgs & OperationExprInputs<OperationInputs<TName>>
+): Expr<OperationResult<TName, TArgs>> {
+  return funcExpr(name, args.map((arg) => toExprNode(arg))) as Expr<OperationResult<TName, TArgs>>;
+}
+
+/** Build a custom function when the caller supplies an explicit result type. */
+export function unsafeFn<
+  T = SqlUnknown,
+  const TArgs extends readonly ExprInput<unknown>[] = readonly ExprInput<unknown>[],
+>(name: string, ...args: TArgs): Expr<T> {
+  assertSqlFunctionName(name);
+  return funcExpr(name, args.map((arg) => toExprNode(arg))) as Expr<T>;
+}
+
+export function windowFn<T = SqlUnknown>(
   name: string,
   ...args: ExprInput<unknown>[]
 ): WindowBuilder<T> {

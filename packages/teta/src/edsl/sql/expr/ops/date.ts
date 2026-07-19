@@ -9,7 +9,7 @@ import type {
 } from "../../types.ts";
 import {
   exprOf,
-  fn,
+  unsafeFn,
   funcExpr,
   toExprNode,
   type ExprInput,
@@ -62,7 +62,7 @@ export function dateTrunc<TValue extends NullableDateLike>(
   value: ExprInput<TValue>,
   unit: ExprInput<string>
 ): Expr<PropagateNull<TValue, SqlTimestamp>> {
-  return fn<PropagateNull<TValue, SqlTimestamp>>("DATE_TRUNC", unit, value);
+  return unsafeFn<PropagateNull<TValue, SqlTimestamp>>("DATE_TRUNC", unit, value);
 }
 
 export function dateAdd<TValue extends NullableDateLike>(
@@ -70,7 +70,7 @@ export function dateAdd<TValue extends NullableDateLike>(
   unit: ExprInput<string>,
   amount: ExprInput<SqlInt>
 ): Expr<DateAddResult<TValue>> {
-  return fn<DateAddResult<TValue>>("DATE_ADD", unit, amount, value);
+  return unsafeFn<DateAddResult<TValue>>("DATE_ADD", unit, amount, value);
 }
 
 export function dateDiff<
@@ -81,33 +81,33 @@ export function dateDiff<
   unit: ExprInput<string>,
   other: ExprInput<TOther>
 ): Expr<PropagateNull<TValue | TOther, SqlInt>> {
-  return fn<PropagateNull<TValue | TOther, SqlInt>>("DATE_DIFF", unit, value, other);
+  return unsafeFn<PropagateNull<TValue | TOther, SqlInt>>("DATE_DIFF", unit, value, other);
 }
 
 export function dateFormat<TValue extends NullableDateLike>(
   value: ExprInput<TValue>,
   format: ExprInput<string>
 ): Expr<PropagateNull<TValue, SqlString>> {
-  return fn<PropagateNull<TValue, SqlString>>("DATE_FORMAT", value, format);
+  return unsafeFn<PropagateNull<TValue, SqlString>>("DATE_FORMAT", value, format);
 }
 
 export function dateParse<TValue extends string | null>(
   value: ExprInput<TValue>,
   format: ExprInput<string>
 ): Expr<PropagateNull<TValue, SqlTimestamp>> {
-  return fn<PropagateNull<TValue, SqlTimestamp>>("DATE_PARSE", value, format);
+  return unsafeFn<PropagateNull<TValue, SqlTimestamp>>("DATE_PARSE", value, format);
 }
 
 export function toUnixTime<TValue extends NullableDateLike>(
   value: ExprInput<TValue>
 ): Expr<PropagateNull<TValue, SqlFloat>> {
-  return fn<PropagateNull<TValue, SqlFloat>>("TO_UNIXTIME", value);
+  return unsafeFn<PropagateNull<TValue, SqlFloat>>("TO_UNIXTIME", value);
 }
 
 export function fromUnixTime<TValue extends NullableSqlNumber>(
   value: ExprInput<TValue>
 ): Expr<PropagateNull<TValue, SqlTimestamp>> {
-  return fn<PropagateNull<TValue, SqlTimestamp>>("FROM_UNIXTIME", value);
+  return unsafeFn<PropagateNull<TValue, SqlTimestamp>>("FROM_UNIXTIME", value);
 }
 
 export function year<TValue>(value: ExprInput<TValue>): Expr<PropagateNull<TValue, SqlInt>> {

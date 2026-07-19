@@ -5,8 +5,10 @@ import type { QueryValue } from "../../query/types.ts";
 
 type ProjectionKey = Exclude<string, `__teta_${string}`>;
 
-export type ProjectionValue = Expr<any, ExprPhase> | Value;
-export type AggregateProjectionValue = Expr<any, "group" | "aggregate"> | Value;
+/** Expression inputs accepted by a row projection. */
+export type ProjectionValue = Expr<unknown, ExprPhase> | Value;
+/** Expression inputs accepted by an aggregate projection. */
+export type AggregateProjectionValue = Expr<unknown, "group" | "aggregate"> | Value;
 
 export type ProjectionValueResult<V> = V extends Expr<infer T, ExprPhase>
   ? T
@@ -18,11 +20,11 @@ export type ProjectionShape = Record<ProjectionKey, ProjectionValue>;
 export type AggregateProjectionShape = Record<ProjectionKey, AggregateProjectionValue>;
 
 export type ProjectionResult<S extends ProjectionShape> = {
-  [K in keyof S]: QueryProjectionValue<ProjectionValueResult<S[K]>>;
+  [K in keyof S]: Extract<ProjectionValueResult<S[K]>, QueryValue>;
 };
 
 export type AggregateProjectionResult<S extends AggregateProjectionShape> = {
-  [K in keyof S]: QueryProjectionValue<ProjectionValueResult<S[K]>>;
+  [K in keyof S]: Extract<ProjectionValueResult<S[K]>, QueryValue>;
 };
 
 export type ProjectionSelection = ProjectionShape;

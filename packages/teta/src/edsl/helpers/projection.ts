@@ -16,6 +16,7 @@ import type {
 import { assertKnownColumns, selectColumnsByName } from "../query/projection_utils.ts";
 import type { QueryColumns } from "../query/types.ts";
 type StringKeyOf<T> = Extract<keyof T, string>;
+type ProjectionResultValue<T> = Extract<ProjectionValueResult<T>, QueryColumns[string]>;
 type GenericQueryStep<TInput extends QueryColumns, TOutput extends QueryColumns> =
   (query: Query<TInput>) => Query<TOutput>;
 
@@ -29,7 +30,7 @@ export function extendInternal<
 >(
   name: TName,
   selector: (cols: ColumnRefs<TColumns>) => TValue
-): (query: Query<TColumns>) => Query<ExtendResult<TColumns, { [K in TName]: ProjectionValueResult<TValue> }>> {
+): (query: Query<TColumns>) => Query<ExtendResult<TColumns, { [K in TName]: ProjectionResultValue<TValue> }>> {
   const resolvedSelector = resolveExtendSelector(
     name,
     eraseProjectionSelector(selector)
@@ -67,7 +68,7 @@ export type InternalExtendedColumns<
   TColumns extends QueryColumns,
   TName extends string,
   TValue extends ProjectionValue,
-> = ExtendResult<TColumns, { [K in TName]: ProjectionValueResult<TValue> }>;
+> = ExtendResult<TColumns, { [K in TName]: ProjectionResultValue<TValue> }>;
 
 export function filterInternal<TColumns extends QueryColumns>(
   query: Query<TColumns>,

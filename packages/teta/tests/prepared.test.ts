@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test";
 
 import {
   eq,
+  decodeRow,
+  decodeRows,
   filter,
   isPreparedQuery,
   map,
@@ -71,5 +73,24 @@ describe("typed prepared queries", () => {
     expect(descriptor.decode([1, 2, 3])).toEqual([1, 2, 3]);
     expect(descriptor.encode(null)).toBeNull();
     expect(() => descriptor.encode([1, 2.5])).toThrow("Expected int value");
+  });
+
+  test("decodes driver rows through schema codecs", () => {
+    const schema = {
+      id: t.int(),
+      created_at: {
+        kind: "column_type" as const,
+        type: "string" as const,
+        nullable: false,
+        encode: (value: Date) => value.toISOString(),
+        decode: (value: unknown) => new Date(String(value)),
+      },
+    };
+
+    const row = decodeRow(schema, { id: 4, created_at: "2026-07-19T00:00:00.000Z" });
+    expect(row.id).toBe(4);
+    expect(row.created_at).toBeInstanceOf(Date);
+    expect(decodeRows(schema, [{ id: 4, created_at: "2026-07-19T00:00:00.000Z" }])).toHaveLength(1);
+    expect(() => decodeRow(schema, { id: 4 })).toThrow("missing column 'created_at'");
   });
 });

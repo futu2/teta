@@ -10,7 +10,11 @@ export type Query<TColumns extends import("./src/edsl/query.ts").QueryColumns> =
 export type QueryColumns = import("./src/edsl/query.ts").QueryColumns;
 
 /** Runtime SQL type descriptor with distinct expression, input, and output types. */
-export type SqlType<TExpression, TInput, TOutput = TInput> = import("./src/edsl/query.ts").SqlType<TExpression, TInput, TOutput>;
+export type SqlType<
+  TExpression extends import("./src/edsl/query/types.ts").QueryValue,
+  TInput,
+  TOutput = TInput,
+> = import("./src/edsl/query.ts").SqlType<TExpression, TInput, TOutput>;
 
 /** Driver-facing row shape inferred from a query or prepared query. */
 export type RowOf<TQuery> = import("./src/edsl/query.ts").RowOf<TQuery>;
@@ -26,6 +30,37 @@ export type InputOf<TType> = import("./src/edsl/query.ts").InputOf<TType>;
 
 /** Decoded driver output for a SQL type descriptor. */
 export type OutputOf<TType> = import("./src/edsl/query.ts").OutputOf<TType>;
+
+/** Decoded row shape inferred from a runtime schema descriptor map. */
+export type DecodedSchema<TSchema extends import("./src/edsl/query.ts").TableSchema> = import("./src/edsl/query.ts").DecodedSchema<TSchema>;
+
+/** Static SQL value with codec metadata removed. */
+export type SqlExpressionValue<T> = import("./src/edsl/expr.ts").SqlExpressionValue<T>;
+
+/** Canonical SQL value universe used by the v2 type system. */
+export type SqlValue = import("./src/edsl/expr.ts").SqlValue;
+
+/** SQL value with nullability added at the type level. */
+export type Nullable<T> = import("./src/edsl/expr.ts").Nullable<T>;
+
+/** SQL value with nullability removed at the type level. */
+export type NonNullableSql<T> = import("./src/edsl/expr.ts").NonNullableSql<T>;
+
+/** Null-propagating result helper used by expression signatures. */
+export type PropagateSqlNull<TInput, TResult> = import("./src/edsl/expr.ts").PropagateSqlNull<TInput, TResult>;
+
+/** Schema codec metadata carried by table column expression types. */
+export type CodecValue<
+  TExpression extends import("./src/edsl/expr.ts").SqlValue,
+  TInput,
+  TOutput,
+> = import("./src/edsl/expr.ts").CodecValue<TExpression, TInput, TOutput>;
+
+/** Decoded row shape inferred from query expression metadata. */
+export type DecodedRow<TColumns extends Record<string, unknown>> = import("./src/edsl/expr.ts").DecodedRow<TColumns>;
+
+/** Explicit unknown SQL result produced by unchecked custom expressions. */
+export type UnknownValue = import("./src/edsl/expr.ts").UnknownValue;
 
 /** Named parameter descriptor map used by `prepare`. */
 export type ParameterSchema = import("./src/edsl/query.ts").ParameterSchema;
@@ -177,6 +212,12 @@ export const table: typeof import("./src/edsl/query.ts").table = query.table;
 /** Creates a typed query root from inline literal rows. */
 export const values: typeof import("./src/edsl/query.ts").values = query.values;
 
+/** Decode one driver row using a schema's runtime codecs. */
+export const decodeRow: typeof import("./src/edsl/query.ts").decodeRow = query.decodeRow;
+
+/** Decode multiple driver rows using a schema's runtime codecs. */
+export const decodeRows: typeof import("./src/edsl/query.ts").decodeRows = query.decodeRows;
+
 /** Declares typed parameters and builds a query requiring exact render-time bindings. */
 export const prepare: typeof import("./src/edsl/query.ts").prepare = query.prepare;
 
@@ -277,6 +318,36 @@ export type ExprInputValue<TInput> = import("./src/edsl/expr.ts").ExprInputValue
 /** Tuple of expression inputs matching a tuple of value types. */
 export type ExprInputTuple<T extends readonly unknown[]> = import("./src/edsl/expr.ts").ExprInputTuple<T>;
 
+/** Domain accepted by one catalog-checked scalar operation. */
+export type OperationInputDomain = import("./src/edsl/expr.ts").OperationInputDomain;
+
+/** Host and SQL values accepted by one catalog operation domain. */
+export type OperationInputValue<TDomain extends OperationInputDomain> = import("./src/edsl/expr.ts").OperationInputValue<TDomain>;
+
+/** Catalog argument domains for one scalar operation. */
+export type OperationInputs<TName extends OperationName> = import("./src/edsl/expr.ts").OperationInputs<TName>;
+
+/** Name of a scalar operation in the canonical backend language catalog. */
+export type OperationName = import("./src/edsl/expr.ts").OperationName;
+
+/** Result type inferred from a catalog operation and its arguments. */
+export type OperationResult<TName extends OperationName, TArgs extends readonly unknown[]> = import("./src/edsl/expr.ts").OperationResult<TName, TArgs>;
+
+/** Typed operation descriptor used by checked expression builders. */
+export type OperationSpec<
+  TName extends OperationName = OperationName,
+  TInputs extends readonly OperationInputDomain[] = readonly OperationInputDomain[],
+  TOutput extends import("@teta/sql").BuiltinFunctionResultKind = import("@teta/sql").BuiltinFunctionResultKind,
+  TNullability extends import("@teta/sql").BuiltinFunctionNullability = import("@teta/sql").BuiltinFunctionNullability,
+  TPhase extends ExprPhase = "row",
+> = import("./src/edsl/expr.ts").OperationSpec<TName, TInputs, TOutput, TNullability, TPhase>;
+
+/** Descriptor lookup for one canonical operation. */
+export type OperationSpecOf<TName extends OperationName> = import("./src/edsl/expr.ts").OperationSpecOf<TName>;
+
+/** Complete canonical operation catalog used by the checked EDSL. */
+export type SqlOperationCatalog = import("./src/edsl/expr.ts").SqlOperationCatalog;
+
 /** Expression phase marker used to distinguish row, group, and aggregate expressions. */
 export type ExprPhase = import("./src/edsl/expr.ts").ExprPhase;
 
@@ -348,6 +419,9 @@ export const isExpr: typeof import("./src/edsl/expr.ts").isExpr = expr.isExpr;
 
 /** Returns true when a value is a Teta column expression. */
 export const isColumn: typeof import("./src/edsl/expr.ts").isColumn = expr.isColumn;
+
+/** Builds a portable function expression using the canonical operation catalog. */
+export const checkedFn: typeof import("./src/edsl/expr.ts").checkedFn = expr.checkedFn;
 
 /** Returns true when a value is a Teta query. */
 export const isQuery: typeof import("./src/edsl/query.ts").isQuery = query.isQuery;
@@ -701,7 +775,13 @@ export const dateLiteral: typeof import("./src/edsl/expr.ts").dateLiteral = expr
 export const timestampLiteral: typeof import("./src/edsl/expr.ts").timestampLiteral = expr.timestampLiteral;
 
 /** Canonical catalog of SQL operations and dialect support metadata. */
-export { LANGUAGE_SPEC, getLanguageSpec } from "./src/edsl/sql/language.ts";
+export {
+  LANGUAGE_SPEC,
+  BUILTIN_FUNCTION_ARITIES,
+  BUILTIN_FUNCTION_OPERATIONS,
+  BUILTIN_FUNCTION_SPECS,
+  getLanguageSpec,
+} from "./src/edsl/sql/language.ts";
 
 export type { LanguageCategory } from "./src/edsl/sql/language.ts";
 
@@ -734,6 +814,7 @@ export type {
   SqlResult,
   SqlString,
   SqlTimestamp,
+  SqlUnknown,
   SqlUuid,
 } from "./src/edsl/types.ts";
 

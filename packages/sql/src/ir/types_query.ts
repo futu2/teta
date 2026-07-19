@@ -109,7 +109,7 @@ export type FoldStage = Readonly<{
   kind: "fold";
   items: readonly ProjectionItem[];
   keys: readonly string[];
-  groupBy: readonly ExprNode<any>[] | null;
+  groupBy: readonly ExprNode<unknown>[] | null;
   outputScopeId: ScopeId;
 }>;
 
@@ -222,6 +222,6 @@ export type ColumnType<T> = Readonly<{
 }>;
 
 /** Infer a row shape from a schema object made of `ColumnType` values. */
-export type InferSchema<S extends Record<string, ColumnType<any>>> = {
+export type InferSchema<S extends Record<string, ColumnType<unknown>>> = {
   [K in keyof S]: S[K] extends ColumnType<infer T> ? T : never;
 };

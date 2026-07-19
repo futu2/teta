@@ -5,7 +5,7 @@ import { userError } from "../errors.ts";
 import type { SqlBoolean } from "../types.ts";
 import type { QueryValue } from "./types.ts";
 
-export type JoinSelection = Record<string, Expr<any, ExprPhase>>;
+export type JoinSelection = Record<string, Expr<unknown, ExprPhase>>;
 
 export type JoinOverlappingColumnNames<
   TLeft extends Record<string, unknown>,

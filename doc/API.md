@@ -65,6 +65,12 @@ const seed = values([
 
 Requires at least one row. Every row must have the same keys. `undefined` values are not allowed.
 
+### `decodeRow(schema, row)` / `decodeRows(schema, rows)`
+
+Decode raw driver rows with the `decode` functions declared by a schema. The
+returned type is the schema's `OutputOf<...>` shape, independently of the SQL
+expression type used to build a query.
+
 ---
 
 ## Query Steps
@@ -638,7 +644,9 @@ interface WindowSpec {
 | `lit(value)` | `(value: T) => Expr<T>` | Wraps a host-language literal as an expression |
 | `param(name, type)` | `(name: string, type: SqlType<TExpr, TInput, TOutput>) => Expr<TExpr>` | Typed named parameter placeholder |
 | `prepare(schema, build)` | `(schema, params => Query) => PreparedQuery` | Declares parameters and builds a query with exact typed bindings |
-| `fn<T>(name, ...args)` | `(name: string, ...args: ExprInput<any>[]) => Expr<T>` | Generic SQL function call |
+| `checkedFn(name, ...args)` | Catalog-checked portable operation builder | Derives argument and result types from the shared operation catalog |
+| `fn(name, ...args)` | `(name: string, ...args: ExprInput<unknown>[]) => Expr<SqlUnknown>` | Unchecked custom SQL function call |
+| `unsafeFn<T>(name, ...args)` | `(name: string, ...args: ExprInput<unknown>[]) => Expr<T>` | Explicitly typed custom SQL function call |
 | `windowFn<T>(name, ...args)` | `(name: string, ...args: ExprInput<any>[]) => Expr<T>` | Generic window function (before `over()`) |
 | `when(cond, val, ...pairs)` | `(cond: ExprInput<SqlBoolean>, val: ExprInput<S>, ...rest: WhenPair<S>[]) => Expr<S>` | `CASE WHEN ... THEN ... END` |
 | `f\`...\`` | template tag | String concatenation via `CONCAT` |
@@ -708,15 +716,23 @@ Every declared parameter must be used, undeclared parameters are rejected, and
 the render-time `params` object must contain exactly the declared keys. Each
 value is encoded and validated by its `SqlType` before it reaches the backend.
 
-### `fn<T>(name, ...args)` and `windowFn<T>(name, ...args)`
+### Checked and custom function builders
 
 Import these database-specific builders from `@teta/teta/advanced`. Names must
 be SQL identifiers; arbitrary SQL fragments are rejected.
 
 ```ts
-map((u) => ({ hash: fn<SqlString>("md5", u.email) }));
+map((u) => ({ normalized: checkedFn("UPPER", u.email) }));
+map((u) => ({ hash: unsafeFn<SqlString>("md5", u.email) }));
+map((u) => ({ unknown: fn("vendor_normalize", u.email) }));
 map((u) => ({ pct: over(windowFn<SqlFloat>("percent_rank"), { orderBy: desc(u.score) }) }));
 ```
+
+`checkedFn` is constrained by the canonical operation catalog and derives a
+portable result type. `fn` is an unchecked custom builder that returns
+`SqlUnknown`; use `unsafeFn<T>` only when the external function's result is
+known. `windowFn<T>` remains generic because window function signatures depend
+on the database dialect and window specification.
 
 ---
 

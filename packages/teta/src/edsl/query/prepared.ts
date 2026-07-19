@@ -7,6 +7,7 @@ import { getQueryState, type Query } from "./core.ts";
 import { lowerLogicalCtes, lowerLogicalStages } from "./logical.ts";
 import {
   isColumnType,
+  type AnySqlType,
   type ExpressionOf,
   type InputOf,
   type SqlType,
@@ -16,7 +17,7 @@ import { isPlainObject, isQuery } from "./value.ts";
 
 const PREPARED_QUERY_BRAND: unique symbol = Symbol("teta.prepared_query");
 
-export type ParameterSchema = Readonly<Record<string, SqlType<any, any, any>>>;
+export type ParameterSchema = Readonly<Record<string, AnySqlType>>;
 
 export type ParameterRefs<TSchema extends ParameterSchema> = Readonly<{
   [K in keyof TSchema]: Expr<ExpressionOf<TSchema[K]>>;
@@ -111,7 +112,8 @@ export function encodePreparedOptions<TSchema extends ParameterSchema>(
   const encoded = createStringRecord<unknown>();
   for (const name of expected) {
     const type = prepared.parameters[name]!;
-    setStringRecordValue(encoded, name, type.encode(options.params[name]));
+    const encode = type.encode as (value: unknown) => unknown;
+    setStringRecordValue(encoded, name, encode(options.params[name]));
   }
   return { ...options, params: encoded };
 }
@@ -156,7 +158,7 @@ function isParameterSchema(value: unknown): value is ParameterSchema {
 }
 
 function freezeParameterSchema<TSchema extends ParameterSchema>(schema: TSchema): TSchema {
-  const snapshot = createStringRecord<SqlType<any, any, any>>();
+  const snapshot = createStringRecord<AnySqlType>();
   for (const [name, type] of Object.entries(schema)) {
     setStringRecordValue(snapshot, name, type);
   }

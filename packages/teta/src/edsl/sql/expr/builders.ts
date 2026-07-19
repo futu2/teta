@@ -2,7 +2,7 @@ import type { CaseWhenNode, ExprNode } from "../../core/types.ts";
 import type { NormalizeExpressionLiteral, SqlString } from "../types.ts";
 import {
   exprOf,
-  fn,
+  unsafeFn,
   lit,
   toExprNode,
   type ExprInput,
@@ -116,7 +116,7 @@ export function f<const TExprs extends readonly ExprInput<unknown>[]>(
     if (expr !== undefined) parts.push(expr);
   }
   if (parts.length === 0) return lit("") as Expr<SqlString>;
-  return fn<SqlString>("CONCAT", ...parts) as Expr<SqlString>;
+  return unsafeFn<SqlString>("CONCAT", ...parts) as Expr<SqlString>;
 }
 
 function buildCaseExpr<T>(

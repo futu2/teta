@@ -24,6 +24,13 @@ import type { Query } from "./core.ts";
 import { createQuery } from "./core.ts";
 import { initialScopeId, reserveQueryScopes } from "./planner.ts";
 import type { QueryValue } from "./types.ts";
+import type {
+  CodecValue,
+  DecodedRow,
+  DriverValue as TypedDriverValue,
+  InputValue,
+  OutputValue,
+} from "../type_system.ts";
 import { normalizeTableSource } from "./utils.ts";
 import { isPlainObject } from "./value.ts";
 import { createStringRecord, setStringRecordValue } from "../record.ts";
@@ -44,35 +51,71 @@ type MatchingValuesRows<TRows extends readonly [ValuesRow, ...ValuesRow[]]> = {
     : never;
 };
 
-export type SqlType<TExpression, TInput, TOutput = TInput> = ColumnType<TExpression> & Readonly<{
+/** Runtime SQL descriptor with static SQL, input, and decoded-output domains. */
+export type SqlType<
+  TExpression extends QueryValue,
+  TInput,
+  TOutput = TInput,
+> = ColumnType<TExpression> & Readonly<{
   encode: (value: TInput) => unknown;
   decode: (value: unknown) => TOutput;
-  readonly __input?: TInput;
-  readonly __output?: TOutput;
 }>;
 
-export type ExpressionOf<TType> = TType extends SqlType<infer TExpression, any, any>
+export type ExpressionOf<TType> = TType extends ColumnType<infer TExpression>
   ? TExpression
   : never;
-export type InputOf<TType> = TType extends SqlType<any, infer TInput, any> ? TInput : never;
-export type OutputOf<TType> = TType extends SqlType<any, any, infer TOutput> ? TOutput : never;
+export type InputOf<TType> = TType extends { encode: (value: infer TInput) => unknown }
+  ? TInput
+  : never;
+export type OutputOf<TType> = TType extends { decode: (value: unknown) => infer TOutput }
+  ? TOutput
+  : never;
 
-export type DriverValue<T> =
-  T extends null ? null
-  : T extends SqlInt | SqlFloat | SqlDecimal ? number
-  : T extends SqlBigInt ? bigint
-  : T extends SqlBoolean ? boolean
-  : T extends SqlDate | SqlTimestamp | SqlUuid | SqlString ? string
-  : T extends SqlBytes ? Uint8Array
-  : T extends readonly (infer TItem)[] ? readonly DriverValue<TItem>[]
-  : T extends SqlJson<infer TJson> ? TJson
-  : T;
+/** Driver-facing value inferred from a projected SQL expression. */
+export type DriverValue<T> = TypedDriverValue<T>;
 
+/** Driver-facing decoded row shape inferred from a query or prepared query. */
 export type RowOf<TQuery> = TQuery extends Query<infer TColumns>
-  ? { readonly [K in keyof TColumns]: DriverValue<TColumns[K]> }
+  ? DecodedRow<TColumns>
   : TQuery extends { readonly query: Query<infer TColumns> }
-    ? { readonly [K in keyof TColumns]: DriverValue<TColumns[K]> }
+    ? DecodedRow<TColumns>
     : never;
+
+/** Decoded output row corresponding to a runtime schema descriptor map. */
+export type DecodedSchema<S extends TableSchema> = {
+  readonly [K in keyof S]: OutputOf<S[K]>;
+};
+
+/** Decode one driver row with the exact codecs declared by a schema. */
+export function decodeRow<const S extends TableSchema>(
+  schema: S,
+  row: Readonly<Record<string, unknown>>,
+): DecodedSchema<S> {
+  assertTableSchema(schema);
+  if (!isPlainObject(row)) {
+    userError("INVALID_PARAM_VALUE", "decodeRow() expects a row object");
+  }
+
+  const decoded = createStringRecord<unknown>();
+  for (const [name, type] of Object.entries(schema)) {
+    if (!Object.hasOwn(row, name)) {
+      userError("INVALID_PARAM_VALUE", `decodeRow() is missing column '${name}'`);
+    }
+    setStringRecordValue(decoded, name, type.decode(row[name]));
+  }
+  return Object.freeze(decoded) as DecodedSchema<S>;
+}
+
+/** Decode a list of driver rows using one schema. */
+export function decodeRows<const S extends TableSchema>(
+  schema: S,
+  rows: readonly Readonly<Record<string, unknown>>[],
+): readonly DecodedSchema<S>[] {
+  if (!Array.isArray(rows)) {
+    userError("INVALID_PARAM_VALUE", "decodeRows() expects an array of row objects");
+  }
+  return Object.freeze(rows.map((row) => decodeRow(schema, row)));
+}
 
 export type TableColumnHelpers = {
   string: () => SqlType<SqlString, string>;
@@ -86,10 +129,10 @@ export type TableColumnHelpers = {
   uuid: () => SqlType<SqlUuid, string>;
   json: <T = unknown>() => SqlType<SqlJson<T>, T>;
   bytes: () => SqlType<SqlBytes, Uint8Array>;
-  array: <TExpression, TInput, TOutput>(
+  array: <TExpression extends QueryValue, TInput, TOutput>(
     column: SqlType<TExpression, TInput, TOutput>
   ) => SqlType<readonly TExpression[], readonly TInput[], readonly TOutput[]>;
-  nullable: <TExpression, TInput, TOutput>(
+  nullable: <TExpression extends QueryValue, TInput, TOutput>(
     column: SqlType<TExpression, TInput, TOutput>
   ) => SqlType<TExpression | null, TInput | null, TOutput | null>;
 };
@@ -109,11 +152,11 @@ export const t: TableColumnHelpers = Object.freeze({
     ((value: unknown): value is T => value !== undefined)
   ),
   bytes: () => scalarType<SqlBytes, Uint8Array>("bytes", isBytes),
-  array: <TExpression, TInput, TOutput>(
+  array: <TExpression extends QueryValue, TInput, TOutput>(
     column: SqlType<TExpression, TInput, TOutput>
   ): SqlType<readonly TExpression[], readonly TInput[], readonly TOutput[]> => {
     assertColumnType("t.array", column);
-    return sqlType("array", false, column as SqlType<unknown, unknown, unknown>,
+    return sqlType("array", false, column as SqlType<QueryValue, never, unknown>,
       (value: readonly TInput[]) => {
         if (!Array.isArray(value)) invalidDescriptorValue("array", value);
         return value.map((item) => column.encode(item));
@@ -123,17 +166,17 @@ export const t: TableColumnHelpers = Object.freeze({
         return value.map((item) => column.decode(item));
       });
   },
-  nullable: <TExpression, TInput, TOutput>(
+  nullable: <TExpression extends QueryValue, TInput, TOutput>(
     column: SqlType<TExpression, TInput, TOutput>
   ): SqlType<TExpression | null, TInput | null, TOutput | null> => {
     assertColumnType("t.nullable", column);
-    return sqlType(column.type, true, column.arrayOf as SqlType<unknown, unknown, unknown> | undefined,
+    return sqlType(column.type, true, column.arrayOf as SqlType<QueryValue, never, unknown> | undefined,
       (value: TInput | null) => value === null ? null : column.encode(value),
       (value: unknown) => value === null ? null : column.decode(value));
   },
 });
 
-function scalarType<TExpression, TValue>(
+function scalarType<TExpression extends QueryValue, TValue>(
   type: ColumnTypeName,
   validate: (value: unknown) => value is TValue
 ): SqlType<TExpression, TValue> {
@@ -148,10 +191,10 @@ function scalarType<TExpression, TValue>(
     });
 }
 
-function sqlType<TExpression, TInput, TOutput>(
+function sqlType<TExpression extends QueryValue, TInput, TOutput>(
   type: ColumnTypeName,
   nullable: boolean,
-  arrayOf: SqlType<unknown, unknown, unknown> | undefined,
+  arrayOf: SqlType<QueryValue, never, unknown> | undefined,
   encode: (value: TInput) => unknown,
   decode: (value: unknown) => TOutput
 ): SqlType<TExpression, TInput, TOutput> {
@@ -166,13 +209,16 @@ function sqlType<TExpression, TInput, TOutput>(
 }
 
 /** Define a table with a schema and return a typed query builder. */
-export type TableSchema = Record<string, SqlType<any, any, any>>;
+export type AnySqlType = SqlType<QueryValue, never, unknown>;
+export type TableSchema = Record<string, AnySqlType>;
 type RequireNonEmptySchema<S extends TableSchema> =
   keyof S extends never
     ? { __teta_table_schema_requires_columns__: never }
     : unknown;
 type InferQuerySchema<S extends TableSchema> = {
-  [K in keyof S]: ExpressionOf<S[K]> extends infer T extends QueryValue ? T : never;
+  [K in keyof S]: ExpressionOf<S[K]> extends infer T extends QueryValue
+    ? CodecValue<T, InputOf<S[K]>, OutputOf<S[K]>>
+    : never;
 };
 
 export function table<S extends TableSchema>(

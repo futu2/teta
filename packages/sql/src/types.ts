@@ -12,6 +12,7 @@ declare const __sqlTimestamp: unique symbol;
 declare const __sqlUuid: unique symbol;
 declare const __sqlBytes: unique symbol;
 declare const __sqlJson: unique symbol;
+declare const __sqlUnknown: unique symbol;
 
 /** Branded SQL integer value. */
 export type SqlInt = number & { readonly [__sqlInt]: true };
@@ -37,6 +38,16 @@ export type SqlUuid = string & { readonly [__sqlUuid]: true };
 export type SqlBytes = Uint8Array & { readonly [__sqlBytes]: true };
 /** Branded SQL JSON value preserving the JSON payload type. */
 export type SqlJson<T = unknown> = T & { readonly [__sqlJson]: true };
+
+/**
+ * An expression whose SQL result type is intentionally unknown.
+ *
+ * This is the result type of unchecked/custom function builders.  Keeping it
+ * distinct from `unknown` means it can flow through the expression and query
+ * APIs without reintroducing `any`, while decoded rows still expose an
+ * honest `unknown` value to callers.
+ */
+export type SqlUnknown = { readonly [__sqlUnknown]: true };
 
 type ContextSqlNumber<TContext> = Extract<Exclude<TContext, null>, SqlNumber>;
 

@@ -5,6 +5,7 @@ import type {
 import { resolveQueryInitDefaults } from "./state.ts";
 import type { ColumnRefs } from "../expr.ts";
 import type { QueryColumns } from "./types.ts";
+import type { SqlExpressionValue } from "../type_system.ts";
 import { normalizeQueryState } from "./normalize.ts";
 
 const QUERY_BRAND: unique symbol = Symbol("teta.query");
@@ -13,10 +14,16 @@ const QUERY_STEP_BRAND: unique symbol = Symbol("teta.query_step");
 declare const QUERY_ROW_TYPE: unique symbol;
 
 // Index-signature rows are internal erasure points; finite rows retain exact identity.
+type PublicRow<TColumns extends QueryColumns> = {
+  readonly [K in keyof TColumns]: SqlExpressionValue<TColumns[K]>;
+};
+
 type QueryRowIdentity<TColumns extends QueryColumns> =
   string extends keyof TColumns
     ? (...args: any[]) => any
-    : (columns: TColumns) => TColumns;
+    : 0 extends (1 & TColumns)
+    ? (...args: any[]) => any
+    : (columns: PublicRow<TColumns>) => PublicRow<TColumns>;
 
 export type QueryStepMetadata = {
   readonly kind: "query_step";

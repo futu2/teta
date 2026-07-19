@@ -1,6 +1,7 @@
 import type { SqlBoolean, SqlInt, SqlString } from "../../types.ts";
 import {
-  fn,
+  checkedFn,
+  unsafeFn,
   wrapExpr,
   type ExprInput,
   type ExprInputValue,
@@ -22,7 +23,7 @@ export function replace<
   search: TSearch,
   replacement: TReplacement
 ): Expr<SqlStringResult<TInput>> {
-  return fn<SqlStringResult<TInput>, [TInput, TSearch, TReplacement]>(
+  return unsafeFn<SqlStringResult<TInput>, [TInput, TSearch, TReplacement]>(
     "REPLACE",
     value,
     search,
@@ -33,25 +34,25 @@ export function replace<
 export function upper<TInput extends ExprInput<NullableString>>(
   value: TInput
 ): Expr<SqlStringResult<TInput>> {
-  return fn<SqlStringResult<TInput>, [TInput]>("UPPER", value);
+  return checkedFn("UPPER", value) as Expr<SqlStringResult<TInput>>;
 }
 
 export function lower<TInput extends ExprInput<NullableString>>(
   value: TInput
 ): Expr<SqlStringResult<TInput>> {
-  return fn<SqlStringResult<TInput>, [TInput]>("LOWER", value);
+  return unsafeFn<SqlStringResult<TInput>, [TInput]>("LOWER", value);
 }
 
 export function reverse<TInput extends ExprInput<NullableString>>(
   value: TInput
 ): Expr<SqlStringResult<TInput>> {
-  return fn<SqlStringResult<TInput>, [TInput]>("REVERSE", value);
+  return unsafeFn<SqlStringResult<TInput>, [TInput]>("REVERSE", value);
 }
 
 export function trim<TInput extends ExprInput<NullableString>>(
   value: TInput
 ): Expr<SqlStringResult<TInput>> {
-  return fn<SqlStringResult<TInput>, [TInput]>("TRIM", value);
+  return unsafeFn<SqlStringResult<TInput>, [TInput]>("TRIM", value);
 }
 
 export function regexLike<
@@ -61,7 +62,7 @@ export function regexLike<
   value: TInput,
   pattern: TPattern
 ): Expr<SqlBooleanResult<TInput>> {
-  return fn<SqlBooleanResult<TInput>, [TInput, TPattern]>(
+  return unsafeFn<SqlBooleanResult<TInput>, [TInput, TPattern]>(
     "REGEXP_LIKE",
     value,
     pattern
@@ -81,14 +82,14 @@ export function regexReplace<
   flags?: TFlags
 ): Expr<SqlStringResult<TInput>> {
   if (flags === undefined) {
-    return fn<SqlStringResult<TInput>, [TInput, TPattern, TReplacement]>(
+    return unsafeFn<SqlStringResult<TInput>, [TInput, TPattern, TReplacement]>(
       "REGEXP_REPLACE",
       value,
       pattern,
       replacement
     );
   }
-  return fn<SqlStringResult<TInput>, [TInput, TPattern, TReplacement, NonNullable<TFlags>]>(
+  return unsafeFn<SqlStringResult<TInput>, [TInput, TPattern, TReplacement, NonNullable<TFlags>]>(
     "REGEXP_REPLACE",
     value,
     pattern,
@@ -108,13 +109,13 @@ export function regexExtract<
   groupIndex?: TGroupIndex
 ): Expr<SqlStringResult<TInput>> {
   if (groupIndex === undefined) {
-    return fn<SqlStringResult<TInput>, [TInput, TPattern]>(
+    return unsafeFn<SqlStringResult<TInput>, [TInput, TPattern]>(
       "REGEXP_EXTRACT",
       value,
       pattern
     );
   }
-  return fn<SqlStringResult<TInput>, [TInput, TPattern, NonNullable<TGroupIndex>]>(
+  return unsafeFn<SqlStringResult<TInput>, [TInput, TPattern, NonNullable<TGroupIndex>]>(
     "REGEXP_EXTRACT",
     value,
     pattern,
@@ -133,13 +134,13 @@ export function substring<
   length?: TLength
 ): Expr<SqlStringResult<TInput>> {
   if (length === undefined) {
-    return fn<SqlStringResult<TInput>, [TInput, TStart]>(
+    return unsafeFn<SqlStringResult<TInput>, [TInput, TStart]>(
       "SUBSTRING",
       value,
       start
     );
   }
-  return fn<SqlStringResult<TInput>, [TInput, TStart, NonNullable<TLength>]>(
+  return unsafeFn<SqlStringResult<TInput>, [TInput, TStart, NonNullable<TLength>]>(
     "SUBSTRING",
     value,
     start,
@@ -155,7 +156,7 @@ export function position<
   value: TInput,
   needle: TNeedle
 ): Expr<PropagateNull<ExprInputValue<TInput>, SqlInt>> {
-  return fn<PropagateNull<ExprInputValue<TInput>, SqlInt>, [TNeedle, TInput]>("POSITION", needle, value);
+  return unsafeFn<PropagateNull<ExprInputValue<TInput>, SqlInt>, [TNeedle, TInput]>("POSITION", needle, value);
 }
 
 export function overlay<
@@ -171,14 +172,14 @@ export function overlay<
   length?: TLength
 ): Expr<SqlStringResult<TInput>> {
   if (length === undefined) {
-    return fn<SqlStringResult<TInput>, [TInput, TPlacing, TStart]>(
+    return unsafeFn<SqlStringResult<TInput>, [TInput, TPlacing, TStart]>(
       "OVERLAY",
       value,
       placing,
       start
     );
   }
-  return fn<SqlStringResult<TInput>, [TInput, TPlacing, TStart, NonNullable<TLength>]>(
+  return unsafeFn<SqlStringResult<TInput>, [TInput, TPlacing, TStart, NonNullable<TLength>]>(
     "OVERLAY",
     value,
     placing,
@@ -190,25 +191,25 @@ export function overlay<
 export function charLength<TInput extends ExprInput<NullableString>>(
   value: TInput
 ): Expr<PropagateNull<ExprInputValue<TInput>, SqlInt>> {
-  return fn<PropagateNull<ExprInputValue<TInput>, SqlInt>, [TInput]>("CHAR_LENGTH", value);
+  return unsafeFn<PropagateNull<ExprInputValue<TInput>, SqlInt>, [TInput]>("CHAR_LENGTH", value);
 }
 
 export function characterLength<TInput extends ExprInput<NullableString>>(
   value: TInput
 ): Expr<PropagateNull<ExprInputValue<TInput>, SqlInt>> {
-  return fn<PropagateNull<ExprInputValue<TInput>, SqlInt>, [TInput]>("CHARACTER_LENGTH", value);
+  return unsafeFn<PropagateNull<ExprInputValue<TInput>, SqlInt>, [TInput]>("CHARACTER_LENGTH", value);
 }
 
 export function octetLength<TInput extends ExprInput<NullableString>>(
   value: TInput
 ): Expr<PropagateNull<ExprInputValue<TInput>, SqlInt>> {
-  return fn<PropagateNull<ExprInputValue<TInput>, SqlInt>, [TInput]>("OCTET_LENGTH", value);
+  return unsafeFn<PropagateNull<ExprInputValue<TInput>, SqlInt>, [TInput]>("OCTET_LENGTH", value);
 }
 
 export function bitLength<TInput extends ExprInput<NullableString>>(
   value: TInput
 ): Expr<PropagateNull<ExprInputValue<TInput>, SqlInt>> {
-  return fn<PropagateNull<ExprInputValue<TInput>, SqlInt>, [TInput]>("BIT_LENGTH", value);
+  return unsafeFn<PropagateNull<ExprInputValue<TInput>, SqlInt>, [TInput]>("BIT_LENGTH", value);
 }
 
 export function leftSubstring<
@@ -218,7 +219,7 @@ export function leftSubstring<
   value: TInput,
   length: TLength
 ): Expr<SqlStringResult<TInput>> {
-  return fn<SqlStringResult<TInput>, [TInput, TLength]>("LEFT", value, length);
+  return unsafeFn<SqlStringResult<TInput>, [TInput, TLength]>("LEFT", value, length);
 }
 
 export function rightSubstring<
@@ -228,7 +229,7 @@ export function rightSubstring<
   value: TInput,
   length: TLength
 ): Expr<SqlStringResult<TInput>> {
-  return fn<SqlStringResult<TInput>, [TInput, TLength]>("RIGHT", value, length);
+  return unsafeFn<SqlStringResult<TInput>, [TInput, TLength]>("RIGHT", value, length);
 }
 
 export function lpad<
@@ -241,7 +242,7 @@ export function lpad<
   length: TLength,
   padding: TPadding = " " as TPadding
 ): Expr<SqlStringResult<TInput>> {
-  return fn<SqlStringResult<TInput>, [TInput, TLength, TPadding]>(
+  return unsafeFn<SqlStringResult<TInput>, [TInput, TLength, TPadding]>(
     "LPAD",
     value,
     length,
@@ -259,7 +260,7 @@ export function rpad<
   length: TLength,
   padding: TPadding = " " as TPadding
 ): Expr<SqlStringResult<TInput>> {
-  return fn<SqlStringResult<TInput>, [TInput, TLength, TPadding]>(
+  return unsafeFn<SqlStringResult<TInput>, [TInput, TLength, TPadding]>(
     "RPAD",
     value,
     length,
@@ -278,5 +279,5 @@ export function concat<
   if (parts.length === 0) {
     return wrapExpr(value) as Expr<SqlStringResult<TInput>>;
   }
-  return fn<SqlStringResult<TInput>, [TInput, ...TParts]>("CONCAT", value, ...parts);
+  return unsafeFn<SqlStringResult<TInput>, [TInput, ...TParts]>("CONCAT", value, ...parts);
 }

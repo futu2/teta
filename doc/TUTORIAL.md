@@ -750,7 +750,7 @@ WHERE t_0.__teta_take_within_row_number <= 1
 
 ```ts
 import { desc, over, map, type SqlFloat, type SqlString, table, t, toSql, pipe } from "@teta/teta";
-import { fn, windowFn } from "@teta/teta/advanced";
+import { unsafeFn, windowFn } from "@teta/teta/advanced";
 
 const users = table("users", {
   id: t.int(),
@@ -761,7 +761,7 @@ const q = pipe(
   users,
   map((u) => ({
     id: u.id,
-    name_hash: fn<SqlString>("my_hash_udf", u.name),
+    name_hash: unsafeFn<SqlString>("my_hash_udf", u.name),
     score_rank: over(windowFn<SqlFloat>("percent_rank"), { orderBy: desc(u.id) }),
   }))
 );
