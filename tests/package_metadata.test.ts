@@ -75,7 +75,7 @@ test("teta jsr manifest maps workspace dependencies to jsr packages", () => {
   }>("packages/teta/jsr.json");
 
   expect(tetaPackage.dependencies?.["@teta/sql"]).toEqual("workspace:*");
-  expect(tetaJsr.imports?.["@teta/sql"]).toEqual("jsr:@teta/sql@^0.1.12");
+  expect(tetaJsr.imports?.["@teta/sql"]).toEqual("jsr:@teta/sql@^0.1.13");
 });
 
 test("dev deno manifest maps workspace dependencies to jsr packages", () => {

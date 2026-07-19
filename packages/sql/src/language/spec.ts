@@ -172,12 +172,76 @@ export type BuiltinFunctionSpecCatalog = Readonly<
   Record<BuiltinFunctionOperation, BuiltinFunctionSpec>
 >;
 
+type BuiltinFunctionSpecWith<
+  TInputs extends readonly BuiltinFunctionInputDomain[],
+  TVariadic extends BuiltinFunctionInputDomain | null,
+  TResult extends BuiltinFunctionResultKind,
+  TNullability extends BuiltinFunctionNullability,
+> = BuiltinFunctionSpec & Readonly<{
+  inputs: TInputs;
+  variadic: TVariadic;
+  result: TResult;
+  nullability: TNullability;
+}>;
+
+type BuiltinFunctionSpecs = Readonly<{
+  MOD: BuiltinFunctionSpecWith<readonly ["numeric", "numeric"], null, "same", "propagate">;
+  ABS: BuiltinFunctionSpecWith<readonly ["numeric"], null, "same", "propagate">;
+  CEIL: BuiltinFunctionSpecWith<readonly ["numeric"], null, "integer", "propagate">;
+  FLOOR: BuiltinFunctionSpecWith<readonly ["numeric"], null, "integer", "propagate">;
+  SQRT: BuiltinFunctionSpecWith<readonly ["numeric"], null, "float", "propagate">;
+  ROUND: BuiltinFunctionSpecWith<readonly ["numeric", "integer?"], null, "same", "propagate">;
+  POWER: BuiltinFunctionSpecWith<readonly ["numeric", "numeric"], null, "float", "propagate">;
+  GREATEST: BuiltinFunctionSpecWith<readonly ["numeric", "numeric"], "numeric", "same", "propagate">;
+  LEAST: BuiltinFunctionSpecWith<readonly ["numeric", "numeric"], "numeric", "same", "propagate">;
+  CONCAT: BuiltinFunctionSpecWith<readonly ["unknown", "unknown"], "unknown", "string", "propagate">;
+  UPPER: BuiltinFunctionSpecWith<readonly ["string"], null, "string", "propagate">;
+  LOWER: BuiltinFunctionSpecWith<readonly ["string"], null, "string", "propagate">;
+  TRIM: BuiltinFunctionSpecWith<readonly ["string"], null, "string", "propagate">;
+  SUBSTRING: BuiltinFunctionSpecWith<readonly ["string", "integer", "integer?"], null, "string", "propagate">;
+  POSITION: BuiltinFunctionSpecWith<readonly ["string", "string"], null, "integer", "propagate">;
+  OVERLAY: BuiltinFunctionSpecWith<readonly ["string", "string", "integer", "integer?"], null, "string", "propagate">;
+  CHAR_LENGTH: BuiltinFunctionSpecWith<readonly ["string"], null, "integer", "propagate">;
+  CHARACTER_LENGTH: BuiltinFunctionSpecWith<readonly ["string"], null, "integer", "propagate">;
+  OCTET_LENGTH: BuiltinFunctionSpecWith<readonly ["string"], null, "integer", "propagate">;
+  BIT_LENGTH: BuiltinFunctionSpecWith<readonly ["string"], null, "integer", "propagate">;
+  REPLACE: BuiltinFunctionSpecWith<readonly ["string", "string", "string"], null, "string", "propagate">;
+  REVERSE: BuiltinFunctionSpecWith<readonly ["string"], null, "string", "propagate">;
+  LEFT: BuiltinFunctionSpecWith<readonly ["string", "integer"], null, "string", "propagate">;
+  RIGHT: BuiltinFunctionSpecWith<readonly ["string", "integer"], null, "string", "propagate">;
+  LPAD: BuiltinFunctionSpecWith<readonly ["string", "integer", "string"], null, "string", "propagate">;
+  RPAD: BuiltinFunctionSpecWith<readonly ["string", "integer", "string"], null, "string", "propagate">;
+  REGEXP_LIKE: BuiltinFunctionSpecWith<readonly ["string", "string"], null, "boolean", "propagate">;
+  REGEXP_REPLACE: BuiltinFunctionSpecWith<readonly ["string", "string", "string", "string?"], null, "string", "propagate">;
+  REGEXP_EXTRACT: BuiltinFunctionSpecWith<readonly ["string", "string", "integer?"], null, "string", "propagate">;
+  CURRENT_DATE: BuiltinFunctionSpecWith<readonly [], null, "date", "never">;
+  CURRENT_TIMESTAMP: BuiltinFunctionSpecWith<readonly [], null, "timestamp", "never">;
+  DATE_TRUNC: BuiltinFunctionSpecWith<readonly ["string", "dateLike"], null, "timestamp", "propagate">;
+  DATE_ADD: BuiltinFunctionSpecWith<readonly ["string", "integer", "dateLike"], null, "timestamp", "propagate">;
+  DATE_DIFF: BuiltinFunctionSpecWith<readonly ["string", "dateLike", "dateLike"], null, "integer", "propagate">;
+  DATE_PARSE: BuiltinFunctionSpecWith<readonly ["string", "string"], null, "timestamp", "propagate">;
+  DATE_FORMAT: BuiltinFunctionSpecWith<readonly ["dateLike", "string"], null, "string", "propagate">;
+  TO_UNIXTIME: BuiltinFunctionSpecWith<readonly ["dateLike"], null, "float", "propagate">;
+  FROM_UNIXTIME: BuiltinFunctionSpecWith<readonly ["numeric"], null, "timestamp", "propagate">;
+  COALESCE: BuiltinFunctionSpecWith<readonly ["unknown", "unknown"], "unknown", "same", "coalesce">;
+  NULLIF: BuiltinFunctionSpecWith<readonly ["unknown", "unknown"], null, "same", "always">;
+  ARRAY_LENGTH: BuiltinFunctionSpecWith<readonly ["array"], null, "integer", "propagate">;
+  ARRAY_CONTAINS: BuiltinFunctionSpecWith<readonly ["array", "unknown"], null, "boolean", "propagate">;
+  ARRAY_POSITION: BuiltinFunctionSpecWith<readonly ["array", "unknown"], null, "integer", "propagate">;
+  ARRAY_SLICE: BuiltinFunctionSpecWith<readonly ["array", "integer", "integer?"], null, "array", "propagate">;
+  ARRAY_JOIN: BuiltinFunctionSpecWith<readonly ["array", "string"], null, "string", "propagate">;
+  ARRAY_APPEND: BuiltinFunctionSpecWith<readonly ["array", "unknown"], null, "array", "propagate">;
+  ARRAY_PREPEND: BuiltinFunctionSpecWith<readonly ["array", "unknown"], null, "array", "propagate">;
+  ARRAY_CONCAT: BuiltinFunctionSpecWith<readonly ["array", "array"], "array", "array", "propagate">;
+  ARRAY_DISTINCT: BuiltinFunctionSpecWith<readonly ["array"], null, "array", "propagate">;
+}>;
+
 /**
  * Canonical scalar-operation catalog shared by validation, rendering, and
  * typed frontends. Arity is derived from the argument domains, so adding an
  * operation requires one semantic declaration instead of synchronized maps.
  */
-export const BUILTIN_FUNCTION_SPECS = Object.freeze({
+export const BUILTIN_FUNCTION_SPECS: BuiltinFunctionSpecs = Object.freeze({
   MOD: builtin(["numeric", "numeric"], null, "same", "propagate"),
   ABS: builtin(["numeric"], null, "same", "propagate"),
   CEIL: builtin(["numeric"], null, "integer", "propagate"),
@@ -227,7 +291,7 @@ export const BUILTIN_FUNCTION_SPECS = Object.freeze({
   ARRAY_PREPEND: builtin(["array", "unknown"], null, "array", "propagate"),
   ARRAY_CONCAT: builtin(["array", "array"], "array", "array", "propagate"),
   ARRAY_DISTINCT: builtin(["array"], null, "array", "propagate"),
-} satisfies BuiltinFunctionSpecCatalog);
+} as const satisfies BuiltinFunctionSpecCatalog);
 
 /** Scalar operations emitted by the portable EDSL as typed `builtin` nodes. */
 export const BUILTIN_FUNCTION_OPERATIONS = Object.freeze(
