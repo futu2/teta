@@ -107,7 +107,8 @@ export function buildCompiledSegment(
             item.expr.kind === "column" &&
             isInternalScopeName(item.expr.table) &&
             (
-              (boundExpr.kind === "column" && boundExpr.name !== outputName) ||
+              boundExpr.kind !== "column" ||
+              boundExpr.name !== outputName ||
               hasExpandedAliasMismatch
             )
           )

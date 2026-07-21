@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { Parser } from "node-sql-parser";
-import { lit, table, t, filter, inner, join, left, map, toSql, asc, bitLength, characterLength, dateAdd, eq, gt, replace, rowNumber, upper, sort, over, and, take, not, or, group, unnest, dropOverlapLeft, usingCols, asBigInt, asBoolean, asBytes, asDate, asDecimal, asFloat, asInt, asJson, asString, asTimestamp, asUuid, pipe, loop, union, unionAll } from "../mod.ts";
+import { lit, table, t, filter, inner, join, left, map, pick, toSql, asc, bitLength, characterLength, dateAdd, eq, gt, replace, rowNumber, upper, sort, over, and, take, not, or, group, unnest, dropOverlapLeft, usingCols, asBigInt, asBoolean, asBytes, asDate, asDecimal, asFloat, asInt, asJson, asString, asTimestamp, asUuid, isNotNull, pipe, loop, union, unionAll } from "../mod.ts";
 import { toAst } from "../inspect.ts";
 import { USER_PIPELINE_POSTGRES_COMPACT, USER_PIPELINE_POSTGRES_PRETTY, USERS_NAME_LENGTH_SQLITE_COMPACT, EMPLOYEES_SELF_JOIN_POSTGRES_COMPACT, USERS_ORDERS_LEFT_JOIN_SELECT_POSTGRES_COMPACT, USERS_SELECT_FILTER_POSTGRES_COMPACT, ANALYTICS_EVENTS_SELECT_POSTGRES_COMPACT, QUOTED_ANALYTICS_EVENTS_SELECT_POSTGRES_COMPACT, QUOTED_ANALYTICS_EVENTS_SELECT_BIGQUERY_COMPACT, QUOTED_USERS_ALIAS_SELECT_POSTGRES_COMPACT, QUOTED_USERS_PROJECTED_ALIAS_BIGQUERY_COMPACT, QUOTED_ROW_NUMBER_ALIAS_FILTER_POSTGRES_COMPACT, ORDERS_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT, ORDERS_ROW_NUMBER_FILTER_POSTGRES_COMPACT, ORDERS_ROW_NUMBER_FILTER_ORDER_LIMIT_POSTGRES_COMPACT, ORDERS_TOTAL_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT, ORDERS_TOTAL_ROW_NUMBER_FILTER_POSTGRES_COMPACT, ORDERS_TOTAL_SHARED_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT, ORDERS_TOTAL_SHARED_ROW_NUMBER_FILTER_POSTGRES_COMPACT, ORDERS_TOTAL_NOT_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT, ORDERS_TOTAL_NOT_ROW_NUMBER_FILTER_POSTGRES_COMPACT, ORDERS_SHARED_DISJUNCTION_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT } from "./helpers/expected-sql.ts";
 import { buildUserPipelineQuery, createOrdersTable, createUsersTable } from "./helpers/fixtures.ts";
@@ -20,6 +20,31 @@ describe("toSql(query, options)", () => {
             }))
         );
         expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe(USERS_ORDERS_LEFT_JOIN_SELECT_POSTGRES_COMPACT);
+    });
+    test("aliases a computed join column selected by a top-level map", () => {
+        const accounts = table("accounts", {
+            id: t.int(),
+        });
+        const history = table("history", {
+            account_id: t.int(),
+        });
+        const query = pipe(
+            accounts,
+            join(
+                history,
+                left(
+                    (account, historic) => eq(account.id, historic.account_id),
+                    (account, historic) => ({
+                        id: account.id,
+                        was_seen: isNotNull(historic.account_id),
+                    })
+                )
+            ),
+            map(pick("id", "was_seen"))
+        );
+        expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe(
+            "SELECT accounts_0.id, history_1.account_id IS NOT NULL AS was_seen FROM accounts AS accounts_0 LEFT JOIN history AS history_1 ON accounts_0.id = history_1.account_id"
+        );
     });
     test("pushes a post-map filter into WHERE", () => {
         const users = createUsersTable();
