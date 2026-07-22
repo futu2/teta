@@ -122,6 +122,10 @@ export function day<TValue>(value: ExprInput<TValue>): Expr<PropagateNull<TValue
   return cast<PropagateNull<TValue, SqlInt>>(extract(value, "day"), "INTEGER");
 }
 
+export function dayOfWeek<TValue>(value: ExprInput<TValue>): Expr<PropagateNull<TValue, SqlInt>> {
+  return unsafeFn<PropagateNull<TValue, SqlInt>>("day_of_week", value);
+}
+
 export function hour<TValue>(value: ExprInput<TValue>): Expr<PropagateNull<TValue, SqlInt>> {
   return cast<PropagateNull<TValue, SqlInt>>(extract(value, "hour"), "INTEGER");
 }

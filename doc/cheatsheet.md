@@ -382,6 +382,7 @@ const explicitSql = irToSql(ir, { dialect: "postgresql" });
 - `year(value)`
 - `month(value)`
 - `day(value)`
+- `dayOfWeek(value)`
 - `hour(value)`
 - `minute(value)`
 - `second(value)`

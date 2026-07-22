@@ -521,6 +521,7 @@ the join spec's second argument:
 | `year(value)` | `(value: Expr<DT>) => Expr<SqlInt>` | `EXTRACT(YEAR ...)` |
 | `month(value)` | `(value: Expr<DT>) => Expr<SqlInt>` | `EXTRACT(MONTH ...)` |
 | `day(value)` | `(value: Expr<DT>) => Expr<SqlInt>` | `EXTRACT(DAY ...)` |
+| `dayOfWeek(value)` | `(value: Expr<DT>) => Expr<SqlInt>` | `day_of_week(value)` |
 | `hour(value)` | `(value: Expr<DT>) => Expr<SqlInt>` | `EXTRACT(HOUR ...)` |
 | `minute(value)` | `(value: Expr<DT>) => Expr<SqlInt>` | `EXTRACT(MINUTE ...)` |
 | `second(value)` | `(value: Expr<DT>) => Expr<SqlInt>` | `EXTRACT(SECOND ...)` |

@@ -90,6 +90,7 @@
     "dateParse",
     "dateTrunc",
     "day",
+    "dayOfWeek",
     "decodeRow",
     "decodeRows",
     "denseRank",

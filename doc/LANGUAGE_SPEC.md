@@ -104,7 +104,7 @@ Function-first policy:
 
 Convenience date-part helpers over `extract(...)`:
 
-- `year(value)`, `month(value)`, `day(value)`
+- `year(value)`, `month(value)`, `day(value)`, `dayOfWeek(value)`
 - `hour(value)`, `minute(value)`, `second(value)`
 
 ## 5) Type conversion and null handling

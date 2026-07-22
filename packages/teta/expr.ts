@@ -93,6 +93,7 @@ export {
   dateParse,
   dateTrunc,
   day,
+  dayOfWeek,
   denseRank,
   desc,
   div,

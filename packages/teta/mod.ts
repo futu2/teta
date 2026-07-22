@@ -519,6 +519,9 @@ export const month: typeof import("./src/edsl/expr.ts").month = expr.month;
 /** Extracts the day from a temporal expression. */
 export const day: typeof import("./src/edsl/expr.ts").day = expr.day;
 
+/** Returns the day of the week for a temporal expression. */
+export const dayOfWeek: typeof import("./src/edsl/expr.ts").dayOfWeek = expr.dayOfWeek;
+
 /** Extracts the hour from a temporal expression. */
 export const hour: typeof import("./src/edsl/expr.ts").hour = expr.hour;
 
