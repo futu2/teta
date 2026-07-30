@@ -26,6 +26,10 @@ type DateAddResult<TValue> =
   TValue extends null ? null
   : TValue extends SqlDate ? SqlDate
   : SqlTimestamp;
+type DateTruncResult<TValue> =
+  TValue extends null ? null
+  : TValue extends SqlDate ? SqlDate
+  : SqlTimestamp;
 
 export function currentDate(): Expr<SqlDate> {
   return funcExpr("CURRENT_DATE", []);
@@ -61,8 +65,8 @@ export function extract<TValue>(value: ExprInput<TValue>, field: string): Expr<P
 export function dateTrunc<TValue extends NullableDateLike>(
   value: ExprInput<TValue>,
   unit: ExprInput<string>
-): Expr<PropagateNull<TValue, SqlTimestamp>> {
-  return unsafeFn<PropagateNull<TValue, SqlTimestamp>>("DATE_TRUNC", unit, value);
+): Expr<DateTruncResult<TValue>> {
+  return unsafeFn<DateTruncResult<TValue>>("DATE_TRUNC", unit, value);
 }
 
 export function dateAdd<TValue extends NullableDateLike>(
@@ -93,9 +97,22 @@ export function dateFormat<TValue extends NullableDateLike>(
 
 export function dateParse<TValue extends string | null>(
   value: ExprInput<TValue>,
+  format: ExprInput<string>,
+  resultType: "date"
+): Expr<PropagateNull<TValue, SqlDate>>;
+export function dateParse<TValue extends string | null>(
+  value: ExprInput<TValue>,
   format: ExprInput<string>
-): Expr<PropagateNull<TValue, SqlTimestamp>> {
-  return unsafeFn<PropagateNull<TValue, SqlTimestamp>>("DATE_PARSE", value, format);
+): Expr<PropagateNull<TValue, SqlTimestamp>>;
+export function dateParse<TValue extends string | null>(
+  value: ExprInput<TValue>,
+  format: ExprInput<string>,
+  resultType?: "date"
+): Expr<PropagateNull<TValue, SqlDate | SqlTimestamp>> {
+  const parsed = unsafeFn<PropagateNull<TValue, SqlTimestamp>>("DATE_PARSE", value, format);
+  return resultType === "date"
+    ? asDate(parsed) as Expr<PropagateNull<TValue, SqlDate | SqlTimestamp>>
+    : parsed;
 }
 
 export function toUnixTime<TValue extends NullableDateLike>(

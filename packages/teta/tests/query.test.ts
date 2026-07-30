@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { Parser } from "node-sql-parser";
-import { lit, table, t, filter, inner, join, left, map, pick, toSql, asc, bitLength, characterLength, dateAdd, eq, gt, replace, rowNumber, upper, sort, over, and, take, not, or, group, unnest, dropOverlapLeft, usingCols, asBigInt, asBoolean, asBytes, asDate, asDecimal, asFloat, asInt, asJson, asString, asTimestamp, asUuid, isNotNull, pipe, loop, union, unionAll } from "../mod.ts";
+import { lit, table, t, filter, inner, join, left, map, pick, toSql, asc, bitLength, characterLength, dateAdd, dateParse, dateTrunc, eq, gt, replace, rowNumber, upper, sort, over, and, take, not, or, group, unnest, dropOverlapLeft, usingCols, asBigInt, asBoolean, asBytes, asDate, asDecimal, asFloat, asInt, asJson, asString, asTimestamp, asUuid, isNotNull, pipe, loop, union, unionAll } from "../mod.ts";
 import { toAst } from "../inspect.ts";
 import { USER_PIPELINE_POSTGRES_COMPACT, USER_PIPELINE_POSTGRES_PRETTY, USERS_NAME_LENGTH_SQLITE_COMPACT, EMPLOYEES_SELF_JOIN_POSTGRES_COMPACT, USERS_ORDERS_LEFT_JOIN_SELECT_POSTGRES_COMPACT, USERS_SELECT_FILTER_POSTGRES_COMPACT, ANALYTICS_EVENTS_SELECT_POSTGRES_COMPACT, QUOTED_ANALYTICS_EVENTS_SELECT_POSTGRES_COMPACT, QUOTED_ANALYTICS_EVENTS_SELECT_BIGQUERY_COMPACT, QUOTED_USERS_ALIAS_SELECT_POSTGRES_COMPACT, QUOTED_USERS_PROJECTED_ALIAS_BIGQUERY_COMPACT, QUOTED_ROW_NUMBER_ALIAS_FILTER_POSTGRES_COMPACT, ORDERS_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT, ORDERS_ROW_NUMBER_FILTER_POSTGRES_COMPACT, ORDERS_ROW_NUMBER_FILTER_ORDER_LIMIT_POSTGRES_COMPACT, ORDERS_TOTAL_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT, ORDERS_TOTAL_ROW_NUMBER_FILTER_POSTGRES_COMPACT, ORDERS_TOTAL_SHARED_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT, ORDERS_TOTAL_SHARED_ROW_NUMBER_FILTER_POSTGRES_COMPACT, ORDERS_TOTAL_NOT_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT, ORDERS_TOTAL_NOT_ROW_NUMBER_FILTER_POSTGRES_COMPACT, ORDERS_SHARED_DISJUNCTION_ROW_NUMBER_QUALIFY_BIGQUERY_COMPACT } from "./helpers/expected-sql.ts";
 import { buildUserPipelineQuery, createOrdersTable, createUsersTable } from "./helpers/fixtures.ts";
@@ -362,6 +362,30 @@ describe("toSql(query, options)", () => {
         const sql = toSql(query, { dialect: "postgresql", format: "compact" });
         expect(sql).toContain("events_0.event_date");
         expect(sql).toContain("events_0.event_ts");
+    });
+    test("accepts dateTrunc inputs from date and timestamp columns", () => {
+        const events = table("events", {
+            event_date: t.date(),
+            event_ts: t.timestamp(),
+        });
+        const query = pipe(events, map((event) => ({
+            truncated_date: dateTrunc(event.event_date, "day"),
+            truncated_timestamp: dateTrunc(event.event_ts, "day"),
+        })));
+        expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe(
+            "SELECT date_trunc('day', events_0.event_date) AS truncated_date, date_trunc('day', events_0.event_ts) AS truncated_timestamp FROM events AS events_0"
+        );
+    });
+    test("casts parsed text to DATE when requested", () => {
+        const events = table("events", {
+            event_text: t.string(),
+        });
+        const query = pipe(events, map((event) => ({
+            event_date: dateParse(event.event_text, "%Y-%m-%d", "date"),
+        })));
+        expect(toSql(query, { dialect: "postgresql", format: "compact" })).toBe(
+            "SELECT CAST(to_timestamp(events_0.event_text, 'YYYY-MM-DD') AS DATE) AS event_date FROM events AS events_0"
+        );
     });
     test("renders a compact postgres pipeline", () => {
         const query = buildUserPipelineQuery();

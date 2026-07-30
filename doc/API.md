@@ -515,7 +515,7 @@ the join spec's second argument:
 | `dateAdd(value, unit, amount)` | `(value: Expr<DT>, unit: string, amount: number) => Expr<DT>` | `DATE_ADD` |
 | `dateDiff(value, unit, other)` | `(value: Expr<DT>, unit: string, other: Expr<DT>) => Expr<SqlInt>` | `DATE_DIFF` |
 | `dateFormat(value, format)` | `(value: Expr<DT>, format: string) => Expr<SqlString>` | `DATE_FORMAT` |
-| `dateParse(value, format)` | `(value: Expr<SqlString>, format: string) => Expr<SqlTimestamp>` | `DATE_PARSE` |
+| `dateParse(value, format[, "date"])` | Default: `Expr<SqlTimestamp>`; with `"date"`: `Expr<SqlDate>` | `DATE_PARSE` |
 | `toUnixTime(value)` | `(value: Expr<DT>) => Expr<SqlBigInt>` | `TO_UNIXTIME` |
 | `fromUnixTime(value)` | `(value: Expr<N>) => Expr<SqlTimestamp>` | `FROM_UNIXTIME` |
 | `year(value)` | `(value: Expr<DT>) => Expr<SqlInt>` | `EXTRACT(YEAR ...)` |

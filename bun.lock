@@ -34,7 +34,7 @@
     },
     "packages/teta": {
       "name": "@teta/teta",
-      "version": "0.5.3",
+      "version": "0.5.4",
       "dependencies": {
         "@teta/sql": "workspace:*",
       },
